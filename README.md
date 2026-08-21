@@ -1,152 +1,46 @@
-# dsh-Top100
+<p align="center">
+  <img src="./docs/assets/dsh-top100-readme-cover.png" alt="dsh-Top100 · True popularity. Readable at a glance." width="100%">
+</p>
 
-面向 DeepSeek Harness 生态的开源插件排行榜。项目持续发现并验证 GitHub 仓库，记录每日 Stars 快照，发布 Top 100、新锐榜和完整总榜，并根据项目 README 提供中文简介。
+<p align="center">
+  <a href="http://47.238.229.20"><strong>访问 dsh-Top100 网站</strong></a>
+</p>
 
-## 功能
+## 网站
 
-- **Top 100**：沿用综合近期增长、活跃度、项目质量和社区热度的排序规则。
-- **新锐榜**：按最近七天新增 Stars 排序，展示前 100 个仓库。
-- **完整总榜**：按 GitHub Stars 排序，展示所有已收录仓库。
-- **中文简介**：复用历史缓存，可选使用 DeepSeek API 根据 README 增量生成。
-- **自动更新**：Docker 调度器默认每天北京时间 06:00 更新，周日执行完整发现。
-- **可迁移数据**：SQLite、历史快照、中文缓存和公开 JSON 全部保存在 `runtime/`。
+**dsh-Top100** 用于发现、验证和追踪 DeepSeek Harness 生态中的 GitHub 插件仓库。网站每天更新仓库 Stars、中文简介和排行榜。
 
-## 快速开始
+访问地址：<http://47.238.229.20>
 
-需要 Docker Engine 24+ 和 Docker Compose v2。
+## 榜单
 
-```bash
-cp .env.example .env
-```
-
-编辑 `.env`，至少填写 GitHub Token：
-
-```env
-GITHUB_TOKEN=github_pat_xxx
-
-# 可选：为新增或 README 明显变化的仓库生成中文简介
-DEEPSEEK_API_KEY=
-DEEPSEEK_API_BASE=https://api.deepseek.com
-DEEPSEEK_MODEL=deepseek-v4-flash
-DEEPSEEK_MAX_TOKENS=800
-```
-
-不要把 `.env` 或任何 API Key 提交到 Git。
-
-准备初始数据并启动服务：
-
-```bash
-./scripts/prepare-runtime.sh
-docker compose up -d --build web scheduler
-```
-
-打开 <http://localhost:8080>。服务状态可通过以下命令查看：
-
-```bash
-docker compose ps
-docker compose logs -f web scheduler
-```
-
-## 排行规则
-
-| 榜单 | 范围 | 排序依据 |
+| 榜单 | 范围 | 排序方式 |
 | --- | --- | --- |
-| Top 100 | 前 100 | 日增、七日增量、增长率、活跃度、数据质量和总热度的公开权重 |
-| 新锐榜 | 前 100 | 最近七天新增 Stars 降序 |
-| 总榜 | 全部 | 当前 GitHub Stars 降序 |
+| **Top 100** | 当前最值得关注的 100 个仓库 | 按综合评分排序，页面展示真实 GitHub Stars |
+| **新锐榜** | 最近一周增长最快的 100 个仓库 | 最近 7 天新增 Stars 降序 |
+| **总榜** | 全部已验证仓库 | 当前 GitHub Stars 总数降序 |
 
-权重位于 [`config/ranking.json`](config/ranking.json)。第一次导入没有历史快照，因此增量为 0；每日快照积累后，新锐榜和 Top 100 会形成真实增长数据。
+新部署需要积累历史快照；不足 7 天时，新锐榜中的周增量可能为 0。
 
-## 中文简介
+## 爬取规则
 
-采集器读取仓库的 GitHub description、README、SKILL.md 和 topics。已有中文简介优先从缓存复用；配置 `DEEPSEEK_API_KEY` 后，只为新仓库、简介缺失或 README 明显变化的仓库调用模型。
+1. **多来源召回**：使用 GitHub Repository Search、GitHub Code Search、npm 搜索、社区 Awesome 列表、DSH 组织仓库和用户提交线索寻找候选项目。
+2. **关键词与结构搜索**：检索 `dsh-plugin`、`deepseek-harness-plugin`、`dsh-skill` 等 topics，以及 `SKILL.md`、`dsh.profile`、`cordis.patch.yml` 和 `@deepseek-ai/dsh-*` 依赖。
+3. **结构验证**：排除 fork 和 archived 仓库；候选仓库必须存在 DSH Skill、Cordis/DSH 配置文件，或能够从 `package.json` 中确认 DSH/Cordis 依赖与声明。子目录中的插件也会被识别。
+4. **合并去重**：同一仓库从多个来源命中时只保留一条记录，并保存全部发现来源；社区提交的项目使用相同验证规则，不直接入榜。
+5. **每日增量**：默认北京时间每天 06:00 扫描近期有更新的高价值候选，同时刷新所有已收录仓库的 Stars、活跃状态和基础信息。
+6. **每周全量**：每周日执行完整发现。GitHub Repository Search 按创建时间递归分片，必要时继续按 Stars 和仓库大小切分，避免直接受单次搜索 1,000 条结果上限影响。
+7. **历史记录**：每次成功采集后写入 SQLite 和每日 Stars 快照，用于计算日增量与 7 日增量。
 
-模型输出会经过长度、中文字符和标记内容校验。未配置模型或调用失败时，系统会使用安全的中文兜底文案，不影响榜单更新。前端只读取生成后的公开 JSON，不接触任何密钥。
+## Top 100 评分规则
 
-`DEEPSEEK_MODEL` 必须填写服务商控制台展示的准确模型 ID。
+| 指标 | 权重 | 计算依据 |
+| --- | ---: | --- |
+| 当日 Stars 增长 | 35% | 当前 Stars 与上一份快照的差值 |
+| 7 日 Stars 增长 | 25% | 当前 Stars 与七日前最近快照的差值 |
+| 7 日增长率 | 15% | 7 日增量 ÷ 七日前 Stars；达到 30% 时获得该项满分 |
+| 近期活跃度 | 10% | 根据最近推送时间衰减，半衰期为 60 天 |
+| 数据质量 | 10% | 中文简介、README 摘要、许可证和有效发现证据的完整度 |
+| Stars 总热度 | 5% | 当前 GitHub Stars |
 
-## 日常运维
-
-```bash
-# 手动执行一次增量采集、入库和发布
-docker compose --profile manual run --rm collector
-
-# 手动执行完整发现
-DSH_DISCOVERY_MODE=full docker compose --profile manual run --rm collector
-
-# 仅用现有采集结果重新生成数据库和榜单
-npm run db:sync
-
-# 备份 SQLite、历史快照和缓存
-./scripts/backup-runtime.sh
-
-# 停止服务
-docker compose down
-```
-
-默认调度配置：
-
-- `COLLECT_HOUR=6`：北京时间 06:00 更新。
-- `FULL_DISCOVERY_WEEKDAY=0`：每周日执行完整发现，`0` 表示星期日。
-- `DSH_INCREMENTAL_REPOSITORY_PAGES=2`：日常增量模式每个仓库搜索源读取的页数。
-- `RUN_COLLECT_ON_STARTUP=false`：容器启动时只发布现有数据，不立即访问 GitHub。
-
-## 部署到服务器
-
-1. 安装 Docker Engine 与 Docker Compose。
-2. 将项目复制或克隆到服务器。
-3. 创建 `.env` 并填写密钥。
-4. 如果是新部署，运行 `./scripts/prepare-runtime.sh`。
-5. 运行 `docker compose up -d --build web scheduler`。
-6. 使用 Nginx、Caddy 或云负载均衡器将域名反向代理到 `127.0.0.1:8080`，并启用 HTTPS。
-
-迁移现有数据时，先在原机器运行 `./scripts/backup-runtime.sh`，把生成的 `backups/dsh-top100-runtime-*.tar.gz` 复制到服务器并解压到项目根目录。迁移 `runtime/` 会保留 SQLite 历史、新锐榜基线和中文简介缓存。
-
-完整上线清单见 [`docs/deployment.md`](docs/deployment.md)。
-
-## 公开数据
-
-Web 服务通过 `/data/` 发布只读 JSON：
-
-- `/data/rankings.json`：三个榜单的统一数据。
-- `/data/rankings-hot.json`：Top 100（保留内部兼容路径）。
-- `/data/rankings-rising.json`：新锐榜。
-- `/data/rankings-total.json`：完整总榜。
-- `/data/plugins.json`：全部公开插件字段。
-
-SQLite、采集缓存和 `.env` 不会被 Nginx 暴露。
-
-## 项目结构
-
-```text
-collector/          GitHub/npm 发现、插件验证、中文简介、数据库和调度器
-schema/             采集器与数据发布共享的 TypeScript 类型
-web/public/         无构建依赖的静态前端
-config/             排行算法配置
-data/               首次部署使用的种子快照
-docker/             容器构建文件与 Nginx 配置
-docs/               架构、排行口径、部署和历史设计文档
-scripts/            运行目录初始化与备份脚本
-runtime/            SQLite、每日快照、缓存和公开 JSON（不提交 Git）
-```
-
-系统结构和数据流见 [`docs/architecture.md`](docs/architecture.md)，排行细节见 [`docs/ranking.md`](docs/ranking.md)。
-
-## 本地开发
-
-需要 Node.js 24，推荐使用 `.nvmrc`：
-
-```bash
-nvm use
-npm ci
-npm run check
-npm run runtime:prepare
-npm run db:sync
-npm run serve
-```
-
-提交修改前请阅读 [`CONTRIBUTING.md`](CONTRIBUTING.md)。安全问题请按 [`SECURITY.md`](SECURITY.md) 中的方式报告。
-
-## License
-
-[MIT](LICENSE)
+增长量和 Stars 总热度使用对数归一化，避免超大型仓库压缩其他项目的分数差异。负增长按 0 计算；综合得分相同时，依次比较当日新增 Stars、Stars 总数和仓库名称。
