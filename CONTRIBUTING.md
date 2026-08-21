@@ -1,6 +1,6 @@
 # Contributing
 
-感谢你改进 dsh-TrueEval。
+感谢你改进 dsh-Top100。
 
 ## 开发流程
 

@@ -136,7 +136,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
   };
 }
 
-/** Build the complete total ranking, weekly rising 100, and configurable Hot 100. */
+/** Build the complete total ranking, weekly rising 100, and public Top 100. */
 export function buildRankings(
   database: DatabaseSync,
   snapshotDate: string,

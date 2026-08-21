@@ -1,10 +1,10 @@
-# dsh-TrueEval
+# dsh-Top100
 
-面向 DeepSeek Harness 生态的开源插件排行榜。项目持续发现并验证 GitHub 仓库，记录每日 Stars 快照，发布 Hot 100、新锐榜和完整总榜，并根据项目 README 提供中文简介。
+面向 DeepSeek Harness 生态的开源插件排行榜。项目持续发现并验证 GitHub 仓库，记录每日 Stars 快照，发布 Top 100、新锐榜和完整总榜，并根据项目 README 提供中文简介。
 
 ## 功能
 
-- **Hot 100**：综合近期增长、活跃度、项目质量和社区热度。
+- **Top 100**：沿用综合近期增长、活跃度、项目质量和社区热度的排序规则。
 - **新锐榜**：按最近七天新增 Stars 排序，展示前 100 个仓库。
 - **完整总榜**：按 GitHub Stars 排序，展示所有已收录仓库。
 - **中文简介**：复用历史缓存，可选使用 DeepSeek API 根据 README 增量生成。
@@ -51,11 +51,11 @@ docker compose logs -f web scheduler
 
 | 榜单 | 范围 | 排序依据 |
 | --- | --- | --- |
-| Hot 100 | 前 100 | 日增、七日增量、增长率、活跃度、数据质量和总热度的公开权重 |
+| Top 100 | 前 100 | 日增、七日增量、增长率、活跃度、数据质量和总热度的公开权重 |
 | 新锐榜 | 前 100 | 最近七天新增 Stars 降序 |
 | 总榜 | 全部 | 当前 GitHub Stars 降序 |
 
-权重位于 [`config/ranking.json`](config/ranking.json)。第一次导入没有历史快照，因此增量为 0；每日快照积累后，新锐榜和 Hot 100 会形成真实增长数据。
+权重位于 [`config/ranking.json`](config/ranking.json)。第一次导入没有历史快照，因此增量为 0；每日快照积累后，新锐榜和 Top 100 会形成真实增长数据。
 
 ## 中文简介
 
@@ -109,7 +109,7 @@ docker compose down
 Web 服务通过 `/data/` 发布只读 JSON：
 
 - `/data/rankings.json`：三个榜单的统一数据。
-- `/data/rankings-hot.json`：Hot 100。
+- `/data/rankings-hot.json`：Top 100（保留内部兼容路径）。
 - `/data/rankings-rising.json`：新锐榜。
 - `/data/rankings-total.json`：完整总榜。
 - `/data/plugins.json`：全部公开插件字段。

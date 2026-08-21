@@ -2,7 +2,7 @@
 
 ## Overview
 
-dsh-TrueEval separates collection, persistence, publication and presentation so a failed network update cannot leave the public site with partial data.
+dsh-Top100 separates collection, persistence, publication and presentation so a failed network update cannot leave the public site with partial data.
 
 ```text
 GitHub Search / Code Search / npm / curated lists

@@ -20,9 +20,9 @@ Negative values are clamped to zero. Entries are ordered by `weeklyStars`, then 
 
 When no seven-day baseline exists, `weeklyStars` is zero. This is expected during a new deployment and resolves as daily history accumulates.
 
-## Hot 100
+## Top 100
 
-The Hot score combines normalized signals configured in `config/ranking.json`:
+The Top 100 keeps the existing composite popularity score, combining normalized signals configured in `config/ranking.json`:
 
 | Signal | Default weight |
 | --- | ---: |
@@ -33,6 +33,6 @@ The Hot score combines normalized signals configured in `config/ranking.json`:
 | Available description, README, license and source evidence | 10 |
 | Total Stars popularity | 5 |
 
-Growth and popularity use logarithmic normalization so one very large repository does not flatten the rest of the list. Activity uses an exponential half-life, currently 60 days. The public Hot 100 is ordered by the computed score, but each card displays GitHub Stars for a consistent user-facing metric.
+Growth and popularity use logarithmic normalization so one very large repository does not flatten the rest of the list. Activity uses an exponential half-life, currently 60 days. The public Top 100 is ordered by the computed score, but each card displays GitHub Stars for a consistent user-facing metric.
 
 Changing weights changes product behavior. Update tests and this document in the same change.
