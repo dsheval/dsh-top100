@@ -1,0 +1,29 @@
+{
+  "name": "dsh-top100",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Verified DeepSeek Harness plugin rankings with daily GitHub updates",
+  "workspaces": [
+    "schema",
+    "collector"
+  ],
+  "scripts": {
+    "check": "npm run typecheck && npm test",
+    "collect": "npm run collect -w @dsh-top100/collector",
+    "db:sync": "npm run db:sync -w @dsh-top100/collector",
+    "update:once": "npm run collect && npm run db:sync",
+    "scheduler": "npm run scheduler -w @dsh-top100/collector",
+    "test": "npm run test -w @dsh-top100/collector",
+    "typecheck": "npm run typecheck -w @dsh-top100/collector && npm run typecheck -w @dsh-top100/schema",
+    "serve": "npx --yes serve web/public",
+    "runtime:prepare": "./scripts/prepare-runtime.sh",
+    "runtime:backup": "./scripts/backup-runtime.sh",
+    "docker:up": "docker compose up -d --build web scheduler",
+    "docker:down": "docker compose down"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,72 @@
+{
+  "repositoryQueries": [
+    {
+      "id": "topic-dsh-plugin",
+      "query": "topic:dsh-plugin"
+    },
+    {
+      "id": "topic-deepseek-harness-plugin",
+      "query": "topic:deepseek-harness-plugin"
+    },
+    {
+      "id": "topic-dsh-bundle",
+      "query": "topic:dsh-bundle"
+    },
+    {
+      "id": "topic-dsh-skill",
+      "query": "topic:dsh-skill"
+    },
+    {
+      "id": "deepseek-harness-phrase",
+      "query": "\"deepseek harness\" in:name,description,readme"
+    },
+    {
+      "id": "deepseek-harness-slug",
+      "query": "\"deepseek-harness\" in:name,description,readme"
+    },
+    {
+      "id": "dsh-plugin-phrase",
+      "query": "\"dsh plugin\" in:name,description,readme"
+    },
+    {
+      "id": "dsh-package-readme",
+      "query": "\"@deepseek-ai/dsh-\" in:readme"
+    }
+  ],
+  "codeQueries": [
+    {
+      "id": "cordis-patch",
+      "query": "filename:cordis.patch.yml"
+    },
+    {
+      "id": "dsh-profile",
+      "query": "filename:dsh.profile"
+    },
+    {
+      "id": "dsh-profile-yml",
+      "query": "filename:dsh.profile.yml"
+    },
+    {
+      "id": "dsh-package-dependency",
+      "query": "\"@deepseek-ai/dsh-\" filename:package.json"
+    },
+    {
+      "id": "dsh-skill-content",
+      "query": "\"deepseek-harness\" filename:SKILL.md"
+    }
+  ],
+  "npmQueries": [
+    {
+      "id": "deepseek-harness",
+      "query": "deepseek-harness"
+    },
+    {
+      "id": "dsh-plugin",
+      "query": "dsh-plugin"
+    },
+    {
+      "id": "dsh-skill",
+      "query": "dsh-skill"
+    }
+  ]
+}

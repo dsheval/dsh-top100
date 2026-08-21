@@ -1,0 +1,2048 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="dsh-TrueEval：经过兼容性验证的 DSH 插件 GitHub Stars 榜单。"
+    />
+    <title>dsh-TrueEval · DSH 插件真实热度榜</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f2f3ef;
+        --card: #fbfcf9;
+        --ink: #17211f;
+        --muted: #66716d;
+        --accent: #2f6f68;
+        --accent-soft: #d5e5e1;
+        --section: #dfeae6;
+        --section-strong: #bdd3cd;
+        --line: rgba(23, 33, 31, 0.34);
+        --hero: #174942;
+        --hero-ink: #f7f3e7;
+        --hero-muted: #c7d8d3;
+        --hero-accent: #f1c75b;
+        --content: 1380px;
+        --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+        --serif: Iowan Old Style, Baskerville, "Times New Roman", "Songti SC", serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--paper);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .nav-shell {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        border-bottom: 1px solid rgba(23, 33, 31, 0.12);
+        background: color-mix(in srgb, var(--paper) 94%, transparent);
+        backdrop-filter: blur(12px);
+      }
+
+      .nav {
+        display: flex;
+        width: min(calc(100% - 48px), var(--content));
+        min-height: 62px;
+        margin: 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 32px;
+      }
+
+      .wordmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        text-decoration: none;
+      }
+
+      .wordmark-mark {
+        position: relative;
+        width: 17px;
+        height: 17px;
+      }
+
+      .wordmark-mark::before,
+      .wordmark-mark::after {
+        position: absolute;
+        left: 2px;
+        width: 10px;
+        height: 3px;
+        background: var(--accent);
+        content: "";
+        transform-origin: left center;
+      }
+
+      .wordmark-mark::before {
+        top: 8px;
+        transform: rotate(-56deg);
+      }
+
+      .wordmark-mark::after {
+        top: 7px;
+        left: 9px;
+        transform: rotate(56deg);
+      }
+
+      .nav-label {
+        margin: 0;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        position: relative;
+        isolation: isolate;
+        min-height: 520px;
+        overflow: hidden;
+        border-bottom: 1px solid rgba(247, 243, 231, 0.2);
+        color: var(--hero-ink);
+        background: var(--hero);
+      }
+
+      .hero::before {
+        position: absolute;
+        z-index: 0;
+        width: min(62vw, 920px);
+        aspect-ratio: 1;
+        inset: -58% -10% auto auto;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(241, 199, 91, 0.2) 0,
+          rgba(241, 199, 91, 0.07) 38%,
+          transparent 68%
+        );
+        content: "";
+        pointer-events: none;
+        animation: hero-glow 10s ease-in-out infinite alternate;
+      }
+
+      .hero-inner {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        width: min(calc(100% - 48px), var(--content));
+        min-height: 520px;
+        margin: 0 auto;
+        grid-template-columns: minmax(0, 0.92fr) minmax(360px, 0.72fr);
+        align-items: center;
+        gap: 70px;
+        padding: 82px 0 86px;
+      }
+
+      .hero-copy {
+        max-width: 760px;
+      }
+
+      .hero-copy > * {
+        animation: hero-enter 650ms cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+
+      .hero-copy > :nth-child(2) {
+        animation-delay: 90ms;
+      }
+
+      .hero-copy > :nth-child(3) {
+        animation-delay: 170ms;
+      }
+
+      .hero-copy > :nth-child(4) {
+        animation-delay: 250ms;
+      }
+
+      .eyebrow {
+        margin: 0 0 20px;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        color: var(--hero-accent);
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 800px;
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(58px, 7.2vw, 102px);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 0.92;
+      }
+
+      .hero-description {
+        max-width: 560px;
+        margin: 28px 0 0;
+        color: var(--hero-muted);
+        font-size: clamp(16px, 1.7vw, 20px);
+        line-height: 1.5;
+      }
+
+      .hero-actions {
+        display: flex;
+        margin-top: 30px;
+        align-items: stretch;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-link,
+      .hero-placeholder {
+        display: inline-flex;
+        min-height: 46px;
+        padding: 0 18px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--hero-accent);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        transition: color 140ms ease, background 140ms ease;
+      }
+
+      .hero-link {
+        color: var(--ink);
+        background: var(--hero-accent);
+        text-decoration: none;
+      }
+
+      .hero-placeholder {
+        color: var(--hero-accent);
+        background: transparent;
+        cursor: default;
+      }
+
+      .hero-link:hover,
+      .hero-link:focus-visible {
+        color: var(--hero-accent);
+        background: transparent;
+      }
+
+      .signal-field {
+        position: relative;
+        width: min(100%, 490px);
+        aspect-ratio: 1;
+        justify-self: end;
+        border: 1px solid rgba(241, 199, 91, 0.22);
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 18% 27%, var(--hero-accent) 0 4px, transparent 5px),
+          radial-gradient(circle at 68% 18%, var(--hero-ink) 0 4px, transparent 5px),
+          radial-gradient(circle at 82% 42%, var(--hero-accent) 0 5px, transparent 6px),
+          radial-gradient(circle at 38% 48%, var(--hero-ink) 0 5px, transparent 6px),
+          radial-gradient(circle at 63% 70%, var(--hero-accent) 0 4px, transparent 5px),
+          radial-gradient(circle at 27% 78%, var(--hero-ink) 0 4px, transparent 5px),
+          repeating-radial-gradient(
+            circle at 50% 50%,
+            transparent 0 38px,
+            rgba(241, 199, 91, 0.14) 39px 40px,
+            transparent 41px 65px
+          );
+        animation: signal-float 6s ease-in-out infinite;
+      }
+
+      .signal-field::before,
+      .signal-field::after {
+        position: absolute;
+        border: 1px solid rgba(241, 199, 91, 0.42);
+        border-radius: 50%;
+        content: "";
+        transform-origin: center;
+      }
+
+      .signal-field::before {
+        inset: 19% -7% 29% 12%;
+        animation: orbit-forward 22s linear infinite;
+      }
+
+      .signal-field::after {
+        inset: 33% 10% 10% -9%;
+        animation: orbit-reverse 17s linear infinite;
+      }
+
+      .signal-core {
+        position: absolute;
+        display: grid;
+        width: 104px;
+        height: 104px;
+        inset: 50% auto auto 50%;
+        place-items: center;
+        border: 1px solid var(--hero-accent);
+        border-radius: 50%;
+        color: var(--hero-accent);
+        background: var(--hero);
+        font-family: var(--mono);
+        font-size: 26px;
+        font-weight: 800;
+        transform: translate(-50%, -50%);
+      }
+
+      @keyframes hero-enter {
+        from {
+          opacity: 0;
+          translate: 0 16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+
+      @keyframes hero-glow {
+        from {
+          opacity: 0.68;
+          transform: translate3d(0, 0, 0) scale(0.96);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(-5%, 7%, 0) scale(1.06);
+        }
+      }
+
+      @keyframes signal-float {
+        0%,
+        100% {
+          translate: 0 0;
+        }
+        50% {
+          translate: 0 -10px;
+        }
+      }
+
+      @keyframes orbit-forward {
+        from {
+          transform: rotate(28deg);
+        }
+        to {
+          transform: rotate(388deg);
+        }
+      }
+
+      @keyframes orbit-reverse {
+        from {
+          transform: rotate(-24deg);
+        }
+        to {
+          transform: rotate(-384deg);
+        }
+      }
+
+      .data-strip {
+        overflow: hidden;
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .data-strip-track {
+        display: flex;
+        width: max-content;
+        animation: data-strip-scroll 28s linear infinite;
+        will-change: transform;
+      }
+
+      .data-strip:hover .data-strip-track {
+        animation-play-state: paused;
+      }
+
+      .data-strip-group {
+        display: flex;
+        width: max-content;
+        flex: 0 0 auto;
+        min-height: 58px;
+        align-items: center;
+      }
+
+      .ticker-item {
+        display: inline-flex;
+        align-items: center;
+        color: #55534e;
+        font-family: var(--mono);
+        font-size: clamp(12px, 1.15vw, 15px);
+        font-weight: 800;
+        letter-spacing: 0.055em;
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+
+      .ticker-item::after {
+        width: 7px;
+        height: 7px;
+        margin: 0 32px;
+        border-radius: 50%;
+        background: var(--accent);
+        content: "";
+      }
+
+      @keyframes data-strip-scroll {
+        to {
+          transform: translateX(-50%);
+        }
+      }
+
+      .ranking {
+        position: relative;
+        isolation: isolate;
+        min-height: 100vh;
+        overflow: clip;
+        background: var(--section);
+      }
+
+      .ranking::before {
+        position: absolute;
+        z-index: -1;
+        width: min(56vw, 760px);
+        aspect-ratio: 1;
+        top: 8%;
+        right: -18%;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          rgba(47, 111, 104, 0.14) 0,
+          rgba(47, 111, 104, 0.05) 42%,
+          transparent 70%
+        );
+        content: "";
+        pointer-events: none;
+        animation: ranking-glow 14s ease-in-out infinite alternate;
+      }
+
+      .ranking-inner {
+        position: relative;
+        z-index: 1;
+        width: min(calc(100% - 48px), var(--content));
+        margin: 0 auto;
+        padding: 64px 0 96px;
+      }
+
+      .section-header {
+        display: flex;
+        margin-bottom: 34px;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: 36px;
+      }
+
+      h2 {
+        max-width: 850px;
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(46px, 6.5vw, 88px);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 0.94;
+      }
+
+      .ranking-meta {
+        min-width: 300px;
+        padding-bottom: 5px;
+        color: var(--ink);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.07em;
+        line-height: 1.7;
+        text-align: right;
+        text-transform: uppercase;
+      }
+
+      .ranking-meta p {
+        margin: 0;
+      }
+
+      .ranking-updated {
+        letter-spacing: 0.03em;
+        text-transform: none;
+      }
+
+      .ranking-tools {
+        display: flex;
+        margin: 0;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .view-tabs {
+        display: flex;
+        align-items: stretch;
+      }
+
+      .view-tab {
+        min-height: 54px;
+        padding: 0 20px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        color: var(--ink);
+        background: transparent;
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+        text-transform: uppercase;
+      }
+
+      .view-tab:first-child {
+        border-left: 1px solid var(--line);
+      }
+
+      .view-tab:hover,
+      .view-tab:focus-visible {
+        background: var(--section-strong);
+      }
+
+      .view-tab:focus-visible {
+        position: relative;
+        z-index: 1;
+        outline: 3px solid var(--accent);
+        outline-offset: -3px;
+      }
+
+      .view-tab[aria-selected="true"] {
+        color: white;
+        background: var(--ink);
+      }
+
+      .skill-filter {
+        min-height: 36px;
+        margin-right: 9px;
+        padding: 0 13px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: var(--card);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .skill-filter:hover,
+      .skill-filter:focus-visible {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .skill-filter[aria-pressed="true"] {
+        border-color: var(--ink);
+        color: white;
+        background: var(--ink);
+      }
+
+      .skill-filter:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .search-panels {
+        margin: -1px 0 28px;
+      }
+
+      .search-panel {
+        display: block;
+      }
+
+      .search-panel[hidden] {
+        display: none;
+      }
+
+      .search-field {
+        display: block;
+        min-width: 0;
+      }
+
+      .search-control {
+        position: relative;
+        display: block;
+      }
+
+      .search-control::before {
+        position: absolute;
+        width: 11px;
+        height: 11px;
+        top: 50%;
+        left: 17px;
+        border: 2px solid var(--accent);
+        border-radius: 50%;
+        content: "";
+        pointer-events: none;
+        transform: translateY(-62%);
+      }
+
+      .search-control::after {
+        position: absolute;
+        width: 7px;
+        height: 2px;
+        top: calc(50% + 5px);
+        left: 28px;
+        background: var(--accent);
+        content: "";
+        pointer-events: none;
+        transform: rotate(45deg);
+        transform-origin: left center;
+      }
+
+      .search-input {
+        width: 100%;
+        min-height: 50px;
+        padding: 0 92px 0 48px;
+        border: 1px solid var(--line);
+        border-radius: 0;
+        outline: 0;
+        color: var(--ink);
+        background: color-mix(in srgb, var(--card) 90%, transparent);
+        font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        line-height: 1.4;
+        appearance: none;
+      }
+
+      .search-input::placeholder {
+        color: color-mix(in srgb, var(--muted) 78%, transparent);
+      }
+
+      .search-input:focus {
+        border-color: var(--accent);
+        box-shadow: inset 0 0 0 1px var(--accent);
+      }
+
+      .search-input::-webkit-search-cancel-button {
+        appearance: none;
+      }
+
+      .search-clear {
+        position: absolute;
+        min-height: 30px;
+        top: 50%;
+        right: 10px;
+        padding: 0 10px;
+        border: 0;
+        color: var(--muted);
+        background: transparent;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 800;
+        cursor: pointer;
+        text-transform: uppercase;
+        transform: translateY(-50%);
+      }
+
+      .search-clear:hover,
+      .search-clear:focus-visible {
+        color: var(--ink);
+        background: var(--accent-soft);
+      }
+
+      .search-clear:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .search-clear[hidden] {
+        display: none;
+      }
+
+      .plugin-list {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .plugin {
+        position: relative;
+        display: grid;
+        min-height: 222px;
+        padding: 18px 19px 20px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-rows: auto auto minmax(0, 1fr);
+        align-content: start;
+        column-gap: 8px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+        transition: background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+      }
+
+      .plugin:nth-child(-n + 4) {
+        background: #edf4f1;
+      }
+
+      .plugin:hover {
+        z-index: 2;
+        background: var(--card);
+        box-shadow: 6px 6px 0 var(--accent);
+        transform: translate(-4px, -4px);
+      }
+
+      .plugin-title {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        min-width: 0;
+        margin-top: 18px;
+        align-items: center;
+        gap: 9px;
+      }
+
+      .plugin-name {
+        min-width: 0;
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(22px, 2vw, 29px);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        line-height: 1.04;
+        overflow-wrap: anywhere;
+      }
+
+      .plugin-name-text {
+        display: block;
+      }
+
+      .plugin-description {
+        display: -webkit-box;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        margin: 14px 0 0;
+        overflow: hidden;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.58;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+      }
+
+      .rank {
+        grid-column: 1;
+        grid-row: 1;
+        padding-top: 5px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+      }
+
+      .stars {
+        position: relative;
+        overflow: hidden;
+        display: inline-flex;
+        grid-column: 2;
+        grid-row: 1;
+        min-height: 34px;
+        padding: 0 11px;
+        align-items: center;
+        border: 1px solid var(--accent);
+        color: white;
+        background: var(--accent);
+        font-family: var(--mono);
+        font-size: 15px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        justify-self: end;
+        white-space: nowrap;
+        transition: box-shadow 180ms ease, transform 180ms ease;
+      }
+
+      .github-link {
+        display: grid;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        flex: 0 0 24px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 50%;
+        color: var(--ink);
+        background: var(--card);
+        cursor: pointer;
+        transition: border-color 140ms ease, background 140ms ease;
+      }
+
+      .github-link:hover,
+      .github-link:focus-visible {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .github-link:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+      .github-logo {
+        display: block;
+        width: 13px;
+        height: 13px;
+        object-fit: contain;
+      }
+
+      .copy-icon {
+        display: block;
+        width: 13px;
+        height: 13px;
+        fill: none;
+        stroke: currentColor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.8;
+      }
+
+      .copy-feedback {
+        position: fixed;
+        z-index: 50;
+        right: 22px;
+        bottom: 22px;
+        max-width: min(420px, calc(100vw - 44px));
+        padding: 12px 16px;
+        color: white;
+        background: var(--ink);
+        box-shadow: 5px 5px 0 var(--accent);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .copy-feedback[hidden] {
+        display: none;
+      }
+
+      .list-head {
+        display: grid;
+        min-height: 40px;
+        padding: 0 18px;
+        grid-template-columns: 62px minmax(230px, 0.82fr) minmax(260px, 1.35fr) 132px;
+        align-items: center;
+        gap: 22px;
+        border: 1px solid var(--line);
+        border-bottom: 0;
+        background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .list-head span:last-child {
+        text-align: right;
+      }
+
+      .list-head[hidden] {
+        display: none;
+      }
+
+      .plugin-list.is-top100-list {
+        display: block;
+        border: 0;
+      }
+
+      .plugin-list.is-top100-list .plugin {
+        min-height: 86px;
+        padding: 13px 18px;
+        grid-template-columns: 62px minmax(230px, 0.82fr) minmax(260px, 1.35fr) 132px;
+        grid-template-rows: auto;
+        align-items: center;
+        gap: 22px;
+        border: 1px solid var(--line);
+        border-bottom: 0;
+        background: var(--card);
+      }
+
+      .plugin-list.is-top100-list .plugin:last-child {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .plugin-list.is-top100-list .plugin.tone-soft {
+        background: #edf4f1;
+      }
+
+      .plugin-list.is-top100-list .plugin.tone-paper {
+        background: var(--card);
+      }
+
+      .plugin-list.is-top100-list .plugin:hover,
+      .plugin-list.is-top100-list .plugin:focus-within {
+        z-index: 3;
+        border-color: var(--accent);
+        box-shadow:
+          0 10px 22px rgba(23, 33, 31, 0.16),
+          inset 0 0 0 1px var(--accent);
+        transform: translateY(-2px);
+      }
+
+      .plugin-list.is-top100-list .plugin:first-child:hover,
+      .plugin-list.is-top100-list .plugin:first-child:focus-within {
+        box-shadow:
+          0 8px 18px rgba(23, 33, 31, 0.14),
+          inset 0 0 0 1px var(--accent);
+        transform: none;
+      }
+
+      .plugin-list.is-top100-list .rank,
+      .plugin-list.is-top100-list .plugin-title,
+      .plugin-list.is-top100-list .plugin-description,
+      .plugin-list.is-top100-list .stars {
+        grid-row: 1;
+        margin: 0;
+      }
+
+      .plugin-list.is-top100-list .rank {
+        grid-column: 1;
+        padding: 0;
+        color: var(--accent);
+        font-size: 12px;
+      }
+
+      .plugin-list.is-top100-list .plugin-title {
+        grid-column: 2;
+      }
+
+      .plugin-list.is-top100-list .plugin-name {
+        font-size: clamp(20px, 1.8vw, 27px);
+      }
+
+      .plugin-list.is-top100-list .plugin-description {
+        grid-column: 3;
+        -webkit-line-clamp: 2;
+      }
+
+      .plugin-list.is-top100-list .stars {
+        grid-column: 4;
+      }
+
+      .stars::before {
+        margin-right: 7px;
+        content: "★";
+        font-size: 12px;
+      }
+
+      .stars::after {
+        position: absolute;
+        width: 18px;
+        height: 150%;
+        top: -25%;
+        left: -36px;
+        background: rgba(255, 255, 255, 0.34);
+        content: "";
+        pointer-events: none;
+        transform: rotate(18deg);
+        transition: translate 420ms ease;
+      }
+
+      .plugin:hover .stars {
+        box-shadow: 0 6px 16px rgba(29, 81, 74, 0.2);
+        transform: translateY(-2px);
+      }
+
+      .plugin:hover .stars::after {
+        translate: 190px 0;
+      }
+
+      .motion-ready .reveal-item.is-revealed {
+        animation: content-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: var(--reveal-delay, 0ms);
+      }
+
+      @keyframes content-reveal {
+        from {
+          opacity: 0;
+          translate: 0 16px;
+        }
+        to {
+          opacity: 1;
+          translate: 0 0;
+        }
+      }
+
+      @keyframes ranking-glow {
+        from {
+          opacity: 0.68;
+          transform: translate3d(0, 0, 0) scale(0.94);
+        }
+        to {
+          opacity: 1;
+          transform: translate3d(-12%, 16%, 0) scale(1.08);
+        }
+      }
+
+      .status {
+        grid-column: 1 / -1;
+        margin: 0;
+        padding: 72px 24px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 700;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .status.error {
+        color: #a40034;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      .load-more {
+        display: flex;
+        min-height: 52px;
+        margin: 30px auto 0;
+        padding: 0 24px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--ink);
+        color: var(--ink);
+        background: var(--card);
+        box-shadow: 5px 5px 0 var(--accent);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        cursor: pointer;
+      }
+
+      .load-more:hover,
+      .load-more:focus-visible {
+        color: white;
+        background: var(--ink);
+      }
+
+      .load-more:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 3px;
+      }
+
+      .load-more[hidden] {
+        display: none;
+      }
+
+      .footer {
+        display: flex;
+        min-height: 120px;
+        padding: 28px max(24px, calc((100vw - var(--content)) / 2));
+        align-items: center;
+        justify-content: space-between;
+        gap: 30px;
+        border-top: 1px solid var(--line);
+        background: var(--ink);
+        color: var(--paper);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      @media (min-width: 721px) {
+        .list-head:not([hidden]) {
+          position: sticky;
+          z-index: 8;
+          top: 62px;
+          box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
+        }
+      }
+
+      @media (max-width: 1120px) {
+        .hero-inner {
+          grid-template-columns: minmax(0, 1fr) 300px;
+          gap: 34px;
+        }
+
+        .plugin-list {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+
+      @media (max-width: 860px) {
+        .plugin-list {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .list-head,
+        .plugin-list.is-top100-list .plugin {
+          grid-template-columns: 54px minmax(190px, 0.78fr) minmax(220px, 1fr) 118px;
+          gap: 16px;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .nav,
+        .hero-inner,
+        .ranking-inner {
+          width: min(calc(100% - 28px), var(--content));
+        }
+
+        .nav-label {
+          display: none;
+        }
+
+        .hero,
+        .hero-inner {
+          min-height: auto;
+        }
+
+        .hero-inner {
+          display: block;
+          padding: 64px 0 52px;
+        }
+
+        h1 {
+          font-size: clamp(54px, 17vw, 78px);
+        }
+
+        .signal-field {
+          width: min(88vw, 360px);
+          margin: 54px auto -132px;
+          opacity: 0.82;
+          transform: translateX(28%);
+        }
+
+        .data-strip {
+          position: relative;
+          z-index: 3;
+        }
+
+        .data-strip-group {
+          min-height: 54px;
+        }
+
+        .ticker-item {
+          font-size: 11px;
+        }
+
+        .ticker-item::after {
+          width: 6px;
+          height: 6px;
+          margin: 0 20px;
+        }
+
+        .ranking-inner {
+          padding: 54px 0 72px;
+        }
+
+        .section-header {
+          display: block;
+        }
+
+        .ranking-meta {
+          min-width: 0;
+          margin-top: 20px;
+          padding-bottom: 0;
+          text-align: left;
+        }
+
+        .ranking-tools {
+          display: block;
+        }
+
+        .view-tabs {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+        }
+
+        .view-tab {
+          width: 100%;
+        }
+
+        .skill-filter {
+          width: calc(100% - 18px);
+          margin: 9px;
+        }
+
+        .plugin-list {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .list-head {
+          display: none;
+        }
+
+        .plugin-list.is-top100-list .plugin {
+          min-height: 104px;
+          padding: 14px;
+          grid-template-columns: 46px minmax(0, 1fr) auto;
+          grid-template-rows: auto auto;
+          align-items: start;
+          gap: 8px 12px;
+        }
+
+        .plugin-list.is-top100-list .rank {
+          grid-column: 1;
+          grid-row: 1 / 3;
+          padding-top: 5px;
+        }
+
+        .plugin-list.is-top100-list .plugin-title {
+          grid-column: 2;
+          grid-row: 1;
+          padding-top: 2px;
+        }
+
+        .plugin-list.is-top100-list .plugin-name {
+          font-size: 22px;
+        }
+
+        .plugin-list.is-top100-list .stars {
+          grid-column: 3;
+          grid-row: 1;
+        }
+
+        .plugin-list.is-top100-list .plugin-description {
+          grid-column: 2 / 4;
+          grid-row: 2;
+        }
+
+        .plugin {
+          min-height: 205px;
+        }
+
+        .footer {
+          display: block;
+        }
+
+        .footer span:last-child {
+          display: block;
+          margin-top: 10px;
+          color: #b7c3bf;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        .data-strip-track,
+        .ranking::before,
+        .motion-ready .reveal-item.is-revealed {
+          animation: none;
+        }
+
+        .data-strip-group[aria-hidden="true"] {
+          display: none;
+        }
+
+        .motion-ready .reveal-item {
+          opacity: 1;
+          translate: 0 0;
+        }
+
+        .hero::before,
+        .hero-copy > *,
+        .signal-field,
+        .signal-field::before,
+        .signal-field::after {
+          animation: none;
+        }
+
+        .signal-field::before {
+          transform: rotate(28deg);
+        }
+
+        .signal-field::after {
+          transform: rotate(-24deg);
+        }
+
+        .plugin,
+        .hero-link,
+        .github-link,
+        .stars,
+        .stars::after {
+          transition: none;
+        }
+
+        .plugin:hover .stars {
+          box-shadow: none;
+          transform: none;
+        }
+
+        .plugin-list.is-top100-list .plugin:hover,
+        .plugin-list.is-top100-list .plugin:focus-within {
+          box-shadow: inset 4px 0 0 var(--accent);
+          transform: none;
+        }
+
+        .stars::after {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="nav-shell">
+      <nav class="nav" aria-label="主导航">
+        <a class="wordmark" href="#top" aria-label="dsh-TrueEval 首页">
+          <span class="wordmark-mark" aria-hidden="true"></span>
+          <span>dsh-TrueEval</span>
+        </a>
+        <p class="nav-label">Verified ecosystem · ranked by GitHub stars</p>
+      </nav>
+    </div>
+
+    <main id="top">
+      <section class="hero">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow">The verified plugin index for agents</p>
+            <h1>找到真正热门的 DSH 插件。</h1>
+            <p class="hero-description">
+              持续追踪经验证的 DeepSeek Harness 插件，通过 Hot 100、新锐榜和完整总榜，
+              发现真正值得关注的开源项目。
+            </p>
+            <div class="hero-actions">
+              <a class="hero-link" href="#ranking">HOT 100</a>
+              <button class="hero-placeholder" type="button" aria-disabled="true">接入 dsh</button>
+              <button class="hero-placeholder" type="button" aria-disabled="true">docs</button>
+            </div>
+          </div>
+
+          <div class="signal-field" aria-hidden="true">
+            <span class="signal-core">100</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="data-strip" aria-label="插件生态索引">
+        <div class="data-strip-track">
+          <div class="data-strip-group">
+            <span class="ticker-item">Verified plugins</span>
+            <span class="ticker-item">Skills</span>
+            <span class="ticker-item">Agent tools</span>
+            <span class="ticker-item">Open source</span>
+            <span class="ticker-item">AI summaries</span>
+            <span class="ticker-item">GitHub ranked</span>
+          </div>
+
+          <div class="data-strip-group" aria-hidden="true">
+            <span class="ticker-item">Verified plugins</span>
+            <span class="ticker-item">Skills</span>
+            <span class="ticker-item">Agent tools</span>
+            <span class="ticker-item">Open source</span>
+            <span class="ticker-item">AI summaries</span>
+            <span class="ticker-item">GitHub ranked</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="ranking" id="ranking">
+        <div class="ranking-inner">
+          <header class="section-header">
+            <h2>True popularity.<br />Readable at a glance.</h2>
+            <div class="ranking-meta" aria-live="polite">
+              <p id="ranking-meta-title">DEEPSEEK HARNESS PLUGINS · HOT 100</p>
+              <p class="ranking-updated" id="ranking-updated">更新于：加载中</p>
+            </div>
+          </header>
+
+          <div class="ranking-tools">
+            <div class="view-tabs" role="tablist" aria-label="榜单范围">
+              <button
+                class="view-tab"
+                id="tab-top100"
+                type="button"
+                role="tab"
+                aria-controls="plugin-list"
+                aria-selected="true"
+                data-view="top100"
+              >
+                Hot 100
+              </button>
+              <button
+                class="view-tab"
+                id="tab-rising"
+                type="button"
+                role="tab"
+                aria-controls="plugin-list"
+                aria-selected="false"
+                data-view="rising"
+              >
+                新锐榜
+              </button>
+              <button
+                class="view-tab"
+                id="tab-all"
+                type="button"
+                role="tab"
+                aria-controls="plugin-list"
+                aria-selected="false"
+                data-view="all"
+              >
+                总榜 <span id="all-count"></span>
+              </button>
+            </div>
+            <button
+              class="skill-filter"
+              id="skill-filter"
+              type="button"
+              aria-pressed="false"
+            >
+              隐藏 Skill 仓库
+            </button>
+          </div>
+
+          <div class="search-panels">
+            <div class="search-panel" data-search-view="top100" role="search">
+              <div class="search-field">
+                <label class="sr-only" for="search-top100">搜索 Hot 100</label>
+                <span class="search-control">
+                  <input
+                    class="search-input"
+                    id="search-top100"
+                    type="search"
+                    autocomplete="off"
+                    maxlength="80"
+                    spellcheck="false"
+                    placeholder="搜索 Hot 100：名称、功能或中文关键词"
+                    aria-describedby="search-result-top100"
+                  />
+                  <button
+                    class="search-clear"
+                    type="button"
+                    data-clear-view="top100"
+                    hidden
+                  >
+                    清除
+                  </button>
+                </span>
+              </div>
+              <p class="sr-only search-result" id="search-result-top100">
+                等待插件数据
+              </p>
+            </div>
+
+            <div class="search-panel" data-search-view="rising" role="search" hidden>
+              <div class="search-field">
+                <label class="sr-only" for="search-rising">搜索新锐榜</label>
+                <span class="search-control">
+                  <input
+                    class="search-input"
+                    id="search-rising"
+                    type="search"
+                    autocomplete="off"
+                    maxlength="80"
+                    spellcheck="false"
+                    placeholder="搜索新锐榜：名称、功能或中文关键词"
+                    aria-describedby="search-result-rising"
+                  />
+                  <button class="search-clear" type="button" data-clear-view="rising" hidden>
+                    清除
+                  </button>
+                </span>
+              </div>
+              <p class="sr-only search-result" id="search-result-rising">
+                等待插件数据
+              </p>
+            </div>
+
+            <div class="search-panel" data-search-view="all" role="search" hidden>
+              <div class="search-field">
+                <label class="sr-only" for="search-all">搜索总榜</label>
+                <span class="search-control">
+                  <input
+                    class="search-input"
+                    id="search-all"
+                    type="search"
+                    autocomplete="off"
+                    maxlength="80"
+                    spellcheck="false"
+                    placeholder="搜索全部仓库：名称、功能或中文关键词"
+                    aria-describedby="search-result-all"
+                  />
+                  <button class="search-clear" type="button" data-clear-view="all" hidden>
+                    清除
+                  </button>
+                </span>
+              </div>
+              <p class="sr-only search-result" id="search-result-all">
+                等待插件数据
+              </p>
+            </div>
+          </div>
+
+          <div class="list-head" id="list-head" aria-hidden="true">
+            <span>排名</span>
+            <span>插件</span>
+            <span>中文简介</span>
+            <span id="metric-head">GitHub Stars</span>
+          </div>
+          <div
+            class="plugin-list"
+            id="plugin-list"
+            role="tabpanel"
+            aria-labelledby="tab-top100"
+          >
+            <p class="status">正在加载 Hot 100…</p>
+          </div>
+          <p class="sr-only" id="ranking-status" aria-live="polite"></p>
+          <button class="load-more" id="load-more" type="button" hidden>继续加载</button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span>dsh-TrueEval · DSH plugin leaderboard</span>
+      <span>Verified sources · AI Chinese summaries · GitHub stars</span>
+    </footer>
+
+    <template id="plugin-template">
+      <article class="plugin">
+        <span class="rank"></span>
+        <div class="plugin-title">
+          <h3 class="plugin-name">
+            <span class="plugin-name-text"></span>
+          </h3>
+          <a class="github-link" target="_blank" rel="noopener noreferrer">
+            <img
+              class="github-logo"
+              src="https://github.githubassets.com/favicons/favicon.svg"
+              alt=""
+              width="13"
+              height="13"
+            />
+          </a>
+          <button class="github-link copy-link" type="button">
+            <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect>
+              <path d="M3.5 10.5h-1a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"></path>
+            </svg>
+          </button>
+        </div>
+        <p class="plugin-description"></p>
+        <span class="stars" aria-label="GitHub Stars"></span>
+      </article>
+    </template>
+    <p class="copy-feedback" id="copy-feedback" role="status" aria-live="polite" hidden></p>
+
+    <script type="module">
+      const sources = [
+        "./data/rankings.json",
+      ];
+
+      const list = document.querySelector("#plugin-list");
+      const template = document.querySelector("#plugin-template");
+      const tabs = [...document.querySelectorAll(".view-tab")];
+      const allCount = document.querySelector("#all-count");
+      const loadMore = document.querySelector("#load-more");
+      const skillFilter = document.querySelector("#skill-filter");
+      const copyFeedback = document.querySelector("#copy-feedback");
+      const rankingStatus = document.querySelector("#ranking-status");
+      const listHead = document.querySelector("#list-head");
+      const metricHead = document.querySelector("#metric-head");
+      const rankingMetaTitle = document.querySelector("#ranking-meta-title");
+      const rankingUpdated = document.querySelector("#ranking-updated");
+      const sectionHeader = document.querySelector(".section-header");
+      const rankingTools = document.querySelector(".ranking-tools");
+      const searchPanels = [...document.querySelectorAll(".search-panel")];
+      const searchInputs = Object.fromEntries(
+        [...document.querySelectorAll(".search-input")].map((input) => [
+          input.closest("[data-search-view]").dataset.searchView,
+          input,
+        ])
+      );
+      const searchResults = Object.fromEntries(
+        [...document.querySelectorAll(".search-result")].map((result) => [
+          result.closest("[data-search-view]").dataset.searchView,
+          result,
+        ])
+      );
+      const searchClearButtons = [...document.querySelectorAll(".search-clear")];
+      const PAGE_SIZE = 100;
+      const searchSynonymGroups = [
+        ["图片", "图像", "视觉", "ocr", "image", "vision"],
+        ["搜索", "检索", "查找", "search", "retrieval"],
+        ["浏览器", "网页", "web", "browser"],
+        ["代码", "编程", "开发", "code", "coding"],
+        ["终端", "命令行", "shell", "cli", "terminal"],
+        ["文档", "知识库", "document", "docs", "knowledge"],
+        ["自动化", "工作流", "automation", "workflow"],
+        ["测试", "评测", "评估", "test", "eval", "evaluation"],
+        ["智能体", "代理", "agent"],
+        ["数据库", "sql", "database"],
+        ["记忆", "memory"],
+        ["安全", "security"],
+        ["监控", "观测", "monitoring", "observability"],
+      ];
+      const chineseSegmenter = "Segmenter" in Intl
+        ? new Intl.Segmenter("zh-CN", { granularity: "word" })
+        : null;
+      const searchTimers = { top100: null, rising: null, all: null };
+      const composingViews = new Set();
+      const viewState = {
+        top100: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
+        rising: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
+        all: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
+      };
+      let rankedEntries = [];
+      let risingEntries = [];
+      let hotEntries = [];
+      let generatedAt = null;
+      let hideSkills = false;
+      let copyFeedbackTimer = null;
+      const requestedView = new URLSearchParams(window.location.search).get("view");
+      let currentView = ["top100", "rising", "all"].includes(requestedView)
+        ? requestedView
+        : "top100";
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const revealObserver = !reduceMotion && "IntersectionObserver" in window
+        ? new IntersectionObserver(
+            (entries) => {
+              for (const entry of entries) {
+                if (!entry.isIntersecting) continue;
+                entry.target.classList.add("is-revealed");
+                revealObserver.unobserve(entry.target);
+              }
+            },
+            { rootMargin: "0px 0px 8%", threshold: 0.08 }
+          )
+        : null;
+
+      if (revealObserver) {
+        document.documentElement.classList.add("motion-ready");
+      }
+
+      function observeReveal(element, delay = 0) {
+        if (!revealObserver || !element) return;
+        element.classList.add("reveal-item");
+        element.style.setProperty("--reveal-delay", `${Math.min(delay, 220)}ms`);
+        revealObserver.observe(element);
+      }
+
+      observeReveal(sectionHeader);
+      observeReveal(rankingTools, 70);
+
+      function cleanChineseSummary(value) {
+        if (typeof value !== "string" || value.trim() === "") {
+          return "";
+        }
+
+        return value
+          .replace(/<[^>]*>/g, " ")
+          .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
+          .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+          .replace(/^#{1,6}\s+/gm, "")
+          .replace(/```[\s\S]*?```/g, " ")
+          .replace(/[`*_~>|]/g, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function normalizeSearchText(value) {
+        return String(value ?? "")
+          .normalize("NFKC")
+          .toLocaleLowerCase("zh-CN")
+          .replace(/[^\p{L}\p{N}]+/gu, " ")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function tokenizeSearchQuery(value) {
+        const normalized = normalizeSearchText(value);
+        if (!normalized) return [];
+        const tokens = [];
+        for (const part of normalized.split(" ")) {
+          if (!chineseSegmenter || !/\p{Script=Han}/u.test(part)) {
+            tokens.push(part);
+            continue;
+          }
+          const segments = [...chineseSegmenter.segment(part)]
+            .filter((segment) => segment.isWordLike)
+            .map((segment) => normalizeSearchText(segment.segment))
+            .filter(Boolean);
+          tokens.push(...(segments.length > 0 ? segments : [part]));
+        }
+        return [...new Set(tokens)];
+      }
+
+      function isOneEditAway(left, right) {
+        if (Math.abs(left.length - right.length) > 1) return false;
+        if (left === right) return true;
+        if (left.length === right.length) {
+          let differences = 0;
+          for (let index = 0; index < left.length; index += 1) {
+            if (left[index] !== right[index] && ++differences > 1) return false;
+          }
+          return true;
+        }
+        const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];
+        let shortIndex = 0;
+        let longIndex = 0;
+        let skipped = false;
+        while (shortIndex < shorter.length && longIndex < longer.length) {
+          if (shorter[shortIndex] === longer[longIndex]) {
+            shortIndex += 1;
+            longIndex += 1;
+            continue;
+          }
+          if (skipped) return false;
+          skipped = true;
+          longIndex += 1;
+        }
+        return true;
+      }
+
+      function searchAlternatives(token) {
+        return searchSynonymGroups.find((group) => group.includes(token)) ?? [token];
+      }
+
+      function entryMatchesToken(entry, token) {
+        for (const alternative of searchAlternatives(token)) {
+          if (entry.searchText.includes(alternative)) return true;
+          if (
+            /^[a-z0-9]+$/.test(alternative) &&
+            alternative.length >= 5 &&
+            entry.searchWords.some((word) => isOneEditAway(alternative, word))
+          ) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      function entryMatchesQuery(entry, query) {
+        const tokens = tokenizeSearchQuery(query);
+        return tokens.length === 0 || tokens.every((token) => entryMatchesToken(entry, token));
+      }
+
+      async function loadMarketData() {
+        let lastError;
+        for (const source of sources) {
+          try {
+            const response = await fetch(source, { cache: "no-cache" });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return await response.json();
+          } catch (error) {
+            lastError = error;
+          }
+        }
+        throw lastError ?? new Error("unknown data error");
+      }
+
+      function formatStars(value) {
+        return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
+      }
+
+      function formatStarRate(value) {
+        if (!Number.isFinite(value) || value <= 0) return "0";
+        if (value >= 1000) {
+          return `${new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(value / 1000)}K`;
+        }
+        return new Intl.NumberFormat("zh-CN", {
+          maximumFractionDigits: value < 10 ? 1 : 0,
+        }).format(value);
+      }
+
+      function formatUpdateTime(value) {
+        const date = new Date(value);
+        if (!Number.isFinite(date.getTime())) return "时间未知";
+        const parts = new Intl.DateTimeFormat("zh-CN", {
+          timeZone: "Asia/Shanghai",
+          year: "numeric",
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hourCycle: "h23",
+        }).formatToParts(date);
+        const part = (type) => parts.find((item) => item.type === type)?.value ?? "";
+        return `${part("year")}年${part("month")}月${part("day")}日 ${part("hour")}:${part("minute")}`;
+      }
+
+      function setView(view) {
+        currentView = ["top100", "rising", "all"].includes(view) ? view : "top100";
+        for (const tab of tabs) {
+          const selected = tab.dataset.view === currentView;
+          tab.setAttribute("aria-selected", String(selected));
+          tab.tabIndex = selected ? 0 : -1;
+        }
+        list.setAttribute("aria-labelledby", `tab-${currentView}`);
+        list.classList.toggle("is-top100-list", currentView !== "all");
+        listHead.hidden = currentView === "all";
+        metricHead.textContent = currentView === "rising"
+          ? "一周新增 Stars"
+          : "GitHub Stars";
+        const metaLabels = {
+          top100: "DEEPSEEK HARNESS PLUGINS · HOT 100",
+          rising: "DEEPSEEK HARNESS PLUGINS · 新锐榜",
+          all: "DEEPSEEK HARNESS PLUGINS · 总榜",
+        };
+        rankingMetaTitle.textContent = metaLabels[currentView];
+        rankingUpdated.textContent = `更新于：${formatUpdateTime(generatedAt)}`;
+        for (const panel of searchPanels) {
+          panel.hidden = panel.dataset.searchView !== currentView;
+        }
+        const url = new URL(window.location.href);
+        if (currentView === "top100") url.searchParams.delete("view");
+        else url.searchParams.set("view", currentView);
+        history.replaceState(null, "", `${url.pathname}${url.search}#ranking`);
+        renderRanking();
+      }
+
+      function renderRanking() {
+        const state = viewState[currentView];
+        const scoped = currentView === "top100"
+          ? hotEntries
+          : currentView === "rising"
+            ? risingEntries
+            : rankedEntries;
+        const matched = scoped.filter(
+          (entry) =>
+            (!hideSkills || entry.plugin.type !== "skill") &&
+            entryMatchesQuery(entry, state.query)
+        );
+        const shown = currentView === "all" ? matched.slice(0, state.visible) : matched;
+        const fragment = document.createDocumentFragment();
+
+        if (revealObserver) {
+          for (const element of list.querySelectorAll(".reveal-item")) {
+            revealObserver.unobserve(element);
+          }
+        }
+
+        for (const [index, entry] of shown.entries()) {
+          const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
+          const displayRank = absoluteRank;
+          const item = template.content.cloneNode(true);
+          const pluginElement = item.querySelector(".plugin");
+          const rank = item.querySelector(".rank");
+          const nameText = item.querySelector(".plugin-name-text");
+          const githubLink = item.querySelector(".github-link");
+          const copyLink = item.querySelector(".copy-link");
+          const description = item.querySelector(".plugin-description");
+          const stars = item.querySelector(".stars");
+          const starText = formatStars(plugin.stars);
+          const repositoryUrl = `https://github.com/${plugin.fullName}`;
+          const downloadUrl = `${repositoryUrl}.git`;
+
+          rank.textContent = `#${String(displayRank).padStart(3, "0")}`;
+          nameText.textContent = name;
+          githubLink.href = repositoryUrl;
+          githubLink.setAttribute("aria-label", `在 GitHub 打开 ${name}`);
+          copyLink.dataset.copyUrl = downloadUrl;
+          copyLink.setAttribute("aria-label", `复制 ${name} 的 Git 下载链接`);
+          copyLink.title = "复制 Git 下载链接";
+          description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
+          if (currentView === "rising") {
+            const rateText = formatStars(plugin.weeklyStars);
+            stars.textContent = `↑ ${rateText}`;
+            stars.setAttribute(
+              "aria-label",
+              `最近一周新增 ${rateText} Stars，当前共 ${starText} Stars`
+            );
+          } else {
+            stars.textContent = starText;
+            stars.setAttribute("aria-label", `${starText} GitHub Stars`);
+          }
+          pluginElement.classList.add(
+            Math.floor((displayRank - 1) / 5) % 2 === 0 ? "tone-soft" : "tone-paper"
+          );
+          pluginElement.dataset.revealDelay = String((index % 8) * 28);
+          fragment.appendChild(item);
+        }
+
+        if (shown.length === 0) {
+          const status = document.createElement("p");
+          status.className = "status";
+          status.textContent = `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`;
+          fragment.appendChild(status);
+        }
+
+        list.replaceChildren(fragment);
+        for (const pluginElement of list.querySelectorAll(".plugin")) {
+          observeReveal(pluginElement, Number(pluginElement.dataset.revealDelay));
+        }
+        const hasQuery = tokenizeSearchQuery(state.query).length > 0;
+        searchResults[currentView].textContent = hasQuery
+          ? `匹配 ${formatStars(matched.length)} 个 · 保留原始排名`
+          : `已显示 ${formatStars(shown.length)} / ${formatStars(matched.length)} 个`;
+        document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !hasQuery;
+        rankingStatus.textContent = hasQuery
+          ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
+          : `已显示 ${shown.length} / ${matched.length} 个插件`;
+        loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
+      }
+
+      async function copyDownloadUrl(button) {
+        const value = button.dataset.copyUrl;
+        if (!value) return;
+        try {
+          await navigator.clipboard.writeText(value);
+        } catch {
+          const input = document.createElement("textarea");
+          input.value = value;
+          input.style.position = "fixed";
+          input.style.opacity = "0";
+          document.body.appendChild(input);
+          input.select();
+          document.execCommand("copy");
+          input.remove();
+        }
+        copyFeedback.textContent = `已复制下载链接：${value}`;
+        copyFeedback.hidden = false;
+        window.clearTimeout(copyFeedbackTimer);
+        copyFeedbackTimer = window.setTimeout(() => {
+          copyFeedback.hidden = true;
+        }, 2400);
+      }
+
+      list.addEventListener("click", (event) => {
+        const button = event.target.closest(".copy-link");
+        if (button) void copyDownloadUrl(button);
+      });
+
+      skillFilter.addEventListener("click", () => {
+        hideSkills = !hideSkills;
+        skillFilter.setAttribute("aria-pressed", String(hideSkills));
+        skillFilter.textContent = hideSkills ? "显示 Skill 仓库" : "隐藏 Skill 仓库";
+        renderRanking();
+      });
+
+      function applySearchQuery(view, value) {
+        const state = viewState[view];
+        const previousQuery = normalizeSearchText(state.query);
+        const nextQuery = normalizeSearchText(value);
+        state.query = value;
+        if (previousQuery === nextQuery) return;
+        state.visible = nextQuery ? PAGE_SIZE : state.unfilteredVisible;
+        if (currentView === view) renderRanking();
+      }
+
+      function scheduleSearch(view, value, immediate = false) {
+        window.clearTimeout(searchTimers[view]);
+        if (immediate) {
+          applySearchQuery(view, value);
+          return;
+        }
+        searchTimers[view] = window.setTimeout(() => applySearchQuery(view, value), 160);
+      }
+
+      for (const [view, input] of Object.entries(searchInputs)) {
+        input.addEventListener("compositionstart", () => composingViews.add(view));
+        input.addEventListener("compositionend", () => {
+          composingViews.delete(view);
+          scheduleSearch(view, input.value, true);
+        });
+        input.addEventListener("input", () => {
+          if (!composingViews.has(view)) scheduleSearch(view, input.value);
+        });
+      }
+
+      for (const button of searchClearButtons) {
+        button.addEventListener("click", () => {
+          const view = button.dataset.clearView;
+          const input = searchInputs[view];
+          input.value = "";
+          scheduleSearch(view, "", true);
+          input.focus();
+        });
+      }
+
+      try {
+        const data = await loadMarketData();
+        const rankings = data.rankings ?? {};
+        generatedAt = data.generatedAt;
+        const makeEntries = (plugins) => plugins
+          .filter((plugin) => plugin && typeof plugin.fullName === "string")
+          .map((plugin, index) => {
+            const name = plugin.name || plugin.fullName;
+            const descriptionZh = cleanChineseSummary(
+              plugin.descriptionZh || plugin.description
+            );
+            const searchText = normalizeSearchText(
+              `${name} ${plugin.fullName} ${descriptionZh} ${(plugin.topics ?? []).join(" ")}`
+            );
+            return {
+              plugin,
+              rank: Number(plugin.rank) || index + 1,
+              name,
+              descriptionZh,
+              searchText,
+              searchWords: searchText.split(" ").filter(Boolean),
+            };
+          });
+        rankedEntries = makeEntries(Array.isArray(rankings.total) ? rankings.total : []);
+        risingEntries = makeEntries(Array.isArray(rankings.rising) ? rankings.rising : []);
+        hotEntries = makeEntries(Array.isArray(rankings.hot) ? rankings.hot : []);
+        if (rankedEntries.length === 0) throw new Error("榜单数据为空");
+
+        allCount.textContent = `(${formatStars(rankedEntries.length)})`;
+        for (const tab of tabs) {
+          tab.addEventListener("click", () => setView(tab.dataset.view));
+          tab.addEventListener("keydown", (event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+            event.preventDefault();
+            const currentIndex = tabs.indexOf(tab);
+            const offset = event.key === "ArrowRight" ? 1 : -1;
+            const next = tabs[(currentIndex + offset + tabs.length) % tabs.length];
+            next.focus();
+            setView(next.dataset.view);
+          });
+        }
+        loadMore.addEventListener("click", () => {
+          const state = viewState.all;
+          state.visible += PAGE_SIZE;
+          if (!normalizeSearchText(state.query)) state.unfilteredVisible = state.visible;
+          renderRanking();
+        });
+        setView(currentView);
+      } catch (error) {
+        const status = document.createElement("p");
+        status.className = "status error";
+        status.textContent = "暂时无法读取插件数据，请稍后重试。";
+        list.replaceChildren(status);
+        for (const result of Object.values(searchResults)) {
+          result.textContent = "数据加载失败";
+        }
+        console.error(error);
+      }
+    </script>
+  </body>
+</html>

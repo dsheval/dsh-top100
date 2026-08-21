@@ -1,0 +1,23 @@
+# Secrets and local overrides
+.env
+.env.*
+!.env.example
+
+# Dependencies and build output
+node_modules/
+coverage/
+*.tsbuildinfo
+*.log
+
+# Generated collector output and runtime state
+runtime/
+backups/
+data/cache/
+data/report.json
+data/issue-replies.json
+data/tag-alias.json
+
+# Editor and operating-system files
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,16 @@
+{
+  "limits": {
+    "rising": 100,
+    "hot": 100
+  },
+  "hotWeights": {
+    "dailyGrowth": 35,
+    "weeklyGrowth": 25,
+    "growthRate": 15,
+    "activity": 10,
+    "quality": 10,
+    "popularity": 5
+  },
+  "activityHalfLifeDays": 60,
+  "growthRateAtFullScore": 0.3
+}

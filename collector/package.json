@@ -1,0 +1,23 @@
+{
+  "name": "@dsh-top100/collector",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "collect": "node --use-env-proxy --import tsx src/index.ts",
+    "db:sync": "node --import tsx src/sync-database.ts",
+    "scheduler": "node --import tsx src/scheduler.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@dsh-top100/schema": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "license": "MIT"
+}

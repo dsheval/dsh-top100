@@ -1,0 +1,62 @@
+name: dsh-top100
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    volumes:
+      - ./runtime/public-data:/usr/share/nginx/html/data:ro
+    logging: *default-logging
+    restart: unless-stopped
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/collector.Dockerfile
+    init: true
+    env_file:
+      - .env
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
+      COLLECT_HOUR: "${COLLECT_HOUR:-6}"
+      FULL_DISCOVERY_WEEKDAY: "${FULL_DISCOVERY_WEEKDAY:-0}"
+      RUN_COLLECT_ON_STARTUP: "${RUN_COLLECT_ON_STARTUP:-false}"
+      DSH_DISCOVERY_MODE: "${DSH_DISCOVERY_MODE:-incremental}"
+      DATABASE_PATH: /app/runtime/dsh-top100.sqlite
+      SOURCE_DATA_PATH: /app/data/plugins.json
+      PUBLIC_DATA_DIR: /app/runtime/public-data
+    volumes:
+      - ./runtime:/app/runtime
+      - ./runtime/collector-data:/app/data
+    logging: *default-logging
+    stop_grace_period: 30s
+    restart: unless-stopped
+
+  collector:
+    profiles: ["manual"]
+    build:
+      context: .
+      dockerfile: docker/collector.Dockerfile
+    init: true
+    env_file:
+      - .env
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
+      DSH_DISCOVERY_MODE: "${DSH_DISCOVERY_MODE:-incremental}"
+      DATABASE_PATH: /app/runtime/dsh-top100.sqlite
+      SOURCE_DATA_PATH: /app/data/plugins.json
+      PUBLIC_DATA_DIR: /app/runtime/public-data
+    volumes:
+      - ./runtime:/app/runtime
+      - ./runtime/collector-data:/app/data
+    logging: *default-logging
+    command: ["npm", "run", "update:once"]

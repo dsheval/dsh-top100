@@ -1,0 +1,13 @@
+.git
+.env
+node_modules
+runtime
+coverage
+backups
+data
+docs
+scripts
+collector/test
+.DS_Store
+**/.DS_Store
+*.log

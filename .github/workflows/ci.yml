@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and test
+        run: npm run check
+
+      - name: Validate runtime publication
+        run: |
+          cp .env.example .env
+          npm run runtime:prepare
+          npm run db:sync
+
+      - name: Validate Docker configuration
+        run: docker compose config --quiet
+
+      - name: Build production images
+        run: docker compose build web scheduler
