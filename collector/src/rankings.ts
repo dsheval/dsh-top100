@@ -136,7 +136,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
   };
 }
 
-/** Build the complete total ranking, weekly rising 100, and public Top 100. */
+/** Build the complete total ranking, daily rising 100, and public Top 100. */
 export function buildRankings(
   database: DatabaseSync,
   snapshotDate: string,
@@ -185,7 +185,7 @@ export function buildRankings(
   const rising = [...scored]
     .sort(
       (left, right) =>
-        right.weeklyStars - left.weeklyStars ||
+        right.dailyStars - left.dailyStars ||
         right.repository.stars - left.repository.stars ||
         left.repository.fullName.localeCompare(right.repository.fullName)
     )
@@ -208,7 +208,7 @@ export function buildRankings(
     snapshotDate,
     definitions: {
       total: "当前 GitHub Stars 总数降序",
-      rising: "当前 Stars 减去七日前最近一个历史快照的 Stars",
+      rising: "当前 Stars 减去上一份历史快照的 Stars",
       hot: "日增、周增、增长率、活跃度、数据质量与总热度的加权分",
     },
     rankings: { total, rising, hot },

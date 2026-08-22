@@ -55,20 +55,38 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
-  it("persists snapshots and publishes weekly growth independently of total stars", () => {
+  it("ranks rising repositories by daily growth instead of weekly growth or total stars", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-db-"));
     temporaryDirectories.push(directory);
     const database = openDatabase({ path: join(directory, "market.sqlite") });
     try {
-      importMarketData(database, market([plugin("a/growing", 90), plugin("b/large", 1000)]), {
-        snapshotDate: "2026-08-14",
-      });
-      importMarketData(database, market([plugin("a/growing", 100), plugin("b/large", 1000)]), {
-        snapshotDate: "2026-08-20",
-      });
-      importMarketData(database, market([plugin("a/growing", 107), plugin("b/large", 1000)]), {
-        snapshotDate: "2026-08-21",
-      });
+      importMarketData(
+        database,
+        market([
+          plugin("a/growing", 90),
+          plugin("b/large", 1000),
+          plugin("c/slowing", 10),
+        ]),
+        { snapshotDate: "2026-08-14" }
+      );
+      importMarketData(
+        database,
+        market([
+          plugin("a/growing", 100),
+          plugin("b/large", 1000),
+          plugin("c/slowing", 60),
+        ]),
+        { snapshotDate: "2026-08-20" }
+      );
+      importMarketData(
+        database,
+        market([
+          plugin("a/growing", 107),
+          plugin("b/large", 1000),
+          plugin("c/slowing", 60),
+        ]),
+        { snapshotDate: "2026-08-21" }
+      );
 
       const rankings = buildRankings(
         database,
@@ -76,9 +94,13 @@ describe("SQLite history and rankings", () => {
         resolve("../config/ranking.json")
       );
       expect(rankings.rankings.total[0]?.fullName).toBe("b/large");
-      expect(rankings.rankings.total).toHaveLength(2);
+      expect(rankings.rankings.total).toHaveLength(3);
       expect(rankings.rankings.rising[0]?.fullName).toBe("a/growing");
+      expect(rankings.rankings.rising[0]?.dailyStars).toBe(7);
       expect(rankings.rankings.rising[0]?.weeklyStars).toBe(17);
+      expect(
+        rankings.rankings.rising.findIndex((entry) => entry.fullName === "c/slowing")
+      ).toBeGreaterThan(0);
       expect(rankings.rankings.hot[0]?.hotScore).toBeGreaterThan(0);
     } finally {
       database.close();

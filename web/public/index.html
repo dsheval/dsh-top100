@@ -28,6 +28,7 @@
         --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
           "PingFang SC", "Microsoft YaHei", sans-serif;
         --serif: Iowan Old Style, Baskerville, "Times New Roman", "Songti SC", serif;
+        --docs-serif: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
         --mono: "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
       }
 
@@ -112,7 +113,7 @@
       .nav-label {
         margin: 0;
         font-family: var(--mono);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.08em;
         text-transform: uppercase;
@@ -182,7 +183,7 @@
       .eyebrow {
         margin: 0 0 20px;
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
         letter-spacing: 0.1em;
         color: var(--hero-accent);
@@ -193,7 +194,7 @@
         max-width: 800px;
         margin: 0;
         font-family: var(--serif);
-        font-size: clamp(58px, 7.2vw, 102px);
+        font-size: clamp(54px, 6.4vw, 92px);
         font-weight: 500;
         letter-spacing: -0.055em;
         line-height: 0.92;
@@ -203,7 +204,7 @@
         max-width: 560px;
         margin: 28px 0 0;
         color: var(--hero-muted);
-        font-size: clamp(16px, 1.7vw, 20px);
+        font-size: clamp(17px, 1.55vw, 21px);
         line-height: 1.5;
       }
 
@@ -224,11 +225,11 @@
         justify-content: center;
         border: 1px solid var(--hero-accent);
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
-        transition: color 140ms ease, background 140ms ease;
+        transition: color 140ms ease, background 140ms ease, transform 100ms ease;
       }
 
       .hero-link {
@@ -240,13 +241,47 @@
       .hero-placeholder {
         color: var(--hero-accent);
         background: transparent;
-        cursor: default;
+        cursor: pointer;
+        text-decoration: none;
       }
 
       .hero-link:hover,
       .hero-link:focus-visible {
         color: var(--hero-accent);
         background: transparent;
+      }
+
+      .hero-placeholder:hover,
+      .hero-placeholder:focus-visible {
+        color: var(--ink);
+        background: var(--hero-accent);
+      }
+
+      .hero-content-switch.is-active,
+      .hero-content-switch.is-active:hover,
+      .hero-content-switch.is-active:focus-visible {
+        color: var(--ink);
+        background: var(--hero-accent);
+      }
+
+      .hero-placeholder:focus-visible {
+        outline: 2px solid var(--hero-ink);
+        outline-offset: 3px;
+      }
+
+      .hero-placeholder:active {
+        transform: translateY(2px);
+      }
+
+      .hero-github {
+        gap: 8px;
+      }
+
+      .hero-github svg {
+        width: 16px;
+        height: 16px;
+        flex: 0 0 auto;
+        fill: currentColor;
       }
 
       .signal-field {
@@ -388,7 +423,7 @@
         align-items: center;
         color: #55534e;
         font-family: var(--mono);
-        font-size: clamp(12px, 1.15vw, 15px);
+        font-size: clamp(13px, 1.2vw, 16px);
         font-weight: 800;
         letter-spacing: 0.055em;
         text-transform: uppercase;
@@ -421,20 +456,39 @@
       .ranking::before {
         position: absolute;
         z-index: -1;
-        width: min(56vw, 760px);
+        width: min(52vw, 720px);
         aspect-ratio: 1;
-        top: 8%;
-        right: -18%;
+        top: 150px;
+        right: 12%;
         border-radius: 50%;
-        background: radial-gradient(
-          circle,
-          rgba(47, 111, 104, 0.14) 0,
-          rgba(47, 111, 104, 0.05) 42%,
-          transparent 70%
-        );
+        background:
+          radial-gradient(circle at 80% 24%, rgba(47, 111, 104, 0.5) 0 4px, transparent 5px),
+          radial-gradient(circle at 88% 68%, rgba(241, 199, 91, 0.68) 0 4px, transparent 5px),
+          radial-gradient(circle at 50% 50%, transparent 0 30%, rgba(47, 111, 104, 0.13) 30.2% 30.6%, transparent 31%),
+          radial-gradient(circle at 50% 50%, transparent 0 49%, rgba(47, 111, 104, 0.11) 49.2% 49.6%, transparent 50%),
+          radial-gradient(circle, rgba(47, 111, 104, 0.12) 0, rgba(47, 111, 104, 0.04) 48%, transparent 70%);
         content: "";
         pointer-events: none;
-        animation: ranking-glow 14s ease-in-out infinite alternate;
+        animation: ranking-glow 16s ease-in-out infinite alternate;
+      }
+
+      .ranking::after {
+        position: absolute;
+        z-index: -1;
+        width: min(48vw, 660px);
+        aspect-ratio: 1;
+        top: 240px;
+        left: 24%;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle at 18% 22%, rgba(241, 199, 91, 0.72) 0 4px, transparent 5px),
+          radial-gradient(circle at 12% 66%, rgba(47, 111, 104, 0.48) 0 5px, transparent 6px),
+          radial-gradient(circle at 50% 50%, transparent 0 34%, rgba(47, 111, 104, 0.16) 34.2% 34.6%, transparent 35%),
+          radial-gradient(circle at 50% 50%, transparent 0 54%, rgba(47, 111, 104, 0.13) 54.2% 54.6%, transparent 55%);
+        content: "";
+        opacity: 0.75;
+        pointer-events: none;
+        animation: ranking-orbit-drift 18s ease-in-out infinite alternate;
       }
 
       .ranking-inner {
@@ -457,7 +511,7 @@
         max-width: 850px;
         margin: 0;
         font-family: var(--serif);
-        font-size: clamp(46px, 6.5vw, 88px);
+        font-size: clamp(42px, 5.7vw, 78px);
         font-weight: 500;
         letter-spacing: -0.055em;
         line-height: 0.94;
@@ -468,7 +522,7 @@
         padding-bottom: 5px;
         color: var(--ink);
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.07em;
         line-height: 1.7;
@@ -508,7 +562,7 @@
         color: var(--ink);
         background: transparent;
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.04em;
         cursor: pointer;
@@ -544,7 +598,7 @@
         color: var(--ink);
         background: var(--card);
         font-family: var(--mono);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 800;
         cursor: pointer;
       }
@@ -624,7 +678,7 @@
         color: var(--ink);
         background: color-mix(in srgb, var(--card) 90%, transparent);
         font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 500;
         letter-spacing: 0.01em;
         line-height: 1.4;
@@ -654,7 +708,7 @@
         color: var(--muted);
         background: transparent;
         font-family: var(--mono);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 800;
         cursor: pointer;
         text-transform: uppercase;
@@ -741,7 +795,7 @@
         margin: 14px 0 0;
         overflow: hidden;
         color: var(--muted);
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1.58;
         -webkit-box-orient: vertical;
         -webkit-line-clamp: 3;
@@ -753,7 +807,7 @@
         padding-top: 5px;
         color: var(--muted);
         font-family: var(--mono);
-        font-size: 11px;
+        font-size: 12px;
         font-variant-numeric: tabular-nums;
         font-weight: 800;
         letter-spacing: 0.06em;
@@ -836,7 +890,7 @@
         background: var(--ink);
         box-shadow: 5px 5px 0 var(--accent);
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
       }
 
@@ -855,7 +909,7 @@
         border-bottom: 0;
         background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
         font-family: var(--mono);
-        font-size: 10px;
+        font-size: 11px;
         font-weight: 800;
         letter-spacing: 0.06em;
         text-transform: uppercase;
@@ -879,6 +933,7 @@
         padding: 13px 18px;
         grid-template-columns: 62px minmax(230px, 0.82fr) minmax(260px, 1.35fr) 132px;
         grid-template-rows: auto;
+        align-content: center;
         align-items: center;
         gap: 22px;
         border: 1px solid var(--line);
@@ -928,7 +983,7 @@
         grid-column: 1;
         padding: 0;
         color: var(--accent);
-        font-size: 12px;
+        font-size: 13px;
       }
 
       .plugin-list.is-top100-list .plugin-title {
@@ -946,6 +1001,7 @@
 
       .plugin-list.is-top100-list .stars {
         grid-column: 4;
+        align-self: center;
       }
 
       .stars::before {
@@ -976,15 +1032,20 @@
         translate: 190px 0;
       }
 
+      .motion-ready .reveal-item {
+        opacity: 0;
+        translate: 0 12px;
+      }
+
       .motion-ready .reveal-item.is-revealed {
-        animation: content-reveal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation: content-reveal 440ms cubic-bezier(0.22, 1, 0.36, 1) both;
         animation-delay: var(--reveal-delay, 0ms);
       }
 
       @keyframes content-reveal {
         from {
           opacity: 0;
-          translate: 0 16px;
+          translate: 0 12px;
         }
         to {
           opacity: 1;
@@ -994,12 +1055,23 @@
 
       @keyframes ranking-glow {
         from {
-          opacity: 0.68;
-          transform: translate3d(0, 0, 0) scale(0.94);
+          opacity: 0.58;
+          transform: translate3d(6%, -3%, 0) rotate(6deg) scale(0.95);
         }
         to {
-          opacity: 1;
-          transform: translate3d(-12%, 16%, 0) scale(1.08);
+          opacity: 0.88;
+          transform: translate3d(-8%, 10%, 0) rotate(-10deg) scale(1.05);
+        }
+      }
+
+      @keyframes ranking-orbit-drift {
+        from {
+          opacity: 0.58;
+          transform: translate3d(-6%, -4%, 0) rotate(-8deg) scale(0.94);
+        }
+        to {
+          opacity: 0.86;
+          transform: translate3d(12%, 8%, 0) rotate(12deg) scale(1.06);
         }
       }
 
@@ -1011,7 +1083,7 @@
         border-bottom: 1px solid var(--line);
         background: var(--card);
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
         text-align: center;
         text-transform: uppercase;
@@ -1044,7 +1116,7 @@
         background: var(--card);
         box-shadow: 5px 5px 0 var(--accent);
         font-family: var(--mono);
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0.04em;
         cursor: pointer;
@@ -1065,6 +1137,378 @@
         display: none;
       }
 
+      .content-view[hidden] {
+        display: none;
+      }
+
+      .inline-docs {
+        position: relative;
+        z-index: 2;
+      }
+
+      .inline-docs-header {
+        margin-bottom: 32px;
+        padding-bottom: 32px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .inline-docs-title {
+        max-width: 850px;
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(42px, 5.7vw, 78px);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 0.94;
+      }
+
+      .inline-docs-title-zh {
+        margin: 24px 0 0;
+        font-family: var(--docs-serif);
+        font-size: clamp(28px, 3vw, 42px);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        line-height: 1;
+      }
+
+      .inline-docs-intro {
+        max-width: 720px;
+        margin: 22px 0 0;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      .docs-return {
+        display: inline-flex;
+        min-height: 44px;
+        padding: 0 16px;
+        flex: 0 0 auto;
+        align-items: center;
+        border: 1px solid var(--ink);
+        color: white;
+        background: var(--ink);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 850;
+        letter-spacing: 0.05em;
+        text-decoration: none;
+        text-transform: uppercase;
+      }
+
+      .docs-return:hover,
+      .docs-return:focus-visible {
+        color: var(--ink);
+        background: var(--hero-accent);
+      }
+
+      .inline-docs .docs-layout {
+        display: block;
+        padding: 0 0 32px;
+      }
+
+      .inline-docs .toc {
+        position: sticky;
+        z-index: 9;
+        top: 62px;
+        display: grid;
+        margin: 0 0 68px;
+        padding: 0;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--paper) 95%, transparent);
+        backdrop-filter: blur(12px);
+      }
+
+      .inline-docs .toc-title {
+        display: none;
+      }
+
+      .inline-docs .toc a {
+        display: flex;
+        min-height: 74px;
+        padding: 16px 18px;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid var(--line);
+        color: var(--ink);
+        font-family: var(--docs-serif);
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .inline-docs .toc a:last-child {
+        border-right: 0;
+      }
+
+      .inline-docs .toc a::before {
+        margin-right: 9px;
+        color: var(--accent);
+        content: attr(data-section);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .inline-docs .toc a:hover,
+      .inline-docs .toc a:focus-visible {
+        color: var(--ink);
+        background: var(--hero-accent);
+      }
+
+      .inline-docs .docs-content {
+        min-width: 0;
+      }
+
+      .inline-docs .doc-section {
+        padding: 0 0 72px;
+        scroll-margin-top: 90px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .inline-docs .doc-section + .doc-section {
+        padding-top: 72px;
+      }
+
+      .inline-docs .section-kicker {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-family: var(--docs-serif);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      .inline-docs .doc-section h2 {
+        margin: 0 0 26px;
+        font-family: var(--docs-serif);
+        font-size: clamp(38px, 4vw, 58px);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+
+      .inline-docs .doc-section h3 {
+        margin: 34px 0 12px;
+        font-family: var(--docs-serif);
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+
+      .inline-docs .doc-section p {
+        margin: 0 0 18px;
+      }
+
+      .inline-docs code {
+        padding: 2px 5px;
+        background: var(--accent-soft);
+        font-family: var(--mono);
+        font-size: 0.9em;
+      }
+
+      .inline-docs .lead {
+        max-width: 820px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .inline-docs .callout {
+        margin: 28px 0;
+        padding: 22px 24px;
+        border-left: 5px solid var(--hero-accent);
+        color: var(--hero-ink);
+        background: var(--hero);
+      }
+
+      .inline-docs .callout strong {
+        color: var(--hero-accent);
+      }
+
+      .inline-docs .card-grid {
+        display: grid;
+        margin-top: 30px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .inline-docs .doc-card {
+        min-height: 210px;
+        padding: 24px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .inline-docs .card-label {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .inline-docs .doc-card h3 {
+        margin: 18px 0 10px;
+        font-family: var(--docs-serif);
+        font-size: 28px;
+        font-weight: 500;
+      }
+
+      .inline-docs .doc-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .inline-docs .pipeline {
+        display: grid;
+        margin: 30px 0;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .inline-docs .pipeline span {
+        position: relative;
+        display: grid;
+        min-height: 112px;
+        padding: 16px;
+        place-items: center;
+        border-right: 1px solid var(--line);
+        font-family: var(--docs-serif);
+        font-size: clamp(17px, 1.35vw, 21px);
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .inline-docs .pipeline span:last-child {
+        border-right: 0;
+      }
+
+      .inline-docs .pipeline span:not(:last-child)::after {
+        position: absolute;
+        z-index: 2;
+        right: -8px;
+        color: var(--accent);
+        background: var(--card);
+        content: "→";
+      }
+
+      .inline-docs .rule-list,
+      .inline-docs .roadmap-list {
+        display: grid;
+        padding: 0;
+        gap: 12px;
+        list-style: none;
+        counter-reset: rules;
+      }
+
+      .inline-docs .rule-list li,
+      .inline-docs .roadmap-list li {
+        position: relative;
+        padding: 16px 18px 16px 56px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .inline-docs .rule-list li {
+        counter-increment: rules;
+      }
+
+      .inline-docs .rule-list li::before,
+      .inline-docs .roadmap-list li::before {
+        position: absolute;
+        width: 28px;
+        height: 28px;
+        top: 15px;
+        left: 16px;
+        display: grid;
+        place-items: center;
+        color: white;
+        background: var(--accent);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .inline-docs .rule-list li::before {
+        content: counter(rules, decimal-leading-zero);
+      }
+
+      .inline-docs .roadmap-list li::before {
+        content: "→";
+      }
+
+      .inline-docs .table-wrap {
+        max-width: 100%;
+        margin: 26px 0;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+      }
+
+      .inline-docs table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        font-size: 15px;
+      }
+
+      .inline-docs th,
+      .inline-docs td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      .inline-docs th {
+        background: var(--accent-soft);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .inline-docs tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .inline-docs .weight {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .inline-docs .formula {
+        margin: 26px 0;
+        padding: 18px 20px;
+        overflow-x: auto;
+        color: var(--hero-ink);
+        background: var(--hero);
+        font-family: var(--mono);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .docs-loading {
+        margin: 0;
+        padding: 80px 24px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 800;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
       .footer {
         display: flex;
         min-height: 120px;
@@ -1076,7 +1520,7 @@
         background: var(--ink);
         color: var(--paper);
         font-family: var(--mono);
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
         letter-spacing: 0.05em;
         text-transform: uppercase;
@@ -1088,6 +1532,50 @@
           z-index: 8;
           top: 62px;
           box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
+        }
+      }
+
+      @media (max-width: 960px) {
+        .inline-docs .toc {
+          position: static;
+          display: flex;
+          overflow-x: auto;
+          border-right: 1px solid var(--line);
+        }
+
+        .inline-docs .toc a {
+          flex: 0 0 190px;
+          white-space: nowrap;
+        }
+
+        .inline-docs .toc a:last-child {
+          border-right: 0;
+        }
+
+        .inline-docs .card-grid,
+        .inline-docs .pipeline {
+          grid-template-columns: 1fr;
+        }
+
+        .inline-docs .doc-card {
+          min-height: auto;
+        }
+
+        .inline-docs .pipeline span {
+          min-height: 64px;
+          font-size: 18px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .inline-docs .pipeline span:last-child {
+          border-bottom: 0;
+        }
+
+        .inline-docs .pipeline span:not(:last-child)::after {
+          right: 50%;
+          bottom: -13px;
+          transform: rotate(90deg);
         }
       }
 
@@ -1136,7 +1624,7 @@
         }
 
         h1 {
-          font-size: clamp(54px, 17vw, 78px);
+          font-size: clamp(48px, 15vw, 70px);
         }
 
         .signal-field {
@@ -1156,7 +1644,7 @@
         }
 
         .ticker-item {
-          font-size: 11px;
+          font-size: 12px;
         }
 
         .ticker-item::after {
@@ -1234,6 +1722,7 @@
         .plugin-list.is-top100-list .stars {
           grid-column: 3;
           grid-row: 1;
+          align-self: center;
         }
 
         .plugin-list.is-top100-list .plugin-description {
@@ -1243,6 +1732,21 @@
 
         .plugin {
           min-height: 205px;
+        }
+
+        .inline-docs-header {
+          margin-bottom: 28px;
+        }
+
+        .inline-docs .doc-section,
+        .inline-docs .doc-section + .doc-section {
+          padding-top: 0;
+          padding-bottom: 54px;
+          margin-bottom: 54px;
+        }
+
+        .inline-docs .doc-section h2 {
+          font-size: 42px;
         }
 
         .footer {
@@ -1263,6 +1767,7 @@
 
         .data-strip-track,
         .ranking::before,
+        .ranking::after,
         .motion-ready .reveal-item.is-revealed {
           animation: none;
         }
@@ -1294,6 +1799,7 @@
 
         .plugin,
         .hero-link,
+        .hero-placeholder,
         .github-link,
         .stars,
         .stars::after {
@@ -1339,9 +1845,31 @@
               发现真正值得关注的开源项目。
             </p>
             <div class="hero-actions">
-              <a class="hero-link" href="#ranking">TOP 100</a>
-              <button class="hero-placeholder" type="button" aria-disabled="true">接入 dsh</button>
-              <button class="hero-placeholder" type="button" aria-disabled="true">docs</button>
+              <a
+                class="hero-placeholder hero-content-switch"
+                href="#ranking"
+                data-content-switch="ranking"
+              >TOP 100</a>
+              <button class="hero-placeholder" type="button" data-feedback="接入 dsh 功能即将开放">
+                接入 dsh
+              </button>
+              <a
+                class="hero-placeholder hero-content-switch"
+                href="?page=docs#docs"
+                data-content-switch="docs"
+              >docs</a>
+              <a
+                class="hero-placeholder hero-github"
+                href="https://github.com/dsheval/dsh-top100"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="在 GitHub 查看 dsh-Top100 仓库"
+              >
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z" />
+                </svg>
+                <span>GitHub</span>
+              </a>
             </div>
           </div>
 
@@ -1375,6 +1903,7 @@
 
       <section class="ranking" id="ranking">
         <div class="ranking-inner">
+          <div class="content-view" id="leaderboard-view">
           <header class="section-header">
             <h2>True popularity.<br />Readable at a glance.</h2>
             <div class="ranking-meta" aria-live="polite">
@@ -1524,6 +2053,17 @@
           </div>
           <p class="sr-only" id="ranking-status" aria-live="polite"></p>
           <button class="load-more" id="load-more" type="button" hidden>继续加载</button>
+          </div>
+
+          <section class="content-view inline-docs" id="docs-view" aria-labelledby="inline-docs-title" hidden>
+            <header class="inline-docs-header">
+              <h2 class="inline-docs-title" id="inline-docs-title">How the ranking works.</h2>
+              <p class="inline-docs-title-zh">榜单如何工作。</p>
+            </header>
+            <div id="inline-docs-host">
+              <p class="docs-loading">正在加载文档…</p>
+            </div>
+          </section>
         </div>
       </section>
     </main>
@@ -1573,6 +2113,9 @@
       const allCount = document.querySelector("#all-count");
       const loadMore = document.querySelector("#load-more");
       const skillFilter = document.querySelector("#skill-filter");
+      const heroActionButtons = [
+        ...document.querySelectorAll(".hero-placeholder[data-feedback]"),
+      ];
       const copyFeedback = document.querySelector("#copy-feedback");
       const rankingStatus = document.querySelector("#ranking-status");
       const listHead = document.querySelector("#list-head");
@@ -1581,6 +2124,13 @@
       const rankingUpdated = document.querySelector("#ranking-updated");
       const sectionHeader = document.querySelector(".section-header");
       const rankingTools = document.querySelector(".ranking-tools");
+      const leaderboardView = document.querySelector("#leaderboard-view");
+      const docsView = document.querySelector("#docs-view");
+      const inlineDocsHost = document.querySelector("#inline-docs-host");
+      const contentSwitches = [...document.querySelectorAll("[data-content-switch]")];
+      const heroContentSwitches = [
+        ...document.querySelectorAll(".hero-content-switch[data-content-switch]"),
+      ];
       const searchPanels = [...document.querySelectorAll(".search-panel")];
       const searchInputs = Object.fromEntries(
         [...document.querySelectorAll(".search-input")].map((input) => [
@@ -1627,16 +2177,33 @@
       let generatedAt = null;
       let hideSkills = false;
       let copyFeedbackTimer = null;
-      const requestedView = new URLSearchParams(window.location.search).get("view");
+      const initialParams = new URLSearchParams(window.location.search);
+      const requestedView = initialParams.get("view");
       let currentView = ["top100", "rising", "all"].includes(requestedView)
         ? requestedView
         : "top100";
+      let currentContentView = initialParams.get("page") === "docs" ? "docs" : "ranking";
+      let docsLoadPromise = null;
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealObserver = !reduceMotion && "IntersectionObserver" in window
         ? new IntersectionObserver(
             (entries) => {
-              for (const entry of entries) {
-                if (!entry.isIntersecting) continue;
+              const visibleEntries = entries.filter((entry) => entry.isIntersecting);
+              const visiblePlugins = visibleEntries
+                .filter((entry) => entry.target.classList.contains("plugin"))
+                .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top);
+
+              for (const [index, entry] of visiblePlugins.entries()) {
+                entry.target.style.setProperty(
+                  "--reveal-delay",
+                  `${index * 28}ms`
+                );
+                entry.target.classList.add("is-revealed");
+                revealObserver.unobserve(entry.target);
+              }
+
+              for (const entry of visibleEntries) {
+                if (entry.target.classList.contains("plugin")) continue;
                 entry.target.classList.add("is-revealed");
                 revealObserver.unobserve(entry.target);
               }
@@ -1648,6 +2215,93 @@
       if (revealObserver) {
         document.documentElement.classList.add("motion-ready");
       }
+
+      function loadInlineDocs() {
+        if (docsLoadPromise) return docsLoadPromise;
+        docsLoadPromise = fetch("./docs.html", { cache: "no-cache" })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.text();
+          })
+          .then((html) => {
+            const sourceDocument = new DOMParser().parseFromString(html, "text/html");
+            const sourceLayout = sourceDocument.querySelector(".docs-layout");
+            if (!sourceLayout) throw new Error("文档内容缺失");
+
+            const idMap = new Map();
+            for (const element of sourceLayout.querySelectorAll("[id]")) {
+              const oldId = element.id;
+              const newId = `docs-${oldId}`;
+              idMap.set(oldId, newId);
+              element.id = newId;
+            }
+            for (const link of sourceLayout.querySelectorAll('a[href^="#"]')) {
+              const oldId = link.getAttribute("href").slice(1);
+              if (idMap.has(oldId)) link.href = `#${idMap.get(oldId)}`;
+            }
+
+            inlineDocsHost.replaceChildren(document.importNode(sourceLayout, true));
+          })
+          .catch((error) => {
+            const message = document.createElement("p");
+            message.className = "docs-loading";
+            message.textContent = "文档暂时无法加载，请稍后重试。";
+            inlineDocsHost.replaceChildren(message);
+            docsLoadPromise = null;
+            console.error(error);
+          });
+        return docsLoadPromise;
+      }
+
+      function setContentView(view, { historyMode = "replace", scroll = false } = {}) {
+        currentContentView = view === "docs" ? "docs" : "ranking";
+        const showingDocs = currentContentView === "docs";
+        leaderboardView.hidden = showingDocs;
+        docsView.hidden = !showingDocs;
+        for (const control of heroContentSwitches) {
+          const isActive = control.dataset.contentSwitch === currentContentView;
+          control.classList.toggle("is-active", isActive);
+          if (isActive) control.setAttribute("aria-current", "page");
+          else control.removeAttribute("aria-current");
+        }
+        if (showingDocs) void loadInlineDocs();
+
+        if (historyMode !== "none") {
+          const url = new URL(window.location.href);
+          if (showingDocs) url.searchParams.set("page", "docs");
+          else url.searchParams.delete("page");
+          url.hash = showingDocs ? "docs" : "ranking";
+          history[historyMode === "push" ? "pushState" : "replaceState"](
+            null,
+            "",
+            `${url.pathname}${url.search}${url.hash}`
+          );
+        }
+
+        if (scroll) {
+          document.querySelector("#ranking").scrollIntoView({
+            behavior: reduceMotion ? "auto" : "smooth",
+            block: "start",
+          });
+        }
+      }
+
+      for (const control of contentSwitches) {
+        control.addEventListener("click", (event) => {
+          event.preventDefault();
+          setContentView(control.dataset.contentSwitch, {
+            historyMode: "push",
+            scroll: true,
+          });
+        });
+      }
+
+      window.addEventListener("popstate", () => {
+        const page = new URLSearchParams(window.location.search).get("page");
+        setContentView(page === "docs" ? "docs" : "ranking", { historyMode: "none" });
+      });
+
+      setContentView(currentContentView, { historyMode: "none" });
 
       function observeReveal(element, delay = 0) {
         if (!revealObserver || !element) return;
@@ -1807,7 +2461,7 @@
         list.classList.toggle("is-top100-list", currentView !== "all");
         listHead.hidden = currentView === "all";
         metricHead.textContent = currentView === "rising"
-          ? "一周新增 Stars"
+          ? "今日新增 Stars"
           : "GitHub Stars";
         const metaLabels = {
           top100: "DEEPSEEK HARNESS PLUGINS · TOP 100",
@@ -1822,7 +2476,10 @@
         const url = new URL(window.location.href);
         if (currentView === "top100") url.searchParams.delete("view");
         else url.searchParams.set("view", currentView);
-        history.replaceState(null, "", `${url.pathname}${url.search}#ranking`);
+        const contentHash = currentContentView === "docs"
+          ? (window.location.hash.startsWith("#docs-") ? window.location.hash : "#docs")
+          : "#ranking";
+        history.replaceState(null, "", `${url.pathname}${url.search}${contentHash}`);
         renderRanking();
       }
 
@@ -1847,7 +2504,7 @@
           }
         }
 
-        for (const [index, entry] of shown.entries()) {
+        for (const entry of shown) {
           const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
           const displayRank = absoluteRank;
           const item = template.content.cloneNode(true);
@@ -1871,11 +2528,11 @@
           copyLink.title = "复制 Git 下载链接";
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
           if (currentView === "rising") {
-            const rateText = formatStars(plugin.weeklyStars);
+            const rateText = formatStars(plugin.dailyStars);
             stars.textContent = `↑ ${rateText}`;
             stars.setAttribute(
               "aria-label",
-              `最近一周新增 ${rateText} Stars，当前共 ${starText} Stars`
+              `今日新增 ${rateText} Stars，当前共 ${starText} Stars`
             );
           } else {
             stars.textContent = starText;
@@ -1884,7 +2541,6 @@
           pluginElement.classList.add(
             Math.floor((displayRank - 1) / 5) % 2 === 0 ? "tone-soft" : "tone-paper"
           );
-          pluginElement.dataset.revealDelay = String((index % 8) * 28);
           fragment.appendChild(item);
         }
 
@@ -1897,7 +2553,7 @@
 
         list.replaceChildren(fragment);
         for (const pluginElement of list.querySelectorAll(".plugin")) {
-          observeReveal(pluginElement, Number(pluginElement.dataset.revealDelay));
+          observeReveal(pluginElement);
         }
         const hasQuery = tokenizeSearchQuery(state.query).length > 0;
         searchResults[currentView].textContent = hasQuery
@@ -1908,6 +2564,15 @@
           ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
           : `已显示 ${shown.length} / ${matched.length} 个插件`;
         loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
+      }
+
+      function showFeedback(message) {
+        copyFeedback.textContent = message;
+        copyFeedback.hidden = false;
+        window.clearTimeout(copyFeedbackTimer);
+        copyFeedbackTimer = window.setTimeout(() => {
+          copyFeedback.hidden = true;
+        }, 2400);
       }
 
       async function copyDownloadUrl(button) {
@@ -1925,12 +2590,11 @@
           document.execCommand("copy");
           input.remove();
         }
-        copyFeedback.textContent = `已复制下载链接：${value}`;
-        copyFeedback.hidden = false;
-        window.clearTimeout(copyFeedbackTimer);
-        copyFeedbackTimer = window.setTimeout(() => {
-          copyFeedback.hidden = true;
-        }, 2400);
+        showFeedback(`已复制下载链接：${value}`);
+      }
+
+      for (const button of heroActionButtons) {
+        button.addEventListener("click", () => showFeedback(button.dataset.feedback));
       }
 
       list.addEventListener("click", (event) => {

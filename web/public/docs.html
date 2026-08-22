@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="dsh-Top100 文档：了解插件收录、GitHub 发现、Top 100 评分和每日数据更新。"
+    />
+    <title>Docs · dsh-Top100</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #f2f3ef;
+        --card: #fbfcf9;
+        --ink: #17211f;
+        --muted: #5f6c68;
+        --accent: #2f6f68;
+        --accent-soft: #d5e5e1;
+        --section: #dfeae6;
+        --line: rgba(23, 33, 31, 0.3);
+        --hero: #174942;
+        --hero-ink: #f7f3e7;
+        --yellow: #f1c75b;
+        --content: 1320px;
+        --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+        --serif: Iowan Old Style, Baskerville, "Times New Roman", "Songti SC", serif;
+        --docs-serif: "Songti SC", STSong, "Noto Serif CJK SC", "Source Han Serif SC", serif;
+        --mono: "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        background: var(--paper);
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family: var(--sans);
+        font-size: 16px;
+        line-height: 1.75;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      [id] {
+        scroll-margin-top: 88px;
+      }
+
+      .nav-shell {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        border-bottom: 1px solid rgba(23, 33, 31, 0.13);
+        background: color-mix(in srgb, var(--paper) 94%, transparent);
+        backdrop-filter: blur(12px);
+      }
+
+      .nav {
+        display: flex;
+        width: min(calc(100% - 48px), var(--content));
+        min-height: 62px;
+        margin: 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+
+      .wordmark,
+      .back-link {
+        text-decoration: none;
+      }
+
+      .wordmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 18px;
+        font-weight: 850;
+        letter-spacing: -0.03em;
+      }
+
+      .wordmark-mark {
+        position: relative;
+        width: 17px;
+        height: 17px;
+      }
+
+      .wordmark-mark::before,
+      .wordmark-mark::after {
+        position: absolute;
+        width: 10px;
+        height: 3px;
+        top: 8px;
+        background: var(--accent);
+        content: "";
+        transform-origin: left center;
+      }
+
+      .wordmark-mark::before {
+        left: 2px;
+        transform: rotate(-56deg);
+      }
+
+      .wordmark-mark::after {
+        left: 9px;
+        transform: rotate(56deg);
+      }
+
+      .back-link {
+        padding: 7px 11px;
+        border: 1px solid var(--line);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .back-link:hover,
+      .back-link:focus-visible {
+        color: white;
+        background: var(--ink);
+      }
+
+      .docs-hero {
+        position: relative;
+        isolation: isolate;
+        min-height: 440px;
+        overflow: hidden;
+        color: var(--hero-ink);
+        background: var(--hero);
+      }
+
+      .docs-hero-inner {
+        position: relative;
+        z-index: 2;
+        width: min(calc(100% - 48px), var(--content));
+        margin: 0 auto;
+        padding: 86px 0 82px;
+      }
+
+      .eyebrow {
+        margin: 0 0 18px;
+        color: var(--yellow);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 850px;
+        margin: 0;
+        font-family: var(--serif);
+        font-size: clamp(42px, 5.7vw, 78px);
+        font-weight: 500;
+        letter-spacing: -0.055em;
+        line-height: 0.94;
+      }
+
+      .docs-title-zh {
+        margin: 24px 0 0;
+        font-family: var(--docs-serif);
+        font-size: clamp(28px, 3vw, 42px);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        line-height: 1;
+      }
+
+      .hero-description {
+        max-width: 700px;
+        margin: 28px 0 0;
+        color: #c7d8d3;
+        font-size: clamp(17px, 1.5vw, 21px);
+        line-height: 1.65;
+      }
+
+      .orbit {
+        position: absolute;
+        z-index: 0;
+        width: min(46vw, 590px);
+        aspect-ratio: 1;
+        top: -110px;
+        right: -40px;
+        border: 1px solid rgba(241, 199, 91, 0.28);
+        border-radius: 50%;
+        pointer-events: none;
+        animation: orbit-drift 18s ease-in-out infinite alternate;
+      }
+
+      .orbit::before,
+      .orbit::after {
+        position: absolute;
+        border: 1px solid rgba(241, 199, 91, 0.25);
+        border-radius: 50%;
+        content: "";
+      }
+
+      .orbit::before {
+        inset: 13%;
+        transform: rotate(28deg) scaleY(0.7);
+      }
+
+      .orbit::after {
+        inset: 24%;
+        transform: rotate(-28deg) scaleX(1.45);
+      }
+
+      @keyframes orbit-drift {
+        from {
+          opacity: 0.65;
+          transform: rotate(-5deg) translate3d(0, 0, 0);
+        }
+        to {
+          opacity: 0.95;
+          transform: rotate(8deg) translate3d(-24px, 20px, 0);
+        }
+      }
+
+      .docs-layout {
+        display: block;
+        width: min(calc(100% - 48px), var(--content));
+        margin: 0 auto;
+        padding: 72px 0 110px;
+      }
+
+      .toc {
+        position: sticky;
+        z-index: 9;
+        top: 62px;
+        display: grid;
+        margin: 0 0 68px;
+        padding: 0;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--paper) 95%, transparent);
+        backdrop-filter: blur(12px);
+      }
+
+      .toc-title {
+        display: none;
+      }
+
+      .toc a {
+        display: flex;
+        min-height: 74px;
+        padding: 16px 18px;
+        align-items: center;
+        justify-content: center;
+        border-right: 1px solid var(--line);
+        color: var(--ink);
+        font-family: var(--docs-serif);
+        font-size: 18px;
+        font-weight: 600;
+        text-align: center;
+        text-decoration: none;
+      }
+
+      .toc a:last-child {
+        border-right: 0;
+      }
+
+      .toc a::before {
+        margin-right: 9px;
+        color: var(--accent);
+        content: attr(data-section);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .toc a:hover,
+      .toc a:focus-visible {
+        color: var(--ink);
+        background: var(--yellow);
+      }
+
+      .docs-content {
+        min-width: 0;
+      }
+
+      .doc-section {
+        padding: 0 0 72px;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .doc-section + .doc-section {
+        padding-top: 72px;
+      }
+
+      .section-kicker {
+        margin: 0 0 12px;
+        color: var(--accent);
+        font-family: var(--docs-serif);
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+
+      h2 {
+        margin: 0 0 26px;
+        font-family: var(--docs-serif);
+        font-size: clamp(38px, 4vw, 58px);
+        font-weight: 500;
+        letter-spacing: -0.045em;
+        line-height: 1;
+      }
+
+      h3 {
+        margin: 34px 0 12px;
+        font-family: var(--docs-serif);
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1.35;
+      }
+
+      p {
+        margin: 0 0 18px;
+      }
+
+      code {
+        padding: 2px 5px;
+        background: var(--accent-soft);
+        font-family: var(--mono);
+        font-size: 0.9em;
+      }
+
+      .lead {
+        max-width: 820px;
+        color: var(--muted);
+        font-size: 18px;
+      }
+
+      .callout {
+        margin: 28px 0;
+        padding: 22px 24px;
+        border-left: 5px solid var(--yellow);
+        background: var(--hero);
+        color: var(--hero-ink);
+      }
+
+      .callout strong {
+        color: var(--yellow);
+      }
+
+      .card-grid {
+        display: grid;
+        margin-top: 30px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .doc-card {
+        min-height: 210px;
+        padding: 24px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .card-label {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .doc-card h3 {
+        margin: 18px 0 10px;
+        font-family: var(--docs-serif);
+        font-size: 28px;
+        font-weight: 500;
+      }
+
+      .doc-card p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
+      .pipeline {
+        display: grid;
+        margin: 30px 0;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .pipeline span {
+        position: relative;
+        display: grid;
+        min-height: 112px;
+        padding: 16px;
+        place-items: center;
+        border-right: 1px solid var(--line);
+        font-family: var(--docs-serif);
+        font-size: clamp(17px, 1.35vw, 21px);
+        font-weight: 600;
+        text-align: center;
+      }
+
+      .pipeline span:last-child {
+        border-right: 0;
+      }
+
+      .pipeline span:not(:last-child)::after {
+        position: absolute;
+        z-index: 2;
+        right: -8px;
+        color: var(--accent);
+        background: var(--card);
+        content: "→";
+      }
+
+      .rule-list,
+      .roadmap-list {
+        display: grid;
+        padding: 0;
+        gap: 12px;
+        list-style: none;
+        counter-reset: rules;
+      }
+
+      .rule-list li,
+      .roadmap-list li {
+        position: relative;
+        padding: 16px 18px 16px 56px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .rule-list li {
+        counter-increment: rules;
+      }
+
+      .rule-list li::before,
+      .roadmap-list li::before {
+        position: absolute;
+        width: 28px;
+        height: 28px;
+        top: 15px;
+        left: 16px;
+        display: grid;
+        place-items: center;
+        color: white;
+        background: var(--accent);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .rule-list li::before {
+        content: counter(rules, decimal-leading-zero);
+      }
+
+      .roadmap-list li::before {
+        content: "→";
+      }
+
+      .table-wrap {
+        max-width: 100%;
+        margin: 26px 0;
+        overflow-x: auto;
+        border: 1px solid var(--line);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--card);
+        font-size: 15px;
+      }
+
+      th,
+      td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--accent-soft);
+        font-family: var(--mono);
+        font-size: 11px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .weight {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .formula {
+        margin: 26px 0;
+        padding: 18px 20px;
+        overflow-x: auto;
+        color: var(--hero-ink);
+        background: var(--hero);
+        font-family: var(--mono);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .footer {
+        display: flex;
+        min-height: 110px;
+        padding: 28px max(24px, calc((100vw - var(--content)) / 2));
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        color: var(--paper);
+        background: var(--ink);
+        font-family: var(--mono);
+        font-size: 12px;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      @media (max-width: 960px) {
+        .toc {
+          position: static;
+          display: flex;
+          overflow-x: auto;
+        }
+
+        .toc a {
+          flex: 0 0 190px;
+          white-space: nowrap;
+        }
+
+        .card-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .doc-card {
+          min-height: auto;
+        }
+
+        .pipeline {
+          grid-template-columns: 1fr;
+        }
+
+        .pipeline span {
+          min-height: 64px;
+          font-size: 18px;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .pipeline span:last-child {
+          border-bottom: 0;
+        }
+
+        .pipeline span:not(:last-child)::after {
+          right: 50%;
+          bottom: -13px;
+          transform: rotate(90deg);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .nav,
+        .docs-hero-inner,
+        .docs-layout {
+          width: min(calc(100% - 28px), var(--content));
+        }
+
+        .docs-hero-inner {
+          padding: 66px 0 60px;
+        }
+
+        h1 {
+          font-size: clamp(48px, 15vw, 68px);
+        }
+
+        .orbit {
+          width: 420px;
+          top: 90px;
+          right: -250px;
+          opacity: 0.6;
+        }
+
+        .docs-layout {
+          padding: 48px 0 78px;
+        }
+
+        .doc-section,
+        .doc-section + .doc-section {
+          padding-top: 0;
+          padding-bottom: 54px;
+          margin-bottom: 54px;
+        }
+
+        .doc-section + .doc-section {
+          padding-top: 0;
+        }
+
+        h2 {
+          font-size: 42px;
+        }
+
+        .footer {
+          display: block;
+        }
+
+        .footer span:last-child {
+          display: block;
+          margin-top: 8px;
+          color: #b7c3bf;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        .orbit {
+          animation: none;
+        }
+
+        .toc a {
+          transform: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="nav-shell">
+      <nav class="nav" aria-label="文档导航">
+        <a class="wordmark" href="./" aria-label="返回 dsh-Top100 首页">
+          <span class="wordmark-mark" aria-hidden="true"></span>
+          <span>dsh-Top100 / Docs</span>
+        </a>
+        <a class="back-link" href="./#ranking">返回榜单</a>
+      </nav>
+    </div>
+
+    <header class="docs-hero">
+      <div class="docs-hero-inner">
+        <h1>How the ranking works.</h1>
+        <p class="docs-title-zh">榜单如何工作。</p>
+      </div>
+      <div class="orbit" aria-hidden="true"></div>
+    </header>
+
+    <main class="docs-layout">
+      <article class="docs-content">
+        <section class="doc-section" id="overview">
+          <p class="section-kicker">01 · Overview</p>
+          <h2>产品与三个榜单</h2>
+          <p class="lead">
+            dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub
+            仓库；同一仓库包含多个 Skill 时只计一次 Stars。
+          </p>
+          <div class="card-grid">
+            <article class="doc-card">
+              <span class="card-label">Composite signal</span>
+              <h3>Top 100</h3>
+              <p>综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
+            </article>
+            <article class="doc-card">
+              <span class="card-label">Daily momentum</span>
+              <h3>新锐榜</h3>
+              <p>当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
+            </article>
+            <article class="doc-card">
+              <span class="card-label">All verified</span>
+              <h3>总榜</h3>
+              <p>展示全部活跃、已验证仓库，严格按当前 GitHub Stars 总数降序排列。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="doc-section" id="discovery">
+          <p class="section-kicker">02 · Discovery</p>
+          <h2>如何尽可能完整地发现仓库</h2>
+          <p class="lead">
+            GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召回，再使用同一验证器过滤噪声。
+          </p>
+          <div class="pipeline" aria-label="数据处理流程">
+            <span>多来源候选</span>
+            <span>合并去重</span>
+            <span>结构验证</span>
+            <span>SQLite 快照</span>
+            <span>公开榜单 JSON</span>
+          </div>
+          <ol class="rule-list">
+            <li><strong>Repository Search：</strong>搜索 DSH 名称、描述、README 与 topics。</li>
+            <li><strong>Code Search：</strong>寻找 <code>SKILL.md</code>、DSH/Cordis 配置和依赖等强结构标记。</li>
+            <li><strong>生态来源：</strong>补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。</li>
+            <li><strong>递归分片：</strong>每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。</li>
+            <li><strong>稳定去重：</strong>优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。</li>
+          </ol>
+        </section>
+
+        <section class="doc-section" id="verification">
+          <p class="section-kicker">03 · Verification</p>
+          <h2>什么仓库可以入榜</h2>
+          <p class="lead">
+            Topic 和关键词只负责召回，不直接证明兼容性。候选仓库必须提供可验证的 DSH
+            插件、Skill、Bundle 或 Cordis 集成证据。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>检查</th>
+                  <th>通过条件</th>
+                  <th>处理方式</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>仓库状态</td>
+                  <td>公开、未归档、不是 fork</td>
+                  <td>不符合则排除</td>
+                </tr>
+                <tr>
+                  <td>结构证据</td>
+                  <td>Skill 文件、Cordis/DSH 配置、package 依赖或可解析插件目录</td>
+                  <td>至少命中一种强证据</td>
+                </tr>
+                <tr>
+                  <td>数据完整性</td>
+                  <td>仓库 ID、名称、Stars、更新时间和来源可读取</td>
+                  <td>失败保留上次有效数据</td>
+                </tr>
+                <tr>
+                  <td>社区提交</td>
+                  <td>与自动发现候选使用相同验证规则</td>
+                  <td>提交不等于直接入榜</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="ranking">
+          <p class="section-kicker">04 · Ranking</p>
+          <h2>Top 100 如何计算</h2>
+          <p class="lead">
+            Top 100 使用 100 分加权模型。榜单按内部综合分排序，但前端继续展示真实 GitHub Stars，
+            便于用户理解和比较。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>指标</th>
+                  <th>权重</th>
+                  <th>计算依据</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>当日 Stars 增长</td><td class="weight">35%</td><td>当前 Stars 与上一份每日快照之差</td></tr>
+                <tr><td>7 日 Stars 增长</td><td class="weight">25%</td><td>当前 Stars 与七日前最近快照之差</td></tr>
+                <tr><td>7 日增长率</td><td class="weight">15%</td><td>7 日增长 ÷ 七日前 Stars；达到 30% 得满分</td></tr>
+                <tr><td>近期活跃度</td><td class="weight">10%</td><td>按最近推送时间指数衰减，半衰期 60 天</td></tr>
+                <tr><td>数据质量</td><td class="weight">10%</td><td>中文简介、README、许可证与来源证据完整度</td></tr>
+                <tr><td>Stars 总热度</td><td class="weight">5%</td><td>当前 GitHub Stars 总数</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="formula">TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5</div>
+          <p>
+            Stars 增长和总热度使用对数归一化，避免一个超大型仓库压缩其余项目的分数差异。综合分相同时，
+            依次比较今日新增 Stars、当前 Stars 和仓库全名。
+          </p>
+        </section>
+
+        <section class="doc-section" id="database">
+          <p class="section-kicker">05 · Persistence</p>
+          <h2>数据库、每日更新与企业部署</h2>
+          <p class="lead">
+            当前使用 SQLite 作为单服务器事实来源。它保存最新仓库状态、每日 Stars、中文简介来源和采集审计，
+            前端不会直接连接数据库。
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>表</th><th>用途</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>repositories</code></td><td>仓库最新状态、Stars、许可证、来源和活跃状态</td></tr>
+                <tr><td><code>repository_daily_stats</code></td><td>按仓库和日期保存 Stars、Forks 与 Issues 快照</td></tr>
+                <tr><td><code>repository_summaries</code></td><td>中文简介、源内容哈希、模型与提示版本</td></tr>
+                <tr><td><code>collection_runs</code></td><td>每次采集的开始、结束、状态、数量与错误信息</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>更新节奏</h3>
+          <p>
+            北京时间每天 06:00 运行增量发现并刷新全部已收录仓库；每周日运行完整分片发现。
+            成功采集后在一个事务中导入 SQLite，再生成公开 JSON。
+          </p>
+          <h3>迁移与企业扩展</h3>
+          <p>
+            迁移服务器时复制完整 <code>runtime/</code> 即可保留数据库、Stars 历史和简介缓存。
+            单机单写场景继续使用 SQLite 更简单；当出现多实例写入、权限隔离、审计查询或高并发 API
+            需求时，再升级为 PostgreSQL，并保留同一公开 JSON 输出层。
+          </p>
+        </section>
+
+      </article>
+    </main>
+
+    <footer class="footer">
+      <span>dsh-Top100 · Documentation</span>
+      <span>Discover · Verify · Snapshot · Rank · Publish</span>
+    </footer>
+  </body>
+</html>

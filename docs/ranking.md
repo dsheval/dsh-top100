@@ -13,12 +13,12 @@ The total ranking contains every active, verified repository ordered by current 
 For each repository:
 
 ```text
-weeklyStars = currentStars - nearestSnapshotAtOrBefore(sevenDaysAgo)
+dailyStars = currentStars - nearestSnapshotBefore(currentSnapshotDate)
 ```
 
-Negative values are clamped to zero. Entries are ordered by `weeklyStars`, then current Stars, then `fullName`; only the first 100 are published in the rising list.
+Negative values are clamped to zero. Entries are ordered by `dailyStars`, then current Stars, then `fullName`; only the first 100 are published in the rising list.
 
-When no seven-day baseline exists, `weeklyStars` is zero. This is expected during a new deployment and resolves as daily history accumulates.
+When no earlier daily snapshot exists, `dailyStars` is zero. A new deployment receives useful rising data after its second daily snapshot.
 
 ## Top 100
 
