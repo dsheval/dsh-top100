@@ -1,46 +1,155 @@
 <p align="center">
-  <img src="./docs/assets/dsh-top100-readme-cover.png" alt="dsh-Top100 · True popularity. Readable at a glance." width="100%">
+  <img src="./docs/assets/dsh-top100-readme-cover.png" alt="dsh-Top100 · Verified DeepSeek Harness plugin rankings" width="100%">
+</p>
+
+<h1 align="center">dsh-Top100</h1>
+
+<p align="center">
+  <strong>发现、验证并追踪真正值得关注的 DeepSeek Harness 插件。</strong><br>
+  <sub>Verified DSH plugins, Skills and agent tools — discovered from public sources and ranked by GitHub signals.</sub>
 </p>
 
 <p align="center">
-  <a href="http://47.238.229.20"><strong>访问 dsh-Top100 网站</strong></a>
+  <a href="http://47.238.229.20"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
+  <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
+  <a href="http://47.238.229.20/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
+  <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
+  <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="http://47.238.229.20"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
 </p>
 
-## 网站
+<p align="center">
+  <strong>官方网站：</strong>
+  <a href="http://47.238.229.20"><strong>http://47.238.229.20</strong></a>
+  ·
+  <a href="http://47.238.229.20/#ranking">立即查看榜单</a>
+  ·
+  <a href="http://47.238.229.20/?page=docs#docs">排名方法</a>
+  ·
+  <a href="./docs/ranking.md">Ranking specification</a>
+</p>
 
-**dsh-Top100** 用于发现、验证和追踪 DeepSeek Harness 生态中的 GitHub 插件仓库。网站每天更新仓库 Stars、中文简介和排行榜。
+> **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
 
-访问地址：<http://47.238.229.20>
+## 生态标签 · Ecosystem tags
 
-## 榜单
+`deepseek-harness` · `dsh` · `dsh-plugin` · `dsh-skill` · `agent-plugin` · `agent-tools` · `cordis` · `plugin-directory` · `plugin-ranking` · `github-stars` · `open-source` · `ai-agent-ecosystem`
 
-| 榜单 | 范围 | 排序方式 |
+这些关键词用于帮助 GitHub 搜索、Awesome 列表、插件目录、技术榜单和生态研究者识别项目。仓库的核心定位是 **DeepSeek Harness 插件发现、验证、排行与趋势追踪**。
+
+## 插件化能力 · Plugin-first features
+
+dsh-Top100 不只是 Stars 榜单，也是一套面向 DeepSeek Harness 插件生态的可复用索引层：
+
+- **多形态插件识别**：发现并验证 DSH Plugin、Skill、Bundle、Cordis 集成和包含插件子目录的仓库。
+- **结构化兼容性验证**：检查 `SKILL.md`、DSH/Cordis 配置、`package.json` 依赖与插件声明，不只依赖关键词或 topic。
+- **插件与 Skill 筛选**：网站支持按名称、功能和中英文关键词搜索，并可单独筛选 Skill 仓库。
+- **安装来源复用**：每个榜单条目关联原始 GitHub 仓库，并提供可复制的 Git 获取地址，方便接入 DSH profile 或插件管理流程。
+- **公开数据接口**：Top 100、新锐榜和总榜均发布独立 JSON，可供插件市场、机器人、Awesome 列表、内部仪表盘和其他排行榜直接消费。
+- **插件化扩展基础**：采集来源、验证证据、中文简介和排行发布彼此分离，便于继续增加新的生态来源与输出渠道。
+
+访问 **[dsh-Top100 官方网站](http://47.238.229.20)**，可以直接搜索、比较和发现已验证的 DSH 插件与 Skills。
+
+## 01 · 产品与三个榜单
+
+dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub 仓库；同一仓库包含多个 Skill 时只计一次 Stars。
+
+| 榜单 | 信号 | 用途 |
 | --- | --- | --- |
-| **Top 100** | 当前最值得关注的 100 个仓库 | 按综合评分排序，页面展示真实 GitHub Stars |
-| **新锐榜** | 当日增长最快的 100 个仓库 | 今日新增 Stars 降序 |
-| **总榜** | 全部已验证仓库 | 当前 GitHub Stars 总数降序 |
+| **Top 100** | 日增、周增、增长率、活跃度、数据质量和总 Stars 的综合评分 | 发现当前最值得关注的 100 个仓库 |
+| **新锐榜** | 当前 Stars 减去上一份每日快照 | 发现今日增长最快的 100 个仓库 |
+| **总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证仓库 |
 
-新锐榜使用上一份每日快照作为基线；新部署在生成第二份每日快照后即可得到有效排名。
+新锐榜中的负增长按 `0` 处理。新部署在生成第二份每日快照后即可得到有效日增排名。
 
-## 爬取规则
+## 02 · 如何尽可能完整地发现仓库
 
-1. **多来源召回**：使用 GitHub Repository Search、GitHub Code Search、npm 搜索、社区 Awesome 列表、DSH 组织仓库和用户提交线索寻找候选项目。
-2. **关键词与结构搜索**：检索 `dsh-plugin`、`deepseek-harness-plugin`、`dsh-skill` 等 topics，以及 `SKILL.md`、`dsh.profile`、`cordis.patch.yml` 和 `@deepseek-ai/dsh-*` 依赖。
-3. **结构验证**：排除 fork 和 archived 仓库；候选仓库必须存在 DSH Skill、Cordis/DSH 配置文件，或能够从 `package.json` 中确认 DSH/Cordis 依赖与声明。子目录中的插件也会被识别。
-4. **合并去重**：同一仓库从多个来源命中时只保留一条记录，并保存全部发现来源；社区提交的项目使用相同验证规则，不直接入榜。
-5. **每日增量**：默认北京时间每天 06:00 扫描近期有更新的高价值候选，同时刷新所有已收录仓库的 Stars、活跃状态和基础信息。
-6. **每周全量**：每周日执行完整发现。GitHub Repository Search 按创建时间递归分片，必要时继续按 Stars 和仓库大小切分，避免直接受单次搜索 1,000 条结果上限影响。
-7. **历史记录**：每次成功采集后写入 SQLite 和每日 Stars 快照，用于计算日增量与 7 日增量。
+GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召回，再使用同一验证器过滤噪声。
 
-## Top 100 评分规则
+```text
+多来源候选 → 合并去重 → 结构验证 → SQLite 快照 → 公开榜单 JSON
+```
+
+1. **Repository Search**：搜索 DSH 名称、描述、README 与 topics。
+2. **Code Search**：寻找 `SKILL.md`、DSH/Cordis 配置和依赖等强结构标记。
+3. **生态来源**：补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。
+4. **递归分片**：每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。
+5. **稳定去重**：优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。
+
+## 03 · 什么仓库可以入榜
+
+Topic 和关键词只负责召回，不直接证明兼容性。候选仓库必须提供可验证的 DSH 插件、Skill、Bundle 或 Cordis 集成证据。
+
+| 检查 | 通过条件 | 处理方式 |
+| --- | --- | --- |
+| 仓库状态 | 公开、未归档、不是 fork | 不符合则排除 |
+| 结构证据 | Skill 文件、Cordis/DSH 配置、package 依赖或可解析插件目录 | 至少命中一种强证据 |
+| 数据完整性 | 仓库 ID、名称、Stars、更新时间和来源可读取 | 失败时保留上次有效数据 |
+| 社区提交 | 与自动发现候选使用相同验证规则 | 提交不等于直接入榜 |
+
+## 04 · Top 100 如何计算
+
+Top 100 使用 100 分加权模型。榜单按内部综合分排序，但前端继续展示真实 GitHub Stars，便于理解和比较。
 
 | 指标 | 权重 | 计算依据 |
 | --- | ---: | --- |
-| 当日 Stars 增长 | 35% | 当前 Stars 与上一份快照的差值 |
-| 7 日 Stars 增长 | 25% | 当前 Stars 与七日前最近快照的差值 |
-| 7 日增长率 | 15% | 7 日增量 ÷ 七日前 Stars；达到 30% 时获得该项满分 |
-| 近期活跃度 | 10% | 根据最近推送时间衰减，半衰期为 60 天 |
-| 数据质量 | 10% | 中文简介、README 摘要、许可证和有效发现证据的完整度 |
-| Stars 总热度 | 5% | 当前 GitHub Stars |
+| 当日 Stars 增长 | 35% | 当前 Stars 与上一份每日快照之差 |
+| 7 日 Stars 增长 | 25% | 当前 Stars 与七日前最近快照之差 |
+| 7 日增长率 | 15% | 7 日增长 ÷ 七日前 Stars；达到 30% 得满分 |
+| 近期活跃度 | 10% | 按最近推送时间指数衰减，半衰期 60 天 |
+| 数据质量 | 10% | 中文简介、README、许可证与来源证据完整度 |
+| Stars 总热度 | 5% | 当前 GitHub Stars 总数 |
 
-增长量和 Stars 总热度使用对数归一化，避免超大型仓库压缩其他项目的分数差异。负增长按 0 计算；综合得分相同时，依次比较当日新增 Stars、Stars 总数和仓库名称。
+```text
+TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5
+```
+
+Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其他项目的分数差异。综合分相同时，依次比较今日新增 Stars、当前 Stars 和仓库全名。
+
+## 05 · 数据、更新与可靠性
+
+系统使用 SQLite 保存仓库状态、每日 Stars、中文简介来源和采集审计；静态前端只读取发布后的 JSON，不连接数据库，也不持有 GitHub 或模型 API Key。
+
+| 公开文件 | 内容 |
+| --- | --- |
+| `/data/rankings.json` | 完整聚合数据、榜单定义和三个榜单 |
+| `/data/rankings-hot.json` | Top 100 独立数据 |
+| `/data/rankings-rising.json` | 新锐榜独立数据 |
+| `/data/rankings-total.json` | 总榜独立数据 |
+
+- 北京时间每天 `06:00` 运行增量发现并刷新全部已收录仓库。
+- 每周日运行完整分片发现。
+- 公开 JSON 先写临时文件，再原子替换，避免读到半成品数据。
+- 网络或模型调用失败时保留上一次有效数据，不阻断榜单发布。
+- 数据库、快照和缓存集中保存在 `runtime/`，可整体备份与迁移。
+
+## 面向生态索引与榜单
+
+其他 Awesome 列表、插件市场、研究项目或排行榜可以将 dsh-Top100 识别为：
+
+- **名称**：dsh-Top100
+- **类型**：DeepSeek Harness plugin directory and ranking index
+- **覆盖对象**：DSH plugins、DSH Skills、Cordis integrations、agent tools
+- **更新频率**：每日增量、每周完整发现
+- **主要信号**：GitHub Stars 增长、活跃度、数据质量和验证证据
+- **数据输出**：公开 JSON
+- **许可证**：MIT
+
+Canonical repository: <https://github.com/dsheval/dsh-top100>
+
+## 本地开发
+
+```bash
+cp .env.example .env
+./scripts/prepare-runtime.sh
+npm run check
+npm run docker:up
+```
+
+本地网站默认运行在 <http://localhost:8080>。生产部署、数据备份和迁移说明见 [`docs/deployment.md`](./docs/deployment.md)。
+
+## License
+
+[MIT](./LICENSE)
