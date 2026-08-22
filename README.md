@@ -33,25 +33,6 @@
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
 
-## 生态标签 · Ecosystem tags
-
-`deepseek-harness` · `dsh` · `dsh-plugin` · `dsh-skill` · `agent-plugin` · `agent-tools` · `cordis` · `plugin-directory` · `plugin-ranking` · `github-stars` · `open-source` · `ai-agent-ecosystem`
-
-这些关键词用于帮助 GitHub 搜索、Awesome 列表、插件目录、技术榜单和生态研究者识别项目。仓库的核心定位是 **DeepSeek Harness 插件发现、验证、排行与趋势追踪**。
-
-## 插件化能力 · Plugin-first features
-
-dsh-Top100 不只是 Stars 榜单，也是一套面向 DeepSeek Harness 插件生态的可复用索引层：
-
-- **多形态插件识别**：发现并验证 DSH Plugin、Skill、Bundle、Cordis 集成和包含插件子目录的仓库。
-- **结构化兼容性验证**：检查 `SKILL.md`、DSH/Cordis 配置、`package.json` 依赖与插件声明，不只依赖关键词或 topic。
-- **插件与 Skill 筛选**：网站支持按名称、功能和中英文关键词搜索，并可单独筛选 Skill 仓库。
-- **安装来源复用**：每个榜单条目关联原始 GitHub 仓库，并提供可复制的 Git 获取地址，方便接入 DSH profile 或插件管理流程。
-- **公开数据接口**：Top 100、新锐榜和总榜均发布独立 JSON，可供插件市场、机器人、Awesome 列表、内部仪表盘和其他排行榜直接消费。
-- **插件化扩展基础**：采集来源、验证证据、中文简介和排行发布彼此分离，便于继续增加新的生态来源与输出渠道。
-
-访问 **[dsh-Top100 官方网站](https://dsheval.ai)**，可以直接搜索、比较和发现已验证的 DSH 插件与 Skills。
-
 ## 01 · 产品与三个榜单
 
 dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub 仓库；同一仓库包含多个 Skill 时只计一次 Stars。
