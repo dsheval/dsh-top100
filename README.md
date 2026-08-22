@@ -10,23 +10,23 @@
 </p>
 
 <p align="center">
-  <a href="http://47.238.229.20"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="https://dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
-  <a href="http://47.238.229.20/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
+  <a href="https://dsheval.ai/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
   <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
-  <a href="http://47.238.229.20"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
+  <a href="https://dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
 </p>
 
 <p align="center">
   <strong>官方网站：</strong>
-  <a href="http://47.238.229.20"><strong>http://47.238.229.20</strong></a>
+  <a href="https://dsheval.ai"><strong>https://dsheval.ai</strong></a>
   ·
-  <a href="http://47.238.229.20/#ranking">立即查看榜单</a>
+  <a href="https://dsheval.ai/#ranking">立即查看榜单</a>
   ·
-  <a href="http://47.238.229.20/?page=docs#docs">排名方法</a>
+  <a href="https://dsheval.ai/?page=docs#docs">排名方法</a>
   ·
   <a href="./docs/ranking.md">Ranking specification</a>
 </p>
@@ -50,7 +50,7 @@ dsh-Top100 不只是 Stars 榜单，也是一套面向 DeepSeek Harness 插件�
 - **公开数据接口**：Top 100、新锐榜和总榜均发布独立 JSON，可供插件市场、机器人、Awesome 列表、内部仪表盘和其他排行榜直接消费。
 - **插件化扩展基础**：采集来源、验证证据、中文简介和排行发布彼此分离，便于继续增加新的生态来源与输出渠道。
 
-访问 **[dsh-Top100 官方网站](http://47.238.229.20)**，可以直接搜索、比较和发现已验证的 DSH 插件与 Skills。
+访问 **[dsh-Top100 官方网站](https://dsheval.ai)**，可以直接搜索、比较和发现已验证的 DSH 插件与 Skills。
 
 ## 01 · 产品与三个榜单
 
