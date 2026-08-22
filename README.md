@@ -23,12 +23,6 @@
 <p align="center">
   <strong>官方网站：</strong>
   <a href="https://dsheval.ai"><strong>https://dsheval.ai</strong></a>
-  ·
-  <a href="https://dsheval.ai/#ranking">立即查看榜单</a>
-  ·
-  <a href="https://dsheval.ai/?page=docs#docs">排名方法</a>
-  ·
-  <a href="./docs/ranking.md">Ranking specification</a>
 </p>
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
