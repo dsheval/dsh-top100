@@ -562,9 +562,9 @@
         color: var(--ink);
         background: transparent;
         font-family: var(--mono);
-        font-size: 13px;
+        font-size: 15px;
         font-weight: 800;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.025em;
         cursor: pointer;
         text-transform: uppercase;
       }
@@ -586,8 +586,9 @@
       }
 
       .view-tab[aria-selected="true"] {
-        color: white;
-        background: var(--ink);
+        color: var(--ink);
+        background: var(--section-strong);
+        box-shadow: inset 0 -3px 0 var(--accent);
       }
 
       .skill-filter {
@@ -640,6 +641,7 @@
       .search-control {
         position: relative;
         display: block;
+        width: 100%;
       }
 
       .search-control::before {
@@ -728,6 +730,154 @@
 
       .search-clear[hidden] {
         display: none;
+      }
+
+      .category-options {
+        display: grid;
+        width: 100%;
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+
+      .category-panel {
+        position: relative;
+        z-index: 9;
+        padding-top: 0;
+      }
+
+      .category-option {
+        position: relative;
+        display: inline-flex;
+        width: 100%;
+        min-width: 0;
+        min-height: 42px;
+        padding: 0 4px;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 3px;
+        border: 0;
+        border-right: 1px solid var(--line);
+        color: var(--muted);
+        background: color-mix(in srgb, var(--card) 90%, transparent);
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+
+      .category-option:last-child {
+        border-right: 0;
+      }
+
+      .category-icon {
+        display: inline-flex;
+        width: 14px;
+        height: 14px;
+        flex: 0 0 14px;
+        color: color-mix(in srgb, var(--accent) 84%, var(--muted));
+      }
+
+      .category-icon svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.7;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .category-option:hover,
+      .category-option:focus-visible {
+        background: var(--accent-soft);
+      }
+
+      .category-option[aria-pressed="true"] {
+        color: var(--ink);
+        background: var(--section-strong);
+        box-shadow: inset 0 -3px 0 var(--accent);
+      }
+
+      .category-option[aria-pressed="true"] .category-icon {
+        color: var(--accent);
+      }
+
+      .category-count {
+        margin-left: auto;
+        color: color-mix(in srgb, currentColor 72%, transparent);
+        font-family: var(--mono);
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+      }
+
+      .category-description-stage {
+        position: relative;
+        height: 0;
+      }
+
+      .category-description {
+        position: absolute;
+        z-index: 10;
+        top: 10px;
+        left: 50%;
+        display: block;
+        width: min(310px, calc(100% - 16px));
+        margin: 0;
+        padding: 11px 14px 12px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: color-mix(in srgb, var(--card) 97%, var(--section));
+        box-shadow: 0 9px 22px rgba(23, 33, 31, 0.09);
+        font-size: 12px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+        line-height: 1.55;
+        pointer-events: none;
+        transform: translateX(-50%);
+      }
+
+      .category-description::before {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        top: -6px;
+        left: var(--tooltip-arrow-left, 50%);
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+        background: color-mix(in srgb, var(--card) 97%, var(--section));
+        content: "";
+        transform: translateX(-50%) rotate(45deg);
+      }
+
+      .category-description-title {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+      }
+
+      .category-description-body {
+        display: block;
+        color: var(--muted);
+      }
+
+      .category-description[hidden] {
+        display: none;
+      }
+
+      .category-option:focus-visible {
+        position: relative;
+        z-index: 1;
+        outline: 3px solid var(--accent);
+        outline-offset: -3px;
       }
 
       .plugin-list {
@@ -1536,6 +1686,10 @@
       }
 
       @media (max-width: 960px) {
+        .category-count {
+          display: none;
+        }
+
         .inline-docs .toc {
           position: static;
           display: flex;
@@ -1588,6 +1742,7 @@
         .plugin-list {
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
+
       }
 
       @media (max-width: 860px) {
@@ -1674,16 +1829,28 @@
 
         .view-tabs {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(4, 1fr);
+          border-bottom: 1px solid var(--line);
         }
 
         .view-tab {
           width: 100%;
+          padding: 0 8px;
+          font-size: 12px;
         }
 
         .skill-filter {
+          display: block;
           width: calc(100% - 18px);
           margin: 9px;
+        }
+
+        .category-options {
+          grid-template-columns: repeat(9, minmax(0, 1fr));
+        }
+
+        .category-count {
+          display: none;
         }
 
         .plugin-list {
@@ -1947,6 +2114,17 @@
               >
                 总榜 <span id="all-count"></span>
               </button>
+              <button
+                class="view-tab"
+                id="tab-category"
+                type="button"
+                role="tab"
+                aria-controls="plugin-list"
+                aria-selected="false"
+                data-view="category"
+              >
+                分类榜
+              </button>
             </div>
             <button
               class="skill-filter"
@@ -2032,6 +2210,83 @@
                 </span>
               </div>
               <p class="sr-only search-result" id="search-result-all">
+                等待插件数据
+              </p>
+            </div>
+
+            <div class="search-panel category-panel" data-search-view="category" hidden>
+              <div class="category-options" role="group" aria-label="插件分类">
+                <button class="category-option" type="button" data-category="ai" aria-pressed="true" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z"/><path d="m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z"/></svg>
+                  </span>
+                  <span>AI增强</span>
+                  <span class="category-count" data-category-count="ai">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="appearance" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>
+                  </span>
+                  <span>外观</span>
+                  <span class="category-count" data-category-count="appearance">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="memory" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.75 7.5 4.2 7.5-4.2M12 12v9"/></svg>
+                  </span>
+                  <span>记忆</span>
+                  <span class="category-count" data-category-count="memory">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="coding" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16"/></svg>
+                  </span>
+                  <span>编程</span>
+                  <span class="category-count" data-category-count="coding">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="search" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
+                  </span>
+                  <span>搜索</span>
+                  <span class="category-count" data-category-count="search">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="automation" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg>
+                  </span>
+                  <span>自动化</span>
+                  <span class="category-count" data-category-count="automation">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="knowledge" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z"/></svg>
+                  </span>
+                  <span>知识库</span>
+                  <span class="category-count" data-category-count="knowledge">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="security" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                  </span>
+                  <span>安全</span>
+                  <span class="category-count" data-category-count="security">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="tools" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-3-3 2.4-2.4Z"/></svg>
+                  </span>
+                  <span>工具</span>
+                  <span class="category-count" data-category-count="tools">—</span>
+                </button>
+              </div>
+              <div class="category-description-stage">
+                <p class="category-description" id="category-hover-description" role="tooltip" hidden>
+                  <strong class="category-description-title"></strong>
+                  <span class="category-description-body"></span>
+                </p>
+              </div>
+              <p class="sr-only search-result" id="search-result-category">
                 等待插件数据
               </p>
             </div>
@@ -2145,7 +2400,80 @@
         ])
       );
       const searchClearButtons = [...document.querySelectorAll(".search-clear")];
+      const categoryButtons = [...document.querySelectorAll(".category-option")];
+      const categoryDescriptionStage = document.querySelector(".category-description-stage");
+      const categoryDescription = document.querySelector("#category-hover-description");
+      const categoryDescriptionTitle = categoryDescription.querySelector(".category-description-title");
+      const categoryDescriptionBody = categoryDescription.querySelector(".category-description-body");
       const PAGE_SIZE = 100;
+      const categoryLabels = {
+        ai: "AI增强",
+        appearance: "外观",
+        memory: "记忆",
+        coding: "编程",
+        search: "搜索",
+        automation: "自动化",
+        knowledge: "知识库",
+        security: "安全",
+        tools: "工具",
+      };
+      const categoryDescriptions = {
+        ai: "模型路由、提示词、推理增强、多模态能力与 AI 助手。",
+        appearance: "主题、皮肤、界面组件、桌面体验、图标与可视化面板。",
+        memory: "长期记忆、会话历史、上下文管理、人格与状态延续。",
+        coding: "代码生成、调试、测试、代码审查、终端、Git 与开发辅助。",
+        search: "联网搜索、浏览器、网页抓取、研究与信息检索。",
+        automation: "工作流、定时任务、自动执行、流水线与跨应用编排。",
+        knowledge: "知识库、RAG、文档问答、Wiki、笔记与资料管理。",
+        security: "权限、沙箱、审计、认证、隐私、密钥与安全防护。",
+        tools: "通知、连接器、文件处理、效率增强与其他通用实用工具。",
+      };
+      const categoryKeywords = {
+        ai: [
+          "ai agent", "agentic", "llm", "model", "prompt", "reasoning",
+          "inference", "multimodal", "assistant", "chatbot", "模型", "提示词",
+          "推理", "智能体", "代理", "AI增强",
+        ],
+        appearance: [
+          "theme", "skin", "appearance", "ui", "web ui", "dashboard", "desktop",
+          "wallpaper", "avatar", "visual", "emoji", "icon", "界面", "主题",
+          "皮肤", "外观", "桌面", "看板",
+        ],
+        memory: [
+          "memory", "session", "context", "conversation", "history", "chat history",
+          "knowledge", "persona", "recall", "记忆", "会话", "上下文", "知识库",
+          "聊天记录", "人格",
+        ],
+        coding: [
+          "code", "coding", "developer", "devtools", "terminal", "shell", "cli",
+          "git", "github", "debug", "test", "review", "ide", "编程", "代码",
+          "开发", "终端", "调试", "测试", "审查",
+        ],
+        search: [
+          "search", "retrieval", "browser", "web", "crawl", "scrape", "research",
+          "rag", "lookup", "搜索", "检索", "浏览器", "网页", "爬虫", "研究",
+        ],
+        automation: [
+          "automation", "automate", "workflow", "scheduler", "cron", "task",
+          "pipeline", "webhook", "orchestration", "自动化", "工作流", "定时",
+          "任务", "流水线", "编排",
+        ],
+        knowledge: [
+          "knowledge", "rag", "wiki", "document", "docs", "notes", "notion",
+          "knowledge base", "知识库", "知识", "文档", "笔记", "资料",
+        ],
+        security: [
+          "security", "secure", "permission", "sandbox", "audit", "guardrail",
+          "auth", "oauth", "privacy", "secret", "安全", "权限", "沙箱", "审计",
+          "认证", "隐私", "密钥",
+        ],
+        tools: [
+          "utility", "productivity", "integration", "connector", "notification",
+          "plugin manager", "clipboard", "filesystem", "file manager", "converter",
+          "downloader", "calculator", "translate", "实用工具", "效率工具", "集成",
+          "连接器", "通知", "插件管理", "剪贴板", "文件管理", "转换", "下载", "计算器", "翻译",
+        ],
+      };
       const searchSynonymGroups = [
         ["图片", "图像", "视觉", "ocr", "image", "vision"],
         ["搜索", "检索", "查找", "search", "retrieval"],
@@ -2170,6 +2498,7 @@
         top100: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
         rising: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
         all: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
+        category: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
       };
       let rankedEntries = [];
       let risingEntries = [];
@@ -2179,7 +2508,11 @@
       let copyFeedbackTimer = null;
       const initialParams = new URLSearchParams(window.location.search);
       const requestedView = initialParams.get("view");
-      let currentView = ["top100", "rising", "all"].includes(requestedView)
+      const requestedCategory = initialParams.get("category");
+      let activeCategory = Object.hasOwn(categoryLabels, requestedCategory)
+        ? requestedCategory
+        : "ai";
+      let currentView = ["top100", "rising", "all", "category"].includes(requestedView)
         ? requestedView
         : "top100";
       let currentContentView = initialParams.get("page") === "docs" ? "docs" : "ranking";
@@ -2227,6 +2560,24 @@
             const sourceDocument = new DOMParser().parseFromString(html, "text/html");
             const sourceLayout = sourceDocument.querySelector(".docs-layout");
             if (!sourceLayout) throw new Error("文档内容缺失");
+
+            const overview = sourceLayout.querySelector("#overview");
+            if (overview) {
+              const heading = sourceDocument.createElement("h3");
+              heading.textContent = "README 智能分类";
+              const paragraph = sourceDocument.createElement("p");
+              paragraph.textContent =
+                "DeepSeek 在后端读取仓库 README，将项目归入 AI增强、外观、记忆、编程、搜索、自动化、知识库、安全和工具。一个仓库可以同时属于多个分类；结果连同置信度与依据写入 SQLite，并发布到榜单 JSON。模型暂时不可用时使用规则回退，后续更新继续补齐智能分类。";
+              overview.append(heading, paragraph);
+            }
+
+            const databaseRows = sourceLayout.querySelector("#database tbody");
+            if (databaseRows) {
+              const row = sourceDocument.createElement("tr");
+              row.innerHTML =
+                "<td><code>repository_categories</code></td><td>多标签分类、置信度、README 依据、模型和分类时间</td>";
+              databaseRows.append(row);
+            }
 
             const idMap = new Map();
             for (const element of sourceLayout.querySelectorAll("[id]")) {
@@ -2406,6 +2757,68 @@
         return tokens.length === 0 || tokens.every((token) => entryMatchesToken(entry, token));
       }
 
+      function entryMatchesCategory(entry, category) {
+        const backendCategories = Array.isArray(entry.plugin.categories)
+          ? entry.plugin.categories
+              .map((item) => typeof item === "string" ? item : item?.id)
+              .filter(Boolean)
+          : [];
+        if (backendCategories.length > 0) {
+          return backendCategories.includes(category);
+        }
+        return (categoryKeywords[category] ?? []).some((keyword) => {
+          const normalized = normalizeSearchText(keyword);
+          if (!normalized) return false;
+          if (/\p{Script=Han}/u.test(normalized) || normalized.includes(" ")) {
+            return entry.searchText.includes(normalized);
+          }
+          return entry.searchWords.includes(normalized);
+        });
+      }
+
+      function updateCategoryCounts() {
+        for (const button of categoryButtons) {
+          const category = button.dataset.category;
+          const count = rankedEntries.filter((entry) =>
+            entryMatchesCategory(entry, category)
+          ).length;
+          const countElement = button.querySelector("[data-category-count]");
+          countElement.textContent = formatStars(count);
+          button.setAttribute(
+            "aria-label",
+            `${categoryLabels[category]}，${formatStars(count)} 个插件`
+          );
+        }
+      }
+
+      function showCategoryDescription(button) {
+        const category = button.dataset.category;
+        const count = button.querySelector("[data-category-count]").textContent;
+        categoryDescriptionTitle.textContent = `${categoryLabels[category]} · ${count} 个插件`;
+        categoryDescriptionBody.textContent = categoryDescriptions[category];
+        categoryDescription.hidden = false;
+
+        const stageRect = categoryDescriptionStage.getBoundingClientRect();
+        const buttonRect = button.getBoundingClientRect();
+        const tooltipWidth = categoryDescription.offsetWidth;
+        const targetCenter = buttonRect.left - stageRect.left + buttonRect.width / 2;
+        const halfWidth = tooltipWidth / 2;
+        const tooltipCenter = Math.min(
+          Math.max(targetCenter, halfWidth + 8),
+          stageRect.width - halfWidth - 8
+        );
+        const arrowLeft = targetCenter - (tooltipCenter - halfWidth);
+        categoryDescription.style.left = `${tooltipCenter}px`;
+        categoryDescription.style.setProperty(
+          "--tooltip-arrow-left",
+          `${Math.min(Math.max(arrowLeft, 14), tooltipWidth - 14)}px`
+        );
+      }
+
+      function hideCategoryDescription() {
+        categoryDescription.hidden = true;
+      }
+
       async function loadMarketData() {
         let lastError;
         for (const source of sources) {
@@ -2451,7 +2864,9 @@
       }
 
       function setView(view) {
-        currentView = ["top100", "rising", "all"].includes(view) ? view : "top100";
+        currentView = ["top100", "rising", "all", "category"].includes(view)
+          ? view
+          : "top100";
         for (const tab of tabs) {
           const selected = tab.dataset.view === currentView;
           tab.setAttribute("aria-selected", String(selected));
@@ -2467,15 +2882,24 @@
           top100: "DEEPSEEK HARNESS PLUGINS · TOP 100",
           rising: "DEEPSEEK HARNESS PLUGINS · 新锐榜",
           all: "DEEPSEEK HARNESS PLUGINS · 总榜",
+          category: `DEEPSEEK HARNESS PLUGINS · 分类榜 · ${categoryLabels[activeCategory]}`,
         };
         rankingMetaTitle.textContent = metaLabels[currentView];
         rankingUpdated.textContent = `更新于：${formatUpdateTime(generatedAt)}`;
         for (const panel of searchPanels) {
           panel.hidden = panel.dataset.searchView !== currentView;
         }
+        for (const button of categoryButtons) {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.category === activeCategory)
+          );
+        }
         const url = new URL(window.location.href);
         if (currentView === "top100") url.searchParams.delete("view");
         else url.searchParams.set("view", currentView);
+        if (currentView === "category") url.searchParams.set("category", activeCategory);
+        else url.searchParams.delete("category");
         const contentHash = currentContentView === "docs"
           ? (window.location.hash.startsWith("#docs-") ? window.location.hash : "#docs")
           : "#ranking";
@@ -2490,12 +2914,20 @@
           : currentView === "rising"
             ? risingEntries
             : rankedEntries;
-        const matched = scoped.filter(
+        const categoryScoped = currentView === "category"
+          ? scoped.filter((entry) => entryMatchesCategory(entry, activeCategory))
+          : scoped;
+        const categoryRanks = currentView === "category"
+          ? new Map(categoryScoped.map((entry, index) => [entry.plugin.fullName, index + 1]))
+          : null;
+        const matched = categoryScoped.filter(
           (entry) =>
             (!hideSkills || entry.plugin.type !== "skill") &&
-            entryMatchesQuery(entry, state.query)
+            (currentView === "category" || entryMatchesQuery(entry, state.query))
         );
-        const shown = currentView === "all" ? matched.slice(0, state.visible) : matched;
+        const shown = currentView === "all" || currentView === "category"
+          ? matched.slice(0, state.visible)
+          : matched;
         const fragment = document.createDocumentFragment();
 
         if (revealObserver) {
@@ -2506,7 +2938,9 @@
 
         for (const entry of shown) {
           const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
-          const displayRank = absoluteRank;
+          const displayRank = currentView === "category"
+            ? categoryRanks.get(plugin.fullName)
+            : absoluteRank;
           const item = template.content.cloneNode(true);
           const pluginElement = item.querySelector(".plugin");
           const rank = item.querySelector(".rank");
@@ -2547,7 +2981,9 @@
         if (shown.length === 0) {
           const status = document.createElement("p");
           status.className = "status";
-          status.textContent = `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`;
+          status.textContent = currentView === "category"
+            ? `${categoryLabels[activeCategory]}分类暂时没有匹配的插件。`
+            : `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`;
           fragment.appendChild(status);
         }
 
@@ -2555,15 +2991,21 @@
         for (const pluginElement of list.querySelectorAll(".plugin")) {
           observeReveal(pluginElement);
         }
-        const hasQuery = tokenizeSearchQuery(state.query).length > 0;
-        searchResults[currentView].textContent = hasQuery
-          ? `匹配 ${formatStars(matched.length)} 个 · 保留原始排名`
-          : `已显示 ${formatStars(shown.length)} / ${formatStars(matched.length)} 个`;
-        document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !hasQuery;
-        rankingStatus.textContent = hasQuery
-          ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
-          : `已显示 ${shown.length} / ${matched.length} 个插件`;
-        loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
+        if (currentView === "category") {
+          searchResults.category.textContent = `${categoryLabels[activeCategory]}分类共 ${formatStars(matched.length)} 个插件`;
+          rankingStatus.textContent = `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${matched.length} 个插件`;
+          loadMore.hidden = shown.length >= matched.length;
+        } else {
+          const hasQuery = tokenizeSearchQuery(state.query).length > 0;
+          searchResults[currentView].textContent = hasQuery
+            ? `匹配 ${formatStars(matched.length)} 个 · 保留原始排名`
+            : `已显示 ${formatStars(shown.length)} / ${formatStars(matched.length)} 个`;
+          document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !hasQuery;
+          rankingStatus.textContent = hasQuery
+            ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
+            : `已显示 ${shown.length} / ${matched.length} 个插件`;
+          loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
+        }
       }
 
       function showFeedback(message) {
@@ -2652,6 +3094,13 @@
       try {
         const data = await loadMarketData();
         const rankings = data.rankings ?? {};
+        for (const definition of data.categories ?? []) {
+          if (!Object.hasOwn(categoryLabels, definition.id)) continue;
+          if (definition.label) categoryLabels[definition.id] = definition.label;
+          if (definition.description) {
+            categoryDescriptions[definition.id] = definition.description;
+          }
+        }
         generatedAt = data.generatedAt;
         const makeEntries = (plugins) => plugins
           .filter((plugin) => plugin && typeof plugin.fullName === "string")
@@ -2661,7 +3110,7 @@
               plugin.descriptionZh || plugin.description
             );
             const searchText = normalizeSearchText(
-              `${name} ${plugin.fullName} ${descriptionZh} ${(plugin.topics ?? []).join(" ")}`
+              `${name} ${plugin.fullName} ${descriptionZh} ${(plugin.tags ?? []).join(" ")} ${(plugin.topics ?? []).join(" ")}`
             );
             return {
               plugin,
@@ -2678,6 +3127,7 @@
         if (rankedEntries.length === 0) throw new Error("榜单数据为空");
 
         allCount.textContent = `(${formatStars(rankedEntries.length)})`;
+        updateCategoryCounts();
         for (const tab of tabs) {
           tab.addEventListener("click", () => setView(tab.dataset.view));
           tab.addEventListener("keydown", (event) => {
@@ -2690,10 +3140,25 @@
             setView(next.dataset.view);
           });
         }
+        for (const button of categoryButtons) {
+          button.addEventListener("mouseenter", () => showCategoryDescription(button));
+          button.addEventListener("mouseleave", hideCategoryDescription);
+          button.addEventListener("focus", () => showCategoryDescription(button));
+          button.addEventListener("blur", hideCategoryDescription);
+          button.addEventListener("click", () => {
+            activeCategory = button.dataset.category;
+            viewState.category.visible = PAGE_SIZE;
+            viewState.category.unfilteredVisible = PAGE_SIZE;
+            setView("category");
+          });
+        }
         loadMore.addEventListener("click", () => {
-          const state = viewState.all;
+          if (currentView !== "all" && currentView !== "category") return;
+          const state = viewState[currentView];
           state.visible += PAGE_SIZE;
-          if (!normalizeSearchText(state.query)) state.unfilteredVisible = state.visible;
+          if (currentView === "category" || !normalizeSearchText(state.query)) {
+            state.unfilteredVisible = state.visible;
+          }
           renderRanking();
         });
         setView(currentView);

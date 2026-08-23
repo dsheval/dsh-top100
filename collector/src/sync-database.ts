@@ -6,8 +6,22 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DshPlugin, MarketData } from "@dsh-top100/schema";
+import {
+  fallbackCategoryAssignments,
+  hasAuthoritativeCategories,
+  normalizeCategoryAssignments,
+  toDeepSeekAssignments,
+} from "./categories.js";
+import { classifyWithDeepSeek } from "./llm.js";
+import { runPool } from "./pool.js";
 import { buildRankings } from "./rankings.js";
-import { importMarketData, openDatabase, readActiveRepositories } from "./database.js";
+import {
+  categorySourceHash,
+  importMarketData,
+  openDatabase,
+  readActiveRepositories,
+  readCategoryCache,
+} from "./database.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -29,6 +43,7 @@ function publicPlugins(database: ReturnType<typeof openDatabase>, generatedAt: s
     openIssues: repository.openIssues,
     description: repository.description,
     descriptionZh: repository.descriptionZh,
+    categories: repository.categories,
     pushedAt: repository.pushedAt,
     createdAt: repository.createdAt,
     updatedAt: repository.updatedAt,
@@ -36,7 +51,71 @@ function publicPlugins(database: ReturnType<typeof openDatabase>, generatedAt: s
   return { schemaVersion: 2, generatedAt, plugins, packs: [] };
 }
 
-function main(): void {
+async function classifyRepositories(
+  market: MarketData,
+  database: ReturnType<typeof openDatabase>
+): Promise<void> {
+  const cache = readCategoryCache(database);
+  for (const plugin of market.plugins) {
+    plugin.categories = normalizeCategoryAssignments(plugin.categories);
+    if (hasAuthoritativeCategories(plugin.categories)) continue;
+    const cached = cache.get(plugin.fullName.toLocaleLowerCase());
+    if (
+      cached &&
+      cached.sourceHash === categorySourceHash(plugin) &&
+      hasAuthoritativeCategories(cached.categories)
+    ) {
+      plugin.categories = cached.categories;
+    }
+  }
+
+  const pending = market.plugins.filter(
+    (plugin) => !hasAuthoritativeCategories(plugin.categories)
+  );
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
+  const batchSize = Number(process.env.DEEPSEEK_CATEGORY_BATCH_SIZE ?? "200");
+  if (!Number.isInteger(batchSize) || batchSize < 0 || batchSize > 2000) {
+    throw new Error("DEEPSEEK_CATEGORY_BATCH_SIZE must be an integer from 0 to 2000");
+  }
+
+  let classified = 0;
+  if (apiKey && batchSize > 0) {
+    const batch = pending.slice(0, batchSize);
+    await runPool(
+      batch,
+      async (plugin) => {
+        const suggestions = await classifyWithDeepSeek(
+          {
+            name: plugin.fullName,
+            description: plugin.description,
+            readmeSummary: plugin.readmeSummary,
+            topics: plugin.topics,
+          },
+          { apiKey, baseURL, model }
+        );
+        if (suggestions.length > 0) {
+          plugin.categories = toDeepSeekAssignments(suggestions, model);
+          classified++;
+        }
+      },
+      5
+    );
+  }
+
+  let fallback = 0;
+  for (const plugin of market.plugins) {
+    if (hasAuthoritativeCategories(plugin.categories)) continue;
+    plugin.categories = fallbackCategoryAssignments(plugin);
+    fallback++;
+  }
+  console.log(
+    `Category classification: ${classified} DeepSeek, ${fallback} rule fallback, ${pending.length} pending before this run`
+  );
+}
+
+async function main(): Promise<void> {
   const sourcePath = resolve(projectRoot, process.env.SOURCE_DATA_PATH ?? "data/plugins.json");
   const databasePath = resolve(
     projectRoot,
@@ -53,6 +132,8 @@ function main(): void {
 
   const database = openDatabase({ path: databasePath });
   try {
+    await classifyRepositories(market, database);
+    atomicJson(sourcePath, market);
     const imported = importMarketData(database, market, {
       model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat",
       timeZone: process.env.TZ ?? "Asia/Shanghai",
@@ -99,4 +180,7 @@ function main(): void {
   }
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

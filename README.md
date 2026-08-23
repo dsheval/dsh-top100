@@ -27,7 +27,7 @@
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
 
-## 01 · 产品与三个榜单
+## 01 · 产品与榜单
 
 dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub 仓库；同一仓库包含多个 Skill 时只计一次 Stars。
 
@@ -36,6 +36,9 @@ dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索
 | **Top 100** | 日增、周增、增长率、活跃度、数据质量和总 Stars 的综合评分 | 发现当前最值得关注的 100 个仓库 |
 | **新锐榜** | 当前 Stars 减去上一份每日快照 | 发现今日增长最快的 100 个仓库 |
 | **总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证仓库 |
+| **分类榜** | DeepSeek 阅读仓库 README 后生成的受控多标签分类 | 按实际能力发现同类插件；一个仓库可进入多个分类 |
+
+分类榜包含 AI增强、外观、记忆、编程、搜索、自动化、知识库、安全和工具。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据；模型不可用时使用可追踪的规则回退，后续任务会继续补齐 DeepSeek 分类。
 
 新锐榜中的负增长按 `0` 处理。新部署在生成第二份每日快照后即可得到有效日增排名。
 
@@ -44,7 +47,7 @@ dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索
 GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召回，再使用同一验证器过滤噪声。
 
 ```text
-多来源候选 → 合并去重 → 结构验证 → SQLite 快照 → 公开榜单 JSON
+多来源候选 → 合并去重 → 结构验证 → README 智能分类 → SQLite 快照 → 公开榜单 JSON
 ```
 
 1. **Repository Search**：搜索 DSH 名称、描述、README 与 topics。
@@ -85,14 +88,14 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 
 ## 05 · 数据、更新与可靠性
 
-系统使用 SQLite 保存仓库状态、每日 Stars、中文简介来源和采集审计；静态前端只读取发布后的 JSON，不连接数据库，也不持有 GitHub 或模型 API Key。
+系统使用 SQLite 保存仓库状态、每日 Stars、中文简介来源、README 分类和采集审计；静态前端只读取发布后的 JSON，不连接数据库，也不持有 GitHub 或模型 API Key。
 
 | 公开文件 | 内容 |
 | --- | --- |
-| `/data/rankings.json` | 完整聚合数据、榜单定义和三个榜单 |
+| `/data/rankings.json` | 完整聚合数据、榜单定义、分类定义和四个榜单视图所需数据 |
 | `/data/rankings-hot.json` | Top 100 独立数据 |
 | `/data/rankings-rising.json` | 新锐榜独立数据 |
-| `/data/rankings-total.json` | 总榜独立数据 |
+| `/data/rankings-total.json` | 总榜与分类榜的完整仓库数据 |
 
 - 北京时间每天 `06:00` 运行增量发现并刷新全部已收录仓库。
 - 每周日运行完整分片发现。

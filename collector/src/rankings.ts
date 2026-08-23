@@ -8,6 +8,7 @@ import {
   readActiveRepositories,
   type RepositoryRow,
 } from "./database.js";
+import { CATEGORY_DEFINITIONS } from "./categories.js";
 
 interface RankingConfig {
   limits: { rising: number; hot: number };
@@ -42,6 +43,7 @@ export interface RankingEntry {
   license: string | null;
   topics: string[];
   tags: string[];
+  categories: RepositoryRow["categories"];
   type: string;
   install: RepositoryRow["install"];
   sources: string[];
@@ -60,6 +62,12 @@ export interface RankingsDocument {
     rising: string;
     hot: string;
   };
+  categories: Array<{
+    id: string;
+    label: string;
+    description: string;
+    count: number;
+  }>;
   rankings: {
     total: RankingEntry[];
     rising: RankingEntry[];
@@ -126,6 +134,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     license: repository.license,
     topics: repository.topics,
     tags: repository.tags,
+    categories: repository.categories,
     type: repository.type,
     install: repository.install,
     sources: repository.sources,
@@ -203,7 +212,7 @@ export function buildRankings(
     .map((item, index) => toEntry(item, index + 1));
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     snapshotDate,
     definitions: {
@@ -211,6 +220,12 @@ export function buildRankings(
       rising: "当前 Stars 减去上一份历史快照的 Stars",
       hot: "日增、周增、增长率、活跃度、数据质量与总热度的加权分",
     },
+    categories: CATEGORY_DEFINITIONS.map((definition) => ({
+      ...definition,
+      count: repositories.filter((repository) =>
+        repository.categories.some(({ id }) => id === definition.id)
+      ).length,
+    })),
     rankings: { total, rising, hot },
   };
 }

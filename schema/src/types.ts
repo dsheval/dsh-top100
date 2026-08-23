@@ -6,6 +6,31 @@
 /** 插件形态 */
 export type PluginType = "skill" | "cordis-plugin";
 
+/** 分类榜使用的受控分类；一个仓库可以同时属于多个分类。 */
+export type PluginCategoryId =
+  | "ai"
+  | "appearance"
+  | "memory"
+  | "coding"
+  | "search"
+  | "automation"
+  | "knowledge"
+  | "security"
+  | "tools";
+
+export type PluginCategorySource = "deepseek" | "rule-fallback" | "manual";
+
+export interface PluginCategoryAssignment {
+  id: PluginCategoryId;
+  /** 分类置信度 0-1。 */
+  confidence: number;
+  /** 来自 README、描述或 topics 的简短依据。 */
+  evidence: string;
+  source: PluginCategorySource;
+  model?: string;
+  classifiedAt?: string;
+}
+
 /** 一键安装方式 */
 export type InstallMethod =
   | "skills-add" // git clone 到 ~/.agents/skills（skill 型）
@@ -64,6 +89,8 @@ export interface DshPlugin {
   descriptionZh: string | null;
   /** 功能标签（LLM 打标 + 关键词兜底） */
   tags: string[];
+  /** README 语义分类；允许一个仓库进入多个分类榜。 */
+  categories?: PluginCategoryAssignment[];
   /** 人工精选标记 */
   curated: boolean;
   /** 精选推荐理由（人工填写） */

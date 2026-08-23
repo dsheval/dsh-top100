@@ -106,4 +106,53 @@ describe("SQLite history and rankings", () => {
       database.close();
     }
   });
+
+  it("persists multiple backend categories and publishes them in ranking entries", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-categories-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      const classified = plugin("a/coding-agent", 42);
+      classified.categories = [
+        {
+          id: "coding",
+          confidence: 0.95,
+          evidence: "README 提到代码生成和审查",
+          source: "deepseek",
+          model: "deepseek-chat",
+          classifiedAt: "2026-08-21T00:00:00Z",
+        },
+        {
+          id: "automation",
+          confidence: 0.82,
+          evidence: "README 提到自动化工作流",
+          source: "deepseek",
+          model: "deepseek-chat",
+          classifiedAt: "2026-08-21T00:00:00Z",
+        },
+      ];
+      importMarketData(database, market([classified]), { snapshotDate: "2026-08-21" });
+
+      const rows = database
+        .prepare("SELECT category, source FROM repository_categories ORDER BY category")
+        .all() as Array<{ category: string; source: string }>;
+      expect(rows).toEqual([
+        { category: "automation", source: "deepseek" },
+        { category: "coding", source: "deepseek" },
+      ]);
+
+      const rankings = buildRankings(
+        database,
+        "2026-08-21",
+        resolve("../config/ranking.json")
+      );
+      expect(rankings.rankings.total[0]?.categories.map(({ id }) => id)).toEqual([
+        "coding",
+        "automation",
+      ]);
+      expect(rankings.categories.find(({ id }) => id === "coding")?.count).toBe(1);
+    } finally {
+      database.close();
+    }
+  });
 });

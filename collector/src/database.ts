@@ -1,10 +1,14 @@
-/** SQLite persistence for current repository state, daily snapshots, and summary provenance. */
+/** SQLite persistence for repository state, classifications, daily snapshots, and provenance. */
 
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import type { DshPlugin, MarketData } from "@dsh-top100/schema";
+import type { DshPlugin, MarketData, PluginCategoryAssignment } from "@dsh-top100/schema";
+import {
+  fallbackCategoryAssignments,
+  normalizeCategoryAssignments,
+} from "./categories.js";
 
 export interface DatabaseOptions {
   path: string;
@@ -33,6 +37,7 @@ export interface RepositoryRow {
   license: string | null;
   topics: string[];
   tags: string[];
+  categories: PluginCategoryAssignment[];
   install: DshPlugin["install"];
   sources: string[];
   pushedAt: string;
@@ -47,7 +52,11 @@ export interface SnapshotRow {
   stars: number;
 }
 
-/** Return YYYY-MM-DD in the configured product timezone. */
+export interface CategoryCacheEntry {
+  sourceHash: string;
+  categories: PluginCategoryAssignment[];
+}
+
 export function dateInTimeZone(date = new Date(), timeZone = "Asia/Shanghai"): string {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -57,13 +66,18 @@ export function dateInTimeZone(date = new Date(), timeZone = "Asia/Shanghai"): s
   }).format(date);
 }
 
-function sourceHash(plugin: DshPlugin): string {
+export function categorySourceHash(plugin: Pick<DshPlugin, "readmeSummary" | "description" | "topics">): string {
+  return createHash("sha256")
+    .update(JSON.stringify([plugin.readmeSummary ?? "", plugin.description ?? "", plugin.topics ?? []]))
+    .digest("hex");
+}
+
+function summarySourceHash(plugin: DshPlugin): string {
   return createHash("sha256")
     .update(plugin.readmeSummary ?? plugin.description ?? "")
     .digest("hex");
 }
 
-/** Open the database and apply all idempotent migrations. */
 export function openDatabase(options: DatabaseOptions): DatabaseSync {
   mkdirSync(dirname(options.path), { recursive: true });
   const database = new DatabaseSync(options.path);
@@ -120,6 +134,18 @@ export function openDatabase(options: DatabaseOptions): DatabaseSync {
       generated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS repository_categories (
+      repository_id INTEGER NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      category TEXT NOT NULL,
+      confidence REAL NOT NULL,
+      evidence TEXT NOT NULL,
+      source TEXT NOT NULL,
+      model TEXT,
+      source_hash TEXT NOT NULL,
+      classified_at TEXT NOT NULL,
+      PRIMARY KEY (repository_id, category)
+    );
+
     CREATE TABLE IF NOT EXISTS collection_runs (
       id INTEGER PRIMARY KEY,
       started_at TEXT NOT NULL,
@@ -134,11 +160,12 @@ export function openDatabase(options: DatabaseOptions): DatabaseSync {
       ON repositories(active, stars DESC);
     CREATE INDEX IF NOT EXISTS idx_daily_stats_date
       ON repository_daily_stats(snapshot_date, stars DESC);
+    CREATE INDEX IF NOT EXISTS idx_repository_categories_category
+      ON repository_categories(category, confidence DESC);
   `);
   return database;
 }
 
-/** Import a complete collector snapshot in one transaction. */
 export function importMarketData(
   database: DatabaseSync,
   market: MarketData,
@@ -147,9 +174,7 @@ export function importMarketData(
   const now = new Date().toISOString();
   const snapshotDate = options.snapshotDate ?? dateInTimeZone(new Date(), options.timeZone);
   const run = database
-    .prepare(
-      "INSERT INTO collection_runs(started_at, snapshot_date, status) VALUES (?, ?, 'running')"
-    )
+    .prepare("INSERT INTO collection_runs(started_at, snapshot_date, status) VALUES (?, ?, 'running')")
     .run(now, snapshotDate);
   const runId = Number(run.lastInsertRowid);
 
@@ -211,11 +236,21 @@ export function importMarketData(
       status = excluded.status,
       generated_at = excluded.generated_at
   `);
+  const deleteCategories = database.prepare(
+    "DELETE FROM repository_categories WHERE repository_id = ?"
+  );
+  const insertCategory = database.prepare(`
+    INSERT INTO repository_categories (
+      repository_id, category, confidence, evidence, source, model, source_hash, classified_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
 
   database.exec("BEGIN IMMEDIATE");
   try {
     database.exec("UPDATE repositories SET active = 0");
     for (const plugin of market.plugins) {
+      const categories = normalizeCategoryAssignments(plugin.categories);
+      plugin.categories = categories.length > 0 ? categories : fallbackCategoryAssignments(plugin);
       upsertRepository.run(
         plugin.fullName,
         plugin.name,
@@ -244,35 +279,38 @@ export function importMarketData(
       );
       const idRow = selectRepositoryId.get(plugin.fullName) as { id: number } | undefined;
       if (!idRow) throw new Error(`Repository upsert did not return an id: ${plugin.fullName}`);
-      upsertSnapshot.run(
-        idRow.id,
-        snapshotDate,
-        now,
-        plugin.stars,
-        plugin.forks,
-        plugin.openIssues
-      );
+      upsertSnapshot.run(idRow.id, snapshotDate, now, plugin.stars, plugin.forks, plugin.openIssues);
       upsertSummary.run(
         idRow.id,
         plugin.descriptionZh,
-        sourceHash(plugin),
+        summarySourceHash(plugin),
         options.model ?? null,
         plugin.descriptionZh ? "generated-or-reused" : "missing",
         now
       );
+      deleteCategories.run(idRow.id);
+      const inputHash = categorySourceHash(plugin);
+      for (const category of plugin.categories) {
+        insertCategory.run(
+          idRow.id,
+          category.id,
+          category.confidence,
+          category.evidence,
+          category.source,
+          category.model ?? null,
+          inputHash,
+          category.classifiedAt ?? now
+        );
+      }
     }
     database
-      .prepare(
-        "UPDATE collection_runs SET finished_at = ?, status = 'success', repository_count = ? WHERE id = ?"
-      )
+      .prepare("UPDATE collection_runs SET finished_at = ?, status = 'success', repository_count = ? WHERE id = ?")
       .run(new Date().toISOString(), market.plugins.length, runId);
     database.exec("COMMIT");
   } catch (error) {
     database.exec("ROLLBACK");
     database
-      .prepare(
-        "UPDATE collection_runs SET finished_at = ?, status = 'failed', error_message = ? WHERE id = ?"
-      )
+      .prepare("UPDATE collection_runs SET finished_at = ?, status = 'failed', error_message = ? WHERE id = ?")
       .run(new Date().toISOString(), (error as Error).message.slice(0, 1000), runId);
     throw error;
   }
@@ -288,11 +326,61 @@ function parseJson<T>(value: string, fallback: T): T {
   }
 }
 
-/** Read every repository present in the latest successful collector snapshot. */
+function readCategoriesByRepository(database: DatabaseSync): Map<number, PluginCategoryAssignment[]> {
+  const rows = database
+    .prepare("SELECT * FROM repository_categories ORDER BY confidence DESC, category ASC")
+    .all() as Array<Record<string, unknown>>;
+  const categories = new Map<number, PluginCategoryAssignment[]>();
+  for (const row of rows) {
+    const repositoryId = Number(row.repository_id);
+    const list = categories.get(repositoryId) ?? [];
+    list.push({
+      id: String(row.category) as PluginCategoryAssignment["id"],
+      confidence: Number(row.confidence),
+      evidence: String(row.evidence),
+      source: String(row.source) as PluginCategoryAssignment["source"],
+      ...(row.model ? { model: String(row.model) } : {}),
+      ...(row.classified_at ? { classifiedAt: String(row.classified_at) } : {}),
+    });
+    categories.set(repositoryId, list);
+  }
+  return categories;
+}
+
+export function readCategoryCache(database: DatabaseSync): Map<string, CategoryCacheEntry> {
+  const rows = database
+    .prepare(`
+      SELECT r.full_name, c.*
+      FROM repository_categories c
+      JOIN repositories r ON r.id = c.repository_id
+      ORDER BY c.confidence DESC, c.category ASC
+    `)
+    .all() as Array<Record<string, unknown>>;
+  const cache = new Map<string, CategoryCacheEntry>();
+  for (const row of rows) {
+    const fullName = String(row.full_name).toLocaleLowerCase();
+    const entry = cache.get(fullName) ?? {
+      sourceHash: String(row.source_hash),
+      categories: [],
+    };
+    entry.categories.push({
+      id: String(row.category) as PluginCategoryAssignment["id"],
+      confidence: Number(row.confidence),
+      evidence: String(row.evidence),
+      source: String(row.source) as PluginCategoryAssignment["source"],
+      ...(row.model ? { model: String(row.model) } : {}),
+      ...(row.classified_at ? { classifiedAt: String(row.classified_at) } : {}),
+    });
+    cache.set(fullName, entry);
+  }
+  return cache;
+}
+
 export function readActiveRepositories(database: DatabaseSync): RepositoryRow[] {
   const rows = database
     .prepare("SELECT * FROM repositories WHERE active = 1 ORDER BY stars DESC, full_name ASC")
     .all() as Array<Record<string, unknown>>;
+  const categories = readCategoriesByRepository(database);
   return rows.map((row) => ({
     id: Number(row.id),
     fullName: String(row.full_name),
@@ -310,6 +398,7 @@ export function readActiveRepositories(database: DatabaseSync): RepositoryRow[] 
     license: row.license ? String(row.license) : null,
     topics: parseJson(String(row.topics_json), [] as string[]),
     tags: parseJson(String(row.tags_json), [] as string[]),
+    categories: categories.get(Number(row.id)) ?? [],
     install: parseJson(String(row.install_json), {} as DshPlugin["install"]),
     sources: parseJson(String(row.sources_json), [] as string[]),
     pushedAt: String(row.pushed_at),
@@ -320,7 +409,6 @@ export function readActiveRepositories(database: DatabaseSync): RepositoryRow[] 
   }));
 }
 
-/** Find the nearest snapshot on either side of a requested date. */
 export function previousSnapshot(
   database: DatabaseSync,
   repositoryId: number,
@@ -334,8 +422,6 @@ export function previousSnapshot(
        WHERE repository_id = ? AND snapshot_date ${operator} ?
        ORDER BY snapshot_date DESC LIMIT 1`
     )
-    .get(repositoryId, beforeOrOnDate) as
-    | { snapshot_date: string; stars: number }
-    | undefined;
+    .get(repositoryId, beforeOrOnDate) as { snapshot_date: string; stars: number } | undefined;
   return row ? { snapshotDate: row.snapshot_date, stars: Number(row.stars) } : null;
 }

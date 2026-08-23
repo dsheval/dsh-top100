@@ -3,9 +3,13 @@
  * 让中文简介在 README 实质大改时刷新，小改动不重翻（平衡翻译频率与不过时）
  */
 
+import type { PluginCategoryAssignment } from "@dsh-top100/schema";
+
 export interface ZhEntry {
   descriptionZh: string;
   tagsZh: string[];
+  /** DeepSeek 多标签分类；旧缓存缺省时由分类补全流程生成。 */
+  categories?: PluginCategoryAssignment[];
   /** 上次翻译时的 README 摘要指纹——README 实质大改才重翻 */
   summaryKey?: string;
 }
