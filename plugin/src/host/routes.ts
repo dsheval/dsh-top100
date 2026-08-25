@@ -18,9 +18,12 @@ import { FULL_NAME_RE, PROFILE_RE, isCordisEntry, resolveInstallSpec } from "../
 import { InstallVerificationError, verifyInstallSpec } from "../install/install-verify.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
 import { readInstalled } from "./profile.js";
+import { buildDiagnosticReport } from "./diagnose.js";
+import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
+import { isProtectedPackage, setPackageEnabled } from "./patch-toggle.js";
 import { installSkill } from "../install/skill-install.js";
 import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
-import type { InstallBatchSnapshot, InstallJobSnapshot, InstallPhase, InstallResult } from "../shared/types.js";
+import type { InstallAction, InstallBatchSnapshot, InstallJobSnapshot, InstallPhase, InstallResult, ManagedKind } from "../shared/types.js";
 import type { PluginHost, PluginResolvedConfig } from "./contracts.js";
 
 const MAX_BATCH_SIZE = 20;
@@ -82,6 +85,8 @@ function publicJob(job: InstallJob): InstallJobSnapshot {
     batchId: job.batchId,
     fullName: job.fullName,
     profile: job.profile,
+    action: job.action,
+    kind: job.kind,
     phase: job.phase,
     lastLine: job.lastLine,
     error: job.error,
@@ -92,6 +97,67 @@ function publicJob(job: InstallJob): InstallJobSnapshot {
     finishedAt: job.finishedAt,
     cancelRequested: job.cancelRequested,
   };
+}
+
+function enqueueManageJob(
+  batch: BatchRecord,
+  config: PluginResolvedConfig,
+  action: Exclude<InstallAction, "install">,
+  name: string,
+  kind: ManagedKind,
+): void {
+  const job: InstallJob = {
+    id: id("job"), batchId: batch.id, fullName: name, profile: config.profile, action, kind,
+    phase: "queued", lastLine: action === "update" ? "等待更新" : "等待卸载",
+    error: null, message: null, requiresRestart: false, cancelRequested: false,
+    controller: new AbortController(), createdAt: Date.now(), startedAt: null, finishedAt: null,
+  };
+  jobs.set(job.id, job);
+  batch.jobIds.push(job.id);
+  if (kind === "skill") {
+    void (async () => {
+      try {
+        if (action !== "uninstall") throw new Error("Skill 不支持从排行页更新");
+        updateJob(job, "installing", { lastLine: "正在移除 Skill" });
+        uninstallSkill(name);
+        updateJob(job, "installed", { message: "uninstalled", requiresRestart: false, lastLine: "已卸载" });
+      } catch (error) { failJob(job, error); }
+    })();
+    return;
+  }
+  updateJob(job, "waiting-profile-lock", { lastLine: "等待 profile 安装队列" });
+  enqueueProfile(config.profile, job, async () => {
+    if (job.cancelRequested) { updateJob(job, "cancelled"); return; }
+    updateJob(job, "installing", { lastLine: action === "update" ? "正在更新插件" : "正在卸载插件" });
+    const timer = setInterval(() => {
+      if (progress.fullName === job.fullName && progress.lastLine) job.lastLine = progress.lastLine;
+    }, 250);
+    timer.unref?.();
+    try {
+      const spec = readInstalled(config.profile)[name];
+      if (!spec) throw new Error("plugin is not installed");
+      if (isProtectedPackage(name)) throw new Error("该插件属于宿主或本排行插件，不能在这里管理");
+      const target = action === "update" ? resolveUpdateTarget(name, spec) : name;
+      if (!target) throw new Error("本地 link/file 插件请在源码目录更新");
+      const result = await runDshPlugin(config.profile, [action === "update" ? "add" : "remove", target], { fullName: name });
+      if (result.exitCode !== 0 || result.timedOut || result.cancelled) throw new Error(installFailure(result));
+      if (action === "uninstall") cleanupAfterUninstall(config.profile, name);
+      invalidateCatalog();
+      updateJob(job, "installed", { requiresRestart: true, message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成" : "已卸载" });
+    } catch (error) { failJob(job, error); } finally { clearInterval(timer); }
+  });
+}
+
+function createManageJobs(
+  config: PluginResolvedConfig,
+  action: Exclude<InstallAction, "install">,
+  items: Array<{ name: string; kind: ManagedKind }>,
+): InstallBatchSnapshot {
+  const batchId = id("batch");
+  const batch: BatchRecord = { id: batchId, createdAt: Date.now(), jobIds: [] };
+  batches.set(batchId, batch);
+  for (const item of items) enqueueManageJob(batch, config, action, item.name, item.kind);
+  return batchSnapshot(batchId) as InstallBatchSnapshot;
 }
 
 function batchSnapshot(batchId: string): InstallBatchSnapshot | null {
@@ -352,6 +418,7 @@ export function mountRoutes(host: PluginHost, config: PluginResolvedConfig): () 
           ? requestedCategory
           : view === "category" ? "ai" : null;
         const q = (query.get("q") ?? "").trim();
+        const excludeSkills = query.get("skills") === "0";
         const offset = Math.max(0, Number(query.get("offset") ?? 0) || 0);
         const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
         try {
@@ -364,6 +431,7 @@ export function mountRoutes(host: PluginHost, config: PluginResolvedConfig): () 
             offset,
             limit,
             installed,
+            excludeSkills,
           });
           sendJson(response, 200, {
             view,
@@ -373,6 +441,7 @@ export function mountRoutes(host: PluginHost, config: PluginResolvedConfig): () 
             snapshotDate: document.snapshotDate,
             dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
             query: q,
+            excludeSkills,
             total,
             offset,
             limit,
@@ -456,6 +525,13 @@ export function mountRoutes(host: PluginHost, config: PluginResolvedConfig): () 
             sendJson(response, 409, { error: "only failed or cancelled jobs can be retried" });
             return;
           }
+          if (previous.action === "update" || previous.action === "uninstall") {
+            sendJson(response, 202, createManageJobs(config, previous.action, [{
+              name: previous.fullName,
+              kind: previous.kind === "skill" ? "skill" : "bundle",
+            }]));
+            return;
+          }
           sendJson(response, 202, createBatch([previous.fullName], config));
         } catch (error) {
           sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -475,6 +551,76 @@ export function mountRoutes(host: PluginHost, config: PluginResolvedConfig): () 
           if (cancelJob(job.id)) cancelled += 1;
         }
         sendJson(response, 200, { cancelled });
+      },
+    }),
+    host.webServer.register({
+      kind: "exact",
+      path: "/dsh-top100/managed",
+      async handler(request, response) {
+        if (request.method !== "GET") { sendJson(response, 405, { error: "method not allowed" }); return; }
+        const q = (queryOf(request).get("q") ?? "").trim().toLowerCase();
+        try {
+          const document = await safeLoad(config).catch(() => null);
+          const items = (await listManagedPlugins(config.profile, document)).filter((item) => {
+            return !q || `${item.name} ${item.description} ${item.descriptionZh} ${item.fullName ?? ""}`.toLowerCase().includes(q);
+          });
+          sendJson(response, 200, { profile: config.profile, query: q, total: items.length, items });
+        } catch (error) { sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) }); }
+      },
+    }),
+    host.webServer.register({
+      kind: "exact",
+      path: "/dsh-top100/toggle",
+      async handler(request, response) {
+        if (request.method !== "POST" || !sameOrigin(request)) { sendJson(response, 403, { error: "same-origin POST required" }); return; }
+        try {
+          const body = readBodyRecord(await readJsonBody(request));
+          const name = typeof body.name === "string" ? body.name.trim() : "";
+          const enabled = body.enabled === true;
+          if (!name) { sendJson(response, 400, { error: "name is required" }); return; }
+          if (readInstalled(config.profile)[name] === undefined) { sendJson(response, 404, { error: "plugin is not installed" }); return; }
+          const result = setPackageEnabled(config.profile, name, enabled);
+          sendJson(response, result.ok ? 200 : 400, { ok: result.ok, name, enabled, rows: result.rows, error: result.reason, requiresRestart: result.ok });
+        } catch (error) { sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" }); }
+      },
+    }),
+    host.webServer.register({
+      kind: "exact",
+      path: "/dsh-top100/manage",
+      async handler(request, response) {
+        if (request.method !== "POST" || !sameOrigin(request)) { sendJson(response, 403, { error: "same-origin POST required" }); return; }
+        if (!PROFILE_RE.test(config.profile)) { sendJson(response, 500, { error: "invalid profile name" }); return; }
+        try {
+          const body = readBodyRecord(await readJsonBody(request));
+          const action = body.action === "update" || body.action === "uninstall" ? body.action : null;
+          const names = Array.isArray(body.names)
+            ? body.names.filter((value): value is string => typeof value === "string").map((value) => value.trim()).filter(Boolean)
+            : typeof body.name === "string" && body.name.trim() ? [body.name.trim()] : [];
+          const unique = [...new Set(names)];
+          const kind: ManagedKind = body.kind === "skill" ? "skill" : "bundle";
+          if (!action || unique.length === 0 || unique.length > MAX_BATCH_SIZE) { sendJson(response, 400, { error: `action and 1-${MAX_BATCH_SIZE} names are required` }); return; }
+          if (kind === "skill" && action !== "uninstall") { sendJson(response, 400, { error: "Skill 不支持从排行页更新" }); return; }
+          if (kind === "bundle") {
+            const installed = readInstalled(config.profile);
+            for (const name of unique) {
+              const spec = installed[name];
+              if (spec === undefined) { sendJson(response, 404, { error: "plugin is not installed" }); return; }
+              if (isProtectedPackage(name)) { sendJson(response, 403, { error: "该插件属于宿主或本排行插件，不能在这里管理" }); return; }
+              if (action === "update" && !resolveUpdateTarget(name, spec)) { sendJson(response, 400, { error: "本地 link/file 插件请在源码目录更新" }); return; }
+            }
+          }
+          sendJson(response, 202, createManageJobs(config, action, unique.map((name) => ({ name, kind }))));
+        } catch (error) { sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" }); }
+      },
+    }),
+    host.webServer.register({
+      kind: "exact",
+      path: "/dsh-top100/diagnose",
+      async handler(request, response) {
+        if (request.method !== "GET") { sendJson(response, 405, { error: "method not allowed" }); return; }
+        try {
+          sendJson(response, 200, await buildDiagnosticReport(config.profile, { dataUrl: config.dataUrl || DEFAULT_DATA_URL }));
+        } catch (error) { sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) }); }
       },
     }),
     host.webServer.register({

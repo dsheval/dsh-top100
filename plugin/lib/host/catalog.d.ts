@@ -16,10 +16,14 @@ export declare function filterCatalog(document: RankingsDocument, options: {
     offset: number;
     limit: number;
     installed: Record<string, string>;
+    excludeSkills?: boolean;
 }): {
     total: number;
     items: CatalogItem[];
 };
 export declare function invalidateCatalog(): void;
+export declare function describeCatalogFetchError(error: unknown): string;
+export declare function isRetryableCatalogFetchError(error: unknown): boolean;
+export declare function parseRankingsDocument(raw: string): RankingsDocument;
 export declare function loadRankings(dataUrl: string, force?: boolean): Promise<RankingsDocument>;
 export declare function findEntry(document: RankingsDocument, fullName: string): RankingEntry | undefined;

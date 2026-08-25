@@ -1,6 +1,6 @@
 # dsh-Top100 本地开发交接
 
-更新时间：2026-08-22
+更新时间：2026-08-25
 
 ## 1. 交接目标
 
@@ -31,44 +31,13 @@ docker compose ps
 
 ## 3. 当前 Git 状态
 
-当前分支为 `main`，远端为：
+正式稳定基线为 `main` 分支的 `v1.0.0` 标签，远端为：
 
 ```text
 origin  https://github.com/dsheval/dsh-top100.git
 ```
 
-当前本地 HEAD：
-
-```text
-0e4aaad docs: refresh project README
-```
-
-远端 `origin/main` 当前指向：
-
-```text
-b939ba4 Add dsh-Top100 logo
-```
-
-因此本地已有 1 个尚未推送的提交，并且工作树仍有以下未提交内容：
-
-```text
- M README.md
- M collector/src/rankings.ts
- M collector/test/database.test.ts
- M docs/ranking.md
- M web/public/index.html
-?? web/public/docs.html
-?? web/public/readme-cover.html
-?? web/public/assets/dsheval-logo-v2.png
-?? web/public/assets/dsheval-logo-v3.png
-?? web/public/assets/dsheval-logo-v4.png
-?? web/public/assets/dsheval-logo-v5-white.png
-?? web/public/assets/dsheval-logo-v6-white-swapped.png
-?? web/public/assets/dsheval-logo-v7-deepseek-whale.png
-?? web/public/assets/dsheval-logo-v8-right-facing.png
-```
-
-这些文件属于连续开发成果。除非用户明确要求，不要删除、回退、批量格式化或提交它们。
+维护时以远端 `main` 和正式标签为准，不在交接文档中记录容易过期的提交哈希或工作树清单。开始修改前先执行 `git status --short` 和 `git log -3 --oneline --decorate`；已有改动默认属于正在进行的工作，除非用户明确要求，不要删除、回退或批量格式化。
 
 ## 4. 当前可用功能
 
@@ -91,6 +60,8 @@ b939ba4 Add dsh-Top100 logo
 - `web/public/docs.html` 是文档内容源；`index.html` 读取其中的 `.docs-layout` 并嵌入首页，因此不要复制出第二套文档正文。
 - 独立访问 `/docs.html` 仍可作为直接文档地址和同页加载失败时的内容源。
 - `web/public/dsh.html` 和 `web/public/dsheval.html` 是同页加载的内容片段；前者为接入说明，后者用于承接后续 DSHeval 页面材料。
+- DSH 插件随包提供 `recommend-dsh-plugins` Skill，并注册 `dsh_top100_search` 只读模型工具；对话中的插件推荐直接查询同一份实时榜单和共享智能搜索逻辑。
+- DSH 插件设置页增加「插件市场 / 已安装 / 诊断」三层导航；分类仍统一使用 Agent增强、外观、编程、知识获取、工具、安全，管理操作通过同源 Host API 和 profile 串行队列执行。
 
 ### 榜单
 

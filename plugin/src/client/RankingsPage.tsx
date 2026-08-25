@@ -8,13 +8,17 @@ import type {
   RankingView,
 } from "../shared/types.js";
 import type { Translate } from "./locales.js";
+import { DiagnosticsPage } from "./DiagnosticsPage.js";
+import { ManagedPage } from "./ManagedPage.js";
 
 interface RankingsPageProps {
   t: Translate;
 }
 
 const VIEWS: RankingView[] = ["hot", "rising", "total", "category"];
-const BATCH_LIMIT = 20;
+const HIDE_SKILLS_KEY = "dsh-top100:hide-skills";
+const DSHEVAL_SITE = "https://www.dsheval.ai";
+type PageSection = "rankings" | "installed" | "diagnostics";
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -24,10 +28,14 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export function RankingsPage({ t }: RankingsPageProps) {
+  const [section, setSection] = useState<PageSection>("rankings");
   const [view, setView] = useState<RankingView>("hot");
   const [category, setCategory] = useState<PluginCategoryId>("ai");
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState("");
+  const [hideSkills, setHideSkills] = useState(() => {
+    try { return window.localStorage.getItem(HIDE_SKILLS_KEY) === "1"; } catch { return false; }
+  });
   const [data, setData] = useState<CatalogResponse | null>(null);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +43,6 @@ export function RankingsPage({ t }: RankingsPageProps) {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirming, setConfirming] = useState<CatalogItem[] | null>(null);
-  const [selected, setSelected] = useState<string[]>([]);
   const [batch, setBatch] = useState<InstallBatchSnapshot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -43,6 +50,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
     nextView: RankingView,
     nextQuery: string,
     nextCategory: PluginCategoryId,
+    nextHideSkills: boolean,
     offset = 0,
     append = false,
   ) => {
@@ -53,6 +61,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
       const payload = await readJson<CatalogResponse>(`/dsh-top100/rankings?${new URLSearchParams({
         view: nextView,
         category: nextCategory,
+        skills: nextHideSkills ? "0" : "1",
         q: nextQuery,
         offset: String(offset),
         limit: "40",
@@ -68,9 +77,9 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }, []);
 
   useEffect(() => {
-    setSelected([]);
-    void load(view, query, category, 0, false);
-  }, [category, load, query, view]);
+    if (section !== "rankings") return;
+    void load(view, query, category, hideSkills, 0, false);
+  }, [category, hideSkills, load, query, section, view]);
 
   useEffect(() => {
     if (!busy) return undefined;
@@ -80,9 +89,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
           setBatch(snapshot);
           if (snapshot.completed === snapshot.total) {
             setBusy(null);
-            setSelected([]);
             setNotice(snapshot.requiresRestart ? t("restart") : t("batchComplete"));
-            await load(view, query, category, 0, false);
+            await load(view, query, category, hideSkills, 0, false);
           }
         })
         .catch((cause: unknown) => {
@@ -93,7 +101,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
     refresh();
     const timer = window.setInterval(refresh, 800);
     return () => window.clearInterval(timer);
-  }, [busy, category, load, query, t, view]);
+  }, [busy, category, hideSkills, load, query, t, view]);
 
   const remaining = useMemo(() => {
     if (!data) return 0;
@@ -106,12 +114,6 @@ export function RankingsPage({ t }: RankingsPageProps) {
   );
 
   const activeCategory = data?.categories.find((definition) => definition.id === category);
-
-  function toggleSelected(fullName: string): void {
-    setSelected((current) =>
-      current.includes(fullName) ? current.filter((value) => value !== fullName) : [...current, fullName],
-    );
-  }
 
   async function install(selectedItems: CatalogItem[]): Promise<void> {
     setConfirming(null);
@@ -179,18 +181,26 @@ export function RankingsPage({ t }: RankingsPageProps) {
               {t("updated")} {data.snapshotDate}
             </span>
             <span>
-              {t("source")} {data.dataUrl}
+              {t("source")} <a className="data-source" href={DSHEVAL_SITE} target="_blank" rel="noreferrer" title={data.dataUrl}>DSHEval</a>
             </span>
             <span>{data.total} plugins</span>
           </div>
         ) : null}
       </header>
 
+      <nav className="page-tabs" aria-label={t("nav")}>
+        <button type="button" aria-selected={section === "rankings"} onClick={() => setSection("rankings")}>{t("rankings")}</button>
+        <button type="button" aria-selected={section === "installed"} onClick={() => setSection("installed")}>{t("installedPage")}</button>
+        <button type="button" aria-selected={section === "diagnostics"} onClick={() => setSection("diagnostics")}>{t("diagnostics")}</button>
+      </nav>
+
+      {section === "rankings" ? <>
+
       <div className="toolbar">
         <input
           type="search"
           value={draft}
-          placeholder={t("search")}
+          placeholder={t("searchPlaceholder")}
           onChange={(event) => setDraft(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === "Enter") setQuery(draft.trim());
@@ -199,32 +209,22 @@ export function RankingsPage({ t }: RankingsPageProps) {
         <button type="button" className="primary" onClick={() => setQuery(draft.trim())}>
           {t("search")}
         </button>
-        <button
-          type="button"
-          className="primary"
-          disabled={selected.length === 0 || busy !== null}
-          onClick={() => setConfirming(items.filter((item) => selected.includes(item.fullName)))}
-        >
-          {t("batchInstall")} ({selected.length})
-        </button>
-        <div className="tabs" role="tablist">
-          {VIEWS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              className="tab"
-              role="tab"
-              aria-selected={view === id}
-              onClick={() => {
-                setView(id);
-                setQuery("");
-                setDraft("");
-              }}
-            >
-              {t(id)}
-            </button>
-          ))}
-        </div>
+        <label className="skill-filter">
+          <input type="checkbox" checked={hideSkills} onChange={(event) => {
+            const checked = event.target.checked;
+            setHideSkills(checked);
+            try { window.localStorage.setItem(HIDE_SKILLS_KEY, checked ? "1" : "0"); } catch { /* storage unavailable */ }
+          }} />
+          {t("hideSkills")}
+        </label>
+      </div>
+
+      <div className="tabs ranking-tabs" role="tablist">
+        {VIEWS.map((id) => (
+          <button key={id} type="button" className="tab" role="tab" aria-selected={view === id} onClick={() => { setView(id); setQuery(""); setDraft(""); }}>
+            {t(id)}
+          </button>
+        ))}
       </div>
 
       {view === "category" && data ? (
@@ -256,7 +256,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
         <div className="error">
           {t(errorAction === "install" ? "installError" : "loadError")}: {error}{" "}
           {errorAction === "load" ? (
-            <button type="button" onClick={() => void load(view, query, category, 0, false)}>
+            <button type="button" onClick={() => void load(view, query, category, hideSkills, 0, false)}>
               {t("retry")}
             </button>
           ) : null}
@@ -274,16 +274,6 @@ export function RankingsPage({ t }: RankingsPageProps) {
           return (
             <article key={`${item.fullName}-${item.rank}`}>
               <div className="rank">
-                {item.installable && !item.installed ? (
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(item.fullName)}
-                    disabled={busy !== null || (selected.length >= BATCH_LIMIT && !selected.includes(item.fullName))}
-                    title={selected.length >= BATCH_LIMIT && !selected.includes(item.fullName) ? t("batchLimit") : undefined}
-                    aria-label={`${t("select")} ${item.fullName}`}
-                    onChange={() => toggleSelected(item.fullName)}
-                  />
-                ) : null}
                 <span>{item.rank}</span>
               </div>
               <div>
@@ -294,25 +284,14 @@ export function RankingsPage({ t }: RankingsPageProps) {
                 </h3>
                 <p className="desc">{item.descriptionZh || item.description}</p>
                 <div className="facts">
-                  <span>
-                    {t("stars")} {item.stars}
-                  </span>
-                  <span>
-                    {t("weekly")} {item.weeklyStars}
-                  </span>
-                  <span>
-                    {t("daily")} {item.dailyStars}
-                  </span>
-                  <span>{item.type}</span>
-                  {(item.tags ?? []).slice(0, 3).map((tag) => (
-                    <span key={tag}>{tag}</span>
-                  ))}
+                  <span className="star-fact">★ {item.stars}</span>
+                  <span>{t("weekly")} {item.weeklyStars}</span>
                 </div>
               </div>
               <div className="actions">
                 {job ? jobPanel(job) : item.installed ? (
-                  <button type="button" disabled>
-                    {t("installed")}
+                  <button type="button" onClick={() => setSection("installed")}>
+                    {t("manage")}
                   </button>
                 ) : item.installable ? (
                   <button
@@ -328,8 +307,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
                     {t("browseOnly")}
                   </button>
                 )}
-                <a href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">
-                  {t("github")}
+                <a className="github-link" href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">
+                  <span>{t("github")}</span><span className="external-arrow" aria-hidden="true">↗</span>
                 </a>
               </div>
             </article>
@@ -339,7 +318,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
       </div>
 
       {remaining > 0 ? (
-        <button type="button" disabled={loading} onClick={() => void load(view, query, category, items.length, true)}>
+        <button type="button" disabled={loading} onClick={() => void load(view, query, category, hideSkills, items.length, true)}>
           {t("more")} ({remaining})
         </button>
       ) : null}
@@ -373,6 +352,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           </div>
         </div>
       ) : null}
+      </> : section === "installed" ? <ManagedPage t={t} /> : <DiagnosticsPage t={t} />}
     </div>
   );
 }

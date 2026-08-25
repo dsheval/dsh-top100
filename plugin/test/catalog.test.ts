@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { filterCatalog, matchesQuery } from "../src/host/catalog.js";
+import {
+  describeCatalogFetchError,
+  filterCatalog,
+  isRetryableCatalogFetchError,
+  matchesQuery,
+  parseRankingsDocument,
+} from "../src/host/catalog.js";
 import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
 
 function entry(fullName: string, extra: Partial<RankingEntry> = {}): RankingEntry {
@@ -73,6 +79,19 @@ describe("catalog filter", () => {
     expect(result.items.map((item) => item.fullName)).toEqual(["other/search-me"]);
   });
 
+  it("can hide Skill entries without changing the category taxonomy", () => {
+    const result = filterCatalog(document, {
+      view: "total",
+      category: null,
+      query: "",
+      offset: 0,
+      limit: 10,
+      installed: {},
+      excludeSkills: true,
+    });
+    expect(result.items.map((item) => item.fullName)).toEqual(["acme/hot-one"]);
+  });
+
   it("paginates and marks installed github specs", () => {
     const result = filterCatalog(document, {
       view: "total",
@@ -142,5 +161,20 @@ describe("catalog filter", () => {
     });
     expect(matchesQuery(vision, "我想找一个图片处理插件")).toBe(true);
     expect(matchesQuery(entry("acme/search-tool"), "serach")).toBe(true);
+  });
+});
+
+describe("catalog transport", () => {
+  it("recognizes certificate failures that Windows may retry", () => {
+    const cause = Object.assign(new Error("unable to verify the first certificate"), { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" });
+    const error = new Error("fetch failed", { cause });
+    expect(isRetryableCatalogFetchError(error)).toBe(true);
+    expect(describeCatalogFetchError(error)).toContain("证书校验失败");
+  });
+
+  it("validates downloaded rankings JSON before caching it", () => {
+    expect(parseRankingsDocument(JSON.stringify(document)).rankings.total).toHaveLength(3);
+    expect(() => parseRankingsDocument("<html>bad gateway</html>")).toThrow("not valid JSON");
+    expect(() => parseRankingsDocument("{}")).toThrow("rankings.total");
   });
 });

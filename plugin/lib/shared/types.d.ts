@@ -83,6 +83,7 @@ export interface CatalogResponse {
     snapshotDate: string;
     dataUrl: string;
     query: string;
+    excludeSkills: boolean;
     total: number;
     offset: number;
     limit: number;
@@ -105,6 +106,8 @@ export interface InstallJobSnapshot {
     batchId: string;
     fullName: string;
     profile: string;
+    action?: InstallAction;
+    kind?: ManagedKind;
     phase: InstallPhase;
     lastLine: string;
     error: string | null;
@@ -115,6 +118,7 @@ export interface InstallJobSnapshot {
     finishedAt: number | null;
     cancelRequested: boolean;
 }
+export type InstallAction = "install" | "update" | "uninstall";
 export interface InstallBatchSnapshot {
     batchId: string;
     createdAt: number;
@@ -129,4 +133,139 @@ export interface InstallResult {
     stdout: string;
     stderr: string;
     cancelled: boolean;
+}
+export type ManagedKind = "bundle" | "skill";
+export interface ManagedPlugin {
+    name: string;
+    spec: string;
+    version: string | null;
+    description: string;
+    descriptionZh: string;
+    fullName: string | null;
+    url: string | null;
+    enabled: boolean;
+    updateAvailable: boolean;
+    latest: string | null;
+    local: boolean;
+    protected: boolean;
+    kind: ManagedKind;
+}
+export interface ManagedListResponse {
+    profile: string;
+    query: string;
+    total: number;
+    items: ManagedPlugin[];
+}
+export declare const DIAGNOSTIC_SCHEMA = "dsh-top100/diagnostics/v1";
+export type DiagnosticSeverity = "error" | "warning" | "info";
+export interface DiagnosticFinding {
+    severity: DiagnosticSeverity;
+    code: string;
+    subject: string;
+    message: string;
+    detail?: string;
+}
+export interface DiagnosticBundle {
+    name: string;
+    spec: string;
+    version: string | null;
+    kind: "official" | "community";
+    directory: string | null;
+    patchPath: string | null;
+    entries: string[];
+    error: string | null;
+    enabled: boolean;
+    local: boolean;
+    protected: boolean;
+    catalogName: string | null;
+    latest: string | null;
+    updateAvailable: boolean;
+}
+export interface DiagnosticSkill {
+    name: string;
+    hasManifest: boolean;
+    description: string;
+}
+export interface DiagnosticPeer {
+    plugin: string;
+    name: string;
+    range: string;
+    resolved: string | null;
+    satisfied: boolean | null;
+}
+export interface DiagnosticDuplicate {
+    id: string;
+    layers: string[];
+    count: number;
+}
+export interface DiagnosticMultiVersion {
+    name: string;
+    versions: string[];
+}
+export interface DiagnosticHostDep {
+    plugin: string;
+    dependency: string;
+    range: string;
+}
+export interface DiagnosticCatalog {
+    dataUrl: string;
+    ok: boolean;
+    error: string | null;
+    snapshotDate: string | null;
+    generatedAt: string | null;
+    fetchedAt: number | null;
+    latencyMs: number | null;
+    counts: {
+        hot: number;
+        rising: number;
+        total: number;
+    };
+    staleDays: number | null;
+}
+export interface DiagnosticInventory {
+    official: number;
+    community: number;
+    skills: number;
+    enabled: number;
+    disabled: number;
+    protected: number;
+    local: number;
+    updates: number;
+    catalogMatched: number;
+    missingOnDisk: number;
+    extraDependencies: string[];
+}
+export interface DiagnosticPatch {
+    path: string;
+    exists: boolean;
+    disables: string[];
+    forced: string[];
+    orphans: string[];
+}
+export interface DiagnosticReport {
+    schema: typeof DIAGNOSTIC_SCHEMA;
+    profile: string;
+    profileDir: string;
+    scannedAt: number;
+    pluginVersion: string;
+    summary: {
+        ok: boolean;
+        errors: number;
+        warnings: number;
+        infos: number;
+        conflicts: number;
+        dependencies: number;
+        catalogIssues: number;
+        order: number;
+    };
+    catalog: DiagnosticCatalog;
+    inventory: DiagnosticInventory;
+    bundles: DiagnosticBundle[];
+    skills: DiagnosticSkill[];
+    duplicates: DiagnosticDuplicate[];
+    peers: DiagnosticPeer[];
+    multiVersion: DiagnosticMultiVersion[];
+    hostDeps: DiagnosticHostDep[];
+    patch: DiagnosticPatch;
+    findings: DiagnosticFinding[];
 }

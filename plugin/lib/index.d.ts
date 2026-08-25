@@ -5,6 +5,7 @@
 import type { Context } from "@deepseek-ai/cordis";
 import z from "@deepseek-ai/schemastery";
 export declare const name = "dsh-top100";
+export declare const inject: string[];
 export interface Config {
     dataUrl: string;
     profile: string;

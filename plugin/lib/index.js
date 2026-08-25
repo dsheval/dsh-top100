@@ -6,7 +6,9 @@ import z from "@deepseek-ai/schemastery";
 import { DEFAULT_DATA_URL, normalizeDataUrl } from "./host/catalog.js";
 import { argvProfile } from "./host/profile.js";
 import { mountRoutes } from "./host/routes.js";
+import { installRecommendationCapabilities } from "./host/recommendations.js";
 export const name = "dsh-top100";
+export const inject = ["skills", "tools"];
 export const Config = z.object({
     dataUrl: z.string().default(DEFAULT_DATA_URL),
     profile: z.string().default("web"),
@@ -19,6 +21,7 @@ export function apply(ctx, config = { dataUrl: DEFAULT_DATA_URL, profile: "web" 
     void import("./host/settings.js")
         .then((module) => module.installTop100Settings(ctx, resolved))
         .catch(() => undefined);
+    installRecommendationCapabilities(ctx, resolved);
     ctx.inject(["webServer"], (hostCtx) => {
         const host = hostCtx;
         host.effect(() => mountRoutes(host, resolved), "dsh-top100: http routes");

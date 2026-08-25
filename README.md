@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="./CHANGELOG.md"><img alt="正式版本 v1.0.0" src="https://img.shields.io/badge/release-v1.0.0-2f6f68?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
@@ -32,7 +33,7 @@
 
 ## DSH 插件
 
-dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并完成单个或批量安装。
+dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并对可信安装源进行单项确认安装。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
 
 插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](./plugin/README.md#安装)。
 

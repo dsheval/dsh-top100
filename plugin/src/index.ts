@@ -9,8 +9,10 @@ import { DEFAULT_DATA_URL, normalizeDataUrl } from "./host/catalog.js";
 import type { PluginResolvedConfig } from "./host/contracts.js";
 import { argvProfile } from "./host/profile.js";
 import { mountRoutes } from "./host/routes.js";
+import { installRecommendationCapabilities } from "./host/recommendations.js";
 
 export const name = "dsh-top100";
+export const inject = ["skills", "tools"];
 
 export interface Config {
   dataUrl: string;
@@ -31,6 +33,8 @@ export function apply(ctx: Context, config: Config = { dataUrl: DEFAULT_DATA_URL
   void import("./host/settings.js")
     .then((module) => module.installTop100Settings(ctx, resolved))
     .catch(() => undefined);
+
+  installRecommendationCapabilities(ctx, resolved);
 
   ctx.inject(["webServer"], (hostCtx: Context) => {
     const host = hostCtx as unknown as {

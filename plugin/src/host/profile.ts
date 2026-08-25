@@ -5,7 +5,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import type { InstalledMap } from "../shared/types.js";
 
-const INBOX_BUNDLES = new Set([
+export const INBOX_BUNDLES = new Set([
   "@deepseek-ai/dsh-base",
   "@deepseek-ai/dsh-web-app",
   "@deepseek-ai/dsh-headless",
@@ -29,6 +29,31 @@ export function readInstalled(profile: string, explicitDir?: string): InstalledM
     return installed;
   } catch {
     return {};
+  }
+}
+
+export function readInstalledVersion(profile: string, name: string, explicitDir?: string): string | null {
+  try {
+    const manifest = JSON.parse(
+      readFileSync(join(profileDir(profile, explicitDir), "node_modules", name, "package.json"), "utf8"),
+    ) as { version?: string };
+    return manifest.version ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function readInstalledManifest(
+  profile: string,
+  name: string,
+  explicitDir?: string,
+): { name?: string; version?: string; description?: string; homepage?: string; repository?: unknown } | null {
+  try {
+    return JSON.parse(
+      readFileSync(join(profileDir(profile, explicitDir), "node_modules", name, "package.json"), "utf8"),
+    ) as { name?: string; version?: string; description?: string; homepage?: string; repository?: unknown };
+  } catch {
+    return null;
   }
 }
 

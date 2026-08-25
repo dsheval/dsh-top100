@@ -57,7 +57,7 @@ Daily mode reads bounded high-value search windows and refreshes known repositor
 
 ### DSH plugin
 
-`plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process fetches and caches the same published `rankings.json` used by the website, exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings.
+`plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process fetches and caches the same published `rankings.json` used by the website, exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings. The package also registers the bundled `recommend-dsh-plugins` Skill and the read-only `dsh_top100_search` model tool into DSH's global registries; both disappear with the plugin and never copy files into the user's Skill directory.
 
 Website and plugin search use the same weighted search core in `plugin/src/shared/search.ts`. The Host imports it directly; `npm run search:build` bundles the same source to `web/public/search-engine.js`. Search weights exact names and repository identifiers above tags, topics and descriptions, expands Chinese/English synonyms, removes natural-language filler, tolerates one edit or adjacent transposition in longer Latin tokens, and orders matches by relevance while retaining the published rank on each item.
 

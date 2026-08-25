@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-const INBOX_BUNDLES = new Set([
+export const INBOX_BUNDLES = new Set([
     "@deepseek-ai/dsh-base",
     "@deepseek-ai/dsh-web-app",
     "@deepseek-ai/dsh-headless",
@@ -25,6 +25,23 @@ export function readInstalled(profile, explicitDir) {
     }
     catch {
         return {};
+    }
+}
+export function readInstalledVersion(profile, name, explicitDir) {
+    try {
+        const manifest = JSON.parse(readFileSync(join(profileDir(profile, explicitDir), "node_modules", name, "package.json"), "utf8"));
+        return manifest.version ?? null;
+    }
+    catch {
+        return null;
+    }
+}
+export function readInstalledManifest(profile, name, explicitDir) {
+    try {
+        return JSON.parse(readFileSync(join(profileDir(profile, explicitDir), "node_modules", name, "package.json"), "utf8"));
+    }
+    catch {
+        return null;
     }
 }
 export function argvProfile() {
