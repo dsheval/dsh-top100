@@ -55,6 +55,12 @@ Daily mode reads bounded high-value search windows and refreshes known repositor
 
 `web/public/` is a static HTML/CSS/JavaScript application. It reads `/data/rankings.json`; it never connects to GitHub, DeepSeek or SQLite and never receives a secret.
 
+### DSH plugin
+
+`plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process fetches and caches the same published `rankings.json` used by the website, exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings.
+
+The plugin package does not contain the Collector, SQLite database or website backend. `plugin/src/host`, `plugin/src/install`, `plugin/src/client` and `plugin/src/shared` keep host integration, local mutations, UI code and cross-runtime contracts separate.
+
 ## Persistence
 
 All mutable deployment state lives under `runtime/`:
