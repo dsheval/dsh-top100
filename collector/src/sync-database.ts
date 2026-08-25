@@ -60,12 +60,13 @@ async function classifyRepositories(
     plugin.categories = normalizeCategoryAssignments(plugin.categories);
     if (hasAuthoritativeCategories(plugin.categories)) continue;
     const cached = cache.get(plugin.fullName.toLocaleLowerCase());
+    const cachedCategories = normalizeCategoryAssignments(cached?.categories);
     if (
       cached &&
       cached.sourceHash === categorySourceHash(plugin) &&
-      hasAuthoritativeCategories(cached.categories)
+      hasAuthoritativeCategories(cachedCategories)
     ) {
-      plugin.categories = cached.categories;
+      plugin.categories = cachedCategories;
     }
   }
 

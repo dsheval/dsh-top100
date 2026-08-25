@@ -181,11 +181,11 @@
       }
 
       .eyebrow {
-        margin: 0 0 20px;
+        margin: 0 0 24px;
         font-family: var(--mono);
-        font-size: 13px;
+        font-size: 17px;
         font-weight: 700;
-        letter-spacing: 0.1em;
+        letter-spacing: 0.045em;
         color: var(--hero-accent);
         text-transform: uppercase;
       }
@@ -195,9 +195,14 @@
         margin: 0;
         font-family: var(--serif);
         font-size: clamp(54px, 6.4vw, 92px);
-        font-weight: 500;
-        letter-spacing: -0.055em;
-        line-height: 0.92;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        line-height: 1.03;
+      }
+
+      h1 span {
+        display: block;
+        white-space: nowrap;
       }
 
       .hero-description {
@@ -292,17 +297,21 @@
         border: 1px solid rgba(241, 199, 91, 0.22);
         border-radius: 50%;
         background:
-          radial-gradient(circle at 18% 27%, var(--hero-accent) 0 4px, transparent 5px),
-          radial-gradient(circle at 68% 18%, var(--hero-ink) 0 4px, transparent 5px),
-          radial-gradient(circle at 82% 42%, var(--hero-accent) 0 5px, transparent 6px),
-          radial-gradient(circle at 38% 48%, var(--hero-ink) 0 5px, transparent 6px),
-          radial-gradient(circle at 63% 70%, var(--hero-accent) 0 4px, transparent 5px),
-          radial-gradient(circle at 27% 78%, var(--hero-ink) 0 4px, transparent 5px),
-          repeating-radial-gradient(
+          radial-gradient(circle at 18% 27%, var(--hero-accent) 0 3px, transparent 4px),
+          radial-gradient(circle at 68% 18%, var(--hero-ink) 0 6px, transparent 7px),
+          radial-gradient(circle at 82% 42%, var(--hero-accent) 0 4px, transparent 5px),
+          radial-gradient(circle at 38% 48%, var(--hero-ink) 0 7px, transparent 8px),
+          radial-gradient(circle at 63% 70%, var(--hero-accent) 0 5px, transparent 6px),
+          radial-gradient(circle at 27% 78%, var(--hero-ink) 0 3px, transparent 4px),
+          radial-gradient(
             circle at 50% 50%,
-            transparent 0 38px,
-            rgba(241, 199, 91, 0.14) 39px 40px,
-            transparent 41px 65px
+            transparent 0 27%,
+            rgba(241, 199, 91, 0.2) 27.3% 27.8%,
+            transparent 28.2% 49%,
+            rgba(241, 199, 91, 0.11) 49.4% 50.1%,
+            transparent 50.5% 82%,
+            rgba(241, 199, 91, 0.16) 82.3% 82.7%,
+            transparent 83.1%
           );
         animation: signal-float 6s ease-in-out infinite;
       }
@@ -341,6 +350,7 @@
         font-size: 26px;
         font-weight: 800;
         transform: translate(-50%, -50%);
+        animation: signal-core-pulse 4.8s ease-in-out infinite;
       }
 
       @keyframes hero-enter {
@@ -369,27 +379,47 @@
         0%,
         100% {
           translate: 0 0;
+          scale: 0.975;
         }
         50% {
           translate: 0 -10px;
+          scale: 1.025;
         }
       }
 
       @keyframes orbit-forward {
         from {
-          transform: rotate(28deg);
+          transform: rotate(28deg) scaleX(0.94) scaleY(1.04);
+        }
+        50% {
+          transform: rotate(208deg) scaleX(1.06) scaleY(0.95);
         }
         to {
-          transform: rotate(388deg);
+          transform: rotate(388deg) scaleX(0.94) scaleY(1.04);
         }
       }
 
       @keyframes orbit-reverse {
         from {
-          transform: rotate(-24deg);
+          transform: rotate(-24deg) scaleX(1.05) scaleY(0.96);
+        }
+        50% {
+          transform: rotate(-204deg) scaleX(0.93) scaleY(1.07);
         }
         to {
-          transform: rotate(-384deg);
+          transform: rotate(-384deg) scaleX(1.05) scaleY(0.96);
+        }
+      }
+
+      @keyframes signal-core-pulse {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgba(241, 199, 91, 0);
+          transform: translate(-50%, -50%) scale(0.96);
+        }
+        50% {
+          box-shadow: 0 0 0 12px rgba(241, 199, 91, 0.055);
+          transform: translate(-50%, -50%) scale(1.04);
         }
       }
 
@@ -735,7 +765,7 @@
       .category-options {
         display: grid;
         width: 100%;
-        grid-template-columns: repeat(9, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         overflow: hidden;
         border: 1px solid var(--line);
       }
@@ -751,17 +781,17 @@
         display: inline-flex;
         width: 100%;
         min-width: 0;
-        min-height: 42px;
-        padding: 0 4px;
+        min-height: 50px;
+        padding: 0 12px;
         align-items: center;
         justify-content: flex-start;
-        gap: 3px;
+        gap: 6px;
         border: 0;
         border-right: 1px solid var(--line);
         color: var(--muted);
         background: color-mix(in srgb, var(--card) 90%, transparent);
         font-family: var(--sans);
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 800;
         letter-spacing: 0;
         cursor: pointer;
@@ -774,9 +804,9 @@
 
       .category-icon {
         display: inline-flex;
-        width: 14px;
-        height: 14px;
-        flex: 0 0 14px;
+        width: 16px;
+        height: 16px;
+        flex: 0 0 16px;
         color: color-mix(in srgb, var(--accent) 84%, var(--muted));
       }
 
@@ -810,7 +840,7 @@
         margin-left: auto;
         color: color-mix(in srgb, currentColor 72%, transparent);
         font-family: var(--mono);
-        font-size: 8px;
+        font-size: 9px;
         font-weight: 700;
         letter-spacing: -0.02em;
       }
@@ -1768,6 +1798,11 @@
           display: none;
         }
 
+        .eyebrow {
+          margin-bottom: 20px;
+          font-size: 13px;
+        }
+
         .hero,
         .hero-inner {
           min-height: auto;
@@ -1779,7 +1814,7 @@
         }
 
         h1 {
-          font-size: clamp(48px, 15vw, 70px);
+          font-size: clamp(42px, 11.5vw, 58px);
         }
 
         .signal-field {
@@ -1846,7 +1881,20 @@
         }
 
         .category-options {
-          grid-template-columns: repeat(9, minmax(0, 1fr));
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        .category-option {
+          min-height: 44px;
+          padding: 0;
+          gap: 0;
+          font-size: 8.5px;
+        }
+
+        .category-icon {
+          width: 8px;
+          height: 8px;
+          flex-basis: 8px;
         }
 
         .category-count {
@@ -1952,16 +2000,21 @@
         .hero-copy > *,
         .signal-field,
         .signal-field::before,
-        .signal-field::after {
+        .signal-field::after,
+        .signal-core {
           animation: none;
         }
 
         .signal-field::before {
-          transform: rotate(28deg);
+          transform: rotate(28deg) scaleX(0.94) scaleY(1.04);
         }
 
         .signal-field::after {
-          transform: rotate(-24deg);
+          transform: rotate(-24deg) scaleX(1.05) scaleY(0.96);
+        }
+
+        .signal-core {
+          transform: translate(-50%, -50%);
         }
 
         .plugin,
@@ -2006,7 +2059,7 @@
         <div class="hero-inner">
           <div class="hero-copy">
             <p class="eyebrow">The verified plugin index for agents</p>
-            <h1>找到真正热门的 DSH 插件。</h1>
+            <h1><span>找到真正热门的</span><span>DSH 插件。</span></h1>
             <p class="hero-description">
               持续追踪经验证的 DeepSeek Harness 插件，通过 Top 100、新锐榜和完整总榜，
               发现真正值得关注的开源项目。
@@ -2220,7 +2273,7 @@
                   <span class="category-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z"/><path d="m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z"/></svg>
                   </span>
-                  <span>AI增强</span>
+                  <span>Agent增强</span>
                   <span class="category-count" data-category-count="ai">—</span>
                 </button>
                 <button class="category-option" type="button" data-category="appearance" aria-pressed="false" aria-describedby="category-hover-description">
@@ -2230,13 +2283,6 @@
                   <span>外观</span>
                   <span class="category-count" data-category-count="appearance">—</span>
                 </button>
-                <button class="category-option" type="button" data-category="memory" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.75 7.5 4.2 7.5-4.2M12 12v9"/></svg>
-                  </span>
-                  <span>记忆</span>
-                  <span class="category-count" data-category-count="memory">—</span>
-                </button>
                 <button class="category-option" type="button" data-category="coding" aria-pressed="false" aria-describedby="category-hover-description">
                   <span class="category-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16"/></svg>
@@ -2244,33 +2290,12 @@
                   <span>编程</span>
                   <span class="category-count" data-category-count="coding">—</span>
                 </button>
-                <button class="category-option" type="button" data-category="search" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>
-                  </span>
-                  <span>搜索</span>
-                  <span class="category-count" data-category-count="search">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="automation" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="m13 2-8 12h7l-1 8 8-12h-7l1-8Z"/></svg>
-                  </span>
-                  <span>自动化</span>
-                  <span class="category-count" data-category-count="automation">—</span>
-                </button>
                 <button class="category-option" type="button" data-category="knowledge" aria-pressed="false" aria-describedby="category-hover-description">
                   <span class="category-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z"/></svg>
                   </span>
-                  <span>知识库</span>
+                  <span>知识获取</span>
                   <span class="category-count" data-category-count="knowledge">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="security" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-                  </span>
-                  <span>安全</span>
-                  <span class="category-count" data-category-count="security">—</span>
                 </button>
                 <button class="category-option" type="button" data-category="tools" aria-pressed="false" aria-describedby="category-hover-description">
                   <span class="category-icon" aria-hidden="true">
@@ -2278,6 +2303,13 @@
                   </span>
                   <span>工具</span>
                   <span class="category-count" data-category-count="tools">—</span>
+                </button>
+                <button class="category-option" type="button" data-category="security" aria-pressed="false" aria-describedby="category-hover-description">
+                  <span class="category-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                  </span>
+                  <span>安全</span>
+                  <span class="category-count" data-category-count="security">—</span>
                 </button>
               </div>
               <div class="category-description-stage">
@@ -2407,60 +2439,43 @@
       const categoryDescriptionBody = categoryDescription.querySelector(".category-description-body");
       const PAGE_SIZE = 100;
       const categoryLabels = {
-        ai: "AI增强",
+        ai: "Agent增强",
         appearance: "外观",
-        memory: "记忆",
         coding: "编程",
-        search: "搜索",
-        automation: "自动化",
-        knowledge: "知识库",
-        security: "安全",
+        knowledge: "知识获取",
         tools: "工具",
+        security: "安全",
       };
       const categoryDescriptions = {
-        ai: "模型路由、提示词、推理增强、多模态能力与 AI 助手。",
+        ai: "模型能力、提示词、记忆、上下文、多 Agent 协作与智能体增强。",
         appearance: "主题、皮肤、界面组件、桌面体验、图标与可视化面板。",
-        memory: "长期记忆、会话历史、上下文管理、人格与状态延续。",
         coding: "代码生成、调试、测试、代码审查、终端、Git 与开发辅助。",
-        search: "联网搜索、浏览器、网页抓取、研究与信息检索。",
-        automation: "工作流、定时任务、自动执行、流水线与跨应用编排。",
-        knowledge: "知识库、RAG、文档问答、Wiki、笔记与资料管理。",
+        knowledge: "联网搜索、浏览器检索、RAG、知识库、文档问答与研究。",
+        tools: "自动化、工作流、连接器、文件处理、通知与效率工具。",
         security: "权限、沙箱、审计、认证、隐私、密钥与安全防护。",
-        tools: "通知、连接器、文件处理、效率增强与其他通用实用工具。",
       };
       const categoryKeywords = {
         ai: [
-          "ai agent", "agentic", "llm", "model", "prompt", "reasoning",
-          "inference", "multimodal", "assistant", "chatbot", "模型", "提示词",
-          "推理", "智能体", "代理", "AI增强",
+          "ai agent", "agentic", "multi-agent", "subagent", "llm", "model", "prompt",
+          "reasoning", "inference", "multimodal", "assistant", "chatbot", "memory",
+          "session", "context", "conversation", "persona", "recall", "模型", "提示词",
+          "推理", "智能体", "代理", "多智能体", "子代理", "记忆", "会话", "上下文", "人格", "Agent增强",
         ],
         appearance: [
           "theme", "skin", "appearance", "ui", "web ui", "dashboard", "desktop",
           "wallpaper", "avatar", "visual", "emoji", "icon", "界面", "主题",
           "皮肤", "外观", "桌面", "看板",
         ],
-        memory: [
-          "memory", "session", "context", "conversation", "history", "chat history",
-          "knowledge", "persona", "recall", "记忆", "会话", "上下文", "知识库",
-          "聊天记录", "人格",
-        ],
         coding: [
           "code", "coding", "developer", "devtools", "terminal", "shell", "cli",
           "git", "github", "debug", "test", "review", "ide", "编程", "代码",
           "开发", "终端", "调试", "测试", "审查",
         ],
-        search: [
-          "search", "retrieval", "browser", "web", "crawl", "scrape", "research",
-          "rag", "lookup", "搜索", "检索", "浏览器", "网页", "爬虫", "研究",
-        ],
-        automation: [
-          "automation", "automate", "workflow", "scheduler", "cron", "task",
-          "pipeline", "webhook", "orchestration", "自动化", "工作流", "定时",
-          "任务", "流水线", "编排",
-        ],
         knowledge: [
-          "knowledge", "rag", "wiki", "document", "docs", "notes", "notion",
-          "knowledge base", "知识库", "知识", "文档", "笔记", "资料",
+          "search", "retrieval", "browser", "web", "crawl", "scrape", "research",
+          "lookup", "knowledge", "rag", "wiki", "document", "docs", "notes", "notion",
+          "knowledge base", "搜索", "检索", "浏览器", "网页", "爬虫", "研究",
+          "知识库", "知识", "文档", "笔记", "资料", "知识获取",
         ],
         security: [
           "security", "secure", "permission", "sandbox", "audit", "guardrail",
@@ -2468,9 +2483,10 @@
           "认证", "隐私", "密钥",
         ],
         tools: [
-          "utility", "productivity", "integration", "connector", "notification",
+          "automation", "automate", "workflow", "scheduler", "cron", "task", "pipeline",
+          "webhook", "orchestration", "utility", "productivity", "integration", "connector", "notification",
           "plugin manager", "clipboard", "filesystem", "file manager", "converter",
-          "downloader", "calculator", "translate", "实用工具", "效率工具", "集成",
+          "downloader", "calculator", "translate", "自动化", "工作流", "定时", "任务", "流水线", "编排", "实用工具", "效率工具", "集成",
           "连接器", "通知", "插件管理", "剪贴板", "文件管理", "转换", "下载", "计算器", "翻译",
         ],
       };
@@ -2567,7 +2583,7 @@
               heading.textContent = "README 智能分类";
               const paragraph = sourceDocument.createElement("p");
               paragraph.textContent =
-                "DeepSeek 在后端读取仓库 README，将项目归入 AI增强、外观、记忆、编程、搜索、自动化、知识库、安全和工具。一个仓库可以同时属于多个分类；结果连同置信度与依据写入 SQLite，并发布到榜单 JSON。模型暂时不可用时使用规则回退，后续更新继续补齐智能分类。";
+                "DeepSeek 在后端读取仓库 README，将项目归入 Agent增强、外观、编程、知识获取、工具和安全。每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类，因此通常进入 2–3 个分类榜；结果连同置信度与依据写入 SQLite，并发布到榜单 JSON。模型暂时不可用时使用规则回退，后续更新继续补齐智能分类。";
               overview.append(heading, paragraph);
             }
 

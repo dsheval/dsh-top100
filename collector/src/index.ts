@@ -27,7 +27,11 @@ import { detectPlugin, isCordisPackageJson, detectNeedsConfig, detectSubdirBundl
 import { computePracticalScore, computeP99Stars } from "./scoring.js";
 import { cached, cacheGet, cacheSet } from "./cache.js";
 import { runPool } from "./pool.js";
-import { fallbackDescriptionZh, translateWithDeepSeek } from "./llm.js";
+import {
+  fallbackDescriptionZh,
+  isGenericDescriptionZh,
+  translateWithDeepSeek,
+} from "./llm.js";
 import { parseInstallCommands } from "./install-parse.js";
 import { normalizeTags } from "./tag-normalize.js";
 import { summarizeReadme } from "./summary.js";
@@ -560,9 +564,14 @@ async function main() {
   // A：持久化翻译缓存——跨天累积；首次/缺 cache 时从上次 plugins.json 播种
   const zhCache = loadZhCache();
   for (const [id, v] of prevZh) {
-    if (!zhCache.has(id) && v.descriptionZh) {
+    if (!zhCache.has(id) && v.descriptionZh && !isGenericDescriptionZh(v.descriptionZh)) {
       zhCache.set(id, { descriptionZh: v.descriptionZh, tagsZh: v.tagsZh });
     }
+  }
+  for (const d of detected) {
+    if (isGenericDescriptionZh(d.plugin.descriptionZh)) d.plugin.descriptionZh = null;
+    const cached = zhCache.get(d.plugin.id);
+    if (cached && isGenericDescriptionZh(cached.descriptionZh)) zhCache.delete(d.plugin.id);
   }
   let translated = 0;
   let skipped = 0;
@@ -630,7 +639,7 @@ async function main() {
     );
     console.log(`  translated: ${translated}, failed: ${pending.length - translated}`);
     for (const d of detected) {
-      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description);
+      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description, d.plugin.name);
     }
     // A：把本次全部中文简介写回持久化缓存（新翻译 + 复用 + 播种）+ 摘要指纹，跨天累积
     for (const d of detected) {
@@ -646,7 +655,7 @@ async function main() {
     saveZhCache(zhCache);
   } else {
     for (const d of detected) {
-      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description);
+      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description, d.plugin.name);
     }
     console.log("  未配置 DEEPSEEK_API_KEY，复用已有简介并为缺失项生成保守中文简介");
   }

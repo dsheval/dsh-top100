@@ -10,10 +10,7 @@ export type PluginType = "skill" | "cordis-plugin";
 export type PluginCategoryId =
   | "ai"
   | "appearance"
-  | "memory"
   | "coding"
-  | "search"
-  | "automation"
   | "knowledge"
   | "security"
   | "tools";

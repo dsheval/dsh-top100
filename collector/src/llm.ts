@@ -36,7 +36,7 @@ function categoryPromptRules(): string {
   const definitions = CATEGORY_DEFINITIONS.map(
     ({ id, label, description }) => `- ${id}（${label}）：${description}`
   ).join("\n");
-  return `categories：从下面固定分类中选择 1-4 个。一个仓库可以属于多个分类；只根据 README、描述和 topics 中可验证的实际能力分类，不要因为它是 AI 插件就一律选择 ai，也不要把 tools 当默认兜底。每项给出 0-1 置信度和不超过 40 字的简短依据。\n${definitions}`;
+  return `categories：选择 2-3 个分类：第 1 个是主分类，再选择 1-2 个 README 明确证明存在的独立核心能力作为相关分类。不要把实现技术、示例、依赖、安装步骤或偶然出现的关键词当成功能；不要因为它是 AI 插件就一律选择 ai，也不要把 tools 当默认兜底。每项给出 0-1 置信度和不超过 40 字的简短依据，并按置信度从高到低排列。\n${definitions}`;
 }
 
 function buildPrompt(input: LlmRepositoryInput): string {
@@ -51,7 +51,7 @@ README 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（�
 GitHub topics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}
 ${known}
 要求：
-1. descriptionZh：一句话中文简介（不超过 60 字），突出「能做什么、有什么用」，口语化自然，不要翻译腔
+1. descriptionZh：一句话中文简介（不超过 60 字），必须写出该仓库独有的核心功能和用户收益；禁止使用“扩展能力”“请查看 README”“功能与安装方式”等空泛套话，口语化自然，不要翻译腔
 2. tagsZh：3-5 个中文功能标签，用于分类筛选${known ? "，**优先复用上面已存在的标签**（用词一致），只有新功能类型才创建新标签" : ""}
 只输出 JSON，不要任何其他文字：
 {"descriptionZh": "...", "tagsZh": ["...", "..."]}`;
@@ -177,7 +177,7 @@ export async function classifyWithDeepSeek(
       },
       {
         role: "user",
-        content: `请根据仓库 README 为插件做多标签分类。\n\n仓库：${sanitizeUntrustedText(input.name, 120)}\n描述：${sanitizeUntrustedText(input.description || "", 240) || "（无）"}\nREADME 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（无）"}\ntopics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}\n\n${categoryPromptRules()}\n\n只输出 JSON：{"categories":[{"id":"search","confidence":0.91,"evidence":"README 提到联网检索"}]}`,
+        content: `请根据仓库 README 为插件做多标签分类。\n\n仓库：${sanitizeUntrustedText(input.name, 120)}\n描述：${sanitizeUntrustedText(input.description || "", 240) || "（无）"}\nREADME 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（无）"}\ntopics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}\n\n${categoryPromptRules()}\n\n只输出 JSON：{"categories":[{"id":"knowledge","confidence":0.91,"evidence":"README 提到联网检索"}]}`,
       },
     ],
     temperature: 0.1,
@@ -213,12 +213,36 @@ export async function classifyWithDeepSeek(
 }
 
 /** Produce a safe Chinese fallback when model output is unavailable or invalid. */
-export function fallbackDescriptionZh(description: string): string {
+const LEGACY_GENERIC_DESCRIPTION =
+  "用于扩展 DeepSeek Harness 能力，具体功能和安装方式请查看项目 README。";
+
+export function isGenericDescriptionZh(value: string | null | undefined): boolean {
+  if (!value) return false;
+  return value === LEGACY_GENERIC_DESCRIPTION ||
+    /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
+    /中文简介正在生成中/.test(value) ||
+    /：(提供桌面端使用体验|提供搜索、研究或知识检索能力|提供编程开发辅助|增强 Agent 的上下文|提供自动化与效率工具|提供权限、安全检查或隔离能力|改善界面外观与交互体验)/.test(value);
+}
+
+/** Produce an honest, repository-specific fallback when model output is unavailable or invalid. */
+export function fallbackDescriptionZh(description: string, name = "该插件"): string {
   const cleaned = sanitizeUntrustedText(description, 120)
     .replace(/[`#<>]/g, "")
     .trim();
   if ((cleaned.match(/[\u4e00-\u9fff]/g) ?? []).length >= 6) {
     return [...cleaned].slice(0, 60).join("");
   }
-  return "用于扩展 DeepSeek Harness 能力，具体功能和安装方式请查看项目 README。";
+  const signals = `${name} ${cleaned}`.toLocaleLowerCase();
+  const templates: Array<[RegExp, string]> = [
+    [/desktop|electron|macos|windows|桌面/, "提供桌面端使用体验，方便直接运行和管理 DeepSeek Harness。"],
+    [/search|research|retrieval|rag|knowledge|browser|crawl/, "提供搜索、研究或知识检索能力，帮助更快获取和整理资料。"],
+    [/code|coding|developer|debug|test|review|git/, "提供编程开发辅助，覆盖代码处理、调试或工程协作场景。"],
+    [/memory|context|session|persona|agent/, "增强 Agent 的上下文、记忆或协作能力，适合持续处理复杂任务。"],
+    [/workflow|automation|scheduler|pipeline|tool|utility/, "提供自动化与效率工具，帮助简化重复操作和工作流程。"],
+    [/security|sandbox|audit|permission|privacy|secret/, "提供权限、安全检查或隔离能力，降低插件运行风险。"],
+    [/theme|appearance|dashboard|visual|ui\b/, "改善界面外观与交互体验，让日常使用更直观。"],
+  ];
+  const matched = templates.find(([pattern]) => pattern.test(signals));
+  if (matched) return `${name}：${matched[1]}`.slice(0, 60);
+  return `${name} 的中文简介正在生成中，可先查看项目 README 了解核心功能。`.slice(0, 60);
 }

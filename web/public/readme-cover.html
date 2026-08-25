@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dsh-Top100 README Cover</title>
+    <style>
+      :root {
+        --paper: #f2f3ef;
+        --ink: #17211f;
+        --hero: #174942;
+        --hero-ink: #f7f3e7;
+        --accent: #f1c75b;
+        --orbit: rgba(241, 199, 91, 0.46);
+        --divider: rgba(247, 243, 231, 0.42);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        width: 1774px;
+        height: 887px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--paper);
+      }
+
+      body {
+        color: var(--ink);
+        font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "PingFang SC", "Microsoft YaHei", sans-serif;
+      }
+
+      .stage {
+        position: relative;
+        width: 1774px;
+        height: 887px;
+        overflow: hidden;
+      }
+
+      .cover {
+        display: grid;
+        grid-template-columns: 58% 42%;
+        width: 1774px;
+        height: 887px;
+        transform-origin: top left;
+      }
+
+      .copy {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+        padding: 76px 78px 82px 86px;
+        background: var(--paper);
+      }
+
+      .brand {
+        display: flex;
+        align-items: baseline;
+        margin: 0 0 76px;
+        font-size: 82px;
+        font-weight: 800;
+        line-height: 0.9;
+        letter-spacing: -5px;
+      }
+
+      .brand-dsh {
+        color: var(--hero);
+      }
+
+      .brand-top {
+        color: var(--accent);
+      }
+
+      .headline {
+        margin: 0;
+        color: var(--ink);
+        font-family: "Iowan Old Style", Baskerville, "Times New Roman", "Songti SC", serif;
+        font-size: 108px;
+        font-weight: 500;
+        line-height: 0.98;
+        letter-spacing: -6px;
+      }
+
+      .headline span {
+        display: block;
+        white-space: nowrap;
+      }
+
+      .orbit-panel {
+        position: relative;
+        overflow: hidden;
+        border-left: 1px solid var(--divider);
+        background: var(--hero);
+      }
+
+      .orbit-art {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .orbit-line {
+        fill: none;
+        stroke: var(--orbit);
+        stroke-width: 1.2;
+      }
+
+      .orbit-line-strong {
+        fill: none;
+        stroke: rgba(241, 199, 91, 0.64);
+        stroke-width: 1.2;
+      }
+
+      .orbit-core {
+        fill: var(--hero);
+        stroke: var(--accent);
+        stroke-width: 1.6;
+      }
+
+      .orbit-number {
+        fill: var(--accent);
+        font-family: SFMono-Regular, Consolas, "Liberation Mono", "Courier New", monospace;
+        font-size: 31px;
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-anchor: middle;
+      }
+
+      .node-accent {
+        fill: var(--accent);
+      }
+
+      .node-light {
+        fill: var(--hero-ink);
+      }
+
+      body.preview {
+        display: grid;
+        width: 100vw;
+        height: 100vh;
+        place-items: center;
+        background: #dce2df;
+      }
+
+      body.preview .stage {
+        width: calc(1774px * var(--preview-scale));
+        height: calc(887px * var(--preview-scale));
+      }
+
+      body.preview .cover {
+        transform: scale(var(--preview-scale));
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage" aria-label="dsh-Top100 README 封面">
+      <section class="cover">
+        <div class="copy">
+          <p class="brand" aria-label="dsh-Top100">
+            <span class="brand-dsh">dsh-</span><span class="brand-top">Top100</span>
+          </p>
+          <h1 class="headline">
+            <span>True popularity.</span>
+            <span>Readable at a glance.</span>
+          </h1>
+        </div>
+
+        <div class="orbit-panel" aria-hidden="true">
+          <svg class="orbit-art" viewBox="0 0 745 887" role="img">
+            <ellipse class="orbit-line" cx="372" cy="444" rx="274" ry="292"></ellipse>
+            <ellipse class="orbit-line" cx="372" cy="444" rx="215" ry="252"></ellipse>
+            <ellipse class="orbit-line" cx="372" cy="444" rx="151" ry="185"></ellipse>
+            <ellipse
+              class="orbit-line-strong"
+              cx="372"
+              cy="444"
+              rx="292"
+              ry="126"
+              transform="rotate(-17 372 444)"
+            ></ellipse>
+            <ellipse
+              class="orbit-line-strong"
+              cx="372"
+              cy="444"
+              rx="258"
+              ry="176"
+              transform="rotate(31 372 444)"
+            ></ellipse>
+            <ellipse
+              class="orbit-line"
+              cx="372"
+              cy="444"
+              rx="302"
+              ry="104"
+              transform="rotate(58 372 444)"
+            ></ellipse>
+
+            <circle class="orbit-core" cx="372" cy="444" r="66"></circle>
+            <text class="orbit-number" x="372" y="455">100</text>
+
+            <circle class="node-accent" cx="206" cy="274" r="7"></circle>
+            <circle class="node-light" cx="509" cy="210" r="7"></circle>
+            <circle class="node-accent" cx="574" cy="363" r="8"></circle>
+            <circle class="node-light" cx="306" cy="425" r="7"></circle>
+            <circle class="node-accent" cx="437" cy="581" r="7"></circle>
+            <circle class="node-light" cx="253" cy="630" r="7"></circle>
+          </svg>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const CAPTURE_WIDTH = 1774;
+      const CAPTURE_HEIGHT = 887;
+      const params = new URLSearchParams(window.location.search);
+
+      function fitPreview() {
+        if (params.has("capture")) return;
+        const scale = Math.min(
+          window.innerWidth / CAPTURE_WIDTH,
+          window.innerHeight / CAPTURE_HEIGHT
+        );
+        document.body.classList.add("preview");
+        document.body.style.setProperty("--preview-scale", String(scale));
+      }
+
+      fitPreview();
+      window.addEventListener("resize", fitPreview);
+    </script>
+  </body>
+</html>

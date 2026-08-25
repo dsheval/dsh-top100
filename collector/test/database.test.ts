@@ -123,7 +123,7 @@ describe("SQLite history and rankings", () => {
           classifiedAt: "2026-08-21T00:00:00Z",
         },
         {
-          id: "automation",
+          id: "tools",
           confidence: 0.82,
           evidence: "README 提到自动化工作流",
           source: "deepseek",
@@ -137,8 +137,8 @@ describe("SQLite history and rankings", () => {
         .prepare("SELECT category, source FROM repository_categories ORDER BY category")
         .all() as Array<{ category: string; source: string }>;
       expect(rows).toEqual([
-        { category: "automation", source: "deepseek" },
         { category: "coding", source: "deepseek" },
+        { category: "tools", source: "deepseek" },
       ]);
 
       const rankings = buildRankings(
@@ -148,7 +148,7 @@ describe("SQLite history and rankings", () => {
       );
       expect(rankings.rankings.total[0]?.categories.map(({ id }) => id)).toEqual([
         "coding",
-        "automation",
+        "tools",
       ]);
       expect(rankings.categories.find(({ id }) => id === "coding")?.count).toBe(1);
     } finally {

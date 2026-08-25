@@ -15,15 +15,17 @@ describe("Chinese summary validation", () => {
     const categories = extractCategoriesJson(JSON.stringify({
       categories: [
         { id: "coding", confidence: 0.94, evidence: "README 提到代码审查与测试" },
-        { id: "automation", confidence: 0.81, evidence: "支持自动化工作流" },
+        { id: "tools", confidence: 0.81, evidence: "支持自动化工作流" },
+        { id: "security", confidence: 0.72, evidence: "提供权限审计" },
         { id: "made-up", confidence: 1, evidence: "不存在的分类" },
       ],
     }));
-    expect(categories.map(({ id }) => id)).toEqual(["coding", "automation"]);
+    expect(categories.map(({ id }) => id)).toEqual(["coding", "tools", "security"]);
   });
 
   it("uses Chinese source text or a conservative fallback", () => {
     expect(fallbackDescriptionZh("用于管理插件的中文工具")).toBe("用于管理插件的中文工具");
-    expect(fallbackDescriptionZh("An English-only plugin")).toContain("DeepSeek Harness");
+    expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toContain("demo-plugin");
+    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toContain("桌面端");
   });
 });

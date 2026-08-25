@@ -8,6 +8,7 @@ node_modules/
 coverage/
 *.tsbuildinfo
 *.log
+*.map
 
 # Generated collector output and runtime state
 runtime/
