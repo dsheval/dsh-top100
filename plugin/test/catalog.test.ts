@@ -108,4 +108,39 @@ describe("catalog filter", () => {
     });
     expect(result.items.map((item) => item.fullName)).toEqual(["acme/tool"]);
   });
+
+  it("ranks exact name matches above summary-only matches", () => {
+    const ranked: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/general-tool", { rank: 1, descriptionZh: "提供项目搜索能力" }),
+          entry("acme/search", { rank: 90, descriptionZh: "通用插件" }),
+        ],
+      },
+    };
+    const result = filterCatalog(ranked, {
+      view: "total",
+      category: null,
+      query: "search",
+      offset: 0,
+      limit: 10,
+      installed: {},
+    });
+    expect(result.items.map((item) => item.fullName)).toEqual([
+      "acme/search",
+      "acme/general-tool",
+    ]);
+    expect(result.items[0]?.rank).toBe(90);
+  });
+
+  it("understands natural-language filler, bilingual synonyms, and a typo", () => {
+    const vision = entry("acme/visual-reader", {
+      description: "Extract OCR evidence from images",
+      topics: ["vision"],
+    });
+    expect(matchesQuery(vision, "我想找一个图片处理插件")).toBe(true);
+    expect(matchesQuery(entry("acme/search-tool"), "serach")).toBe(true);
+  });
 });

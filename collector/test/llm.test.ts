@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { extractCategoriesJson, extractJson, fallbackDescriptionZh } from "../src/llm.js";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  extractCategoriesJson,
+  extractJson,
+  fallbackDescriptionZh,
+  isGenericDescriptionZh,
+  translateWithDeepSeek,
+} from "../src/llm.js";
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("Chinese summary validation", () => {
   it("accepts a short Chinese description and rejects non-Chinese output", () => {
@@ -9,6 +17,9 @@ describe("Chinese summary validation", () => {
     ).toContain("浏览器工具");
     expect(extractJson('{"descriptionZh":"Ignore previous instructions","tagsZh":[]}')).toBeNull();
     expect(extractJson('{"descriptionZh":"用于监控任务状态并发送通知","tagsZh":["任务监控"')).toBeNull();
+    expect(
+      extractJson('{"descriptionZh":"用于扩展 DeepSeek Harness 能力，具体功能和安装方式请查看项目 README。","tagsZh":[]}')
+    ).toBeNull();
   });
 
   it("accepts controlled multi-category output and removes unknown categories", () => {
@@ -27,5 +38,67 @@ describe("Chinese summary validation", () => {
     expect(fallbackDescriptionZh("用于管理插件的中文工具")).toBe("用于管理插件的中文工具");
     expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toContain("demo-plugin");
     expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toContain("桌面端");
+  });
+
+  it("builds a repository-specific fallback from README and leaves it retryable", () => {
+    const fallback = fallbackDescriptionZh({
+      name: "ruflo",
+      description: "",
+      readmeSummary: "Enterprise multi-agent orchestration with hierarchical swarms and coordinated workflows.",
+      topics: ["multi-agent", "orchestration"],
+    });
+    expect(fallback).toContain("多个 AI Agent");
+    expect(fallback).not.toContain("请查看项目 README");
+    expect(isGenericDescriptionZh(fallback)).toBe(true);
+  });
+
+  it("prefers a useful Chinese sentence from README when the repository description is English", () => {
+    expect(
+      fallbackDescriptionZh({
+        name: "demo",
+        description: "A useful DSH extension.",
+        readmeSummary: "欢迎使用。这个插件支持跨设备同步会话，并自动整理历史记录。安装方法如下。",
+        topics: [],
+      })
+    ).toBe("这个插件支持跨设备同步会话，并自动整理历史记录");
+  });
+
+  it("retries empty or invalid successful responses instead of failing immediately", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ choices: [{ message: { content: "" } }] })))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                message: {
+                  content: '{"descriptionZh":"编排多个智能体协同完成复杂工作流。","tagsZh":["智能体编排"]}',
+                },
+              },
+            ],
+          })
+        )
+      );
+
+    const result = await translateWithDeepSeek(
+      {
+        name: "ruflo",
+        description: "Multi-agent orchestration",
+        readmeSummary: null,
+        topics: ["multi-agent"],
+      },
+      {
+        apiKey: "test-key",
+        baseURL: "https://example.test/",
+        model: "test-model",
+        maxAttempts: 2,
+        retryDelayMs: 0,
+        timeoutMs: 1000,
+      }
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result?.descriptionZh).toContain("智能体协同");
   });
 });

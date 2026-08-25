@@ -1394,7 +1394,7 @@
         display: grid;
         margin: 0 0 68px;
         padding: 0;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         overflow: hidden;
         border: 1px solid var(--line);
         background: color-mix(in srgb, var(--paper) 95%, transparent);
@@ -1514,6 +1514,10 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         border-top: 1px solid var(--line);
         border-left: 1px solid var(--line);
+      }
+
+      .inline-docs .card-grid.four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .inline-docs .doc-card {
@@ -1677,6 +1681,154 @@
         white-space: nowrap;
       }
 
+      #dsh-view .toc {
+        margin-bottom: 44px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      #dsh-view .inline-docs-header {
+        margin-bottom: 24px;
+        padding-bottom: 24px;
+      }
+
+      #dsh-view .inline-docs-title {
+        font-size: clamp(42px, 4.7vw, 64px);
+      }
+
+      #dsh-view .inline-docs-title-zh {
+        margin-top: 16px;
+        font-size: clamp(24px, 2.5vw, 32px);
+      }
+
+      #dsh-view .doc-section:not(:first-child) h2 {
+        font-size: clamp(32px, 3.3vw, 46px);
+      }
+
+      .dsh-install-panel {
+        margin: 30px 0 18px;
+        overflow: hidden;
+        border: 1px solid #0b302b;
+        border-top: 6px solid var(--hero-accent);
+        color: var(--hero-ink);
+        background: var(--hero);
+        box-shadow: 0 18px 38px rgba(23, 73, 66, 0.14);
+      }
+
+      .dsh-install-meta {
+        display: flex;
+        padding: 15px 22px 0;
+        justify-content: space-between;
+        color: var(--hero-muted);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+      }
+
+      .dsh-command-row {
+        display: grid;
+        padding: 18px 22px 24px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: stretch;
+        gap: 14px;
+      }
+
+      .inline-docs code.dsh-install-command {
+        display: flex;
+        min-width: 0;
+        min-height: 58px;
+        padding: 15px 18px;
+        align-items: center;
+        overflow-x: auto;
+        border: 1px solid rgba(247, 243, 231, 0.34);
+        color: #ffffff;
+        background: #0c302b;
+        font-size: clamp(14px, 1.45vw, 19px);
+        font-weight: 750;
+        line-height: 1.45;
+        white-space: nowrap;
+      }
+
+      .dsh-copy-button {
+        min-width: 138px;
+        padding: 0 20px;
+        border: 1px solid var(--hero-accent);
+        color: var(--ink);
+        background: var(--hero-accent);
+        font-family: var(--sans);
+        font-size: 14px;
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .dsh-copy-button:hover,
+      .dsh-copy-button:focus-visible {
+        border-color: white;
+        background: white;
+      }
+
+      .dsh-copy-button:focus-visible {
+        outline: 3px solid var(--hero-accent);
+        outline-offset: 3px;
+      }
+
+      .dsh-install-next {
+        margin: 0 !important;
+        padding: 18px 22px;
+        border-top: 1px solid rgba(247, 243, 231, 0.2);
+        color: var(--hero-muted);
+        font-size: 15px;
+      }
+
+      .inline-docs .dsh-install-next code {
+        color: white;
+        background: rgba(255, 255, 255, 0.12);
+      }
+
+      .dsh-install-next strong {
+        color: white;
+      }
+
+      .dsh-release-note,
+      .dsh-secondary-note {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .dsh-brief-grid {
+        display: grid;
+        margin: 28px 0 18px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-left: 1px solid var(--line);
+      }
+
+      .dsh-brief-grid article {
+        padding: 24px;
+        border-right: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .dsh-brief-grid article > span {
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .inline-docs .dsh-brief-grid h3 {
+        margin: 14px 0 8px;
+        font-size: 25px;
+      }
+
+      .inline-docs .dsh-brief-grid p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 15px;
+      }
+
       .docs-loading {
         margin: 0;
         padding: 80px 24px;
@@ -1737,8 +1889,18 @@
         }
 
         .inline-docs .card-grid,
-        .inline-docs .pipeline {
+        .inline-docs .card-grid.four,
+        .inline-docs .pipeline,
+        .dsh-brief-grid {
           grid-template-columns: 1fr;
+        }
+
+        .dsh-command-row {
+          grid-template-columns: 1fr;
+        }
+
+        .dsh-copy-button {
+          min-height: 52px;
         }
 
         .inline-docs .doc-card {
@@ -2070,9 +2232,11 @@
                 href="#ranking"
                 data-content-switch="ranking"
               >TOP 100</a>
-              <button class="hero-placeholder" type="button" data-feedback="接入 dsh 功能即将开放">
-                接入 dsh
-              </button>
+              <a
+                class="hero-placeholder hero-content-switch"
+                href="?page=dsh#dsh"
+                data-content-switch="dsh"
+              >接入 DSH</a>
               <a
                 class="hero-placeholder hero-content-switch"
                 href="?page=docs#docs"
@@ -2090,6 +2254,12 @@
                 </svg>
                 <span>GitHub</span>
               </a>
+              <a
+                class="hero-placeholder"
+                href="https://www.dsheval.ai/dsheval"
+                target="_blank"
+                rel="noopener noreferrer"
+              >DSHeval</a>
             </div>
           </div>
 
@@ -2344,11 +2514,31 @@
 
           <section class="content-view inline-docs" id="docs-view" aria-labelledby="inline-docs-title" hidden>
             <header class="inline-docs-header">
-              <h2 class="inline-docs-title" id="inline-docs-title">How the ranking works.</h2>
-              <p class="inline-docs-title-zh">榜单如何工作。</p>
+              <h2 class="inline-docs-title" id="inline-docs-title">How rankings and plugins work.</h2>
+              <p class="inline-docs-title-zh">榜单、分类与 DSH 插件。</p>
             </header>
             <div id="inline-docs-host">
               <p class="docs-loading">正在加载文档…</p>
+            </div>
+          </section>
+
+          <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
+            <header class="inline-docs-header">
+              <h2 class="inline-docs-title" id="inline-dsh-title">Install dsh-Top100.</h2>
+              <p class="inline-docs-title-zh">一条命令接入 DSH。</p>
+            </header>
+            <div id="inline-dsh-host">
+              <p class="docs-loading">正在加载接入说明…</p>
+            </div>
+          </section>
+
+          <section class="content-view inline-docs" id="dsheval-view" aria-labelledby="inline-dsheval-title" hidden>
+            <header class="inline-docs-header">
+              <h2 class="inline-docs-title" id="inline-dsheval-title">DSHeval.</h2>
+              <p class="inline-docs-title-zh">新的评测页面。</p>
+            </header>
+            <div id="inline-dsheval-host">
+              <p class="docs-loading">正在加载 DSHeval…</p>
             </div>
           </section>
         </div>
@@ -2390,6 +2580,12 @@
     <p class="copy-feedback" id="copy-feedback" role="status" aria-live="polite" hidden></p>
 
     <script type="module">
+      import {
+        normalizeSearchText,
+        scoreSearchEntry,
+        tokenizeSearchQuery,
+      } from "./search-engine.js";
+
       const sources = [
         "./data/rankings.json",
       ];
@@ -2400,9 +2596,6 @@
       const allCount = document.querySelector("#all-count");
       const loadMore = document.querySelector("#load-more");
       const skillFilter = document.querySelector("#skill-filter");
-      const heroActionButtons = [
-        ...document.querySelectorAll(".hero-placeholder[data-feedback]"),
-      ];
       const copyFeedback = document.querySelector("#copy-feedback");
       const rankingStatus = document.querySelector("#ranking-status");
       const listHead = document.querySelector("#list-head");
@@ -2414,6 +2607,10 @@
       const leaderboardView = document.querySelector("#leaderboard-view");
       const docsView = document.querySelector("#docs-view");
       const inlineDocsHost = document.querySelector("#inline-docs-host");
+      const dshView = document.querySelector("#dsh-view");
+      const inlineDshHost = document.querySelector("#inline-dsh-host");
+      const dshevalView = document.querySelector("#dsheval-view");
+      const inlineDshevalHost = document.querySelector("#inline-dsheval-host");
       const contentSwitches = [...document.querySelectorAll("[data-content-switch]")];
       const heroContentSwitches = [
         ...document.querySelectorAll(".hero-content-switch[data-content-switch]"),
@@ -2490,24 +2687,6 @@
           "连接器", "通知", "插件管理", "剪贴板", "文件管理", "转换", "下载", "计算器", "翻译",
         ],
       };
-      const searchSynonymGroups = [
-        ["图片", "图像", "视觉", "ocr", "image", "vision"],
-        ["搜索", "检索", "查找", "search", "retrieval"],
-        ["浏览器", "网页", "web", "browser"],
-        ["代码", "编程", "开发", "code", "coding"],
-        ["终端", "命令行", "shell", "cli", "terminal"],
-        ["文档", "知识库", "document", "docs", "knowledge"],
-        ["自动化", "工作流", "automation", "workflow"],
-        ["测试", "评测", "评估", "test", "eval", "evaluation"],
-        ["智能体", "代理", "agent"],
-        ["数据库", "sql", "database"],
-        ["记忆", "memory"],
-        ["安全", "security"],
-        ["监控", "观测", "monitoring", "observability"],
-      ];
-      const chineseSegmenter = "Segmenter" in Intl
-        ? new Intl.Segmenter("zh-CN", { granularity: "word" })
-        : null;
       const searchTimers = { top100: null, rising: null, all: null };
       const composingViews = new Set();
       const viewState = {
@@ -2531,8 +2710,12 @@
       let currentView = ["top100", "rising", "all", "category"].includes(requestedView)
         ? requestedView
         : "top100";
-      let currentContentView = initialParams.get("page") === "docs" ? "docs" : "ranking";
-      let docsLoadPromise = null;
+      const contentViewNames = new Set(["ranking", "docs", "dsh", "dsheval"]);
+      const requestedContentView = initialParams.get("page");
+      let currentContentView = contentViewNames.has(requestedContentView)
+        ? requestedContentView
+        : "ranking";
+      const contentLoadPromises = new Map();
       const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const revealObserver = !reduceMotion && "IntersectionObserver" in window
         ? new IntersectionObserver(
@@ -2565,40 +2748,42 @@
         document.documentElement.classList.add("motion-ready");
       }
 
-      function loadInlineDocs() {
-        if (docsLoadPromise) return docsLoadPromise;
-        docsLoadPromise = fetch("./docs.html", { cache: "no-cache" })
+      const inlineContentPages = {
+        docs: {
+          url: "./docs.html",
+          host: inlineDocsHost,
+          selector: ".docs-layout",
+        },
+        dsh: {
+          url: "./dsh.html",
+          host: inlineDshHost,
+          selector: ".docs-layout",
+        },
+        dsheval: {
+          url: "./dsheval.html",
+          host: inlineDshevalHost,
+          selector: ".docs-layout",
+        },
+      };
+
+      function loadInlineContent(name) {
+        const page = inlineContentPages[name];
+        if (!page) return Promise.resolve();
+        if (contentLoadPromises.has(name)) return contentLoadPromises.get(name);
+        const promise = fetch(page.url, { cache: "no-cache" })
           .then((response) => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.text();
           })
           .then((html) => {
             const sourceDocument = new DOMParser().parseFromString(html, "text/html");
-            const sourceLayout = sourceDocument.querySelector(".docs-layout");
-            if (!sourceLayout) throw new Error("文档内容缺失");
-
-            const overview = sourceLayout.querySelector("#overview");
-            if (overview) {
-              const heading = sourceDocument.createElement("h3");
-              heading.textContent = "README 智能分类";
-              const paragraph = sourceDocument.createElement("p");
-              paragraph.textContent =
-                "DeepSeek 在后端读取仓库 README，将项目归入 Agent增强、外观、编程、知识获取、工具和安全。每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类，因此通常进入 2–3 个分类榜；结果连同置信度与依据写入 SQLite，并发布到榜单 JSON。模型暂时不可用时使用规则回退，后续更新继续补齐智能分类。";
-              overview.append(heading, paragraph);
-            }
-
-            const databaseRows = sourceLayout.querySelector("#database tbody");
-            if (databaseRows) {
-              const row = sourceDocument.createElement("tr");
-              row.innerHTML =
-                "<td><code>repository_categories</code></td><td>多标签分类、置信度、README 依据、模型和分类时间</td>";
-              databaseRows.append(row);
-            }
+            const sourceLayout = sourceDocument.querySelector(page.selector);
+            if (!sourceLayout) throw new Error(`${name} 内容缺失`);
 
             const idMap = new Map();
             for (const element of sourceLayout.querySelectorAll("[id]")) {
               const oldId = element.id;
-              const newId = `docs-${oldId}`;
+              const newId = `${name}-${oldId}`;
               idMap.set(oldId, newId);
               element.id = newId;
             }
@@ -2607,37 +2792,44 @@
               if (idMap.has(oldId)) link.href = `#${idMap.get(oldId)}`;
             }
 
-            inlineDocsHost.replaceChildren(document.importNode(sourceLayout, true));
+            page.host.replaceChildren(document.importNode(sourceLayout, true));
           })
           .catch((error) => {
             const message = document.createElement("p");
             message.className = "docs-loading";
-            message.textContent = "文档暂时无法加载，请稍后重试。";
-            inlineDocsHost.replaceChildren(message);
-            docsLoadPromise = null;
+            message.textContent = "页面暂时无法加载，请稍后重试。";
+            page.host.replaceChildren(message);
+            contentLoadPromises.delete(name);
             console.error(error);
           });
-        return docsLoadPromise;
+        contentLoadPromises.set(name, promise);
+        return promise;
       }
 
       function setContentView(view, { historyMode = "replace", scroll = false } = {}) {
-        currentContentView = view === "docs" ? "docs" : "ranking";
-        const showingDocs = currentContentView === "docs";
-        leaderboardView.hidden = showingDocs;
-        docsView.hidden = !showingDocs;
+        currentContentView = contentViewNames.has(view) ? view : "ranking";
+        const contentViews = {
+          ranking: leaderboardView,
+          docs: docsView,
+          dsh: dshView,
+          dsheval: dshevalView,
+        };
+        for (const [name, element] of Object.entries(contentViews)) {
+          element.hidden = name !== currentContentView;
+        }
         for (const control of heroContentSwitches) {
           const isActive = control.dataset.contentSwitch === currentContentView;
           control.classList.toggle("is-active", isActive);
           if (isActive) control.setAttribute("aria-current", "page");
           else control.removeAttribute("aria-current");
         }
-        if (showingDocs) void loadInlineDocs();
+        if (currentContentView !== "ranking") void loadInlineContent(currentContentView);
 
         if (historyMode !== "none") {
           const url = new URL(window.location.href);
-          if (showingDocs) url.searchParams.set("page", "docs");
+          if (currentContentView !== "ranking") url.searchParams.set("page", currentContentView);
           else url.searchParams.delete("page");
-          url.hash = showingDocs ? "docs" : "ranking";
+          url.hash = currentContentView;
           history[historyMode === "push" ? "pushState" : "replaceState"](
             null,
             "",
@@ -2663,9 +2855,40 @@
         });
       }
 
+      document.addEventListener("click", async (event) => {
+        const button = event.target.closest("[data-copy-command]");
+        if (!button) return;
+        const command = button.dataset.copyCommand;
+        if (!command) return;
+        try {
+          if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
+          await navigator.clipboard.writeText(command);
+          const originalLabel = button.textContent;
+          button.textContent = "已复制";
+          window.setTimeout(() => {
+            button.textContent = originalLabel;
+          }, 3000);
+        } catch {
+          const commandElement = button.closest(".dsh-install-panel")?.querySelector(".dsh-install-command");
+          const selection = window.getSelection();
+          if (!commandElement || !selection) {
+            button.textContent = "请手动复制";
+            return;
+          }
+          const range = document.createRange();
+          range.selectNodeContents(commandElement);
+          selection.removeAllRanges();
+          selection.addRange(range);
+          button.textContent = "已选中，请复制";
+          window.setTimeout(() => {
+            button.textContent = "复制命令";
+          }, 5000);
+        }
+      });
+
       window.addEventListener("popstate", () => {
         const page = new URLSearchParams(window.location.search).get("page");
-        setContentView(page === "docs" ? "docs" : "ranking", { historyMode: "none" });
+        setContentView(contentViewNames.has(page) ? page : "ranking", { historyMode: "none" });
       });
 
       setContentView(currentContentView, { historyMode: "none" });
@@ -2694,83 +2917,6 @@
           .replace(/[`*_~>|]/g, " ")
           .replace(/\s+/g, " ")
           .trim();
-      }
-
-      function normalizeSearchText(value) {
-        return String(value ?? "")
-          .normalize("NFKC")
-          .toLocaleLowerCase("zh-CN")
-          .replace(/[^\p{L}\p{N}]+/gu, " ")
-          .replace(/\s+/g, " ")
-          .trim();
-      }
-
-      function tokenizeSearchQuery(value) {
-        const normalized = normalizeSearchText(value);
-        if (!normalized) return [];
-        const tokens = [];
-        for (const part of normalized.split(" ")) {
-          if (!chineseSegmenter || !/\p{Script=Han}/u.test(part)) {
-            tokens.push(part);
-            continue;
-          }
-          const segments = [...chineseSegmenter.segment(part)]
-            .filter((segment) => segment.isWordLike)
-            .map((segment) => normalizeSearchText(segment.segment))
-            .filter(Boolean);
-          tokens.push(...(segments.length > 0 ? segments : [part]));
-        }
-        return [...new Set(tokens)];
-      }
-
-      function isOneEditAway(left, right) {
-        if (Math.abs(left.length - right.length) > 1) return false;
-        if (left === right) return true;
-        if (left.length === right.length) {
-          let differences = 0;
-          for (let index = 0; index < left.length; index += 1) {
-            if (left[index] !== right[index] && ++differences > 1) return false;
-          }
-          return true;
-        }
-        const [shorter, longer] = left.length < right.length ? [left, right] : [right, left];
-        let shortIndex = 0;
-        let longIndex = 0;
-        let skipped = false;
-        while (shortIndex < shorter.length && longIndex < longer.length) {
-          if (shorter[shortIndex] === longer[longIndex]) {
-            shortIndex += 1;
-            longIndex += 1;
-            continue;
-          }
-          if (skipped) return false;
-          skipped = true;
-          longIndex += 1;
-        }
-        return true;
-      }
-
-      function searchAlternatives(token) {
-        return searchSynonymGroups.find((group) => group.includes(token)) ?? [token];
-      }
-
-      function entryMatchesToken(entry, token) {
-        for (const alternative of searchAlternatives(token)) {
-          if (entry.searchText.includes(alternative)) return true;
-          if (
-            /^[a-z0-9]+$/.test(alternative) &&
-            alternative.length >= 5 &&
-            entry.searchWords.some((word) => isOneEditAway(alternative, word))
-          ) {
-            return true;
-          }
-        }
-        return false;
-      }
-
-      function entryMatchesQuery(entry, query) {
-        const tokens = tokenizeSearchQuery(query);
-        return tokens.length === 0 || tokens.every((token) => entryMatchesToken(entry, token));
       }
 
       function entryMatchesCategory(entry, category) {
@@ -2916,9 +3062,12 @@
         else url.searchParams.set("view", currentView);
         if (currentView === "category") url.searchParams.set("category", activeCategory);
         else url.searchParams.delete("category");
-        const contentHash = currentContentView === "docs"
-          ? (window.location.hash.startsWith("#docs-") ? window.location.hash : "#docs")
-          : "#ranking";
+        const contentPrefix = `#${currentContentView}-`;
+        const contentHash = currentContentView === "ranking"
+          ? "#ranking"
+          : (window.location.hash.startsWith(contentPrefix)
+              ? window.location.hash
+              : `#${currentContentView}`);
         history.replaceState(null, "", `${url.pathname}${url.search}${contentHash}`);
         renderRanking();
       }
@@ -2936,11 +3085,20 @@
         const categoryRanks = currentView === "category"
           ? new Map(categoryScoped.map((entry, index) => [entry.plugin.fullName, index + 1]))
           : null;
-        const matched = categoryScoped.filter(
-          (entry) =>
-            (!hideSkills || entry.plugin.type !== "skill") &&
-            (currentView === "category" || entryMatchesQuery(entry, state.query))
-        );
+        const searchActive = currentView !== "category" && tokenizeSearchQuery(state.query).length > 0;
+        const scoredMatches = categoryScoped
+          .filter((entry) => !hideSkills || entry.plugin.type !== "skill")
+          .map((entry) => ({
+            entry,
+            score: currentView === "category" ? 0 : scoreSearchEntry(entry.plugin, state.query),
+          }))
+          .filter((item) => item.score !== null);
+        if (searchActive) {
+          scoredMatches.sort(
+            (left, right) => right.score - left.score || left.entry.rank - right.entry.rank
+          );
+        }
+        const matched = scoredMatches.map(({ entry }) => entry);
         const shown = currentView === "all" || currentView === "category"
           ? matched.slice(0, state.visible)
           : matched;
@@ -3012,12 +3170,11 @@
           rankingStatus.textContent = `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${matched.length} 个插件`;
           loadMore.hidden = shown.length >= matched.length;
         } else {
-          const hasQuery = tokenizeSearchQuery(state.query).length > 0;
-          searchResults[currentView].textContent = hasQuery
-            ? `匹配 ${formatStars(matched.length)} 个 · 保留原始排名`
+          searchResults[currentView].textContent = searchActive
+            ? `匹配 ${formatStars(matched.length)} 个 · 按相关度排序 · 显示原始排名`
             : `已显示 ${formatStars(shown.length)} / ${formatStars(matched.length)} 个`;
-          document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !hasQuery;
-          rankingStatus.textContent = hasQuery
+          document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !searchActive;
+          rankingStatus.textContent = searchActive
             ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
             : `已显示 ${shown.length} / ${matched.length} 个插件`;
           loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
@@ -3049,10 +3206,6 @@
           input.remove();
         }
         showFeedback(`已复制下载链接：${value}`);
-      }
-
-      for (const button of heroActionButtons) {
-        button.addEventListener("click", () => showFeedback(button.dataset.feedback));
       }
 
       list.addEventListener("click", (event) => {

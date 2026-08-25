@@ -1,6 +1,6 @@
 /** Fetch and filter the published rankings document. */
 import type { CatalogItem, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
-export declare const DEFAULT_DATA_URL = "https://dsheval.ai/data";
+export declare const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 export interface CatalogCache {
     dataUrl: string;
     fetchedAt: number;

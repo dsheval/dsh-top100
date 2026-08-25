@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-Top100 文档：了解插件收录、GitHub 发现、Top 100 评分和每日数据更新。"
+      content="dsh-Top100 文档：了解插件收录、智能分类、DSH 接入、Top 100 评分和每日数据更新。"
     />
     <title>Docs · dsh-Top100</title>
     <style>
@@ -243,7 +243,7 @@
         display: grid;
         margin: 0 0 68px;
         padding: 0;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
+        grid-template-columns: repeat(6, minmax(0, 1fr));
         overflow: hidden;
         border: 1px solid var(--line);
         background: color-mix(in srgb, var(--paper) 95%, transparent);
@@ -362,6 +362,10 @@
         grid-template-columns: repeat(3, minmax(0, 1fr));
         border-top: 1px solid var(--line);
         border-left: 1px solid var(--line);
+      }
+
+      .card-grid.four {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
       }
 
       .doc-card {
@@ -553,7 +557,8 @@
           white-space: nowrap;
         }
 
-        .card-grid {
+        .card-grid,
+        .card-grid.four {
           grid-template-columns: 1fr;
         }
 
@@ -663,22 +668,32 @@
 
     <header class="docs-hero">
       <div class="docs-hero-inner">
-        <h1>How the ranking works.</h1>
-        <p class="docs-title-zh">榜单如何工作。</p>
+        <h1>How rankings and plugins work.</h1>
+        <p class="docs-title-zh">榜单、分类与 DSH 插件。</p>
       </div>
       <div class="orbit" aria-hidden="true"></div>
     </header>
 
     <main class="docs-layout">
+      <nav class="toc" aria-label="文档目录">
+        <span class="toc-title">本页目录</span>
+        <a href="#overview" data-section="01">产品与榜单</a>
+        <a href="#plugin" data-section="02">DSH 插件</a>
+        <a href="#discovery" data-section="03">仓库发现</a>
+        <a href="#verification" data-section="04">兼容验证</a>
+        <a href="#ranking" data-section="05">排行算法</a>
+        <a href="#database" data-section="06">数据发布</a>
+      </nav>
+
       <article class="docs-content">
         <section class="doc-section" id="overview">
           <p class="section-kicker">01 · Overview</p>
-          <h2>产品与三个榜单</h2>
+          <h2>产品、四个榜单与六个分类</h2>
           <p class="lead">
             dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub
             仓库；同一仓库包含多个 Skill 时只计一次 Stars。
           </p>
-          <div class="card-grid">
+          <div class="card-grid four">
             <article class="doc-card">
               <span class="card-label">Composite signal</span>
               <h3>Top 100</h3>
@@ -694,19 +709,49 @@
               <h3>总榜</h3>
               <p>展示全部活跃、已验证仓库，严格按当前 GitHub Stars 总数降序排列。</p>
             </article>
+            <article class="doc-card">
+              <span class="card-label">README semantics</span>
+              <h3>分类榜</h3>
+              <p>按 Agent增强、外观、编程、知识获取、工具和安全六类浏览；同一仓库可以进入多个分类。</p>
+            </article>
           </div>
+          <h3>README 智能分类</h3>
+          <p>
+            DeepSeek 根据 README、描述和 topics 选择一个主分类，再补充一至两个有明确依据的相关分类。
+            分类结果连同置信度、依据和模型信息写入 SQLite，并随榜单 JSON 发布；模型不可用时使用可追踪的规则回退。
+          </p>
+        </section>
+
+        <section class="doc-section" id="plugin">
+          <p class="section-kicker">02 · DSH Plugin</p>
+          <h2>排行榜也可以直接进入 DSH</h2>
+          <p class="lead">
+            v0.2 新增可独立发布的 DSH 插件。用户不需要下载 Collector、SQLite 或网页后端，
+            即可在 DSH 设置页浏览、搜索并安装榜单项目。
+          </p>
+          <div class="pipeline" aria-label="DSH 插件数据流">
+            <span>rankings.json</span>
+            <span>插件 Host</span>
+            <span>本地 API</span>
+            <span>设置页 Client</span>
+            <span>DSH Profile</span>
+          </div>
+          <p>
+            插件和官方网站共用同一份线上榜单与分类定义；Host 负责远端数据缓存和受控安装，
+            Client 只通过同源本地接口读取数据。安装说明见首页“接入 DSH”。
+          </p>
         </section>
 
         <section class="doc-section" id="discovery">
-          <p class="section-kicker">02 · Discovery</p>
+          <p class="section-kicker">03 · Discovery</p>
           <h2>如何尽可能完整地发现仓库</h2>
           <p class="lead">
             GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召回，再使用同一验证器过滤噪声。
           </p>
           <div class="pipeline" aria-label="数据处理流程">
             <span>多来源候选</span>
-            <span>合并去重</span>
             <span>结构验证</span>
+            <span>README 分类</span>
             <span>SQLite 快照</span>
             <span>公开榜单 JSON</span>
           </div>
@@ -720,7 +765,7 @@
         </section>
 
         <section class="doc-section" id="verification">
-          <p class="section-kicker">03 · Verification</p>
+          <p class="section-kicker">04 · Verification</p>
           <h2>什么仓库可以入榜</h2>
           <p class="lead">
             Topic 和关键词只负责召回，不直接证明兼容性。候选仓库必须提供可验证的 DSH
@@ -762,7 +807,7 @@
         </section>
 
         <section class="doc-section" id="ranking">
-          <p class="section-kicker">04 · Ranking</p>
+          <p class="section-kicker">05 · Ranking</p>
           <h2>Top 100 如何计算</h2>
           <p class="lead">
             Top 100 使用 100 分加权模型。榜单按内部综合分排序，但前端继续展示真实 GitHub Stars，
@@ -795,7 +840,7 @@
         </section>
 
         <section class="doc-section" id="database">
-          <p class="section-kicker">05 · Persistence</p>
+          <p class="section-kicker">06 · Persistence</p>
           <h2>数据库、每日更新与企业部署</h2>
           <p class="lead">
             当前使用 SQLite 作为单服务器事实来源。它保存最新仓库状态、每日 Stars、中文简介来源和采集审计，
@@ -810,6 +855,7 @@
                 <tr><td><code>repositories</code></td><td>仓库最新状态、Stars、许可证、来源和活跃状态</td></tr>
                 <tr><td><code>repository_daily_stats</code></td><td>按仓库和日期保存 Stars、Forks 与 Issues 快照</td></tr>
                 <tr><td><code>repository_summaries</code></td><td>中文简介、源内容哈希、模型与提示版本</td></tr>
+                <tr><td><code>repository_categories</code></td><td>多标签分类、置信度、README 依据、模型和分类时间</td></tr>
                 <tr><td><code>collection_runs</code></td><td>每次采集的开始、结束、状态、数量与错误信息</td></tr>
               </tbody>
             </table>

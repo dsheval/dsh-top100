@@ -76,8 +76,9 @@ b939ba4 Add dsh-Top100 logo
 
 - 产品名为 `dsh-Top100`。
 - 首页保留绿色、黄色和米白色视觉体系。
-- Hero 区包含 `Top 100`、`接入 dsh`、`Docs` 和带 Logo 的 `GitHub` 按钮。
-- `接入 dsh` 当前只显示“即将开放”反馈。
+- Hero 区包含 `Top 100`、`接入 DSH`、`Docs`、带 Logo 的 `GitHub` 和 `DSHeval` 按钮。
+- `接入 DSH` 会切换到完整的插件介绍、安装、使用、数据安全和排查页面。
+- `DSHeval` 按钮直接打开 `https://www.dsheval.ai/dsheval`。
 - `GitHub` 直达 `https://github.com/dsheval/dsh-top100`。
 - 榜单背景使用两个交错圆形及轻量动画；支持 `prefers-reduced-motion`。
 - 榜单滚动进入视口时按从上到下的顺序显示动画。
@@ -89,6 +90,7 @@ b939ba4 Add dsh-Top100 logo
 - Docs 内有“返回榜单”按钮，浏览器前进、后退和刷新可以恢复当前视图。
 - `web/public/docs.html` 是文档内容源；`index.html` 读取其中的 `.docs-layout` 并嵌入首页，因此不要复制出第二套文档正文。
 - 独立访问 `/docs.html` 仍可作为直接文档地址和同页加载失败时的内容源。
+- `web/public/dsh.html` 和 `web/public/dsheval.html` 是同页加载的内容片段；前者为接入说明，后者用于承接后续 DSHeval 页面材料。
 
 ### 榜单
 
@@ -104,8 +106,10 @@ b939ba4 Add dsh-Top100 logo
 ## 5. 前端关键文件
 
 ```text
-web/public/index.html       首页、榜单、Docs 同页切换、全部样式和前端逻辑
-web/public/docs.html        Docs 正文内容源及独立文档页面
+web/public/index.html       首页、榜单、多内容页切换、全部样式和前端逻辑
+web/public/docs.html        最新 Docs 正文内容源及独立文档页面
+web/public/dsh.html         接入 DSH 页面正文
+web/public/dsheval.html     DSHeval 页面占位正文
 web/public/data/            镜像构建时的静态数据目录
 runtime/public-data/        Docker Web 容器实际只读挂载的公开榜单 JSON
 docker/nginx.conf           静态站点与 /data 路由
@@ -256,10 +260,10 @@ docker compose down
 
 ## 11. 当前未完成与建议优先级
 
-1. `接入 dsh` 按钮尚未实现真实功能。
-2. Docs 的内容已经完整，但后续应补充单仓库排名解释、历史 Stars 曲线和项目提交入口。
+1. 根据 DSHeval 正式页面的后续变化维护外部入口与接入说明。
+2. Docs 后续可补充单仓库排名解释、历史 Stars 曲线和项目提交入口。
 3. 需要决定哪些 Logo 草稿保留；未得到用户确认前不要删除任何图片。
-4. 当前前端与排名算法改动尚未整理成提交；提交前应先让用户确认最终页面。
+4. 当前多内容页前端改动尚未提交；提交前应先让用户确认最终页面。
 5. 服务器版本与本地版本可能不同。任何上线、数据迁移、Caddy 或 SSL 操作都必须转到服务器专用任务，并在操作前重新检查线上状态。
 
 ## 12. 交接边界

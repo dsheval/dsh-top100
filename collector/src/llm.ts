@@ -19,6 +19,16 @@ export interface LlmRepositoryInput {
   knownTags?: string[];
 }
 
+export interface DeepSeekRequestOptions {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+  maxTokens?: number;
+  maxAttempts?: number;
+  retryDelayMs?: number;
+  timeoutMs?: number;
+}
+
 function sanitizeUntrustedText(value: string, maxLength: number): string {
   return value
     .replace(/```[\s\S]*?```/g, " ")
@@ -77,7 +87,8 @@ export function extractJson(raw: string): ZhResult | null {
       descriptionLength < 8 ||
       descriptionLength > 60 ||
       !/[\u4e00-\u9fff]/.test(descriptionZh) ||
-      /[`#<>\r\n]/.test(descriptionZh)
+      /[`#<>\r\n]/.test(descriptionZh) ||
+      isGenericDescriptionZh(descriptionZh)
     ) {
       return null;
     }
@@ -89,12 +100,21 @@ export function extractJson(raw: string): ZhResult | null {
 
 export async function translateWithDeepSeek(
   input: LlmRepositoryInput,
-  opts: { apiKey: string; baseURL: string; model: string; maxTokens?: number }
+  opts: DeepSeekRequestOptions
 ): Promise<ZhResult | null> {
   const maxTokens = opts.maxTokens ?? Number(process.env.DEEPSEEK_MAX_TOKENS ?? "800");
   if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > 4096) {
     throw new Error("DEEPSEEK_MAX_TOKENS must be an integer from 128 to 4096");
   }
+  const maxAttempts = opts.maxAttempts ?? Number(process.env.DEEPSEEK_SUMMARY_ATTEMPTS ?? "3");
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
+    throw new Error("DEEPSEEK_SUMMARY_ATTEMPTS must be an integer from 1 to 5");
+  }
+  const timeoutMs = opts.timeoutMs ?? Number(process.env.DEEPSEEK_SUMMARY_TIMEOUT_MS ?? "45000");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120000) {
+    throw new Error("DEEPSEEK_SUMMARY_TIMEOUT_MS must be an integer from 1000 to 120000");
+  }
+  const retryDelayMs = opts.retryDelayMs ?? 2000;
   const body = {
     model: opts.model,
     messages: [
@@ -109,15 +129,16 @@ export async function translateWithDeepSeek(
     max_tokens: maxTokens,
   };
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(`${opts.baseURL}/chat/completions`, {
+      const res = await fetch(`${opts.baseURL.replace(/\/$/, "")}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${opts.apiKey}`,
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) {
         const err = (await res.text()).slice(0, 200);
@@ -130,19 +151,20 @@ export async function translateWithDeepSeek(
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) return null;
+      if (!content) throw new Error("empty model response");
       const result = extractJson(content);
       if (!result) {
         console.warn(`    [llm] bad JSON for ${input.name}: ${content.slice(0, 120)}`);
-        return null;
+        throw new Error("invalid or generic summary response");
       }
       return result;
     } catch (err) {
-      if (attempt === 3) {
+      if (attempt === maxAttempts) {
         console.warn(`    [llm] ${input.name} failed after retries: ${(err as Error).message.slice(0, 100)}`);
         return null;
       }
-      await new Promise((r) => setTimeout(r, 2000 * attempt));
+      const jitter = retryDelayMs > 0 ? Math.floor(Math.random() * 300) : 0;
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt + jitter));
     }
   }
   return null;
@@ -216,33 +238,66 @@ export async function classifyWithDeepSeek(
 const LEGACY_GENERIC_DESCRIPTION =
   "用于扩展 DeepSeek Harness 能力，具体功能和安装方式请查看项目 README。";
 
+const FALLBACK_SUMMARIES: Array<[RegExp, string]> = [
+  [/multi[- ]?agent|swarm|orchestrat|hierarch|agentic workflow/, "编排多个 AI Agent 协同执行任务，适合拆解和推进复杂工作流。"],
+  [/desktop|electron|macos|windows|桌面/, "提供跨平台桌面端入口，无需命令行即可运行和管理 DSH。"],
+  [/vision|image|ocr|screenshot|multimodal/, "为 DSH 补充图像理解与 OCR 能力，可提取图片中的文字、布局和语义。"],
+  [/search|research|retrieval|rag|knowledge|browser|crawl/, "提供搜索、研究和知识检索能力，帮助快速获取并整理资料。"],
+  [/memory|context|session|persona/, "管理 Agent 的上下文、记忆或会话信息，支持持续处理复杂任务。"],
+  [/code|coding|developer|debug|test|review|git/, "提供代码生成、调试、测试或审查能力，辅助完成软件开发任务。"],
+  [/\bmcp\b|model context protocol/, "连接 MCP 工具与服务，让 DSH 可以调用更多外部能力。"],
+  [/workflow|automation|scheduler|pipeline|utility/, "自动编排重复操作和工作流程，减少手动执行步骤。"],
+  [/security|sandbox|audit|permission|privacy|secret/, "提供权限审计、安全检查或隔离能力，降低插件运行风险。"],
+  [/theme|appearance|dashboard|visual|\bui\b/, "改善 DSH 的界面外观和交互体验，让常用操作更直观。"],
+  [/terminal|shell|command|\bcli\b/, "增强终端和命令行操作能力，帮助更高效地执行本地任务。"],
+  [/agent|harness/, "为 DSH 提供 Agent 工作流支持，帮助组织和执行多步骤任务。"],
+];
+
+const INSUFFICIENT_SOURCE_SUMMARY =
+  "已收录的 DSH 插件，现有项目资料不足以生成可靠的功能简介。";
+
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;
   return value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
     /中文简介正在生成中/.test(value) ||
+    FALLBACK_SUMMARIES.some(([, summary]) => value.includes(summary.slice(0, 16))) ||
+    value.endsWith(INSUFFICIENT_SOURCE_SUMMARY) ||
     /：(提供桌面端使用体验|提供搜索、研究或知识检索能力|提供编程开发辅助|增强 Agent 的上下文|提供自动化与效率工具|提供权限、安全检查或隔离能力|改善界面外观与交互体验)/.test(value);
 }
 
 /** Produce an honest, repository-specific fallback when model output is unavailable or invalid. */
-export function fallbackDescriptionZh(description: string, name = "该插件"): string {
-  const cleaned = sanitizeUntrustedText(description, 120)
+export function fallbackDescriptionZh(
+  source: string | Pick<LlmRepositoryInput, "name" | "description" | "readmeSummary" | "topics">,
+  legacyName = "该插件"
+): string {
+  const input = typeof source === "string"
+    ? { name: legacyName, description: source, readmeSummary: null, topics: [] as string[] }
+    : source;
+  const cleaned = sanitizeUntrustedText(input.description, 180)
     .replace(/[`#<>]/g, "")
     .trim();
   if ((cleaned.match(/[\u4e00-\u9fff]/g) ?? []).length >= 6) {
     return [...cleaned].slice(0, 60).join("");
   }
-  const signals = `${name} ${cleaned}`.toLocaleLowerCase();
-  const templates: Array<[RegExp, string]> = [
-    [/desktop|electron|macos|windows|桌面/, "提供桌面端使用体验，方便直接运行和管理 DeepSeek Harness。"],
-    [/search|research|retrieval|rag|knowledge|browser|crawl/, "提供搜索、研究或知识检索能力，帮助更快获取和整理资料。"],
-    [/code|coding|developer|debug|test|review|git/, "提供编程开发辅助，覆盖代码处理、调试或工程协作场景。"],
-    [/memory|context|session|persona|agent/, "增强 Agent 的上下文、记忆或协作能力，适合持续处理复杂任务。"],
-    [/workflow|automation|scheduler|pipeline|tool|utility/, "提供自动化与效率工具，帮助简化重复操作和工作流程。"],
-    [/security|sandbox|audit|permission|privacy|secret/, "提供权限、安全检查或隔离能力，降低插件运行风险。"],
-    [/theme|appearance|dashboard|visual|ui\b/, "改善界面外观与交互体验，让日常使用更直观。"],
-  ];
-  const matched = templates.find(([pattern]) => pattern.test(signals));
-  if (matched) return `${name}：${matched[1]}`.slice(0, 60);
-  return `${name} 的中文简介正在生成中，可先查看项目 README 了解核心功能。`.slice(0, 60);
+  const readme = sanitizeUntrustedText(input.readmeSummary ?? "", 500).replace(/[`#<>]/g, " ");
+  const chineseSentences = readme
+    .split(/[。！？!?；;]+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => {
+      const count = (sentence.match(/[\u4e00-\u9fff]/g) ?? []).length;
+      return count >= 8 && count <= 60;
+    })
+    .sort((a, b) => {
+      const score = (sentence: string) =>
+        (/(支持|提供|用于|帮助|实现|自动|管理|搜索|桌面|编排|插件)/.test(sentence) ? 3 : 0) -
+        (/(安装|欢迎|徽章|README|项目地址)/i.test(sentence) ? 2 : 0);
+      return score(b) - score(a);
+    });
+  if (chineseSentences[0]) return [...chineseSentences[0]].slice(0, 60).join("");
+
+  const signals = `${input.name} ${cleaned} ${readme} ${input.topics.join(" ")}`.toLocaleLowerCase();
+  const matched = FALLBACK_SUMMARIES.find(([pattern]) => pattern.test(signals));
+  const summary = matched?.[1] ?? INSUFFICIENT_SOURCE_SUMMARY;
+  return [...`${input.name}：${summary}`].slice(0, 60).join("");
 }

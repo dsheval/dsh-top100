@@ -579,6 +579,14 @@ async function main() {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const summaryBatchSize = Number(process.env.DEEPSEEK_SUMMARY_BATCH_SIZE ?? "300");
+  const summaryConcurrency = Number(process.env.DEEPSEEK_SUMMARY_CONCURRENCY ?? "3");
+  if (!Number.isInteger(summaryBatchSize) || summaryBatchSize < 0 || summaryBatchSize > 3000) {
+    throw new Error("DEEPSEEK_SUMMARY_BATCH_SIZE must be an integer from 0 to 3000");
+  }
+  if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) {
+    throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
+  }
 
   if (apiKey) {
     // 已知标签清单（约束新翻译优先复用，抑制同义异名）：从已收录插件聚合细分中文标签 top 40
@@ -590,7 +598,7 @@ async function main() {
       ),
     ].slice(0, 40);
 
-    const pending = detected.filter((d) => {
+    const allPending = detected.filter((d) => {
       if (d.plugin.descriptionZh) return false; // 本次已有
       const cached = zhCache.get(d.plugin.id);
       if (cached?.descriptionZh) {
@@ -609,8 +617,11 @@ async function main() {
       }
       return true;
     });
+    // 榜单最先展示高 Stars 项目；API 预算有限时优先保证用户可见条目的简介质量。
+    allPending.sort((a, b) => b.repo.stargazers_count - a.repo.stargazers_count);
+    const pending = allPending.slice(0, summaryBatchSize);
     console.log(
-      `  pending translate: ${pending.length}（其中大改重翻 ${retranslated}），reused: ${skipped}`
+      `  pending translate: ${pending.length}/${allPending.length}（其中大改重翻 ${retranslated}），reused: ${skipped}`
     );
 
     await runPool(
@@ -635,27 +646,47 @@ async function main() {
           console.log(`    ✓ ${d.plugin.id} -> ${result.descriptionZh.slice(0, 40)}`);
         }
       },
-      5 // LLM 并发保守
+      summaryConcurrency
     );
-    console.log(`  translated: ${translated}, failed: ${pending.length - translated}`);
+    console.log(
+      `  translated: ${translated}, failed: ${pending.length - translated}, deferred: ${allPending.length - pending.length}`
+    );
+    let fallbackCount = 0;
     for (const d of detected) {
-      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description, d.plugin.name);
+      if (!d.plugin.descriptionZh) {
+        d.plugin.descriptionZh = fallbackDescriptionZh({
+          name: d.plugin.name,
+          description: d.plugin.description,
+          readmeSummary: d.plugin.readmeSummary,
+          topics: d.plugin.topics,
+        });
+        fallbackCount++;
+      }
     }
+    console.log(`  deterministic fallback: ${fallbackCount}`);
     // A：把本次全部中文简介写回持久化缓存（新翻译 + 复用 + 播种）+ 摘要指纹，跨天累积
     for (const d of detected) {
-      if (d.plugin.descriptionZh) {
+      if (d.plugin.descriptionZh && !isGenericDescriptionZh(d.plugin.descriptionZh)) {
         const prev = zhCache.get(d.plugin.id);
         zhCache.set(d.plugin.id, {
           descriptionZh: d.plugin.descriptionZh,
           tagsZh: d.plugin.tags.filter((t) => /[\u4e00-\u9fff]/.test(t)),
           summaryKey: d.plugin.readmeSummary ?? prev?.summaryKey,
         });
+      } else {
+        // 失败兜底只用于本次发布，不进入持久缓存，下一轮仍会优先重试。
+        zhCache.delete(d.plugin.id);
       }
     }
     saveZhCache(zhCache);
   } else {
     for (const d of detected) {
-      d.plugin.descriptionZh ??= fallbackDescriptionZh(d.plugin.description, d.plugin.name);
+      d.plugin.descriptionZh ??= fallbackDescriptionZh({
+        name: d.plugin.name,
+        description: d.plugin.description,
+        readmeSummary: d.plugin.readmeSummary,
+        topics: d.plugin.topics,
+      });
     }
     console.log("  未配置 DEEPSEEK_API_KEY，复用已有简介并为缺失项生成保守中文简介");
   }
@@ -759,6 +790,12 @@ async function main() {
         translated++;
         console.log(`    ✓ pack ${pack.id} -> ${result.descriptionZh.slice(0, 40)}`);
       }
+      pack.descriptionZh ??= fallbackDescriptionZh({
+        name: pack.name,
+        description: pack.description,
+        readmeSummary: pack.readmeSummary,
+        topics: pack.tags,
+      });
     }
     console.log(`  packs translated: ${translated}`);
   }

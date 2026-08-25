@@ -59,6 +59,8 @@ Daily mode reads bounded high-value search windows and refreshes known repositor
 
 `plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process fetches and caches the same published `rankings.json` used by the website, exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings.
 
+Website and plugin search use the same weighted search core in `plugin/src/shared/search.ts`. The Host imports it directly; `npm run search:build` bundles the same source to `web/public/search-engine.js`. Search weights exact names and repository identifiers above tags, topics and descriptions, expands Chinese/English synonyms, removes natural-language filler, tolerates one edit or adjacent transposition in longer Latin tokens, and orders matches by relevance while retaining the published rank on each item.
+
 The plugin package does not contain the Collector, SQLite database or website backend. `plugin/src/host`, `plugin/src/install`, `plugin/src/client` and `plugin/src/shared` keep host integration, local mutations, UI code and cross-runtime contracts separate.
 
 ## Persistence

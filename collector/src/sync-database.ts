@@ -12,7 +12,11 @@ import {
   normalizeCategoryAssignments,
   toDeepSeekAssignments,
 } from "./categories.js";
-import { classifyWithDeepSeek } from "./llm.js";
+import {
+  classifyWithDeepSeek,
+  fallbackDescriptionZh,
+  isGenericDescriptionZh,
+} from "./llm.js";
 import { runPool } from "./pool.js";
 import { buildRankings } from "./rankings.js";
 import {
@@ -129,6 +133,21 @@ async function main(): Promise<void> {
   const market = JSON.parse(readFileSync(sourcePath, "utf8")) as MarketData;
   if (!Array.isArray(market.plugins) || market.plugins.length === 0) {
     throw new Error(`Source snapshot has no plugins: ${sourcePath}`);
+  }
+
+  let repairedDescriptions = 0;
+  for (const plugin of market.plugins) {
+    if (plugin.descriptionZh && !isGenericDescriptionZh(plugin.descriptionZh)) continue;
+    plugin.descriptionZh = fallbackDescriptionZh({
+      name: plugin.name,
+      description: plugin.description,
+      readmeSummary: plugin.readmeSummary,
+      topics: plugin.topics,
+    });
+    repairedDescriptions++;
+  }
+  if (repairedDescriptions > 0) {
+    console.log(`Description fallback repair: ${repairedDescriptions} repositories`);
   }
 
   const database = openDatabase({ path: databasePath });

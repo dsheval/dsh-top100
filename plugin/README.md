@@ -26,7 +26,7 @@ dsh plugin --profile web add link:D:/dsh-top100/plugin
 Host 端读取：
 
 ```text
-https://dsheval.ai/data/rankings.json
+https://www.dsheval.ai/data/rankings.json
 ```
 
 分类榜与网页版共用该文件中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent增强、外观、编程、知识获取、工具和安全；线上名称、说明和数量更新后，插件会随榜单数据同步。
@@ -41,7 +41,7 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 - id: dsh-top100
   name: dsh-top100-plugin
   config:
-    dataUrl: https://dsheval.ai/data
+    dataUrl: https://www.dsheval.ai/data
     profile: web
 ```
 

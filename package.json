@@ -10,7 +10,7 @@
     "plugin"
   ],
   "scripts": {
-    "check": "npm run typecheck && npm test",
+    "check": "npm run search:build && npm run typecheck && npm test",
     "collect": "npm run collect -w @dsh-top100/collector",
     "db:sync": "npm run db:sync -w @dsh-top100/collector",
     "update:once": "npm run collect && npm run db:sync",
@@ -23,10 +23,14 @@
     "docker:up": "docker compose up -d --build web scheduler",
     "docker:down": "docker compose down",
     "plugin:build": "npm run build -w dsh-top100-plugin",
-    "plugin:check": "npm run typecheck -w dsh-top100-plugin && npm run test -w dsh-top100-plugin"
+    "plugin:check": "npm run typecheck -w dsh-top100-plugin && npm run test -w dsh-top100-plugin",
+    "search:build": "esbuild plugin/src/shared/search.ts --bundle --platform=browser --format=esm --outfile=web/public/search-engine.js"
   },
   "engines": {
     "node": ">=22.13"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   },
   "license": "MIT"
 }

@@ -10,19 +10,19 @@
 </p>
 
 <p align="center">
-  <a href="https://dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
-  <a href="https://dsheval.ai/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
   <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
-  <a href="https://dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
+  <a href="https://www.dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
 </p>
 
 <p align="center">
   <strong>官方网站：</strong>
-  <a href="https://dsheval.ai"><strong>https://dsheval.ai</strong></a>
+  <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
   <strong>接入 DSH：</strong>
   <a href="./plugin/README.md#安装"><strong>安装 dsh-Top100 插件</strong></a>
@@ -34,7 +34,7 @@
 
 dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并完成单个或批量安装。
 
-插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](./plugin/README.md#安装)。
+插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](./plugin/README.md#安装)。
 
 ## 01 · 产品与榜单
 

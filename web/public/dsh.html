@@ -1,0 +1,69 @@
+<main class="docs-layout">
+  <nav class="toc" aria-label="接入 DSH 文档目录">
+    <span class="toc-title">本页目录</span>
+    <a href="#install" data-section="01">安装</a>
+    <a href="#features" data-section="02">插件功能</a>
+    <a href="#data" data-section="03">数据来源</a>
+  </nav>
+
+  <article class="docs-content">
+    <section class="doc-section" id="install">
+      <p class="section-kicker">01 · Quick start</p>
+      <h2>一条命令，接入 DSH</h2>
+      <p class="lead">正式发布后，将下面的命令粘贴到终端即可完成安装。</p>
+      <div class="dsh-install-panel">
+        <div class="dsh-install-meta" aria-hidden="true">
+          <span>Install command</span>
+          <span>DSH Web</span>
+        </div>
+        <div class="dsh-command-row">
+          <code class="dsh-install-command">dsh plugin --profile web add dsh-top100-plugin</code>
+          <button
+            class="dsh-copy-button"
+            type="button"
+            data-copy-command="dsh plugin --profile web add dsh-top100-plugin"
+          >复制命令</button>
+        </div>
+        <p class="dsh-install-next">
+          安装完成后重启 <code>dsh web</code>，打开 <strong>设置 → 插件排行</strong>。
+        </p>
+      </div>
+      <p class="dsh-release-note">
+        <strong>发布状态：</strong>安装包尚未发布到 npm。运行环境需要 DSH Web 0.1.0-rc.6+ 和 Node.js 22.13+。
+      </p>
+    </section>
+
+    <section class="doc-section" id="features">
+      <p class="section-kicker">02 · Features</p>
+      <h2>在 DSH 内查找和安装插件</h2>
+      <div class="dsh-brief-grid">
+        <article>
+          <span>01</span>
+          <h3>发现插件</h3>
+          <p>浏览 Top 100、新锐榜、总榜和分类榜，并按名称或标签快速搜索。</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>直接安装</h3>
+          <p>在 DSH 设置页内完成单个或批量安装，无需部署榜单后端。</p>
+        </article>
+      </div>
+      <p class="dsh-secondary-note">安装包只包含 DSH 插件本身，不包含采集程序、数据库或网站后端。</p>
+    </section>
+
+    <section class="doc-section" id="data">
+      <p class="section-kicker">03 · Data Source</p>
+      <h2>与 DSHeval 官网使用同一份数据</h2>
+      <div class="pipeline" aria-label="插件数据流">
+        <span>DSHeval 服务器</span>
+        <span>rankings.json</span>
+        <span>DSH 插件</span>
+        <span>插件排行页</span>
+      </div>
+      <p>
+        榜单数据来自 <code>https://www.dsheval.ai/data/rankings.json</code>，由 DSHeval 服务器持续更新。
+        插件与网页版共用这份数据，因此榜单、分类和项目详情会保持一致；数据由插件 Host 获取并缓存在本地。
+      </p>
+    </section>
+  </article>
+</main>

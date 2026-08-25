@@ -2,6 +2,7 @@
 
 import { isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
 import { entryMatchesCategory } from "../shared/categories.js";
+import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
 import type {
   CatalogItem,
   RankingEntry,
@@ -10,7 +11,7 @@ import type {
   PluginCategoryId,
 } from "../shared/types.js";
 
-export const DEFAULT_DATA_URL = "https://dsheval.ai/data";
+export const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 const CACHE_MS = 5 * 60 * 1000;
 
 export interface CatalogCache {
@@ -34,24 +35,7 @@ export function isRankingView(value: string | null): value is RankingView {
 }
 
 export function matchesQuery(entry: RankingEntry, query: string): boolean {
-  if (!query) return true;
-  const haystack = [
-    entry.fullName,
-    entry.name,
-    entry.owner,
-    entry.description,
-    entry.descriptionZh,
-    entry.type,
-    ...(entry.tags ?? []),
-    ...(entry.topics ?? []),
-  ]
-    .join(" ")
-    .toLowerCase();
-  return query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .every((token) => haystack.includes(token));
+  return matchesSearchQuery(entry, query);
 }
 
 function annotate(entry: RankingEntry, installed: Record<string, string>): CatalogItem {
@@ -75,13 +59,18 @@ export function filterCatalog(
     installed: Record<string, string>;
   },
 ): { total: number; items: CatalogItem[] } {
-  const source = options.query || options.view === "category"
+  const hasQuery = tokenizeSearchQuery(options.query).length > 0;
+  const source = hasQuery || options.view === "category"
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
-  const matched = source
+  const scored = source
     .filter((entry) => options.view !== "category" || (options.category !== null && entryMatchesCategory(entry, options.category)))
-    .filter((entry) => matchesQuery(entry, options.query))
-    .map((entry) => annotate(entry, options.installed));
+    .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
+    .filter((item): item is { entry: RankingEntry; score: number } => item.score !== null);
+  if (hasQuery) {
+    scored.sort((left, right) => right.score - left.score || left.entry.rank - right.entry.rank);
+  }
+  const matched = scored.map(({ entry }) => annotate(entry, options.installed));
   return {
     total: matched.length,
     items: matched.slice(options.offset, options.offset + options.limit),

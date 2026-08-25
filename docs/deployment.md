@@ -8,6 +8,11 @@
 - A GitHub token with public repository metadata and contents read access.
 - Optional DeepSeek API credentials for new Chinese summaries.
 
+Chinese-summary requests retry empty, malformed and generic model responses. The collector prioritizes
+high-Star repositories within `DEEPSEEK_SUMMARY_BATCH_SIZE`; tune
+`DEEPSEEK_SUMMARY_ATTEMPTS`, `DEEPSEEK_SUMMARY_TIMEOUT_MS` and
+`DEEPSEEK_SUMMARY_CONCURRENCY` for the API quota available on the deployment.
+
 ## First deployment
 
 ```bash
