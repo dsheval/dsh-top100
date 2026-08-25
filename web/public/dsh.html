@@ -45,10 +45,18 @@
         <article>
           <span>02</span>
           <h3>直接安装</h3>
-          <p>在 DSH 设置页内完成单个或批量安装，无需部署榜单后端。</p>
+          <p>在 DSH 设置页内对可信来源进行单项确认安装，无需部署榜单后端。</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>对话推荐</h3>
+          <p>内置 <code>recommend-dsh-plugins</code> Skill，可按你的需求实时搜索市场并推荐合适插件。</p>
         </article>
       </div>
-      <p class="dsh-secondary-note">安装包只包含 DSH 插件本身，不包含采集程序、数据库或网站后端。</p>
+      <p class="dsh-secondary-note">
+        在 DSH 对话中直接询问“我应该安装哪个插件”即可触发推荐；Skill 通过只读的
+        <code>dsh_top100_search</code> 工具查询榜单。安装包只包含 DSH 插件及该 Skill，不包含采集程序、数据库或网站后端。
+      </p>
     </section>
 
     <section class="doc-section" id="data">

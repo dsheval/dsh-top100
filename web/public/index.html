@@ -82,32 +82,16 @@
         text-decoration: none;
       }
 
-      .wordmark-mark {
-        position: relative;
-        width: 17px;
-        height: 17px;
-      }
-
-      .wordmark-mark::before,
-      .wordmark-mark::after {
-        position: absolute;
-        left: 2px;
-        width: 10px;
-        height: 3px;
-        background: var(--accent);
-        content: "";
-        transform-origin: left center;
-      }
-
-      .wordmark-mark::before {
-        top: 8px;
-        transform: rotate(-56deg);
-      }
-
-      .wordmark-mark::after {
-        top: 7px;
-        left: 9px;
-        transform: rotate(56deg);
+      .wordmark-logo {
+        display: block;
+        width: 30px;
+        height: 30px;
+        flex: 0 0 30px;
+        border: 1px solid rgba(23, 33, 31, 0.14);
+        border-radius: 50%;
+        background: var(--card);
+        object-fit: cover;
+        object-position: center;
       }
 
       .nav-label {
@@ -1799,7 +1783,7 @@
       .dsh-brief-grid {
         display: grid;
         margin: 28px 0 18px;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         border-top: 1px solid var(--line);
         border-left: 1px solid var(--line);
       }
@@ -2209,7 +2193,13 @@
     <div class="nav-shell">
       <nav class="nav" aria-label="主导航">
         <a class="wordmark" href="#top" aria-label="dsh-Top100 首页">
-          <span class="wordmark-mark" aria-hidden="true"></span>
+          <img
+            class="wordmark-logo"
+            src="./assets/dsh-wordmark-logo.png"
+            alt=""
+            width="30"
+            height="30"
+          />
           <span>dsh-Top100</span>
         </a>
         <p class="nav-label">Verified ecosystem · ranked by GitHub stars</p>

@@ -740,6 +740,11 @@
             插件和官方网站共用同一份线上榜单与分类定义；Host 负责远端数据缓存和受控安装，
             Client 只通过同源本地接口读取数据。安装说明见首页“接入 DSH”。
           </p>
+          <p>
+            安装包还内置 <code>recommend-dsh-plugins</code> Skill，并注册只读的
+            <code>dsh_top100_search</code> 搜索工具。当用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，
+            DSH 会加载该 Skill，从实时 Top100 插件市场检索并给出有榜单数据依据的推荐。
+          </p>
         </section>
 
         <section class="doc-section" id="discovery">
