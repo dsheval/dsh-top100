@@ -11,13 +11,13 @@
 发布后：
 
 ```sh
-dsh plugin --profile web add dsh-top100-plugin
+dsh plugin --profile web add @dsheval/dsh-top100-plugin
 ```
 
 本地开发（官方 `link:` 方式）：
 
 ```sh
-npm run build -w dsh-top100-plugin
+npm run build -w @dsheval/dsh-top100-plugin
 dsh plugin --profile web add link:D:/dsh-top100/plugin
 ```
 
@@ -58,7 +58,7 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 
 ```yaml
 - id: dsh-top100
-  name: dsh-top100-plugin
+  name: '@dsheval/dsh-top100-plugin'
   config:
     dataUrl: https://www.dsheval.ai/data
     profile: web
@@ -78,9 +78,9 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 ## 开发
 
 ```sh
-npm run typecheck -w dsh-top100-plugin
-npm run test -w dsh-top100-plugin
-npm run build -w dsh-top100-plugin
+npm run typecheck -w @dsheval/dsh-top100-plugin
+npm run test -w @dsheval/dsh-top100-plugin
+npm run build -w @dsheval/dsh-top100-plugin
 dsh web --dump-config
 ```
 

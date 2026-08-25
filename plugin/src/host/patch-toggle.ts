@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
 
 const ROW_ID_RE = /^[A-Za-z0-9_.-]+$/;
-const SELF_PACKAGES = new Set(["dsh-top100", "dsh-top100-plugin"]);
+const SELF_PACKAGES = new Set([
+  "dsh-top100",
+  "dsh-top100-plugin",
+  "@dsheval/dsh-top100-plugin",
+]);
 
 export interface PatchState { disables: string[]; forced: string[] }
 

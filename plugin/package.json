@@ -1,11 +1,23 @@
 {
-  "name": "dsh-top100-plugin",
+  "name": "@dsheval/dsh-top100-plugin",
   "version": "1.0.0",
   "description": "dsh-Top100 rankings inside DeepSeek Harness Settings",
   "type": "module",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "license": "MIT",
+  "homepage": "https://www.dsheval.ai/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsheval/dsh-top100.git",
+    "directory": "plugin"
+  },
+  "bugs": {
+    "url": "https://github.com/dsheval/dsh-top100/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=22.13"
   },

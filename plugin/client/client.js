@@ -1,4 +1,4 @@
-window.__ModuleLoader__.load({ id: "dsh-top100-plugin", factory: (require) => {
+window.__ModuleLoader__.load({ id: "@dsheval/dsh-top100-plugin", factory: (require) => {
 var module = { exports: {} }; var exports = module.exports;
 let react = require("react");
 let react_jsx_runtime = require("react/jsx-runtime");

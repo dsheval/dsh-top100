@@ -1,6 +1,6 @@
 import { defineConfig } from "tsdown";
 
-const id = "dsh-top100-plugin";
+const id = "@dsheval/dsh-top100-plugin";
 const CLIENT_EXTERNALS = ["react", "react/jsx-runtime", "react-dom"];
 
 export default defineConfig({
