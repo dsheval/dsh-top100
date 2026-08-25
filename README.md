@@ -23,9 +23,18 @@
 <p align="center">
   <strong>官方网站：</strong>
   <a href="https://dsheval.ai"><strong>https://dsheval.ai</strong></a>
+  &nbsp;&nbsp;·&nbsp;&nbsp;
+  <strong>接入 DSH：</strong>
+  <a href="./plugin/README.md#安装"><strong>安装 dsh-Top100 插件</strong></a>
 </p>
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
+
+## DSH 插件
+
+dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并完成单个或批量安装。
+
+插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](./plugin/README.md#安装)。
 
 ## 01 · 产品与榜单
 
@@ -114,19 +123,6 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 - **主要信号**：GitHub Stars 增长、活跃度、数据质量和验证证据
 - **数据输出**：公开 JSON
 - **许可证**：MIT
-
-Canonical repository: <https://github.com/dsheval/dsh-top100>
-
-## 本地开发
-
-```bash
-cp .env.example .env
-./scripts/prepare-runtime.sh
-npm run check
-npm run docker:up
-```
-
-本地网站默认运行在 <http://localhost:8080>。生产部署、数据备份和迁移说明见 [`docs/deployment.md`](./docs/deployment.md)。
 
 ## License
 
