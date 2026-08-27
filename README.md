@@ -26,7 +26,7 @@
   <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
   &nbsp;&nbsp;·&nbsp;&nbsp;
   <strong>接入 DSH：</strong>
-  <a href="./plugin/README.md#安装"><strong>安装插件与推荐 Skill</strong></a>
+  <a href="https://www.dsheval.ai/?page=dsh#dsh"><strong>安装插件与推荐 Skill</strong></a>
 </p>
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
@@ -35,7 +35,7 @@
 
 dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并对可信安装源进行单项确认安装。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
 
-插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](./plugin/README.md#安装)。
+插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。安装方法见[接入 DSH](https://www.dsheval.ai/?page=dsh#dsh)。
 
 ## 01 · 产品与榜单
 
