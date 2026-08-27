@@ -8,7 +8,7 @@
 
 ## 安装
 
-发布后：
+从 npm 安装：
 
 ```sh
 dsh plugin --profile web add @dsheval/dsh-top100-plugin
