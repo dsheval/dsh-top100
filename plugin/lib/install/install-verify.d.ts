@@ -2,7 +2,8 @@
 import type { InstallSpec } from "../shared/types.js";
 export declare class InstallVerificationError extends Error {
     fatal: boolean;
-    constructor(message: string, fatal?: boolean);
+    status: number | null;
+    constructor(message: string, fatal?: boolean, status?: number | null);
 }
 export interface VerifiedInstallTarget {
     target: string;
@@ -10,4 +11,5 @@ export interface VerifiedInstallTarget {
     packageName: string | null;
     needsBuildApproval: boolean;
 }
+export declare function clearInstallVerificationCache(): void;
 export declare function verifyInstallSpec(spec: InstallSpec): Promise<VerifiedInstallTarget>;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isCordisEntry,
   isInstalledEntry,
+  npmPackageSpec,
   parseInstallSpec,
   resolveInstallSpec,
 } from "../src/install/install-spec.js";
@@ -38,6 +39,14 @@ describe("parseInstallSpec", () => {
   it("accepts npm package names and github specs", () => {
     expect(parseInstallSpec("dshmarket")).toEqual({ kind: "npm", spec: "dshmarket" });
     expect(parseInstallSpec("@liustack/modlens")).toEqual({ kind: "npm", spec: "@liustack/modlens" });
+    expect(parseInstallSpec("dsh-better-sidebar@latest")).toEqual({
+      kind: "npm",
+      spec: "dsh-better-sidebar@latest",
+    });
+    expect(parseInstallSpec("@acme/plugin@1.2.3-rc.1")).toEqual({
+      kind: "npm",
+      spec: "@acme/plugin@1.2.3-rc.1",
+    });
     expect(parseInstallSpec("github:owner/repo#abc123")).toEqual({
       kind: "github",
       spec: "github:owner/repo#abc123",
@@ -50,6 +59,12 @@ describe("parseInstallSpec", () => {
     expect(parseInstallSpec("https://evil.example/pkg")).toBeNull();
     expect(parseInstallSpec("link:/tmp/plugin")).toBeNull();
     expect(parseInstallSpec("--yes")).toBeNull();
+    expect(parseInstallSpec("plugin@^1.0.0")).toBeNull();
+  });
+
+  it("separates an npm package name from its tag or exact version", () => {
+    expect(npmPackageSpec("dshmarket")).toEqual({ name: "dshmarket", selector: null });
+    expect(npmPackageSpec("@acme/plugin@next")).toEqual({ name: "@acme/plugin", selector: "next" });
   });
 });
 
@@ -68,10 +83,18 @@ describe("resolveInstallSpec", () => {
     expect(spec).toEqual({ kind: "npm", spec: "dsh-better-sidebar" });
   });
 
-  it("falls back to github:owner/repo for cordis plugins", () => {
+  it("keeps cordis entries without an author-provided add command browse-only", () => {
     expect(
       resolveInstallSpec(entry({ fullName: "acme/dsh-demo", type: "cordis-plugin" })),
-    ).toEqual({ kind: "github", spec: "github:acme/dsh-demo" });
+    ).toBeNull();
+  });
+
+  it("preserves an npm tag from an author-provided add command", () => {
+    expect(resolveInstallSpec(entry({
+      fullName: "acme/dsh-demo",
+      type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/dsh-demo@latest"] },
+    }))).toEqual({ kind: "npm", spec: "@acme/dsh-demo@latest" });
   });
 
   it("falls back to github:owner/repo for catalogued skills", () => {

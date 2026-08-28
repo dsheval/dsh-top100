@@ -25,5 +25,12 @@ export declare function invalidateCatalog(): void;
 export declare function describeCatalogFetchError(error: unknown): string;
 export declare function isRetryableCatalogFetchError(error: unknown): boolean;
 export declare function parseRankingsDocument(raw: string): RankingsDocument;
+export declare function parseRankingViewDocument(raw: string, view: "hot" | "rising"): RankingsDocument;
 export declare function loadRankings(dataUrl: string, force?: boolean): Promise<RankingsDocument>;
+/** Return a last-good full or view cache without ever delaying local management on the network. */
+export declare function loadCachedRankings(dataUrl: string): Promise<RankingsDocument | null>;
+/** Resolve installation metadata from a current, authoritative full catalog snapshot. */
+export declare function findPublishedEntry(dataUrl: string, fullName: string): Promise<RankingEntry | undefined>;
+/** Load the small published shard used by the initial hot/rising tabs. */
+export declare function loadRankingView(dataUrl: string, view: "hot" | "rising", force?: boolean): Promise<RankingsDocument>;
 export declare function findEntry(document: RankingsDocument, fullName: string): RankingEntry | undefined;

@@ -221,15 +221,18 @@ function ManagedPage({ t, initialQuery = "" }) {
 	const [batch, setBatch] = (0, react.useState)(null);
 	const [busy, setBusy] = (0, react.useState)(null);
 	const [notice, setNotice] = (0, react.useState)(null);
+	const loadSequence = (0, react.useRef)(0);
 	const load = (0, react.useCallback)(async () => {
+		const requestId = ++loadSequence.current;
 		setLoading(true);
 		setError(null);
 		try {
-			setData(await readJson$1(`/dsh-top100/managed?q=${encodeURIComponent(query)}`));
+			const payload = await readJson$1(`/dsh-top100/managed?q=${encodeURIComponent(query)}`);
+			if (requestId === loadSequence.current) setData(payload);
 		} catch (cause) {
-			setError(cause instanceof Error ? cause.message : String(cause));
+			if (requestId === loadSequence.current) setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
-			setLoading(false);
+			if (requestId === loadSequence.current) setLoading(false);
 		}
 	}, [query]);
 	(0, react.useEffect)(() => {
@@ -293,9 +296,18 @@ function ManagedPage({ t, initialQuery = "" }) {
 		}
 	}
 	const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
+	function descriptionFor(item) {
+		const supplied = item.descriptionZh.trim();
+		if (supplied) return supplied;
+		return item.kind === "skill" ? `${t("installedSkillFallback")}：${item.name}。${t("noChineseDescription")}。` : `${t("installedPluginFallback")}：${item.name}。${t("noChineseDescription")}。`;
+	}
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 		className: "managed-page",
 		children: [
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("installedManagerTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "lede",
+				children: t("installedManagerHint")
+			})] }),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "toolbar",
 				children: [
@@ -365,6 +377,11 @@ function ManagedPage({ t, initialQuery = "" }) {
 					batch.total
 				]
 			}) : null,
+			loading && !data && !error ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "banner",
+				role: "status",
+				children: t("loadingInstalled")
+			}) : null,
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "list managed-list",
 				children: [(data?.items ?? []).map((item) => {
@@ -372,7 +389,10 @@ function ManagedPage({ t, initialQuery = "" }) {
 					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", { children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: "status-cell",
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: `dot${item.enabled ? "" : " off"}` })
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: `dot${item.enabled ? "" : " off"}`,
+								"aria-hidden": "true"
+							})
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: item.url ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
@@ -383,14 +403,18 @@ function ManagedPage({ t, initialQuery = "" }) {
 							}) : item.name }),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 								className: "desc",
-								children: item.descriptionZh || item.description || item.spec
+								children: descriptionFor(item)
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: "facts",
 								children: [
 									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: "badge",
-										children: item.kind === "skill" ? "Skill" : "Bundle"
+										children: t(item.kind === "skill" ? "skillKind" : "bundleKind")
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: `badge${item.enabled ? "" : " muted"}`,
+										children: t(item.enabled ? "enabled" : "disabled")
 									}),
 									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 										t("version"),
@@ -401,6 +425,11 @@ function ManagedPage({ t, initialQuery = "" }) {
 										t("latest"),
 										": ",
 										item.latest
+									] }) : null,
+									item.fullName && item.fullName !== item.name ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+										t("project"),
+										": ",
+										item.fullName
 									] }) : null,
 									item.local ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 										className: "badge",
@@ -456,6 +485,13 @@ function ManagedPage({ t, initialQuery = "" }) {
 }
 
 //#endregion
+//#region src/client/pagination.ts
+/** Keep paginated rows from two independently published catalog snapshots from being mixed. */
+function shouldRestartPagination(append, currentGeneratedAt, incomingGeneratedAt) {
+	return append && currentGeneratedAt !== null && currentGeneratedAt !== incomingGeneratedAt;
+}
+
+//#endregion
 //#region src/client/RankingsPage.tsx
 const VIEWS = [
 	"hot",
@@ -493,26 +529,45 @@ function RankingsPage({ t }) {
 	const [confirming, setConfirming] = (0, react.useState)(null);
 	const [batch, setBatch] = (0, react.useState)(null);
 	const [notice, setNotice] = (0, react.useState)(null);
+	const loadSequence = (0, react.useRef)(0);
+	const loadedSnapshot = (0, react.useRef)(null);
 	const load = (0, react.useCallback)(async (nextView, nextQuery, nextCategory, nextHideSkills, offset = 0, append = false) => {
+		const requestId = ++loadSequence.current;
+		const requestSnapshot = loadedSnapshot.current;
 		setLoading(true);
 		setErrorAction("load");
 		setError(null);
+		if (!append) {
+			loadedSnapshot.current = null;
+			setData(null);
+			setItems([]);
+		}
 		try {
-			const payload = await readJson(`/dsh-top100/rankings?${new URLSearchParams({
+			const fetchPage = (pageOffset) => readJson(`/dsh-top100/rankings?${new URLSearchParams({
 				view: nextView,
 				category: nextCategory,
 				skills: nextHideSkills ? "0" : "1",
 				q: nextQuery,
-				offset: String(offset),
+				offset: String(pageOffset),
 				limit: "40"
 			})}`);
+			let payload = await fetchPage(offset);
+			if (requestId !== loadSequence.current) return;
+			let shouldAppend = append;
+			if (shouldRestartPagination(append, requestSnapshot, payload.generatedAt)) {
+				payload = await fetchPage(0);
+				if (requestId !== loadSequence.current) return;
+				shouldAppend = false;
+			}
+			loadedSnapshot.current = payload.generatedAt;
 			setData(payload);
-			setItems((current) => append ? [...current, ...payload.items] : payload.items);
+			setItems((current) => shouldAppend ? [...current, ...payload.items] : payload.items);
 		} catch (cause) {
+			if (requestId !== loadSequence.current) return;
 			setError(cause instanceof Error ? cause.message : String(cause));
 			if (!append) setItems([]);
 		} finally {
-			setLoading(false);
+			if (requestId === loadSequence.current) setLoading(false);
 		}
 	}, []);
 	(0, react.useEffect)(() => {
@@ -768,6 +823,11 @@ function RankingsPage({ t }) {
 					className: "banner",
 					children: batch ? `${t("batchProgress")} ${batch.completed}/${batch.total}` : t("installing")
 				}) : null,
+				loading && items.length === 0 && !error ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "banner",
+					role: "status",
+					children: t("loadingRankings")
+				}) : null,
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "list",
 					children: [items.map((item) => {
@@ -815,7 +875,7 @@ function RankingsPage({ t }) {
 								}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									disabled: true,
-									title: t("skillHint"),
+									title: t("browseOnlyHint"),
 									children: t("browseOnly")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 									className: "github-link",
@@ -1180,6 +1240,10 @@ const css = `
   color: #9a6700;
   background: color-mix(in srgb, #f0b429 18%, transparent);
 }
+.dsh-top100 .badge.muted {
+  color: var(--t100-muted);
+  background: var(--t100-fill);
+}
 .dsh-top100 .managed-page,
 .dsh-top100 .diag-page {
   display: grid;
@@ -1296,7 +1360,7 @@ const css = `
 const zh = {
 	nav: "插件排行",
 	title: "DSH-Top100",
-	subtitle: "从线上榜单浏览、搜索并安装已验证的 DSH 插件",
+	subtitle: "从线上榜单浏览和搜索 DSH 插件；仅对作者明确提供的安装源开放一键安装",
 	rankings: "插件市场",
 	installedPage: "已安装",
 	diagnostics: "诊断",
@@ -1311,6 +1375,7 @@ const zh = {
 	updated: "数据日期",
 	source: "数据源",
 	empty: "没有匹配的插件",
+	loadingRankings: "正在加载榜单…",
 	loadError: "无法读取线上榜单",
 	installError: "插件安装失败",
 	retry: "重试",
@@ -1322,9 +1387,18 @@ const zh = {
 	select: "选择",
 	installed: "已安装",
 	manage: "管理",
-	searchInstalled: "搜索已安装插件或 Skill",
-	profile: "当前 Profile",
-	managedItems: "个项目",
+	searchInstalled: "搜索已安装插件或技能（Skill）",
+	loadingInstalled: "正在读取已安装项目…",
+	installedManagerTitle: "已安装插件管理",
+	installedManagerHint: "查看当前配置中的插件与技能，并进行启停、更新或卸载。",
+	profile: "当前配置（Profile）",
+	managedItems: "个已安装项目",
+	bundleKind: "插件（Bundle）",
+	skillKind: "技能（Skill）",
+	project: "项目",
+	installedPluginFallback: "已安装的 DSH 插件",
+	installedSkillFallback: "已安装的本地技能（Skill）",
+	noChineseDescription: "暂无中文简介",
 	update: "更新",
 	updateAll: "全部更新",
 	updateAvailable: "有可用更新",
@@ -1342,9 +1416,10 @@ const zh = {
 	confirmRemoveSkill: "确定卸载这个 Skill？",
 	confirmRemovePlugin: "确定卸载这个插件？",
 	browseOnly: "仅浏览",
+	browseOnlyHint: "未找到作者明确提供且可验证的 dsh plugin add 安装源，请前往 GitHub 查看说明。",
 	installing: "安装中",
 	confirmTitle: "确认安装",
-	confirmBody: "将写入当前 DSH profile 或 skills 目录，不执行 README 命令。Git 源插件如声明 prepare，确认后会仅为该包放行构建脚本；这会在本机执行第三方代码。",
+	confirmBody: "将写入当前 DSH profile 或 skills 目录，不执行 README 命令。安装源如声明生命周期构建脚本，确认后会仅为该包放行；这会在本机执行第三方代码。",
 	confirmSpec: "安装源",
 	confirmNeedConfig: "这个插件可能还需要额外配置。",
 	confirm: "确认安装",
@@ -1387,7 +1462,7 @@ const zh = {
 const en = {
 	nav: "Rankings",
 	title: "DSH-Top100",
-	subtitle: "Browse, search, and install verified DSH plugins from the hosted rankings",
+	subtitle: "Browse and search hosted DSH rankings; one-click install is limited to author-provided sources",
 	rankings: "Marketplace",
 	installedPage: "Installed",
 	diagnostics: "Diagnostics",
@@ -1402,6 +1477,7 @@ const en = {
 	updated: "Snapshot",
 	source: "Source",
 	empty: "No matching plugins",
+	loadingRankings: "Loading rankings…",
 	loadError: "Could not load the hosted rankings",
 	installError: "Plugin installation failed",
 	retry: "Retry",
@@ -1414,8 +1490,17 @@ const en = {
 	installed: "Installed",
 	manage: "Manage",
 	searchInstalled: "Search installed plugins or Skills",
+	loadingInstalled: "Loading installed items…",
+	installedManagerTitle: "Installed plugin management",
+	installedManagerHint: "Review plugins and Skills in this profile, then enable, disable, update, or uninstall them.",
 	profile: "Profile",
 	managedItems: "items",
+	bundleKind: "Plugin (Bundle)",
+	skillKind: "Skill",
+	project: "Project",
+	installedPluginFallback: "Installed DSH plugin",
+	installedSkillFallback: "Installed local Skill",
+	noChineseDescription: "No Chinese summary available",
 	update: "Update",
 	updateAll: "Update all",
 	updateAvailable: "Update available",
@@ -1433,9 +1518,10 @@ const en = {
 	confirmRemoveSkill: "Uninstall this Skill?",
 	confirmRemovePlugin: "Uninstall this plugin?",
 	browseOnly: "Browse only",
+	browseOnlyHint: "No author-provided, verifiable dsh plugin add target was found. Open GitHub for installation details.",
 	installing: "Installing",
 	confirmTitle: "Confirm install",
-	confirmBody: "This writes to the current DSH profile or skills directory without running README commands. If a Git plugin declares prepare, confirming allows build scripts for that exact package, which executes third-party code locally.",
+	confirmBody: "This writes to the current DSH profile or skills directory without running README commands. If the source declares lifecycle build scripts, confirming allows them only for that exact package, which executes third-party code locally.",
 	confirmSpec: "Install spec",
 	confirmNeedConfig: "This plugin may require extra configuration.",
 	confirm: "Install",

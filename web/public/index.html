@@ -1698,6 +1698,73 @@
         box-shadow: 0 18px 38px rgba(23, 73, 66, 0.14);
       }
 
+      .dsh-install-methods {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .dsh-install-methods > input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      .dsh-install-methods > label {
+        display: flex;
+        min-height: 68px;
+        padding: 14px 20px;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 4px;
+        border-bottom: 1px solid #0b302b;
+        color: var(--hero-muted);
+        background: rgba(12, 48, 43, 0.08);
+        font-weight: 850;
+        cursor: pointer;
+      }
+
+      .dsh-install-methods > label + input + label {
+        border-left: 1px solid #0b302b;
+      }
+
+      .dsh-install-methods > label small {
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .dsh-install-methods > input:checked + label {
+        color: white;
+        background: #0c302b;
+        box-shadow: inset 0 -4px 0 var(--hero-accent);
+      }
+
+      .dsh-install-methods > input:focus-visible + label {
+        outline: 3px solid var(--hero-accent);
+        outline-offset: -5px;
+      }
+
+      .dsh-method-panels {
+        min-width: 0;
+        grid-column: 1 / -1;
+      }
+
+      .dsh-method-panel {
+        display: none;
+      }
+
+      #dsh-method-npx:checked ~ .dsh-method-panels .dsh-method-panel-npx,
+      #dsh-method-source:checked ~ .dsh-method-panels .dsh-method-panel-source {
+        display: block;
+      }
+
       .dsh-install-meta {
         display: flex;
         padding: 15px 22px 0;
@@ -1772,6 +1839,51 @@
 
       .dsh-install-next strong {
         color: white;
+      }
+
+      .dsh-start-row,
+      .dsh-source-path {
+        display: grid;
+        margin: 0 22px 18px;
+        grid-template-columns: 150px minmax(0, 1fr);
+        align-items: center;
+        gap: 14px;
+        color: var(--hero-muted);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .dsh-source-path {
+        margin-top: 18px;
+      }
+
+      .dsh-start-row code,
+      .dsh-source-path code {
+        min-width: 0;
+        padding: 10px 13px;
+        overflow-x: auto;
+        border: 1px solid rgba(12, 48, 43, 0.2);
+        color: var(--hero-ink);
+        background: rgba(255, 255, 255, 0.56);
+        white-space: nowrap;
+      }
+
+      .dsh-cli-note {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .dsh-known-issue {
+        margin: 18px 0;
+        padding: 18px 20px;
+        border-left: 5px solid #d39b1d;
+        background: #fff4d5;
+        color: #4d3912;
+      }
+
+      .dsh-known-issue p {
+        margin: 6px 0 0 !important;
+        font-size: 14px;
       }
 
       .dsh-release-note,
@@ -1885,6 +1997,16 @@
 
         .dsh-copy-button {
           min-height: 52px;
+        }
+
+        .dsh-install-methods > label {
+          padding-inline: 10px;
+          text-align: center;
+        }
+
+        .dsh-start-row,
+        .dsh-source-path {
+          grid-template-columns: 1fr;
         }
 
         .inline-docs .doc-card {
@@ -2226,7 +2348,7 @@
                 class="hero-placeholder hero-content-switch"
                 href="?page=dsh#dsh"
                 data-content-switch="dsh"
-              >接入 DSH</a>
+              >安装 dsh-Top100</a>
               <a
                 class="hero-placeholder hero-content-switch"
                 href="?page=docs#docs"
@@ -2515,7 +2637,7 @@
           <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
             <header class="inline-docs-header">
               <h2 class="inline-docs-title" id="inline-dsh-title">Install dsh-Top100.</h2>
-              <p class="inline-docs-title-zh">一条命令接入 DSH。</p>
+              <p class="inline-docs-title-zh">下载插件并接入 DSH。</p>
             </header>
             <div id="inline-dsh-host">
               <p class="docs-loading">正在加载接入说明…</p>
@@ -2859,7 +2981,7 @@
             button.textContent = originalLabel;
           }, 3000);
         } catch {
-          const commandElement = button.closest(".dsh-install-panel")?.querySelector(".dsh-install-command");
+          const commandElement = button.closest(".dsh-command-row")?.querySelector(".dsh-install-command");
           const selection = window.getSelection();
           if (!commandElement || !selection) {
             button.textContent = "请手动复制";
@@ -3115,15 +3237,14 @@
           const stars = item.querySelector(".stars");
           const starText = formatStars(plugin.stars);
           const repositoryUrl = `https://github.com/${plugin.fullName}`;
-          const downloadUrl = `${repositoryUrl}.git`;
 
           rank.textContent = `#${String(displayRank).padStart(3, "0")}`;
           nameText.textContent = name;
           githubLink.href = repositoryUrl;
           githubLink.setAttribute("aria-label", `在 GitHub 打开 ${name}`);
-          copyLink.dataset.copyUrl = downloadUrl;
-          copyLink.setAttribute("aria-label", `复制 ${name} 的 Git 下载链接`);
-          copyLink.title = "复制 Git 下载链接";
+          copyLink.dataset.copyUrl = repositoryUrl;
+          copyLink.setAttribute("aria-label", `复制 ${name} 的 GitHub 仓库地址`);
+          copyLink.title = "复制 GitHub 仓库地址";
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
           if (currentView === "rising") {
             const rateText = formatStars(plugin.dailyStars);
@@ -3195,7 +3316,7 @@
           document.execCommand("copy");
           input.remove();
         }
-        showFeedback(`已复制下载链接：${value}`);
+        showFeedback(`已复制 GitHub 仓库地址：${value}`);
       }
 
       list.addEventListener("click", (event) => {

@@ -2,11 +2,11 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, filterCatalog, findEntry, invalidateCatalog, isRankingView, loadRankings, normalizeDataUrl, } from "./catalog.js";
-import { cancelActive, progress, runDshPlugin } from "../install/dsh-cli.js";
+import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, normalizeDataUrl, } from "./catalog.js";
+import { cancelActive, progress, runDshPlugin, runDshProfileCheck } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
-import { FULL_NAME_RE, PROFILE_RE, isCordisEntry, resolveInstallSpec } from "../install/install-spec.js";
-import { InstallVerificationError, verifyInstallSpec } from "../install/install-verify.js";
+import { FULL_NAME_RE, PROFILE_RE, resolveInstallSpec } from "../install/install-spec.js";
+import { verifyInstallSpec } from "../install/install-verify.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
 import { readInstalled } from "./profile.js";
 import { buildDiagnosticReport } from "./diagnose.js";
@@ -214,8 +214,8 @@ async function prepareJob(job, config) {
             return;
         }
         updateJob(job, "validating", { lastLine: "正在验证安装源" });
-        const document = await safeLoad(config);
-        const entry = findEntry(document, job.fullName);
+        const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
+        const entry = await findPublishedEntry(dataUrl, job.fullName);
         if (!entry)
             throw new Error("plugin is not in the published catalog");
         if (entry.type?.toLowerCase() === "skill") {
@@ -249,19 +249,12 @@ async function prepareJob(job, config) {
             throw new Error("this catalog entry has no trusted DSH install source");
         let target = spec.spec;
         let buildPackageName = null;
-        try {
-            const resolvedTarget = await verifyInstallSpec(spec);
-            target = resolvedTarget.target;
-            if (resolvedTarget.needsBuildApproval) {
-                if (!resolvedTarget.packageName)
-                    throw new Error("Git 插件需要构建，但 package.json 缺少 name");
-                buildPackageName = resolvedTarget.packageName;
-            }
-        }
-        catch (error) {
-            if (!isCordisEntry(entry) || (error instanceof InstallVerificationError && error.fatal))
-                throw error;
-            job.lastLine = `宽松验证：${error instanceof Error ? error.message : "未验证安装源"}`;
+        const resolvedTarget = await verifyInstallSpec(spec);
+        target = resolvedTarget.target;
+        if (resolvedTarget.needsBuildApproval) {
+            if (!resolvedTarget.packageName)
+                throw new Error("插件需要构建，但 package.json 缺少 name");
+            buildPackageName = resolvedTarget.packageName;
         }
         if (alreadyInstalled(entry, spec.spec, config.profile)) {
             updateJob(job, "installed", {
@@ -284,12 +277,35 @@ async function prepareJob(job, config) {
             }, 250);
             progressTimer.unref?.();
             try {
+                job.lastLine = "正在检查当前 DSH profile";
+                const before = await runDshProfileCheck(config.profile);
+                if (before.exitCode !== 0 || before.timedOut) {
+                    throw new Error(`当前 DSH profile 已存在配置问题，安装已停止：${installFailure(before)}`);
+                }
+                if (job.cancelRequested) {
+                    updateJob(job, "cancelled", { lastLine: "已取消" });
+                    return;
+                }
                 if (buildPackageName)
                     allowPackageBuild(config.profile, buildPackageName);
+                job.lastLine = "正在写入 DSH profile";
                 const result = await runDshPlugin(config.profile, ["add", target], { fullName: job.fullName });
                 const ok = result.exitCode === 0 && !result.timedOut && !result.cancelled;
                 if (!ok)
                     throw new Error(installFailure(result));
+                job.lastLine = "正在验证安装后的 DSH 配置";
+                const after = await runDshProfileCheck(config.profile);
+                if (after.exitCode !== 0 || after.timedOut) {
+                    const packageName = resolvedTarget.packageName;
+                    const rollback = packageName
+                        ? await runDshPlugin(config.profile, ["remove", packageName], { fullName: job.fullName })
+                        : null;
+                    const rolledBack = rollback !== null
+                        && rollback.exitCode === 0
+                        && !rollback.timedOut
+                        && !rollback.cancelled;
+                    throw new Error(`插件安装后未通过 DSH 配置验证${rolledBack ? "，已自动回滚" : "，自动回滚失败，请手动移除"}：${installFailure(after)}`);
+                }
                 invalidateCatalog();
                 updateJob(job, "installed", {
                     requiresRestart: true,
@@ -405,7 +421,9 @@ export function mountRoutes(host, config) {
                 const offset = Math.max(0, Number(query.get("offset") ?? 0) || 0);
                 const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
                 try {
-                    const document = await safeLoad(config);
+                    const document = q === "" && (view === "hot" || view === "rising")
+                        ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
+                        : await safeLoad(config);
                     const installed = readInstalled(config.profile);
                     const { total, items } = filterCatalog(document, {
                         view,
@@ -551,7 +569,10 @@ export function mountRoutes(host, config) {
                 }
                 const q = (queryOf(request).get("q") ?? "").trim().toLowerCase();
                 try {
-                    const document = await safeLoad(config).catch(() => null);
+                    const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
+                    const document = await loadCachedRankings(dataUrl);
+                    // Populate or refresh the full catalog for later searches without delaying local management.
+                    void safeLoad(config).catch(() => undefined);
                     const items = (await listManagedPlugins(config.profile, document)).filter((item) => {
                         return !q || `${item.name} ${item.description} ${item.descriptionZh} ${item.fullName ?? ""}`.toLowerCase().includes(q);
                     });

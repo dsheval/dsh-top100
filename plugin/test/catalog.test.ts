@@ -1,9 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   describeCatalogFetchError,
   filterCatalog,
+  findPublishedEntry,
+  invalidateCatalog,
   isRetryableCatalogFetchError,
+  loadCachedRankings,
+  loadRankingView,
+  loadRankings,
   matchesQuery,
+  parseRankingViewDocument,
   parseRankingsDocument,
 } from "../src/host/catalog.js";
 import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
@@ -42,15 +51,34 @@ const document: RankingsDocument = {
   generatedAt: "2026-08-22T00:00:00.000Z",
   snapshotDate: "2026-08-22",
   rankings: {
-    hot: [entry("acme/hot-one", { rank: 1, type: "cordis-plugin" })],
+    hot: [entry("acme/hot-one", {
+      rank: 1,
+      type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/hot-one"] },
+    })],
     rising: [entry("acme/rise-one", { rank: 1, tags: ["memory"] })],
     total: [
-      entry("acme/hot-one", { rank: 2, type: "cordis-plugin" }),
+      entry("acme/hot-one", {
+        rank: 2,
+        type: "cordis-plugin",
+        install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/hot-one"] },
+      }),
       entry("acme/rise-one", { rank: 3, tags: ["memory"] }),
       entry("other/search-me", { rank: 4, descriptionZh: "检索助手" }),
     ],
   },
 };
+
+const temporaryCaches: string[] = [];
+const originalCacheDirectory = process.env.DSH_TOP100_CACHE_DIR;
+
+afterEach(async () => {
+  invalidateCatalog();
+  vi.unstubAllGlobals();
+  if (originalCacheDirectory === undefined) delete process.env.DSH_TOP100_CACHE_DIR;
+  else process.env.DSH_TOP100_CACHE_DIR = originalCacheDirectory;
+  await Promise.all(temporaryCaches.splice(0).map((path) => rm(path, { recursive: true, force: true })));
+});
 
 describe("catalog filter", () => {
   it("returns the selected view when there is no query", () => {
@@ -77,6 +105,22 @@ describe("catalog filter", () => {
       installed: {},
     });
     expect(result.items.map((item) => item.fullName)).toEqual(["other/search-me"]);
+  });
+
+  it("does not advertise one-click install without an explicit trusted add target", () => {
+    const result = filterCatalog({
+      ...document,
+      rankings: { ...document.rankings, hot: [entry("acme/browse-only", { type: "cordis-plugin" })] },
+    }, {
+      view: "hot",
+      category: null,
+      query: "",
+      offset: 0,
+      limit: 10,
+      installed: {},
+    });
+    expect(result.items[0]?.installable).toBe(false);
+    expect(result.items[0]?.installSpec).toBeNull();
   });
 
   it("can hide Skill entries without changing the category taxonomy", () => {
@@ -172,9 +216,102 @@ describe("catalog transport", () => {
     expect(describeCatalogFetchError(error)).toContain("证书校验失败");
   });
 
+  it("turns transport failures into actionable Chinese messages", () => {
+    expect(describeCatalogFetchError(new Error("The operation was aborted due to timeout")))
+      .toContain("榜单请求超时");
+    expect(describeCatalogFetchError(new Error("rankings fetch failed: 502 Bad Gateway")))
+      .toBe("榜单服务器请求失败（HTTP 502 Bad Gateway）");
+    expect(describeCatalogFetchError(new Error("fetch failed"))).toContain("网络连接失败");
+  });
+
   it("validates downloaded rankings JSON before caching it", () => {
     expect(parseRankingsDocument(JSON.stringify(document)).rankings.total).toHaveLength(3);
     expect(() => parseRankingsDocument("<html>bad gateway</html>")).toThrow("not valid JSON");
     expect(() => parseRankingsDocument("{}")).toThrow("rankings.total");
+  });
+
+  it("normalizes a small published view shard into the catalog shape", () => {
+    const shard = parseRankingViewDocument(JSON.stringify({
+      ...document,
+      rankings: document.rankings.hot,
+    }), "hot");
+    expect(shard.rankings.hot).toHaveLength(1);
+    expect(shard.rankings.total).toBe(shard.rankings.hot);
+    expect(shard.rankings.rising).toEqual([]);
+  });
+
+  it("coalesces initial shard downloads and reuses the persistent cache", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      ...document,
+      rankings: document.rankings.hot,
+    }), { status: 200, headers: { "content-type": "application/json" } }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const [left, right] = await Promise.all([
+      loadRankingView("https://catalog.example/data", "hot"),
+      loadRankingView("https://catalog.example/data", "hot"),
+    ]);
+    expect(left.rankings.hot).toHaveLength(1);
+    expect(right.rankings.hot).toHaveLength(1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://catalog.example/data/rankings-hot.json");
+
+    invalidateCatalog();
+    const offlineFetch = vi.fn().mockRejectedValue(new Error("offline"));
+    vi.stubGlobal("fetch", offlineFetch);
+    await expect(loadCachedRankings("https://catalog.example/data"))
+      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
+    await expect(loadRankingView("https://catalog.example/data", "hot"))
+      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
+    expect(offlineFetch).not.toHaveBeenCalled();
+  });
+
+  it("falls back to the full catalog when a view shard is not JSON", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("<html>upstream warning</html>", {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(document), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadRankingView("https://catalog.example/data", "hot"))
+      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/rankings-hot.json",
+      "https://catalog.example/data/rankings.json",
+    ]);
+  });
+
+  it("treats a newer full catalog omission as authoritative for installation", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const target = document.rankings.hot[0];
+    const oldShard = { ...document, generatedAt: "2026-08-21T00:00:00.000Z", rankings: [target] };
+    const newFull = {
+      ...document,
+      generatedAt: "2026-08-22T00:00:00.000Z",
+      rankings: { hot: [], rising: [], total: document.rankings.total.filter((entry) => entry.fullName !== target.fullName) },
+    };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify(oldShard), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(newFull), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await loadRankingView("https://catalog.example/data", "hot", true);
+    await loadRankings("https://catalog.example/data", true);
+    await expect(findPublishedEntry("https://catalog.example/data", target.fullName))
+      .resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });

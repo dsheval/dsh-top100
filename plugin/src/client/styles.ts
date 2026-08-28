@@ -273,6 +273,10 @@ export const css = `
   color: #9a6700;
   background: color-mix(in srgb, #f0b429 18%, transparent);
 }
+.dsh-top100 .badge.muted {
+  color: var(--t100-muted);
+  background: var(--t100-fill);
+}
 .dsh-top100 .managed-page,
 .dsh-top100 .diag-page {
   display: grid;

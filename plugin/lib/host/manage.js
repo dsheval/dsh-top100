@@ -65,6 +65,28 @@ export async function fetchNpmLatest(name) {
 function updateAvailable(current, latest) {
     return Boolean(current && latest && compareSemver(current.replace(/^v/, ""), latest.replace(/^v/, "")) < 0);
 }
+const HAN_TEXT_RE = /\p{Script=Han}/u;
+function cleanDescription(value) {
+    return value?.trim() ?? "";
+}
+/**
+ * Pick an author/catalog supplied Chinese description without inventing a
+ * translation. English-only metadata falls back to an explicit inventory
+ * summary so the management page remains understandable in Chinese.
+ */
+export function managedDescriptionZh(options) {
+    const catalogChinese = cleanDescription(options.descriptionZh);
+    if (catalogChinese)
+        return catalogChinese;
+    const suppliedChinese = (options.descriptions ?? [])
+        .map(cleanDescription)
+        .find((description) => HAN_TEXT_RE.test(description));
+    if (suppliedChinese)
+        return suppliedChinese;
+    return options.kind === "skill"
+        ? `已安装的本地技能（Skill）：${options.name}。暂无中文简介。`
+        : `已安装的 DSH 插件：${options.name}。暂无中文简介。`;
+}
 export function resolveUpdateTarget(name, spec) {
     if (spec.startsWith("link:") || spec.startsWith("file:"))
         return null;
@@ -89,7 +111,7 @@ function listSkills() {
             spec: `skill:${entry.name}`,
             version: null,
             description,
-            descriptionZh: description,
+            descriptionZh: managedDescriptionZh({ kind: "skill", name: entry.name, descriptions: [description] }),
             fullName: null,
             url: null,
             enabled: true,
@@ -109,12 +131,18 @@ export async function listManagedPlugins(profile, document) {
         const version = readInstalledVersion(profile, name);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
         const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);
+        const description = catalog?.description || manifest?.description || "";
         return {
             name,
             spec,
             version,
-            description: catalog?.descriptionZh || catalog?.description || manifest?.description || "",
-            descriptionZh: catalog?.descriptionZh || "",
+            description,
+            descriptionZh: managedDescriptionZh({
+                kind: "bundle",
+                name,
+                descriptionZh: catalog?.descriptionZh,
+                descriptions: [catalog?.description, manifest?.description],
+            }),
             fullName: catalog?.fullName ?? fullName,
             url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
             enabled: !packageIsDisabled(profile, name),

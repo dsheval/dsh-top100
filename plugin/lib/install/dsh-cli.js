@@ -4,6 +4,7 @@ import { existsSync } from "node:fs";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { SAFE_TARGET_RE } from "./install-spec.js";
 const INSTALL_TIMEOUT_MS = Number(process.env.DSH_TOP100_INSTALL_TIMEOUT_MS) || 15 * 60 * 1000;
+const PROFILE_CHECK_TIMEOUT_MS = Number(process.env.DSH_TOP100_PROFILE_CHECK_TIMEOUT_MS) || 60 * 1000;
 const CMD_METACHARS = /[\s"&|<>^()%!]/;
 const winCmdShim = process.platform === "win32";
 const COMSPEC = process.env.ComSpec ?? "cmd.exe";
@@ -30,6 +31,21 @@ export function quoteCmdArg(arg) {
 export function cmdCommandLine(argv) {
     return argv.map(quoteCmdArg).join(" ");
 }
+/** Keep Node loader/runtime flags, but never forward wrapper-only eval flags to the DSH child. */
+export function safeExecArgv(argv) {
+    const filtered = [];
+    for (let index = 0; index < argv.length; index += 1) {
+        const arg = argv[index];
+        if (arg === "-e" || arg === "--eval" || arg === "-p" || arg === "--print" || arg === "--input-type") {
+            index += 1;
+            continue;
+        }
+        if (/^(?:--eval|--print|--input-type)=/.test(arg))
+            continue;
+        filtered.push(arg);
+    }
+    return filtered;
+}
 function spawnShim(file, args, options) {
     const { viaShell = false, ...spawnOptions } = options;
     if (!viaShell || process.platform !== "win32") {
@@ -45,7 +61,7 @@ export function dshArgv() {
     const entry = process.argv[1];
     if (entry !== undefined && /[\\/](?:bin\.(?:js|ts)|dsh)$/.test(entry)) {
         const abs = resolve(entry);
-        return { file: nodeExecutable(), args: [...process.execArgv, abs], cwd: dirname(abs), viaShell: false };
+        return { file: nodeExecutable(), args: [...safeExecArgv(process.execArgv), abs], cwd: dirname(abs), viaShell: false };
     }
     return { file: "dsh", args: [], cwd: undefined, viaShell: winCmdShim };
 }
@@ -163,6 +179,53 @@ export function runDshPlugin(profile, pluginArgs, meta) {
                 stderr,
                 cancelled: cancelRequested,
             });
+        });
+    });
+}
+/** Compose the selected profile without starting it, using the exact CLI that launched this plugin. */
+export function runDshProfileCheck(profile) {
+    const { file, args, cwd, viaShell } = dshArgv();
+    return new Promise((resolvePromise) => {
+        const child = spawnShim(file, [...args, "--profile", profile, "--dump-config"], {
+            cwd,
+            env: { ...process.env, CI: "true" },
+            stdio: ["ignore", "pipe", "pipe"],
+            viaShell,
+            detached: process.platform !== "win32",
+        });
+        let stdout = "";
+        let stderr = "";
+        let timedOut = false;
+        let settled = false;
+        const finish = (result) => {
+            if (settled)
+                return;
+            settled = true;
+            resolvePromise(result);
+        };
+        const timer = setTimeout(() => {
+            timedOut = true;
+            killTree(child);
+        }, PROFILE_CHECK_TIMEOUT_MS);
+        child.stdout?.on("data", (chunk) => {
+            stdout = (stdout + chunk.toString()).slice(-256 * 1024);
+        });
+        child.stderr?.on("data", (chunk) => {
+            stderr = (stderr + chunk.toString()).slice(-64 * 1024);
+        });
+        child.on("error", (error) => {
+            clearTimeout(timer);
+            finish({
+                exitCode: 127,
+                timedOut: false,
+                stdout,
+                stderr: `${stderr}\n${error.message}`,
+                cancelled: false,
+            });
+        });
+        child.on("close", (code) => {
+            clearTimeout(timer);
+            finish({ exitCode: code, timedOut, stdout, stderr, cancelled: false });
         });
     });
 }

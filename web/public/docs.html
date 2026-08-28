@@ -726,8 +726,8 @@
           <p class="section-kicker">02 · DSH Plugin</p>
           <h2>排行榜也可以直接进入 DSH</h2>
           <p class="lead">
-            v0.2 新增可独立发布的 DSH 插件。用户不需要下载 Collector、SQLite 或网页后端，
-            即可在 DSH 设置页浏览、搜索并安装榜单项目。
+            dsh-Top100 提供可独立安装的 DSH 插件。用户不需要下载 Collector、SQLite 或网页后端，
+            即可在 DSH 设置页浏览和搜索榜单，并对作者明确提供且验证通过的安装源进行确认安装。
           </p>
           <div class="pipeline" aria-label="DSH 插件数据流">
             <span>rankings.json</span>
@@ -737,8 +737,8 @@
             <span>DSH Profile</span>
           </div>
           <p>
-            插件和官方网站共用同一份线上榜单与分类定义；Host 负责远端数据缓存和受控安装，
-            Client 只通过同源本地接口读取数据。安装说明见首页“接入 DSH”。
+            插件和官方网站共用同一份线上榜单与分类定义；Host 负责远端数据缓存、安装源验证和受控安装，
+            Client 只通过同源本地接口读取数据。安装说明见首页“安装 dsh-Top100”。
           </p>
           <p>
             安装包还内置 <code>recommend-dsh-plugins</code> Skill，并注册只读的

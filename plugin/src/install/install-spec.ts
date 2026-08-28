@@ -2,7 +2,9 @@
 
 import type { InstallSpec, RankingEntry } from "../shared/types.js";
 
-export const NPM_SPEC_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
+const NPM_NAME_SOURCE = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
+const NPM_SELECTOR_SOURCE = "[a-z0-9][a-z0-9._+-]*";
+export const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME_SOURCE})(?:@(${NPM_SELECTOR_SOURCE}))?$`, "i");
 export const GITHUB_SPEC_RE =
   /^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/-]+))?$/i;
 export const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
@@ -35,6 +37,12 @@ export function parseInstallSpec(raw: string): InstallSpec | null {
   return null;
 }
 
+export function npmPackageSpec(spec: string): { name: string; selector: string | null } | null {
+  const match = spec.match(NPM_SPEC_RE);
+  if (!match) return null;
+  return { name: match[1], selector: match[2] ?? null };
+}
+
 function specFromCommands(commands: string[] | undefined): InstallSpec | null {
   for (const command of commands ?? []) {
     const dsh = command.match(DSH_ADD_RE);
@@ -54,7 +62,7 @@ export function resolveInstallSpec(entry: RankingEntry): InstallSpec | null {
   const fromCommands = specFromCommands(entry.install?.commands);
   if (fromCommands) return fromCommands;
   if (!FULL_NAME_RE.test(entry.fullName)) return null;
-  if (isCordisEntry(entry) || entry.type?.toLowerCase() === "skill") {
+  if (entry.type?.toLowerCase() === "skill") {
     return { kind: "github", spec: `github:${entry.fullName}` };
   }
   return null;
@@ -66,7 +74,7 @@ export function isInstalledEntry(entry: RankingEntry, installed: Record<string, 
   const repo = entry.name.toLowerCase();
   for (const [name, value] of Object.entries(installed)) {
     if (name.toLowerCase() === repo) return true;
-    if (spec?.kind === "npm" && name === spec.spec) return true;
+    if (spec?.kind === "npm" && name === npmPackageSpec(spec.spec)?.name) return true;
     const haystack = `${name} ${value}`.toLowerCase();
     if (haystack.includes(fullName)) return true;
     if (spec && haystack.includes(spec.spec.toLowerCase())) return true;

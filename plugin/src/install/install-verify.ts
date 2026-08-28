@@ -1,16 +1,20 @@
 /** Verify an install target exposes a real DSH bundle manifest before running pnpm. */
 
 import type { InstallSpec } from "../shared/types.js";
+import { npmPackageSpec } from "./install-spec.js";
 
 const MANIFEST_TIMEOUT_MS = 15_000;
+const VERIFICATION_CACHE_MS = 10 * 60 * 1000;
 
 export class InstallVerificationError extends Error {
   fatal: boolean;
+  status: number | null;
 
-  constructor(message: string, fatal = false) {
+  constructor(message: string, fatal = false, status: number | null = null) {
     super(message);
     this.name = "InstallVerificationError";
     this.fatal = fatal;
+    this.status = status;
   }
 }
 
@@ -23,12 +27,23 @@ export interface VerifiedInstallTarget {
 
 interface PackageManifest {
   name?: unknown;
-  scripts?: { prepare?: unknown };
+  scripts?: {
+    preinstall?: unknown;
+    install?: unknown;
+    postinstall?: unknown;
+    prepare?: unknown;
+  };
   dsh?: { bundle?: { patch?: unknown } };
   dependencies?: Record<string, unknown>;
   devDependencies?: Record<string, unknown>;
   optionalDependencies?: Record<string, unknown>;
   peerDependencies?: Record<string, unknown>;
+}
+
+const verificationCache = new Map<string, { value: VerifiedInstallTarget; verifiedAt: number }>();
+
+export function clearInstallVerificationCache(): void {
+  verificationCache.clear();
 }
 
 function isBundleManifest(value: unknown): value is PackageManifest {
@@ -57,33 +72,68 @@ function verifiedTarget(
       true,
     );
   }
-  const packageName = typeof manifest.name === "string" ? manifest.name : null;
-  const prepare = typeof manifest.scripts?.prepare === "string" && manifest.scripts.prepare.trim() !== "";
+  const packageName = typeof manifest.name === "string" && manifest.name.trim() ? manifest.name : null;
+  if (!packageName) {
+    throw new InstallVerificationError("项目本身问题：插件 package.json 缺少有效的 name", true);
+  }
+  const lifecycleScripts = ["preinstall", "install", "postinstall", "prepare"] as const;
+  const needsBuildApproval = lifecycleScripts.some((name) => {
+    const command = manifest.scripts?.[name];
+    return typeof command === "string" && command.trim() !== "";
+  });
   return {
     target,
     source,
     packageName,
-    needsBuildApproval: source === "github" && prepare,
+    needsBuildApproval,
   };
 }
 
 async function fetchJson(url: string): Promise<unknown> {
+  const headers: Record<string, string> = {
+    accept: "application/json",
+    "user-agent": "dsh-top100-plugin",
+  };
+  const token = process.env.GITHUB_TOKEN?.trim() || process.env.GH_TOKEN?.trim();
+  if (token && url.startsWith("https://api.github.com/")) headers.authorization = `Bearer ${token}`;
   const response = await fetch(url, {
-    headers: {
-      accept: "application/json",
-      "user-agent": "dsh-top100-plugin",
-    },
+    headers,
     signal: AbortSignal.timeout(MANIFEST_TIMEOUT_MS),
   });
-  if (!response.ok) throw new Error(`manifest lookup failed: ${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    const remaining = response.headers.get("x-ratelimit-remaining");
+    if ((response.status === 403 || response.status === 429) && remaining === "0") {
+      throw new InstallVerificationError(
+        "GitHub 安装源验证额度已用尽，请稍后重试；配置 GITHUB_TOKEN 或 GH_TOKEN 可提高额度",
+        true,
+      );
+    }
+    throw new InstallVerificationError(
+      `安装源验证失败：${response.status} ${response.statusText || "request failed"}`,
+      response.status === 404,
+      response.status,
+    );
+  }
   return response.json();
 }
 
+async function fetchOptionalJson(url: string): Promise<unknown | null> {
+  try {
+    return await fetchJson(url);
+  } catch (error) {
+    if (error instanceof InstallVerificationError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 async function verifyNpm(spec: string): Promise<VerifiedInstallTarget> {
-  const encoded = spec.startsWith("@")
-    ? `@${encodeURIComponent(spec.slice(1))}`
-    : encodeURIComponent(spec);
-  const manifest = await fetchJson(`https://registry.npmjs.org/${encoded}/latest`);
+  const parsed = npmPackageSpec(spec);
+  if (!parsed) throw new InstallVerificationError("npm 安装源格式无效", true);
+  const encoded = parsed.name.startsWith("@")
+    ? `@${encodeURIComponent(parsed.name.slice(1))}`
+    : encodeURIComponent(parsed.name);
+  const selector = encodeURIComponent(parsed.selector ?? "latest");
+  const manifest = await fetchJson(`https://registry.npmjs.org/${encoded}/${selector}`);
   if (!isBundleManifest(manifest)) {
     throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
   }
@@ -95,9 +145,9 @@ async function verifyGitHub(spec: string): Promise<VerifiedInstallTarget> {
   if (!match) throw new InstallVerificationError("GitHub 安装源格式无效", true);
   const [, owner, repo, ref] = match;
   const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-  const payload = await fetchJson(
+  const payload = await fetchOptionalJson(
     `https://api.github.com/repos/${owner}/${repo}/contents/package.json${query}`,
-  ).catch(() => null);
+  );
   if (payload !== null && typeof payload === "object" && typeof (payload as { content?: unknown }).content === "string") {
     try {
       const manifest = JSON.parse(
@@ -136,9 +186,9 @@ async function verifyGitHub(spec: string): Promise<VerifiedInstallTarget> {
     const packagePath = candidate.path;
     const directory = packagePath.slice(0, -"/package.json".length);
     const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
-    const child = await fetchJson(
+    const child = await fetchOptionalJson(
       `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
-    ).catch(() => null);
+    );
     if (child === null || typeof child !== "object" || typeof (child as { content?: unknown }).content !== "string") {
       continue;
     }
@@ -157,6 +207,10 @@ async function verifyGitHub(spec: string): Promise<VerifiedInstallTarget> {
 }
 
 export async function verifyInstallSpec(spec: InstallSpec): Promise<VerifiedInstallTarget> {
-  if (spec.kind === "npm") return verifyNpm(spec.spec);
-  return verifyGitHub(spec.spec);
+  const key = `${spec.kind}:${spec.spec}`;
+  const cached = verificationCache.get(key);
+  if (cached && Date.now() - cached.verifiedAt < VERIFICATION_CACHE_MS) return cached.value;
+  const value = spec.kind === "npm" ? await verifyNpm(spec.spec) : await verifyGitHub(spec.spec);
+  verificationCache.set(key, { value, verifiedAt: Date.now() });
+  return value;
 }

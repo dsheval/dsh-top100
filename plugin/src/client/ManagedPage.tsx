@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InstallBatchSnapshot, ManagedKind, ManagedListResponse, ManagedPlugin } from "../shared/types.js";
 import type { Translate } from "./locales.js";
 
@@ -18,13 +18,20 @@ export function ManagedPage({ t, initialQuery = "" }: { t: Translate; initialQue
   const [batch, setBatch] = useState<InstallBatchSnapshot | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const loadSequence = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++loadSequence.current;
     setLoading(true);
     setError(null);
-    try { setData(await readJson<ManagedListResponse>(`/dsh-top100/managed?q=${encodeURIComponent(query)}`)); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
-    finally { setLoading(false); }
+    try {
+      const payload = await readJson<ManagedListResponse>(`/dsh-top100/managed?q=${encodeURIComponent(query)}`);
+      if (requestId === loadSequence.current) setData(payload);
+    } catch (cause) {
+      if (requestId === loadSequence.current) setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (requestId === loadSequence.current) setLoading(false);
+    }
   }, [query]);
 
   useEffect(() => { void load(); }, [load]);
@@ -72,8 +79,20 @@ export function ManagedPage({ t, initialQuery = "" }: { t: Translate; initialQue
 
   const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
 
+  function descriptionFor(item: ManagedPlugin): string {
+    const supplied = item.descriptionZh.trim();
+    if (supplied) return supplied;
+    return item.kind === "skill"
+      ? `${t("installedSkillFallback")}：${item.name}。${t("noChineseDescription")}。`
+      : `${t("installedPluginFallback")}：${item.name}。${t("noChineseDescription")}。`;
+  }
+
   return (
     <div className="managed-page">
+      <div>
+        <h3>{t("installedManagerTitle")}</h3>
+        <p className="lede">{t("installedManagerHint")}</p>
+      </div>
       <div className="toolbar">
         <input type="search" value={draft} placeholder={t("searchInstalled")} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") setQuery(draft.trim()); }} />
         <button type="button" className="primary" onClick={() => setQuery(draft.trim())}>{t("search")}</button>
@@ -85,19 +104,22 @@ export function ManagedPage({ t, initialQuery = "" }: { t: Translate; initialQue
       {notice ? <div className="banner">{notice}</div> : null}
       {error ? <div className="error">{error} <button type="button" onClick={() => void load()}>{t("retry")}</button></div> : null}
       {busy && batch ? <div className="banner">{t("batchProgress")} {batch.completed}/{batch.total}</div> : null}
+      {loading && !data && !error ? <div className="banner" role="status">{t("loadingInstalled")}</div> : null}
       <div className="list managed-list">
         {(data?.items ?? []).map((item) => {
           const job = jobByName.get(item.name);
           return (
             <article key={`${item.kind}-${item.name}`}>
-              <div className="status-cell"><span className={`dot${item.enabled ? "" : " off"}`} /></div>
+              <div className="status-cell"><span className={`dot${item.enabled ? "" : " off"}`} aria-hidden="true" /></div>
               <div>
                 <h3>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.name}</a> : item.name}</h3>
-                <p className="desc">{item.descriptionZh || item.description || item.spec}</p>
+                <p className="desc">{descriptionFor(item)}</p>
                 <div className="facts">
-                  <span className="badge">{item.kind === "skill" ? "Skill" : "Bundle"}</span>
+                  <span className="badge">{t(item.kind === "skill" ? "skillKind" : "bundleKind")}</span>
+                  <span className={`badge${item.enabled ? "" : " muted"}`}>{t(item.enabled ? "enabled" : "disabled")}</span>
                   <span>{t("version")}: {item.version ?? "—"}</span>
                   {item.latest ? <span>{t("latest")}: {item.latest}</span> : null}
+                  {item.fullName && item.fullName !== item.name ? <span>{t("project")}: {item.fullName}</span> : null}
                   {item.local ? <span className="badge">{t("localLink")}</span> : null}
                   {item.protected ? <span className="badge">{t("protected")}</span> : null}
                   {item.updateAvailable ? <span className="badge warn">{t("updateAvailable")}</span> : null}

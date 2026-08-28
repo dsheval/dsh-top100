@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CatalogItem,
   CatalogResponse,
@@ -10,6 +10,7 @@ import type {
 import type { Translate } from "./locales.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
 import { ManagedPage } from "./ManagedPage.js";
+import { shouldRestartPagination } from "./pagination.js";
 
 interface RankingsPageProps {
   t: Translate;
@@ -45,6 +46,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
   const [confirming, setConfirming] = useState<CatalogItem[] | null>(null);
   const [batch, setBatch] = useState<InstallBatchSnapshot | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const loadSequence = useRef(0);
+  const loadedSnapshot = useRef<string | null>(null);
 
   const load = useCallback(async (
     nextView: RankingView,
@@ -54,25 +57,44 @@ export function RankingsPage({ t }: RankingsPageProps) {
     offset = 0,
     append = false,
   ) => {
+    const requestId = ++loadSequence.current;
+    const requestSnapshot = loadedSnapshot.current;
     setLoading(true);
     setErrorAction("load");
     setError(null);
+    if (!append) {
+      loadedSnapshot.current = null;
+      setData(null);
+      setItems([]);
+    }
     try {
-      const payload = await readJson<CatalogResponse>(`/dsh-top100/rankings?${new URLSearchParams({
-        view: nextView,
-        category: nextCategory,
-        skills: nextHideSkills ? "0" : "1",
-        q: nextQuery,
-        offset: String(offset),
-        limit: "40",
-      })}`);
+      const fetchPage = (pageOffset: number): Promise<CatalogResponse> => readJson<CatalogResponse>(
+        `/dsh-top100/rankings?${new URLSearchParams({
+          view: nextView,
+          category: nextCategory,
+          skills: nextHideSkills ? "0" : "1",
+          q: nextQuery,
+          offset: String(pageOffset),
+          limit: "40",
+        })}`,
+      );
+      let payload = await fetchPage(offset);
+      if (requestId !== loadSequence.current) return;
+      let shouldAppend = append;
+      if (shouldRestartPagination(append, requestSnapshot, payload.generatedAt)) {
+        payload = await fetchPage(0);
+        if (requestId !== loadSequence.current) return;
+        shouldAppend = false;
+      }
+      loadedSnapshot.current = payload.generatedAt;
       setData(payload);
-      setItems((current) => (append ? [...current, ...payload.items] : payload.items));
+      setItems((current) => (shouldAppend ? [...current, ...payload.items] : payload.items));
     } catch (cause) {
+      if (requestId !== loadSequence.current) return;
       setError(cause instanceof Error ? cause.message : String(cause));
       if (!append) setItems([]);
     } finally {
-      setLoading(false);
+      if (requestId === loadSequence.current) setLoading(false);
     }
   }, []);
 
@@ -267,6 +289,9 @@ export function RankingsPage({ t }: RankingsPageProps) {
           {batch ? `${t("batchProgress")} ${batch.completed}/${batch.total}` : t("installing")}
         </div>
       ) : null}
+      {loading && items.length === 0 && !error ? (
+        <div className="banner" role="status">{t("loadingRankings")}</div>
+      ) : null}
 
       <div className="list">
         {items.map((item) => {
@@ -303,7 +328,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                     {t("install")}
                   </button>
                 ) : (
-                  <button type="button" disabled title={t("skillHint")}>
+                  <button type="button" disabled title={t("browseOnlyHint")}>
                     {t("browseOnly")}
                   </button>
                 )}

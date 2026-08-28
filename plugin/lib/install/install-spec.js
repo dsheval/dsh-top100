@@ -1,5 +1,7 @@
 /** Derive a safe `dsh plugin add` target from a ranking entry. Never execute README commands. */
-export const NPM_SPEC_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
+const NPM_NAME_SOURCE = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
+const NPM_SELECTOR_SOURCE = "[a-z0-9][a-z0-9._+-]*";
+export const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME_SOURCE})(?:@(${NPM_SELECTOR_SOURCE}))?$`, "i");
 export const GITHUB_SPEC_RE = /^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/-]+))?$/i;
 export const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 export const SAFE_TARGET_RE = /^[A-Za-z0-9@:./_#+-]+$/;
@@ -28,6 +30,12 @@ export function parseInstallSpec(raw) {
     }
     return null;
 }
+export function npmPackageSpec(spec) {
+    const match = spec.match(NPM_SPEC_RE);
+    if (!match)
+        return null;
+    return { name: match[1], selector: match[2] ?? null };
+}
 function specFromCommands(commands) {
     for (const command of commands ?? []) {
         const dsh = command.match(DSH_ADD_RE);
@@ -49,7 +57,7 @@ export function resolveInstallSpec(entry) {
         return fromCommands;
     if (!FULL_NAME_RE.test(entry.fullName))
         return null;
-    if (isCordisEntry(entry) || entry.type?.toLowerCase() === "skill") {
+    if (entry.type?.toLowerCase() === "skill") {
         return { kind: "github", spec: `github:${entry.fullName}` };
     }
     return null;
@@ -61,7 +69,7 @@ export function isInstalledEntry(entry, installed) {
     for (const [name, value] of Object.entries(installed)) {
         if (name.toLowerCase() === repo)
             return true;
-        if (spec?.kind === "npm" && name === spec.spec)
+        if (spec?.kind === "npm" && name === npmPackageSpec(spec.spec)?.name)
             return true;
         const haystack = `${name} ${value}`.toLowerCase();
         if (haystack.includes(fullName))

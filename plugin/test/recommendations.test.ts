@@ -35,7 +35,10 @@ function entry(fullName: string, extra: Partial<RankingEntry> = {}): RankingEntr
     tags: extra.tags ?? [],
     categories: extra.categories ?? [],
     type: extra.type ?? "cordis-plugin",
-    install: extra.install ?? { method: "dsh-plugin", target: `github:${fullName}` },
+    install: extra.install ?? {
+      method: "pnpm-profile",
+      commands: [`dsh plugin --profile web add github:${fullName}`],
+    },
     sources: [],
     url: `https://github.com/${fullName}`,
     pushedAt: "",
