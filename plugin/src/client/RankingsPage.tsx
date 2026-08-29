@@ -9,6 +9,12 @@ import type {
 } from "../shared/types.js";
 import type { Translate } from "./locales.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
+import {
+  installProgress,
+  installStatus,
+  presentInstallError,
+  type InstallErrorKind,
+} from "./install-presentation.js";
 import { ManagedPage } from "./ManagedPage.js";
 import { shouldRestartPagination } from "./pagination.js";
 
@@ -20,6 +26,17 @@ const VIEWS: RankingView[] = ["hot", "rising", "total", "category"];
 const HIDE_SKILLS_KEY = "dsh-top100:hide-skills";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
 type PageSection = "rankings" | "installed" | "diagnostics";
+
+const ERROR_LOCALE_KEYS: Record<InstallErrorKind, string> = {
+  "ignored-builds": "ignoredBuilds",
+  network: "network",
+  timeout: "timeout",
+  permission: "permission",
+  lockfile: "lockfile",
+  profile: "profile",
+  source: "source",
+  generic: "generic",
+};
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
@@ -174,11 +191,65 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   function jobPanel(job: InstallJobSnapshot) {
+    const progress = installProgress(job);
+    const status = installStatus(job);
+    const failed = job.phase === "failed";
+    const error = failed ? presentInstallError(job.error ?? job.lastLine) : null;
+    const errorKey = error ? ERROR_LOCALE_KEYS[error.kind] : null;
+    const activeStage = progress >= 100 ? 3 : progress >= 70 ? 2 : progress >= 36 ? 1 : 0;
+    const stages = ["installStageCheck", "installStageDownload", "installStageApply", "installStageReady"];
     return (
-      <div className={`job job-${job.phase}`}>
-        {t(`phase_${job.phase}`)}
-        {job.lastLine ? <small>{job.lastLine}</small> : null}
-        {job.error ? <small>{job.error}</small> : null}
+      <div className={`job job-${job.phase}`} aria-live="polite">
+        <div className="job-heading">
+          <strong>{t(`phase_${job.phase}`)}</strong>
+          <span>{t("installProgressEstimate")} {progress}%</span>
+        </div>
+        <div
+          className="job-progress"
+          role="progressbar"
+          aria-label={t("installProgressLabel")}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-valuetext={`${t("installProgressEstimate")} ${progress}%`}
+        >
+          <span style={{ width: `${progress}%` }} />
+        </div>
+        <div className="job-stages" aria-hidden="true">
+          {stages.map((key, index) => (
+            <span
+              key={key}
+              className={index < activeStage || job.phase === "installed"
+                ? "is-complete"
+                : index === activeStage ? "is-active" : undefined}
+            >
+              <i />{t(key)}
+            </span>
+          ))}
+        </div>
+        <p className="job-status">
+          {t(status.key)}{status.count === undefined ? null : <span> · {status.count}</span>}
+        </p>
+        {error && errorKey ? (
+          <div className="job-error-message" role="alert">
+            <strong>{t(`installError_${errorKey}_title`)}</strong>
+            <p>{t(`installError_${errorKey}_summary`)}</p>
+            {error.packages.length > 0 ? (
+              <p className="job-error-packages">
+                <span>{t("installErrorPackages")}</span>
+                <code>{error.packages.join(", ")}</code>
+              </p>
+            ) : null}
+            <p className="job-error-hint">
+              <span>{t("installErrorNext")}</span>
+              {t(`installError_${errorKey}_hint`)}
+            </p>
+            <details className="job-error-details">
+              <summary>{t("installErrorDetails")}</summary>
+              <pre>{error.detail}</pre>
+            </details>
+          </div>
+        ) : null}
         {!["installed", "failed", "cancelled"].includes(job.phase) ? (
           <button type="button" onClick={() => void cancelJob(job.id)}>
             {t("cancel")}
@@ -186,6 +257,10 @@ export function RankingsPage({ t }: RankingsPageProps) {
         ) : ["failed", "cancelled"].includes(job.phase) ? (
           <button type="button" disabled={busy !== null} onClick={() => void retryJob(job.id)}>
             {t("retry")}
+          </button>
+        ) : job.phase === "installed" ? (
+          <button type="button" onClick={() => setSection("installed")}>
+            {t("manage")}
           </button>
         ) : null}
       </div>

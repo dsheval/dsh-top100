@@ -324,22 +324,182 @@ export const css = `
 .dsh-top100 .diag-list small { display: block; color: var(--t100-muted); margin-top: 2px; }
 .dsh-top100 .job {
   display: grid;
-  gap: 4px;
-  width: min(240px, 28vw);
-  padding: 7px 9px;
-  border-radius: 8px;
-  background: var(--t100-accent-soft);
+  gap: 9px;
+  width: min(340px, 38vw);
+  padding: 11px;
+  border: 1px solid color-mix(in srgb, var(--t100-accent) 28%, var(--t100-line));
+  border-radius: 10px;
+  background: color-mix(in srgb, Canvas 94%, var(--t100-accent-soft));
   font-size: 12px;
 }
-.dsh-top100 .job small {
+.dsh-top100 .job-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dsh-top100 .job-heading strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+.dsh-top100 .job-heading span {
   color: var(--t100-muted);
-  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dsh-top100 .job-progress {
+  position: relative;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+}
+.dsh-top100 .job-progress > span {
+  position: relative;
+  display: block;
+  height: 100%;
+  min-width: 6px;
+  overflow: hidden;
+  border-radius: inherit;
+  background: var(--t100-accent);
+  transition: width 520ms cubic-bezier(.2,.75,.25,1);
+}
+.dsh-top100 .job:not(.job-installed):not(.job-failed):not(.job-cancelled) .job-progress > span::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0 35%, color-mix(in srgb, white 62%, transparent) 50%, transparent 65% 100%);
+  transform: translateX(-100%);
+  animation: t100-progress-sweep 1.8s ease-in-out infinite;
+}
+.dsh-top100 .job-stages {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  color: var(--t100-muted);
+  font-size: 9px;
+}
+.dsh-top100 .job-stages > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.dsh-top100 .job-stages i {
+  width: 6px;
+  height: 6px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+  border-radius: 50%;
+  background: Canvas;
+}
+.dsh-top100 .job-stages .is-active,
+.dsh-top100 .job-stages .is-complete {
+  color: var(--t100-accent);
+}
+.dsh-top100 .job-stages .is-active i {
+  border-color: var(--t100-accent);
+  box-shadow: 0 0 0 3px var(--t100-accent-soft);
+}
+.dsh-top100 .job-stages .is-complete i {
+  border-color: var(--t100-accent);
+  background: var(--t100-accent);
+}
+.dsh-top100 .job-status {
+  margin: 0;
+  color: var(--t100-muted);
+  line-height: 1.45;
+}
+.dsh-top100 .job-status span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
 }
 .dsh-top100 .job-failed {
-  background: color-mix(in srgb, #b42318 12%, transparent);
+  border-color: color-mix(in srgb, #b42318 34%, var(--t100-line));
+  background: color-mix(in srgb, Canvas 96%, #b42318 4%);
+}
+.dsh-top100 .job-failed .job-progress > span {
+  background: #b42318;
+}
+.dsh-top100 .job-failed .job-stages .is-active,
+.dsh-top100 .job-failed .job-stages .is-complete {
+  color: #b42318;
+}
+.dsh-top100 .job-failed .job-stages .is-active i,
+.dsh-top100 .job-failed .job-stages .is-complete i {
+  border-color: #b42318;
+}
+.dsh-top100 .job-failed .job-stages .is-complete i {
+  background: #b42318;
 }
 .dsh-top100 .job-installed {
-  background: color-mix(in srgb, #16803c 12%, transparent);
+  border-color: color-mix(in srgb, #16803c 30%, var(--t100-line));
+  background: color-mix(in srgb, Canvas 96%, #16803c 4%);
+}
+.dsh-top100 .job-installed .job-progress > span {
+  background: #16803c;
+}
+.dsh-top100 .job-error-message {
+  display: grid;
+  gap: 6px;
+  padding: 9px 10px;
+  border-left: 3px solid #b42318;
+  border-radius: 6px;
+  background: color-mix(in srgb, #b42318 7%, transparent);
+  line-height: 1.45;
+}
+.dsh-top100 .job-error-message > strong {
+  color: color-mix(in srgb, #b42318 88%, currentColor);
+  font-size: 12px;
+}
+.dsh-top100 .job-error-message p {
+  margin: 0;
+  color: var(--t100-muted);
+}
+.dsh-top100 .job-error-packages,
+.dsh-top100 .job-error-hint {
+  display: grid;
+  gap: 2px;
+}
+.dsh-top100 .job-error-packages > span,
+.dsh-top100 .job-error-hint > span {
+  color: var(--t100-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.dsh-top100 .job-error-packages code {
+  color: var(--t100-ink);
+}
+.dsh-top100 details.job-error-details {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.dsh-top100 .job-error-details summary {
+  color: var(--t100-muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+.dsh-top100 .job-error-details pre {
+  max-height: 140px;
+  margin: 7px 0 0;
+  padding: 8px;
+  overflow: auto;
+  border-radius: 6px;
+  background: color-mix(in srgb, CanvasText 6%, Canvas);
+  color: var(--t100-muted);
+  font: 10px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.dsh-top100 .job > button {
+  width: 100%;
+}
+@keyframes t100-progress-sweep {
+  55%, 100% { transform: translateX(100%); }
 }
 .dsh-top100 .banner,
 .dsh-top100 .error {
@@ -385,5 +545,10 @@ export const css = `
   .dsh-top100 .diag-grid { grid-template-columns: 1fr; }
   .dsh-top100 article { grid-template-columns: 34px minmax(0, 1fr); }
   .dsh-top100 .actions { grid-column: 2; flex-direction: row; flex-wrap: wrap; }
+  .dsh-top100 .actions .job { flex: 1 1 100%; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dsh-top100 .job-progress > span { transition: none; }
+  .dsh-top100 .job-progress > span::after { display: none; animation: none; }
 }
 `;
