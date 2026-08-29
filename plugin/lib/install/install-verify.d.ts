@@ -10,6 +10,8 @@ export interface VerifiedInstallTarget {
     source: "npm" | "github";
     packageName: string | null;
     needsBuildApproval: boolean;
+    /** Exact pnpm allowBuilds keys verified for this source. */
+    buildApprovalKeys: string[];
 }
 export declare function clearInstallVerificationCache(): void;
 export declare function verifyInstallSpec(spec: InstallSpec): Promise<VerifiedInstallTarget>;

@@ -1,6 +1,7 @@
 /** Persist enable/disable through the profile user patch layer. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { JSON_SCHEMA, Type, load } from "js-yaml";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
 const ROW_ID_RE = /^[A-Za-z0-9_.-]+$/;
 const SELF_PACKAGES = new Set([
@@ -10,6 +11,76 @@ const SELF_PACKAGES = new Set([
 ]);
 export function userPatchPath(profile, explicitDir) {
     return join(profileDir(profile, explicitDir), "cordis.patch.yml");
+}
+const jsExpr = new Type("tag:yaml.org,2002:js", {
+    kind: "scalar",
+    resolve: (data) => typeof data === "string",
+    construct: (data) => ({ __jsExpr: String(data) }),
+});
+const entrySchema = JSON_SCHEMA.extend(jsExpr);
+/** Parse the same entry-list YAML dialect DSH uses, including `!!js` scalars. */
+export function parseDshPatchText(source) {
+    try {
+        const value = load(source, { schema: entrySchema });
+        return Array.isArray(value) ? value : null;
+    }
+    catch {
+        return null;
+    }
+}
+/**
+ * Find user-owned `insert` rows that still load a package. `null` is a
+ * fail-closed result: the patch uses a shape this small DSH-dialect reader
+ * cannot inspect safely, so uninstall must not guess.
+ */
+export function userPatchPackageReferences(patchPath, packageName) {
+    let source;
+    try {
+        source = readFileSync(patchPath, "utf8");
+    }
+    catch (error) {
+        const code = error !== null && typeof error === "object" && "code" in error
+            ? error.code
+            : undefined;
+        return code === "ENOENT" ? [] : null;
+    }
+    const rows = parseDshPatchText(source);
+    if (rows === null)
+        return null;
+    const insertedNames = new Set();
+    const visiting = new Set();
+    const visited = new Set();
+    const collect = (entries) => {
+        if (visited.has(entries))
+            return true;
+        if (visiting.has(entries))
+            return false;
+        visiting.add(entries);
+        for (const entry of entries) {
+            if (entry === null || typeof entry !== "object" || Array.isArray(entry))
+                return false;
+            const row = entry;
+            if ("name" in row && typeof row.name !== "string")
+                return false;
+            if (typeof row.name === "string")
+                insertedNames.add(row.name);
+            if (row.group === true && Array.isArray(row.config) && !collect(row.config))
+                return false;
+        }
+        visiting.delete(entries);
+        visited.add(entries);
+        return true;
+    };
+    for (const patch of rows) {
+        if (patch === null || typeof patch !== "object" || Array.isArray(patch))
+            return null;
+        const row = patch;
+        if (!("insert" in row))
+            continue;
+        if (!Array.isArray(row.insert) || !collect(row.insert))
+            return null;
+    }
+    return [...insertedNames].filter((reference) => reference === packageName || reference.startsWith(`${packageName}/`));
 }
 export function isProtectedPackage(name) {
     return INBOX_BUNDLES.has(name) || SELF_PACKAGES.has(name) || name.startsWith("@deepseek-ai/");

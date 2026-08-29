@@ -15,6 +15,6 @@ export declare function managedDescriptionZh(options: {
     descriptions?: Array<string | null | undefined>;
 }): string;
 export declare function resolveUpdateTarget(name: string, spec: string): string | null;
-export declare function listManagedPlugins(profile: string, document: RankingsDocument | null): Promise<ManagedPlugin[]>;
+export declare function listManagedPlugins(profile: string, document: RankingsDocument | null, explicitDir?: string): Promise<ManagedPlugin[]>;
 export declare function uninstallSkill(name: string): void;
-export declare function cleanupAfterUninstall(profile: string, name: string): void;
+export declare function cleanupAfterUninstall(profile: string, name: string, rowIds?: readonly string[] | undefined, explicitDir?: string): void;

@@ -7,9 +7,10 @@ import type { Context } from "@deepseek-ai/cordis";
 import z from "@deepseek-ai/schemastery";
 import { DEFAULT_DATA_URL, normalizeDataUrl } from "./host/catalog.js";
 import type { PluginResolvedConfig } from "./host/contracts.js";
-import { argvProfile } from "./host/profile.js";
+import { resolveActiveProfile } from "./host/profile.js";
 import { mountRoutes } from "./host/routes.js";
 import { installRecommendationCapabilities } from "./host/recommendations.js";
+import { createDesktopPluginRuntime, type DesktopPnpmLike } from "./install/dsh-cli.js";
 
 export const name = "dsh-top100";
 export const inject = ["skills", "tools"];
@@ -21,26 +22,63 @@ export interface Config {
 
 export const Config: z<Config> = z.object({
   dataUrl: z.string().default(DEFAULT_DATA_URL),
-  profile: z.string().default("web"),
+  // Empty means "manage the profile this DSH process booted".
+  profile: z.string().default(""),
 });
 
-export function apply(ctx: Context, config: Config = { dataUrl: DEFAULT_DATA_URL, profile: "web" }): void {
-  const resolved: PluginResolvedConfig = {
-    dataUrl: normalizeDataUrl(process.env.DSH_TOP100_DATA_URL || config.dataUrl || DEFAULT_DATA_URL),
-    profile: config.profile || argvProfile() || "web",
+interface DesktopProfilesLike {
+  readonly current: { readonly name: string; readonly dir: string };
+}
+
+export function apply(ctx: Context, config: Config = { dataUrl: DEFAULT_DATA_URL, profile: "" }): void {
+  const dataUrl = normalizeDataUrl(process.env.DSH_TOP100_DATA_URL || config.dataUrl || DEFAULT_DATA_URL);
+  let sharedInstalled = false;
+  const installShared = (resolved: PluginResolvedConfig): void => {
+    if (sharedInstalled) return;
+    sharedInstalled = true;
+    void import("./host/settings.js")
+      .then((module) => module.installTop100Settings(ctx, resolved))
+      .catch(() => undefined);
+    installRecommendationCapabilities(ctx, resolved);
   };
-
-  void import("./host/settings.js")
-    .then((module) => module.installTop100Settings(ctx, resolved))
-    .catch(() => undefined);
-
-  installRecommendationCapabilities(ctx, resolved);
 
   ctx.inject(["webServer"], (hostCtx: Context) => {
     const host = hostCtx as unknown as {
-      effect(callback: () => () => void, label: string): void;
+      effect(callback: () => () => void | Promise<void>, label: string): void;
       webServer: Parameters<typeof mountRoutes>[0]["webServer"];
     };
-    host.effect(() => mountRoutes(host, resolved), "dsh-top100: http routes");
+    // desktopProfiles is intentionally detected here, after host services
+    // have mounted, matching DSH Desktop's published plugin contract.
+    const desktopProfiles = ctx.get("desktopProfiles") as DesktopProfilesLike | undefined;
+    if (!desktopProfiles) {
+      const resolved: PluginResolvedConfig = {
+        dataUrl,
+        profile: resolveActiveProfile(config.profile),
+      };
+      installShared(resolved);
+      host.effect(() => mountRoutes(host, resolved), "dsh-top100: http routes");
+      return;
+    }
+    hostCtx.inject(["desktopPnpm"], (desktopCtx: Context) => {
+      const active = desktopProfiles.current;
+      const desktopResolved: PluginResolvedConfig = {
+        dataUrl,
+        profile: active.name,
+        profileDirectory: active.dir,
+      };
+      installShared(desktopResolved);
+      const runtime = createDesktopPluginRuntime(
+        (desktopCtx as unknown as { desktopPnpm: DesktopPnpmLike }).desktopPnpm,
+        active.dir,
+      );
+      const desktopHost = desktopCtx as unknown as typeof host;
+      desktopHost.effect(() => {
+        const disposeRoutes = mountRoutes(desktopHost, desktopResolved, runtime);
+        return async () => {
+          disposeRoutes();
+          await runtime.dispose?.();
+        };
+      }, "dsh-top100: Desktop http routes and package operations");
+    });
   });
 }

@@ -1,13 +1,58 @@
 /** Spawn `dsh plugin` the same way the official CLI forwards to pnpm. */
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { homedir } from "node:os";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
+import { isDshProfileName, profileDir } from "../host/profile.js";
+import { pluginArgsFor } from "./pnpm-compat.js";
 import { SAFE_TARGET_RE } from "./install-spec.js";
 const INSTALL_TIMEOUT_MS = Number(process.env.DSH_TOP100_INSTALL_TIMEOUT_MS) || 15 * 60 * 1000;
 const PROFILE_CHECK_TIMEOUT_MS = Number(process.env.DSH_TOP100_PROFILE_CHECK_TIMEOUT_MS) || 60 * 1000;
 const CMD_METACHARS = /[\s"&|<>^()%!]/;
 const winCmdShim = process.platform === "win32";
 const COMSPEC = process.env.ComSpec ?? "cmd.exe";
+export function toolSearchDirs(platform = process.platform, env = process.env, home = homedir()) {
+    const directories = [];
+    if (env.PNPM_HOME?.trim())
+        directories.push(env.PNPM_HOME.trim());
+    if (platform === "win32") {
+        if (env.LOCALAPPDATA?.trim())
+            directories.push(join(env.LOCALAPPDATA.trim(), "pnpm"));
+        if (env.APPDATA?.trim())
+            directories.push(join(env.APPDATA.trim(), "npm"));
+    }
+    else {
+        directories.push("/opt/homebrew/bin", "/usr/local/bin", join(home, ".local", "bin"), join(home, "Library", "pnpm"), join(home, ".local", "share", "pnpm"));
+    }
+    directories.push(dirname(nodeExecutable()));
+    return [...new Set(directories.filter(Boolean))];
+}
+export function proxyEnvForPnpm(env = process.env) {
+    const output = {};
+    const httpsProxy = env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY;
+    const httpProxy = env.http_proxy || env.HTTP_PROXY || httpsProxy;
+    const noProxy = env.no_proxy || env.NO_PROXY;
+    if (httpsProxy && !env.npm_config_https_proxy)
+        output.npm_config_https_proxy = httpsProxy;
+    if (httpProxy && !env.npm_config_proxy)
+        output.npm_config_proxy = httpProxy;
+    if (noProxy && !env.npm_config_noproxy)
+        output.npm_config_noproxy = noProxy;
+    return output;
+}
+function spawnEnvironment() {
+    const paths = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+    for (const directory of toolSearchDirs()) {
+        if (!paths.includes(directory))
+            paths.push(directory);
+    }
+    return {
+        ...process.env,
+        ...proxyEnvForPnpm(),
+        CI: "true",
+        PATH: paths.join(delimiter),
+    };
+}
 export const progress = {
     active: false,
     fullName: null,
@@ -30,6 +75,10 @@ export function quoteCmdArg(arg) {
 }
 export function cmdCommandLine(argv) {
     return argv.map(quoteCmdArg).join(" ");
+}
+/** Prevent cmd.exe environment expansion in the rare Windows shim fallback. */
+export function isCmdSafeProfileName(profile) {
+    return isDshProfileName(profile) && /^[\p{L}\p{M}\p{N}._ -]+$/u.test(profile);
 }
 /** Keep Node loader/runtime flags, but never forward wrapper-only eval flags to the DSH child. */
 export function safeExecArgv(argv) {
@@ -107,6 +156,7 @@ function rememberLine(text) {
         progress.lastLine = lines[lines.length - 1].slice(0, 200);
 }
 export function runDshPlugin(profile, pluginArgs, meta) {
+    pluginArgs = pluginArgsFor(profileDir(profile), pluginArgs);
     const target = pluginArgs[pluginArgs.length - 1] ?? "";
     if (!SAFE_TARGET_RE.test(target)) {
         return Promise.resolve({
@@ -118,6 +168,15 @@ export function runDshPlugin(profile, pluginArgs, meta) {
         });
     }
     const { file, args, cwd, viaShell } = dshArgv();
+    if (viaShell && !isCmdSafeProfileName(profile)) {
+        return Promise.resolve({
+            exitCode: 1,
+            timedOut: false,
+            stdout: "",
+            stderr: `profile name is unsafe for the Windows cmd shim: ${JSON.stringify(profile)}`,
+            cancelled: false,
+        });
+    }
     progress.active = true;
     progress.fullName = meta?.fullName ?? null;
     progress.spec = target;
@@ -128,7 +187,7 @@ export function runDshPlugin(profile, pluginArgs, meta) {
     return new Promise((resolvePromise) => {
         const child = spawnShim(file, [...args, "plugin", "--profile", profile, ...pluginArgs], {
             cwd,
-            env: { ...process.env, CI: "true" },
+            env: spawnEnvironment(),
             stdio: ["ignore", "pipe", "pipe"],
             viaShell,
             detached: process.platform !== "win32",
@@ -185,10 +244,19 @@ export function runDshPlugin(profile, pluginArgs, meta) {
 /** Compose the selected profile without starting it, using the exact CLI that launched this plugin. */
 export function runDshProfileCheck(profile) {
     const { file, args, cwd, viaShell } = dshArgv();
+    if (viaShell && !isCmdSafeProfileName(profile)) {
+        return Promise.resolve({
+            exitCode: 1,
+            timedOut: false,
+            stdout: "",
+            stderr: `profile name is unsafe for the Windows cmd shim: ${JSON.stringify(profile)}`,
+            cancelled: false,
+        });
+    }
     return new Promise((resolvePromise) => {
         const child = spawnShim(file, [...args, "--profile", profile, "--dump-config"], {
             cwd,
-            env: { ...process.env, CI: "true" },
+            env: spawnEnvironment(),
             stdio: ["ignore", "pipe", "pipe"],
             viaShell,
             detached: process.platform !== "win32",
@@ -228,4 +296,146 @@ export function runDshProfileCheck(profile) {
             finish({ exitCode: code, timedOut, stdout, stderr, cancelled: false });
         });
     });
+}
+const EXACT_NPM_TARGET_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*@\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
+const NPM_NAME_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+const NPM_ONLY_DESKTOP_NOTE = "该桌面客户端的安装边界只接受已发布到 npm 的插件；GitHub-only 插件请改用普通 dsh web 安装。";
+async function exactDesktopNpmArgs(args) {
+    const targets = args.slice(1).filter((argument) => !argument.startsWith("-"));
+    const target = targets[0];
+    if (targets.length !== 1 || target === undefined)
+        return null;
+    if (EXACT_NPM_TARGET_RE.test(target))
+        return [...args];
+    const at = target.lastIndexOf("@");
+    const scopedSlash = target.startsWith("@") ? target.indexOf("/") : -1;
+    const hasSelector = at > 0 && (scopedSlash === -1 || at > scopedSlash);
+    const name = hasSelector ? target.slice(0, at) : target;
+    const selector = hasSelector ? target.slice(at + 1) : "latest";
+    if (!NPM_NAME_RE.test(name))
+        return null;
+    try {
+        const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
+        const response = await fetch(`https://registry.npmjs.org/${encoded}/${encodeURIComponent(selector)}`, {
+            headers: { accept: "application/json", "user-agent": "dsh-top100-plugin" },
+            signal: AbortSignal.timeout(15_000),
+        });
+        if (!response.ok)
+            return null;
+        const version = (await response.json()).version;
+        if (typeof version !== "string")
+            return null;
+        const exact = `${name}@${version}`;
+        return EXACT_NPM_TARGET_RE.test(exact)
+            ? args.map((argument) => (argument === target ? exact : argument))
+            : null;
+    }
+    catch {
+        return null;
+    }
+}
+/** Adapt DSH Desktop's generation-scoped pnpm service to route orchestration. */
+export function createDesktopPluginRuntime(service, activeProfileDir, invokingDir = process.cwd(), timeoutMs = INSTALL_TIMEOUT_MS) {
+    if (!isAbsolute(activeProfileDir) || activeProfileDir.includes("\0")) {
+        throw new Error("dsh-top100: Desktop profile directory must be an absolute path without NUL");
+    }
+    if (!isAbsolute(invokingDir) || invokingDir.includes("\0")) {
+        throw new Error("dsh-top100: Desktop invoking directory must be an absolute path without NUL");
+    }
+    let closed = false;
+    let active = null;
+    const runPlugin = async (_profile, originalArgs, meta) => {
+        if (closed)
+            return { exitCode: 127, timedOut: false, stdout: "", stderr: "Desktop package runtime is disposed", cancelled: false };
+        const args = pluginArgsFor(activeProfileDir, originalArgs);
+        const target = args[args.length - 1] ?? "";
+        if (!SAFE_TARGET_RE.test(target)) {
+            return { exitCode: 1, timedOut: false, stdout: "", stderr: `unsafe plugin target rejected: ${JSON.stringify(target)}`, cancelled: false };
+        }
+        const abort = new AbortController();
+        let handle;
+        let boundaryRefusesTarget = false;
+        try {
+            const boundary = args[0] === "add" ? service.runExternalMarketPluginInstall : undefined;
+            const boundaryArgs = boundary ? await exactDesktopNpmArgs(args) : null;
+            boundaryRefusesTarget = boundary !== undefined && boundaryArgs === null;
+            handle = boundary && boundaryArgs
+                ? boundary.call(service, boundaryArgs, invokingDir, abort.signal)
+                : service.runPlugin(args, invokingDir, abort.signal);
+        }
+        catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            return {
+                exitCode: 127,
+                timedOut: false,
+                stdout: "",
+                stderr: boundaryRefusesTarget ? `${message}\n${NPM_ONLY_DESKTOP_NOTE}` : message,
+                cancelled: false,
+            };
+        }
+        progress.active = true;
+        progress.fullName = meta?.fullName ?? null;
+        progress.spec = target;
+        progress.lastLine = "";
+        progress.startedAt = Date.now();
+        progress.error = null;
+        let stdout = "";
+        let stderr = "";
+        let timedOut = false;
+        const onStdout = (chunk) => { const text = chunk.toString(); stdout = (stdout + text).slice(-256 * 1024); rememberLine(text); };
+        const onStderr = (chunk) => { const text = chunk.toString(); stderr = (stderr + text).slice(-64 * 1024); rememberLine(text); };
+        handle.stdout.on("data", onStdout);
+        handle.stderr.on("data", onStderr);
+        let operation;
+        let timer;
+        const done = (async () => {
+            try {
+                const outcome = await handle.done;
+                const exitCode = outcome.exitCode;
+                if (exitCode !== 0 || timedOut)
+                    progress.error = stderr.slice(-200) || `exit ${exitCode}`;
+                return { exitCode, timedOut, stdout, stderr, cancelled: operation.cancelled };
+            }
+            catch (error) {
+                return { exitCode: 127, timedOut, stdout, stderr: `${stderr}${stderr ? "\n" : ""}${error instanceof Error ? error.message : String(error)}`, cancelled: operation.cancelled };
+            }
+            finally {
+                if (timer)
+                    clearTimeout(timer);
+                handle.stdout.off("data", onStdout);
+                handle.stderr.off("data", onStderr);
+                progress.active = false;
+                if (active === operation)
+                    active = null;
+            }
+        })();
+        operation = { handle, abort, done, cancelled: false };
+        active = operation;
+        timer = setTimeout(() => {
+            timedOut = true;
+            abort.abort(new Error("Desktop package operation timed out"));
+            handle.cancel();
+        }, timeoutMs);
+        timer.unref?.();
+        return done;
+    };
+    return {
+        runPlugin,
+        cancelActive: () => {
+            if (!active)
+                return false;
+            active.cancelled = true;
+            active.abort.abort(new Error("cancelled"));
+            active.handle.cancel();
+            return true;
+        },
+        dispose: async () => {
+            closed = true;
+            if (!active)
+                return;
+            active.abort.abort(new Error("disposed"));
+            active.handle.cancel();
+            await active.done.catch(() => undefined);
+        },
+    };
 }

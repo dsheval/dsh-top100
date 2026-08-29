@@ -1,36 +1,66 @@
-/** Persist one explicitly confirmed pnpm build-script permission. */
+/** Persist explicitly verified pnpm build-script permissions. */
 
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { profileDir } from "../host/profile.js";
 
-const PACKAGE_NAME_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/i;
+const PACKAGE_KEY_RE = /^[A-Za-z0-9@/_.-]+$/;
+const GIT_KEY_RE = /^[A-Za-z0-9@/_.-]+@git\+https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\.git$/;
+const CODELOAD_KEY_RE = /^[A-Za-z0-9@/_.-]+@https:\/\/codeload\.github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/tar\.gz\/[0-9a-f]{40}$/;
 
-export function allowPackageBuild(profile: string, packageName: string): boolean {
-  if (!PACKAGE_NAME_RE.test(packageName)) {
-    throw new Error(`无效的构建许可包名：${packageName}`);
+function validKey(key: string): boolean {
+  return PACKAGE_KEY_RE.test(key) || GIT_KEY_RE.test(key) || CODELOAD_KEY_RE.test(key);
+}
+
+function quoteYamlKey(key: string): string {
+  return /^[-?:,[\]{}#&*!|>'"%@`]/.test(key) || /:(\s|$)/.test(key)
+    ? `'${key.replace(/'/g, "''")}'`
+    : key;
+}
+
+/** Merge approvals into the profile's allowBuilds map and repair duplicate blocks. */
+export function allowPackageBuild(
+  profile: string,
+  packageKeys: string | readonly string[],
+  explicitDir?: string,
+): boolean {
+  const requested = typeof packageKeys === "string" ? [packageKeys] : packageKeys;
+  for (const key of requested) {
+    if (!validKey(key)) throw new Error(`无效的构建许可键：${key}`);
   }
-  const path = join(profileDir(profile), "pnpm-workspace.yaml");
-  let source = readFileSync(path, "utf8");
-  const key = JSON.stringify(packageName);
-  const line = `  ${key}: true`;
-  if (source.split(/\r?\n/).some((entry) => entry.trim() === `${key}: true`)) return false;
 
-  const lines = source.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((entry) => /^allowBuilds:\s*$/.test(entry));
-  if (start === -1) {
-    while (lines.length > 0 && lines[lines.length - 1] === "") lines.pop();
-    lines.push("allowBuilds:", line, "");
-  } else {
-    let insertAt = start + 1;
-    while (insertAt < lines.length && (lines[insertAt].startsWith("  ") || lines[insertAt].trim() === "")) {
-      insertAt += 1;
+  const path = join(profileDir(profile, explicitDir), "pnpm-workspace.yaml");
+  let source = "";
+  try { source = readFileSync(path, "utf8"); } catch { /* create below */ }
+  const blockRe = /allowBuilds:[ \t]*\r?\n((?:[ \t]+[^\r\n]*\r?\n?)*)/g;
+  const approvals = new Map<string, "true" | "false">();
+  const matches = [...source.matchAll(blockRe)];
+  for (const match of matches) {
+    for (const line of match[1].split(/\r?\n/)) {
+      const entry = /^[ \t]+(\S.*?)\s*:\s*(true|false)?\s*$/.exec(line);
+      if (!entry?.[1]) continue;
+      let key = entry[1];
+      if (key.length >= 2 && ((key.startsWith("'") && key.endsWith("'")) || (key.startsWith('"') && key.endsWith('"')))) {
+        key = key.slice(1, -1);
+      }
+      if (validKey(key)) approvals.set(key, entry[2] === "false" ? "false" : "true");
     }
-    lines.splice(insertAt, 0, line);
   }
-  source = lines.join("\n");
-  const temporary = `${path}.${process.pid}.tmp`;
-  writeFileSync(temporary, source, "utf8");
+  for (const key of requested) approvals.set(key, "true");
+
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const rows = [...approvals].map(([key, value]) => `  ${quoteYamlKey(key)}: ${value}`).join(eol);
+  const block = `allowBuilds:${eol}${rows}${eol}`;
+  let next: string;
+  if (matches.length === 0) {
+    next = `${source.replace(/\r?\n?$/, eol)}${block}`;
+  } else {
+    let seen = 0;
+    next = source.replace(blockRe, () => (seen++ === 0 ? block : ""));
+  }
+  if (next === source) return false;
+  const temporary = `${path}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync(temporary, next, "utf8");
   renameSync(temporary, path);
   return true;
 }

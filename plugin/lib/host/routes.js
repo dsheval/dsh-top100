@@ -1,17 +1,18 @@
 /** Host HTTP routes for catalog, install, and status. */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, normalizeDataUrl, } from "./catalog.js";
-import { cancelActive, progress, runDshPlugin, runDshProfileCheck } from "../install/dsh-cli.js";
+import { cancelActive, progress, runDshPlugin, runDshProfileCheck, } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
-import { FULL_NAME_RE, PROFILE_RE, resolveInstallSpec } from "../install/install-spec.js";
+import { FULL_NAME_RE, resolveInstallSpec } from "../install/install-spec.js";
 import { verifyInstallSpec } from "../install/install-verify.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
-import { readInstalled } from "./profile.js";
+import { withPnpmRecovery } from "../install/pnpm-compat.js";
+import { dropFromManifest, INBOX_BUNDLES, isDshProfileName, profileDir, readInstalled, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
 import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
-import { isProtectedPackage, setPackageEnabled } from "./patch-toggle.js";
+import { isProtectedPackage, parseDshPatchText, rowIdsForPackage, setPackageEnabled, userPatchPackageReferences, userPatchPath, } from "./patch-toggle.js";
 import { installSkill } from "../install/skill-install.js";
 import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
 const MAX_BATCH_SIZE = 20;
@@ -39,10 +40,58 @@ async function safeLoad(config) {
 }
 function installFailure(result) {
     const combined = `${result.stdout}\n${result.stderr}`;
-    const pnpmError = combined.match(/\[ERR_PNPM_[A-Z0-9_]+\][\s\S]*?(?=\n\n|$)/);
-    if (pnpmError)
-        return pnpmError[0].trim().slice(-1200);
-    return result.stderr.trim().slice(-800) || result.stdout.trim().slice(-800) || "install failed";
+    const pnpmErrorOffset = combined.lastIndexOf("ERR_PNPM_");
+    if (pnpmErrorOffset !== -1)
+        return combined.slice(pnpmErrorOffset).trim().slice(0, 1200);
+    return [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n").slice(-1200) || "install failed";
+}
+function runProfilePlugin(config, args, fullName, commandRuntime) {
+    return withPnpmRecovery((profile, recoveredArgs) => (commandRuntime?.runPlugin ?? runDshPlugin)(profile, recoveredArgs, { fullName }), config.profile, args, config.profileDirectory);
+}
+function fileProfileCheck(config) {
+    try {
+        const directory = profileDir(config.profile, config.profileDirectory);
+        const manifest = JSON.parse(readFileSync(join(directory, "package.json"), "utf8"));
+        const bundles = manifest.dsh?.profile?.bundles;
+        if (bundles !== undefined && (!Array.isArray(bundles) || bundles.some((name) => typeof name !== "string"))) {
+            throw new Error("dsh.profile.bundles 必须是字符串数组");
+        }
+        for (const name of Array.isArray(bundles) ? bundles : []) {
+            // DSH template bundles are host-provided and deliberately absent from
+            // the profile dependency map. Desktop owns their resolution surface.
+            if (manifest.dependencies?.[name] === undefined) {
+                if (INBOX_BUNDLES.has(name))
+                    continue;
+                throw new Error(`${name} 未声明在 dependencies 中`);
+            }
+            const candidates = [
+                join(directory, "node_modules", name),
+                join(dirname(directory), "node_modules", name),
+            ];
+            const packageDirectory = candidates.find((candidate) => existsSync(join(candidate, "package.json")));
+            if (!packageDirectory)
+                throw new Error(`${name} 未安装在 profile 可见的 node_modules 中`);
+            const bundle = JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8"));
+            const patch = bundle.dsh?.bundle?.patch;
+            if (typeof patch !== "string" || !patch.trim() || !existsSync(join(packageDirectory, patch))) {
+                throw new Error(`${name} 缺少可加载的 dsh.bundle patch`);
+            }
+            if (parseDshPatchText(readFileSync(join(packageDirectory, patch), "utf8")) === null) {
+                throw new Error(`${name} 的 dsh.bundle patch 不是有效的 DSH 补丁列表`);
+            }
+        }
+        return { exitCode: 0, timedOut: false, stdout: "", stderr: "", cancelled: false };
+    }
+    catch (error) {
+        return { exitCode: 1, timedOut: false, stdout: "", stderr: error instanceof Error ? error.message : String(error), cancelled: false };
+    }
+}
+function checkProfile(config, commandRuntime) {
+    if (commandRuntime?.checkProfile)
+        return commandRuntime.checkProfile(config.profile);
+    if (config.profileDirectory === undefined)
+        return runDshProfileCheck(config.profile);
+    return Promise.resolve(fileProfileCheck(config));
 }
 function id(prefix) {
     nextId += 1;
@@ -67,7 +116,7 @@ function publicJob(job) {
         cancelRequested: job.cancelRequested,
     };
 }
-function enqueueManageJob(batch, config, action, name, kind) {
+function enqueueManageJob(batch, config, action, name, kind, commandRuntime, allowUnreadablePatch = false) {
     const job = {
         id: id("job"), batchId: batch.id, fullName: name, profile: config.profile, action, kind,
         phase: "queued", lastLine: action === "update" ? "等待更新" : "等待卸载",
@@ -104,19 +153,82 @@ function enqueueManageJob(batch, config, action, name, kind) {
         }, 250);
         timer.unref?.();
         try {
-            const spec = readInstalled(config.profile)[name];
+            const spec = readInstalled(config.profile, config.profileDirectory)[name];
             if (!spec)
                 throw new Error("plugin is not installed");
             if (isProtectedPackage(name))
                 throw new Error("该插件属于宿主或本排行插件，不能在这里管理");
+            const cleanupRows = action === "uninstall"
+                ? rowIdsForPackage(config.profile, name, config.profileDirectory)
+                : [];
+            if (action === "uninstall") {
+                const references = userPatchPackageReferences(userPatchPath(config.profile, config.profileDirectory), name);
+                if (references === null && !allowUnreadablePatch)
+                    throw new Error("无法安全检查 cordis.patch.yml，已停止卸载");
+                if (references !== null && references.length > 0) {
+                    throw new Error(`cordis.patch.yml 仍通过 insert 引用 ${references.join("、")}，请先移除引用`);
+                }
+            }
             const target = action === "update" ? resolveUpdateTarget(name, spec) : name;
             if (!target)
                 throw new Error("本地 link/file 插件请在源码目录更新");
-            const result = await runDshPlugin(config.profile, [action === "update" ? "add" : "remove", target], { fullName: name });
-            if (result.exitCode !== 0 || result.timedOut || result.cancelled)
+            const manifestBefore = action === "update"
+                ? readProfileManifestSnapshot(config.profile, config.profileDirectory)
+                : null;
+            const result = await runProfilePlugin(config, [action === "update" ? "add" : "remove", target], name, commandRuntime);
+            const failed = result.exitCode !== 0 || result.timedOut || result.cancelled;
+            if (failed) {
+                if (action === "update" && manifestBefore && !result.cancelled) {
+                    const restored = restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
+                    if (restored.length > 0) {
+                        const reinstall = await runProfilePlugin(config, ["install", "--frozen-lockfile"], name, commandRuntime);
+                        if (reinstall.exitCode !== 0 || reinstall.timedOut || reinstall.cancelled) {
+                            throw new Error(`更新失败；profile 清单已回滚，但旧版本文件恢复失败：${installFailure(reinstall)}`);
+                        }
+                    }
+                }
+                if (action === "uninstall" && !result.cancelled) {
+                    const installedOnDisk = existsSync(join(profileDir(config.profile, config.profileDirectory), "node_modules", name, "package.json"));
+                    const stillDeclared = readInstalled(config.profile, config.profileDirectory)[name] !== undefined;
+                    if (!installedOnDisk || !stillDeclared) {
+                        if (!installedOnDisk)
+                            dropFromManifest(config.profile, name, config.profileDirectory);
+                        cleanupAfterUninstall(config.profile, name, cleanupRows, config.profileDirectory);
+                        invalidateCatalog();
+                        updateJob(job, "installed", {
+                            requiresRestart: true,
+                            message: "uninstalled",
+                            lastLine: "卸载已完成，并清理了残留配置",
+                        });
+                        return;
+                    }
+                }
                 throw new Error(installFailure(result));
-            if (action === "uninstall")
-                cleanupAfterUninstall(config.profile, name);
+            }
+            if (action === "update") {
+                job.lastLine = "正在验证更新后的 DSH 配置";
+                const checked = await checkProfile(config, commandRuntime);
+                if (checked.exitCode !== 0 || checked.timedOut) {
+                    const restored = manifestBefore
+                        ? restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory)
+                        : [];
+                    const reinstall = restored.length > 0
+                        ? await runProfilePlugin(config, ["install", "--frozen-lockfile"], name, commandRuntime)
+                        : null;
+                    const rollbackOk = reinstall === null
+                        || (reinstall.exitCode === 0 && !reinstall.timedOut && !reinstall.cancelled);
+                    throw new Error(`插件更新后未通过 DSH 配置验证${rollbackOk ? "，已自动回滚" : "；清单已回滚，但旧版本文件恢复失败"}：${installFailure(checked)}`);
+                }
+            }
+            if (action === "uninstall") {
+                const installedOnDisk = existsSync(join(profileDir(config.profile, config.profileDirectory), "node_modules", name, "package.json"));
+                if (!installedOnDisk)
+                    dropFromManifest(config.profile, name, config.profileDirectory);
+                if (readInstalled(config.profile, config.profileDirectory)[name] !== undefined) {
+                    throw new Error("卸载命令已结束，但插件仍在 profile 清单中");
+                }
+                cleanupAfterUninstall(config.profile, name, cleanupRows, config.profileDirectory);
+            }
             invalidateCatalog();
             updateJob(job, "installed", { requiresRestart: true, message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成" : "已卸载" });
         }
@@ -128,12 +240,13 @@ function enqueueManageJob(batch, config, action, name, kind) {
         }
     });
 }
-function createManageJobs(config, action, items) {
+function createManageJobs(config, action, items, commandRuntime, allowUnreadablePatch = false) {
     const batchId = id("batch");
     const batch = { id: batchId, createdAt: Date.now(), jobIds: [] };
     batches.set(batchId, batch);
-    for (const item of items)
-        enqueueManageJob(batch, config, action, item.name, item.kind);
+    for (const item of items) {
+        enqueueManageJob(batch, config, action, item.name, item.kind, commandRuntime, allowUnreadablePatch);
+    }
     return batchSnapshot(batchId);
 }
 function batchSnapshot(batchId) {
@@ -201,13 +314,13 @@ function enqueueSkill(run) {
     skillQueue.push(run);
     pumpSkills();
 }
-function alreadyInstalled(entry, spec, profile) {
-    return Object.entries(readInstalled(profile)).some(([name, value]) => {
+function alreadyInstalled(entry, spec, profile, explicitDir) {
+    return Object.entries(readInstalled(profile, explicitDir)).some(([name, value]) => {
         const haystack = `${name} ${value}`.toLowerCase();
         return haystack.includes(entry.fullName.toLowerCase()) || haystack.includes(spec.toLowerCase());
     });
 }
-async function prepareJob(job, config) {
+async function prepareJob(job, config, commandRuntime) {
     try {
         if (job.cancelRequested) {
             updateJob(job, "cancelled");
@@ -248,15 +361,17 @@ async function prepareJob(job, config) {
         if (!spec)
             throw new Error("this catalog entry has no trusted DSH install source");
         let target = spec.spec;
-        let buildPackageName = null;
+        let buildApprovalKeys = [];
         const resolvedTarget = await verifyInstallSpec(spec);
         target = resolvedTarget.target;
         if (resolvedTarget.needsBuildApproval) {
             if (!resolvedTarget.packageName)
                 throw new Error("插件需要构建，但 package.json 缺少 name");
-            buildPackageName = resolvedTarget.packageName;
+            if (resolvedTarget.buildApprovalKeys.length === 0)
+                throw new Error("插件需要构建，但没有可验证的 allowBuilds 键");
+            buildApprovalKeys = resolvedTarget.buildApprovalKeys;
         }
-        if (alreadyInstalled(entry, spec.spec, config.profile)) {
+        if (alreadyInstalled(entry, spec.spec, config.profile, config.profileDirectory)) {
             updateJob(job, "installed", {
                 message: "already installed",
                 requiresRestart: false,
@@ -278,7 +393,7 @@ async function prepareJob(job, config) {
             progressTimer.unref?.();
             try {
                 job.lastLine = "正在检查当前 DSH profile";
-                const before = await runDshProfileCheck(config.profile);
+                const before = await checkProfile(config, commandRuntime);
                 if (before.exitCode !== 0 || before.timedOut) {
                     throw new Error(`当前 DSH profile 已存在配置问题，安装已停止：${installFailure(before)}`);
                 }
@@ -286,20 +401,25 @@ async function prepareJob(job, config) {
                     updateJob(job, "cancelled", { lastLine: "已取消" });
                     return;
                 }
-                if (buildPackageName)
-                    allowPackageBuild(config.profile, buildPackageName);
+                if (buildApprovalKeys.length > 0)
+                    allowPackageBuild(config.profile, buildApprovalKeys, config.profileDirectory);
                 job.lastLine = "正在写入 DSH profile";
-                const result = await runDshPlugin(config.profile, ["add", target], { fullName: job.fullName });
+                const manifestBefore = readProfileManifestSnapshot(config.profile, config.profileDirectory);
+                const result = await runProfilePlugin(config, ["add", target], job.fullName, commandRuntime);
                 const ok = result.exitCode === 0 && !result.timedOut && !result.cancelled;
-                if (!ok)
+                if (!ok) {
+                    if (!result.cancelled)
+                        restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
                     throw new Error(installFailure(result));
+                }
                 job.lastLine = "正在验证安装后的 DSH 配置";
-                const after = await runDshProfileCheck(config.profile);
+                const after = await checkProfile(config, commandRuntime);
                 if (after.exitCode !== 0 || after.timedOut) {
                     const packageName = resolvedTarget.packageName;
                     const rollback = packageName
-                        ? await runDshPlugin(config.profile, ["remove", packageName], { fullName: job.fullName })
+                        ? await runProfilePlugin(config, ["remove", packageName], job.fullName, commandRuntime)
                         : null;
+                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
                     const rolledBack = rollback !== null
                         && rollback.exitCode === 0
                         && !rollback.timedOut
@@ -325,7 +445,7 @@ async function prepareJob(job, config) {
         failJob(job, error);
     }
 }
-function createBatch(fullNames, config) {
+function createBatch(fullNames, config, commandRuntime) {
     const batchId = id("batch");
     const batch = { id: batchId, createdAt: Date.now(), jobIds: [] };
     batches.set(batchId, batch);
@@ -348,19 +468,20 @@ function createBatch(fullNames, config) {
         };
         jobs.set(job.id, job);
         batch.jobIds.push(job.id);
-        void prepareJob(job, config);
+        void prepareJob(job, config, commandRuntime);
     }
     return batchSnapshot(batchId);
 }
-function cancelJob(jobId) {
+function cancelJob(jobId, commandRuntime) {
     const job = jobs.get(jobId);
     if (!job || TERMINAL_PHASES.includes(job.phase))
         return false;
     job.cancelRequested = true;
     job.controller.abort();
     job.lastLine = "正在取消";
-    if (job.phase === "installing" && activeProfileJobs.get(job.profile) === job.id)
-        return cancelActive();
+    if (job.phase === "installing" && activeProfileJobs.get(job.profile) === job.id) {
+        return (commandRuntime?.cancelActive ?? cancelActive)();
+    }
     if (["queued", "waiting-profile-lock"].includes(job.phase))
         updateJob(job, "cancelled");
     return true;
@@ -368,7 +489,10 @@ function cancelJob(jobId) {
 function readBodyRecord(body) {
     return body !== null && typeof body === "object" ? body : {};
 }
-export function mountRoutes(host, config) {
+export function mountRoutes(host, config, commandRuntime) {
+    if (config.profileDirectory === undefined && !isDshProfileName(config.profile)) {
+        throw new Error(`dsh-top100: invalid profile name ${JSON.stringify(config.profile)}`);
+    }
     const disposers = [
         host.webServer.register({
             kind: "exact",
@@ -398,7 +522,7 @@ export function mountRoutes(host, config) {
             kind: "exact",
             path: "/dsh-top100/installed",
             handler(_request, response) {
-                sendJson(response, 200, { installed: readInstalled(config.profile) });
+                sendJson(response, 200, { installed: readInstalled(config.profile, config.profileDirectory) });
             },
         }),
         host.webServer.register({
@@ -424,7 +548,7 @@ export function mountRoutes(host, config) {
                     const document = q === "" && (view === "hot" || view === "rising")
                         ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
                         : await safeLoad(config);
-                    const installed = readInstalled(config.profile);
+                    const installed = readInstalled(config.profile, config.profileDirectory);
                     const { total, items } = filterCatalog(document, {
                         view,
                         category,
@@ -478,7 +602,11 @@ export function mountRoutes(host, config) {
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
                     const jobId = typeof body.jobId === "string" ? body.jobId : "";
-                    sendJson(response, 200, { cancelled: jobId ? cancelJob(jobId) : cancelActive() });
+                    sendJson(response, 200, {
+                        cancelled: jobId
+                            ? cancelJob(jobId, commandRuntime)
+                            : (commandRuntime?.cancelActive ?? cancelActive)(),
+                    });
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -493,10 +621,6 @@ export function mountRoutes(host, config) {
                     sendJson(response, 403, { error: "same-origin POST required" });
                     return;
                 }
-                if (!PROFILE_RE.test(config.profile)) {
-                    sendJson(response, 500, { error: "invalid profile name" });
-                    return;
-                }
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
                     const requested = Array.isArray(body.fullNames) ? body.fullNames : [];
@@ -507,7 +631,7 @@ export function mountRoutes(host, config) {
                         sendJson(response, 400, { error: `fullNames must contain 1-${MAX_BATCH_SIZE} owner/repo values` });
                         return;
                     }
-                    sendJson(response, 202, createBatch(fullNames, config));
+                    sendJson(response, 202, createBatch(fullNames, config, commandRuntime));
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -533,10 +657,10 @@ export function mountRoutes(host, config) {
                         sendJson(response, 202, createManageJobs(config, previous.action, [{
                                 name: previous.fullName,
                                 kind: previous.kind === "skill" ? "skill" : "bundle",
-                            }]));
+                            }], commandRuntime));
                         return;
                     }
-                    sendJson(response, 202, createBatch([previous.fullName], config));
+                    sendJson(response, 202, createBatch([previous.fullName], config, commandRuntime));
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -553,7 +677,7 @@ export function mountRoutes(host, config) {
                 }
                 let cancelled = 0;
                 for (const job of jobs.values()) {
-                    if (cancelJob(job.id))
+                    if (cancelJob(job.id, commandRuntime))
                         cancelled += 1;
                 }
                 sendJson(response, 200, { cancelled });
@@ -573,7 +697,7 @@ export function mountRoutes(host, config) {
                     const document = await loadCachedRankings(dataUrl);
                     // Populate or refresh the full catalog for later searches without delaying local management.
                     void safeLoad(config).catch(() => undefined);
-                    const items = (await listManagedPlugins(config.profile, document)).filter((item) => {
+                    const items = (await listManagedPlugins(config.profile, document, config.profileDirectory)).filter((item) => {
                         return !q || `${item.name} ${item.description} ${item.descriptionZh} ${item.fullName ?? ""}`.toLowerCase().includes(q);
                     });
                     sendJson(response, 200, { profile: config.profile, query: q, total: items.length, items });
@@ -599,11 +723,11 @@ export function mountRoutes(host, config) {
                         sendJson(response, 400, { error: "name is required" });
                         return;
                     }
-                    if (readInstalled(config.profile)[name] === undefined) {
+                    if (readInstalled(config.profile, config.profileDirectory)[name] === undefined) {
                         sendJson(response, 404, { error: "plugin is not installed" });
                         return;
                     }
-                    const result = setPackageEnabled(config.profile, name, enabled);
+                    const result = setPackageEnabled(config.profile, name, enabled, config.profileDirectory);
                     sendJson(response, result.ok ? 200 : 400, { ok: result.ok, name, enabled, rows: result.rows, error: result.reason, requiresRestart: result.ok });
                 }
                 catch (error) {
@@ -619,10 +743,6 @@ export function mountRoutes(host, config) {
                     sendJson(response, 403, { error: "same-origin POST required" });
                     return;
                 }
-                if (!PROFILE_RE.test(config.profile)) {
-                    sendJson(response, 500, { error: "invalid profile name" });
-                    return;
-                }
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
                     const action = body.action === "update" || body.action === "uninstall" ? body.action : null;
@@ -631,6 +751,7 @@ export function mountRoutes(host, config) {
                         : typeof body.name === "string" && body.name.trim() ? [body.name.trim()] : [];
                     const unique = [...new Set(names)];
                     const kind = body.kind === "skill" ? "skill" : "bundle";
+                    const forceUnreadablePatch = body.force === true;
                     if (!action || unique.length === 0 || unique.length > MAX_BATCH_SIZE) {
                         sendJson(response, 400, { error: `action and 1-${MAX_BATCH_SIZE} names are required` });
                         return;
@@ -640,7 +761,7 @@ export function mountRoutes(host, config) {
                         return;
                     }
                     if (kind === "bundle") {
-                        const installed = readInstalled(config.profile);
+                        const installed = readInstalled(config.profile, config.profileDirectory);
                         for (const name of unique) {
                             const spec = installed[name];
                             if (spec === undefined) {
@@ -655,9 +776,20 @@ export function mountRoutes(host, config) {
                                 sendJson(response, 400, { error: "本地 link/file 插件请在源码目录更新" });
                                 return;
                             }
+                            if (action === "uninstall") {
+                                const references = userPatchPackageReferences(userPatchPath(config.profile, config.profileDirectory), name);
+                                if (references === null && !forceUnreadablePatch) {
+                                    sendJson(response, 409, { error: "无法安全检查 cordis.patch.yml，已停止卸载；确认补丁无关后可强制重试", userPatchInspectionFailed: true, forceable: true });
+                                    return;
+                                }
+                                if (references !== null && references.length > 0) {
+                                    sendJson(response, 409, { error: `cordis.patch.yml 仍通过 insert 引用 ${references.join("、")}`, userPatchReferenced: true, patchReferences: references });
+                                    return;
+                                }
+                            }
                         }
                     }
-                    sendJson(response, 202, createManageJobs(config, action, unique.map((name) => ({ name, kind }))));
+                    sendJson(response, 202, createManageJobs(config, action, unique.map((name) => ({ name, kind })), commandRuntime, forceUnreadablePatch));
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -673,7 +805,7 @@ export function mountRoutes(host, config) {
                     return;
                 }
                 try {
-                    sendJson(response, 200, await buildDiagnosticReport(config.profile, { dataUrl: config.dataUrl || DEFAULT_DATA_URL }));
+                    sendJson(response, 200, await buildDiagnosticReport(config.profile, { dataUrl: config.dataUrl || DEFAULT_DATA_URL, profileDir: config.profileDirectory }));
                 }
                 catch (error) {
                     sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) });
@@ -686,10 +818,6 @@ export function mountRoutes(host, config) {
             async handler(request, response) {
                 if (request.method !== "POST" || !sameOrigin(request)) {
                     sendJson(response, 403, { error: "same-origin POST required" });
-                    return;
-                }
-                if (!PROFILE_RE.test(config.profile)) {
-                    sendJson(response, 500, { error: "invalid profile name" });
                     return;
                 }
                 let body;
@@ -707,7 +835,7 @@ export function mountRoutes(host, config) {
                     return;
                 }
                 try {
-                    const snapshot = createBatch([fullName], config);
+                    const snapshot = createBatch([fullName], config, commandRuntime);
                     sendJson(response, 202, {
                         ok: true,
                         ...snapshot,

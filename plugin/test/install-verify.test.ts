@@ -24,6 +24,7 @@ describe("install source verification", () => {
       source: "npm",
       packageName: "@acme/demo",
       needsBuildApproval: true,
+      buildApprovalKeys: ["@acme/demo"],
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "https://registry.npmjs.org/@acme%2Fdemo/next",
@@ -40,6 +41,19 @@ describe("install source verification", () => {
       .rejects.toMatchObject<Partial<InstallVerificationError>>({ fatal: true });
   });
 
+  it("allows dev-only workspace tooling in a published npm package", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      devDependencies: { "@acme/build-tools": "workspace:*" },
+    }), { status: 200 })));
+    await expect(verifyInstallSpec({ kind: "npm", spec: "demo" })).resolves.toMatchObject({
+      packageName: "demo",
+      needsBuildApproval: false,
+      buildApprovalKeys: [],
+    });
+  });
+
   it("reports exhausted GitHub verification quota", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}", {
       status: 403,
@@ -50,6 +64,65 @@ describe("install source verification", () => {
     await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/demo" }))
       .rejects.toThrow("GitHub 安装源验证额度已用尽");
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("verifies an explicit GitHub monorepo path selector", async () => {
+    const manifest = Buffer.from(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    })).toString("base64");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo#path:/packages/demo" }))
+      .resolves.toMatchObject({
+        target: "github:acme/repo#path:/packages/demo",
+        packageName: "demo",
+      });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://api.github.com/repos/acme/repo/contents/packages/demo/package.json?ref=main",
+      expect.any(Object),
+    );
+  });
+
+  it("writes both stable and commit-pinned GitHub build approval keys", async () => {
+    const sha = "a".repeat(40);
+    const manifest = Buffer.from(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      scripts: { prepare: "npm run build" },
+    })).toString("base64");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sha }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo" }))
+      .resolves.toMatchObject({
+        target: `github:acme/repo#${sha}`,
+        buildApprovalKeys: [
+          "demo@git+https://github.com/acme/repo.git",
+          `demo@https://codeload.github.com/acme/repo/tar.gz/${sha}`,
+        ],
+      });
+  });
+
+  it("keeps a monorepo path when pinning a GitHub build target", async () => {
+    const sha = "c".repeat(40);
+    const manifest = Buffer.from(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      scripts: { prepare: "npm run build" },
+    })).toString("base64");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sha }), { status: 200 })));
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo#path:/packages/demo" }))
+      .resolves.toMatchObject({ target: `github:acme/repo#${sha}&path:/packages/demo` });
   });
 
   it("caches a successful verification", async () => {

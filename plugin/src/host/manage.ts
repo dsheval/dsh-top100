@@ -127,12 +127,12 @@ function listSkills(): ManagedPlugin[] {
   });
 }
 
-export async function listManagedPlugins(profile: string, document: RankingsDocument | null): Promise<ManagedPlugin[]> {
-  const plugins = await Promise.all(Object.entries(readInstalled(profile)).map(async ([name, spec]) => {
-    const manifest = readInstalledManifest(profile, name);
+export async function listManagedPlugins(profile: string, document: RankingsDocument | null, explicitDir?: string): Promise<ManagedPlugin[]> {
+  const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
+    const manifest = readInstalledManifest(profile, name, explicitDir);
     const fullName = githubFullName(spec, manifest?.repository);
     const catalog = matchCatalogEntry(document, name, spec, fullName);
-    const version = readInstalledVersion(profile, name);
+    const version = readInstalledVersion(profile, name, explicitDir);
     const local = spec.startsWith("link:") || spec.startsWith("file:");
     const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);
     const description = catalog?.description || manifest?.description || "";
@@ -149,7 +149,7 @@ export async function listManagedPlugins(profile: string, document: RankingsDocu
       }),
       fullName: catalog?.fullName ?? fullName,
       url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
-      enabled: !packageIsDisabled(profile, name),
+      enabled: !packageIsDisabled(profile, name, explicitDir),
       updateAvailable: updateAvailable(version, latest),
       latest,
       local,
@@ -167,6 +167,14 @@ export function uninstallSkill(name: string): void {
   rmSync(target, { recursive: true, force: true });
 }
 
-export function cleanupAfterUninstall(profile: string, name: string): void {
-  removeRowBlocks(userPatchPath(profile), rowIdsForPackage(profile, name));
+export function cleanupAfterUninstall(
+  profile: string,
+  name: string,
+  rowIds: readonly string[] | undefined = undefined,
+  explicitDir?: string,
+): void {
+  removeRowBlocks(
+    userPatchPath(profile, explicitDir),
+    rowIds ?? rowIdsForPackage(profile, name, explicitDir),
+  );
 }
