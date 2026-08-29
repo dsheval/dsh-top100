@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
   <a href="./CHANGELOG.md"><img alt="正式版本 v1.0.1" src="https://img.shields.io/badge/release-v1.0.1-2f6f68?style=flat-square"></a>
-  <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="一键下载并接入 DSH" src="https://img.shields.io/badge/一键下载-接入_DSH-f2b84b?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-Top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
@@ -25,9 +25,6 @@
 <p align="center">
   <strong>官方网站：</strong>
   <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
-  &nbsp;&nbsp;·&nbsp;&nbsp;
-  <strong>一键下载：</strong>
-  <a href="https://www.dsheval.ai/?page=dsh#dsh"><strong>前往 DSHeval 接入 DSH 页面</strong></a>
 </p>
 
 > **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
@@ -36,13 +33,13 @@
 
 dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并对作者明确提供且验证通过的安装源进行单项确认安装。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
 
-点击下面的“一键下载”会直接打开 DSHeval 官网的“接入 DSH”页面。页面会根据普通用户或源码开发者的运行方式，提供对应的 npm/npx 或 pnpm 安装命令、启动步骤和问题排查说明。
+点击下面的安装指南会打开 DSHeval 官网，并显示普通用户所需的安装、启动命令；源码运行方式和问题排查收在页面下方。这个入口不会自动下载文件，也不会自动修改电脑。
 
 <p align="center">
-  <a href="https://www.dsheval.ai/?page=dsh#dsh"><strong>一键下载并接入 dsh-Top100 →</strong></a>
+  <a href="https://www.dsheval.ai/?page=dsh#dsh"><strong>打开官网安装指南（不会自动下载） →</strong></a>
 </p>
 
-网页不会在未经确认时直接修改用户电脑；用户需在页面选择自己的 DSH 运行方式并复制安装命令。插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。
+用户需自行复制并运行页面中的命令。插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。
 
 ## 01 · 产品与榜单
 

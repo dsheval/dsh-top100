@@ -1,80 +1,115 @@
-<main class="docs-layout">
-  <nav class="toc" aria-label="接入 DSH 文档目录">
-    <span class="toc-title">本页目录</span>
-    <a href="#install" data-section="01">下载与安装</a>
-    <a href="#features" data-section="02">插件功能</a>
-    <a href="#data" data-section="03">数据来源</a>
-  </nav>
-
+<div class="docs-layout dsh-guide">
   <article class="docs-content">
     <section class="doc-section" id="install">
-      <p class="section-kicker">01 · Quick start</p>
-      <h2>下载 dsh-Top100 并接入 DSH</h2>
-      <p class="lead">从 GitHub README 点击“一键下载”会直接来到本页。这里不提供独立安装包；请选择与你启动 DSH 相同的方式，复制命令即可从 npm 安装插件。</p>
-      <div class="dsh-install-panel">
-        <div class="dsh-install-methods">
-          <input type="radio" name="dsh-install-method" id="dsh-method-npx" checked>
-          <label for="dsh-method-npx" id="dsh-method-npx-label">npm / npx <small>普通用户 · 默认</small></label>
-          <input type="radio" name="dsh-install-method" id="dsh-method-source">
-          <label for="dsh-method-source" id="dsh-method-source-label">DSH 源码 <small>开发者</small></label>
+      <p class="section-kicker">安装步骤</p>
+      <h2>3 步完成安装</h2>
+      <p class="lead">不需要下载压缩包。打开终端（macOS 终端或 Windows PowerShell），依次复制下面两条命令，然后在 DSH 中打开插件排行。</p>
 
-          <div class="dsh-method-panels">
-            <section class="dsh-method-panel dsh-method-panel-npx" aria-labelledby="dsh-method-npx-label">
-              <div class="dsh-install-meta" aria-hidden="true">
-                <span>使用 npx 安装</span>
-                <span>DSH Web</span>
-              </div>
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
-                <button
-                  class="dsh-copy-button"
-                  type="button"
-                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin"
-                >复制安装命令</button>
-              </div>
-              <div class="dsh-start-row">
-                <span>安装后启动</span>
-                <code>npx @deepseek-ai/dsh web</code>
-              </div>
-              <p class="dsh-install-next">请在 DSH 源码仓库外运行以上命令。启动后打开 <strong>设置 → 插件排行</strong>。</p>
-            </section>
+      <div class="dsh-prerequisite">
+        <strong>开始前</strong>
+        <span>已能启动 DSH Web 可直接继续；首次安装需要 Node.js 22.13+。普通用户不要在 DSH 源码仓库内执行以下命令。</span>
+      </div>
 
-            <section class="dsh-method-panel dsh-method-panel-source" aria-labelledby="dsh-method-source-label">
-              <div class="dsh-install-meta" aria-hidden="true">
-                <span>从 DSH 源码安装</span>
-                <span>DSH Web</span>
-              </div>
-              <div class="dsh-source-path"><span>先进入源码仓库</span><code>cd /path/to/deepseek-harness</code></div>
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
-                <button
-                  class="dsh-copy-button"
-                  type="button"
-                  data-copy-command="pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin"
-                >复制安装命令</button>
-              </div>
-              <div class="dsh-start-row">
-                <span>安装后启动</span>
-                <code>pnpm dsh web</code>
-              </div>
-              <p class="dsh-install-next">请将示例路径替换为本机 DSH 源码仓库的实际绝对路径，并在仓库根目录执行后续命令。</p>
-            </section>
+      <ol class="dsh-install-steps">
+        <li class="dsh-install-step">
+          <span class="dsh-step-number" aria-hidden="true">1</span>
+          <div class="dsh-step-content">
+            <h3>安装 dsh-Top100</h3>
+            <p>复制并运行这条命令。它会把插件添加到 DSH Web。</p>
+            <div class="dsh-command-row">
+              <code class="dsh-install-command">npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
+              <button
+                class="dsh-copy-button"
+                type="button"
+                data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin"
+                aria-label="复制插件安装命令"
+              >复制命令</button>
+            </div>
+          </div>
+        </li>
+
+        <li class="dsh-install-step">
+          <span class="dsh-step-number" aria-hidden="true">2</span>
+          <div class="dsh-step-content">
+            <h3>启动 DSH</h3>
+            <p>安装完成后，在同一个终端继续运行：</p>
+            <div class="dsh-command-row">
+              <code class="dsh-install-command">npx @deepseek-ai/dsh web</code>
+              <button
+                class="dsh-copy-button"
+                type="button"
+                data-copy-command="npx @deepseek-ai/dsh web"
+                aria-label="复制 DSH 启动命令"
+              >复制命令</button>
+            </div>
+          </div>
+        </li>
+
+        <li class="dsh-install-step">
+          <span class="dsh-step-number" aria-hidden="true">3</span>
+          <div class="dsh-step-content">
+            <h3>打开插件排行</h3>
+            <p>浏览器打开 DSH 后，进入：</p>
+            <div class="dsh-open-target" aria-label="设置，然后打开插件排行">
+              <span>设置</span>
+              <span aria-hidden="true">→</span>
+              <strong>插件排行</strong>
+            </div>
+          </div>
+        </li>
+      </ol>
+
+      <div class="dsh-help-heading">
+        <p class="section-kicker">按需展开</p>
+        <h3>其他运行方式与问题排查</h3>
+      </div>
+
+      <details class="dsh-detail">
+        <summary>我从 DSH 源码运行（开发者）</summary>
+        <div class="dsh-detail-body">
+          <p>先用 <code>cd /你的/DSH/源码路径</code> 进入仓库根目录；确认已经替换示例路径后，再依次执行：</p>
+          <div class="dsh-command-row">
+            <code class="dsh-install-command">pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
+            <button class="dsh-copy-button" type="button" data-copy-command="pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin">复制命令</button>
+          </div>
+          <div class="dsh-command-row">
+            <code class="dsh-install-command">pnpm dsh web</code>
+            <button class="dsh-copy-button" type="button" data-copy-command="pnpm dsh web">复制命令</button>
           </div>
         </div>
-      </div>
-      <p class="dsh-cli-note">如果终端执行 <code>dsh --version</code> 可以正常返回，也可以使用 <code>dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>，并以 <code>dsh web</code> 启动。</p>
-      <aside class="dsh-known-issue">
-        <strong>npx 已知问题</strong>
-        <p>部分 npm 环境可能在首次解析 DSH 依赖时长时间无输出并持续占用 CPU。该问题发生在 DSH npm 发布包的依赖解析阶段，并非 dsh-Top100 插件安装失败。如果 <code>npx @deepseek-ai/dsh --version</code> 也无法完成，请停止命令并改用源码方式。不要单独添加 <code>--legacy-peer-deps</code>，否则可能漏装 DSH 运行时依赖。参见 <a href="https://github.com/deepseek-ai/deepseek-harness/discussions/3786" target="_blank" rel="noreferrer">DSH 上游讨论</a>。</p>
-      </aside>
+      </details>
+
+      <details class="dsh-detail">
+        <summary>我的电脑已经安装全局 dsh 命令</summary>
+        <div class="dsh-detail-body">
+          <p>如果 <code>dsh --version</code> 能正常返回，可以直接使用：</p>
+          <div class="dsh-command-row">
+            <code class="dsh-install-command">dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
+            <button class="dsh-copy-button" type="button" data-copy-command="dsh plugin --profile web add @dsheval/dsh-top100-plugin">复制命令</button>
+          </div>
+          <div class="dsh-command-row">
+            <code class="dsh-install-command">dsh web</code>
+            <button class="dsh-copy-button" type="button" data-copy-command="dsh web">复制命令</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="dsh-detail dsh-warning-detail">
+        <summary>npx 长时间没反应怎么办？</summary>
+        <div class="dsh-detail-body">
+          <p>部分 npm 环境可能在首次解析 DSH 依赖时长时间无输出并持续占用 CPU。这个问题发生在 DSH npm 包的依赖解析阶段，并不代表 dsh-Top100 安装失败。</p>
+          <p>如果 <code>npx @deepseek-ai/dsh --version</code> 也无法完成，请停止命令并改用上面的源码方式。不要单独添加 <code>--legacy-peer-deps</code>，否则可能漏装 DSH 运行时依赖。参见 <a href="https://github.com/deepseek-ai/deepseek-harness/discussions/3786" target="_blank" rel="noreferrer">DSH 上游讨论</a>。</p>
+        </div>
+      </details>
+
       <p class="dsh-release-note">
-        <strong>当前版本：</strong><a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin" target="_blank" rel="noreferrer"><code>@dsheval/dsh-top100-plugin@1.0.1</code></a> 已发布到 npm。运行环境需要 DSH Web 0.1.0-rc.6+ 和 Node.js 22.13+。
+        <strong>当前版本：</strong><a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin" target="_blank" rel="noreferrer"><code>@dsheval/dsh-top100-plugin@1.0.1</code></a> 已发布到 npm，适配 DSH Web 0.1.0-rc.6+。
       </p>
     </section>
 
     <section class="doc-section" id="features">
-      <p class="section-kicker">02 · Features</p>
-      <h2>在 DSH 内查找插件并确认安装可信来源</h2>
+      <p class="section-kicker">插件功能</p>
+      <h2>安装后可以做什么</h2>
       <div class="dsh-brief-grid">
         <article>
           <span>01</span>
@@ -83,34 +118,28 @@
         </article>
         <article>
           <span>02</span>
-          <h3>确认安装</h3>
-          <p>仅对作者明确提供且验证通过的安装源，在 DSH 设置页内进行单项确认安装。</p>
+          <h3>管理安装</h3>
+          <p>查看中文简介，并对作者明确提供且验证通过的安装源进行单项确认安装。</p>
         </article>
         <article>
           <span>03</span>
           <h3>对话推荐</h3>
-          <p>内置 <code>recommend-dsh-plugins</code> Skill，可按你的需求实时搜索市场并推荐合适插件。</p>
+          <p>直接询问“我该装哪个插件”，内置 Skill 会根据实时榜单给出推荐。</p>
         </article>
       </div>
-      <p class="dsh-secondary-note">
-        在 DSH 对话中直接询问“我应该安装哪个插件”即可触发推荐；Skill 通过只读的
-        <code>dsh_top100_search</code> 工具查询榜单。安装包只包含 DSH 插件及该 Skill，不包含采集程序、数据库或网站后端。
-      </p>
+      <p class="dsh-secondary-note">插件安装包只包含 DSH 插件及 <code>recommend-dsh-plugins</code> Skill，不包含采集程序、数据库或网站后端。</p>
     </section>
 
     <section class="doc-section" id="data">
-      <p class="section-kicker">03 · Data Source</p>
-      <h2>与 DSHeval 官网使用同一份数据</h2>
+      <p class="section-kicker">数据来源</p>
+      <h2>榜单数据从哪里来</h2>
       <div class="pipeline" aria-label="插件数据流">
         <span>DSHeval 服务器</span>
         <span>rankings.json</span>
         <span>DSH 插件</span>
         <span>插件排行页</span>
       </div>
-      <p>
-        榜单数据来自 <code>https://www.dsheval.ai/data/rankings.json</code>，由 DSHeval 服务器持续更新。
-        插件与网页版共用这份数据，因此榜单、分类和项目详情会保持一致；数据由插件 Host 获取并缓存在本地。
-      </p>
+      <p>插件与 <a href="https://www.dsheval.ai" target="_blank" rel="noreferrer">DSHeval 官网</a>共用一份持续更新的榜单数据，因此排行、分类和项目详情保持一致。数据由插件 Host 获取并缓存在本地。</p>
     </section>
   </article>
-</main>
+</div>

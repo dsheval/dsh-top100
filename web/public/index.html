@@ -1665,145 +1665,124 @@
         white-space: nowrap;
       }
 
-      #dsh-view .toc {
-        margin-bottom: 44px;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-      }
-
       #dsh-view .inline-docs-header {
-        margin-bottom: 24px;
-        padding-bottom: 24px;
+        margin-bottom: 34px;
+        padding-bottom: 26px;
       }
 
       #dsh-view .inline-docs-title {
-        font-size: clamp(42px, 4.7vw, 64px);
+        font-size: clamp(36px, 4.2vw, 56px);
       }
 
       #dsh-view .inline-docs-title-zh {
-        margin-top: 16px;
-        font-size: clamp(24px, 2.5vw, 32px);
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: clamp(18px, 2vw, 24px);
       }
 
       #dsh-view .doc-section:not(:first-child) h2 {
         font-size: clamp(32px, 3.3vw, 46px);
       }
 
-      .dsh-install-panel {
-        margin: 30px 0 18px;
-        overflow: hidden;
-        border: 1px solid #0b302b;
-        border-top: 6px solid var(--hero-accent);
-        color: var(--hero-ink);
-        background: var(--hero);
-        box-shadow: 0 18px 38px rgba(23, 73, 66, 0.14);
+      .dsh-prerequisite {
+        display: flex;
+        margin: 24px 0;
+        padding: 15px 18px;
+        align-items: flex-start;
+        gap: 14px;
+        border-left: 4px solid var(--accent);
+        color: #315b55;
+        background: #e7f1ee;
+        font-size: 14px;
       }
 
-      .dsh-install-methods {
+      .dsh-prerequisite strong {
+        flex: 0 0 auto;
+        color: var(--ink);
+      }
+
+      .dsh-install-steps {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin: 0;
+        padding: 0;
+        gap: 16px;
+        list-style: none;
       }
 
-      .dsh-install-methods > input {
-        position: absolute;
-        width: 1px;
-        height: 1px;
+      .dsh-install-step {
+        display: grid;
         overflow: hidden;
-        clip: rect(0 0 0 0);
-        clip-path: inset(50%);
-        white-space: nowrap;
+        grid-template-columns: 64px minmax(0, 1fr);
+        border: 1px solid var(--line);
+        background: var(--card);
+        box-shadow: 0 12px 28px rgba(23, 73, 66, 0.08);
       }
 
-      .dsh-install-methods > label {
+      .dsh-step-number {
         display: flex;
-        min-height: 68px;
-        padding: 14px 20px;
-        align-items: center;
+        min-height: 100%;
+        align-items: flex-start;
         justify-content: center;
-        flex-direction: column;
-        gap: 4px;
-        border-bottom: 1px solid #0b302b;
-        color: var(--hero-muted);
-        background: rgba(12, 48, 43, 0.08);
-        font-weight: 850;
-        cursor: pointer;
-      }
-
-      .dsh-install-methods > label + input + label {
-        border-left: 1px solid #0b302b;
-      }
-
-      .dsh-install-methods > label small {
+        padding-top: 24px;
+        color: #0c302b;
+        background: var(--hero-accent);
         font-family: var(--mono);
-        font-size: 10px;
-        font-weight: 750;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
+        font-size: 19px;
+        font-weight: 900;
       }
 
-      .dsh-install-methods > input:checked + label {
-        color: white;
-        background: #0c302b;
-        box-shadow: inset 0 -4px 0 var(--hero-accent);
-      }
-
-      .dsh-install-methods > input:focus-visible + label {
-        outline: 3px solid var(--hero-accent);
-        outline-offset: -5px;
-      }
-
-      .dsh-method-panels {
+      .dsh-step-content {
         min-width: 0;
-        grid-column: 1 / -1;
+        padding: 22px 24px 24px;
       }
 
-      .dsh-method-panel {
-        display: none;
+      .inline-docs .dsh-step-content h3 {
+        margin: 0 0 6px;
+        font-size: 25px;
       }
 
-      #dsh-method-npx:checked ~ .dsh-method-panels .dsh-method-panel-npx,
-      #dsh-method-source:checked ~ .dsh-method-panels .dsh-method-panel-source {
-        display: block;
-      }
-
-      .dsh-install-meta {
-        display: flex;
-        padding: 15px 22px 0;
-        justify-content: space-between;
-        color: var(--hero-muted);
-        font-family: var(--mono);
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.09em;
-        text-transform: uppercase;
+      .inline-docs .dsh-step-content > p {
+        margin: 0 0 15px;
+        color: var(--muted);
+        font-size: 15px;
       }
 
       .dsh-command-row {
         display: grid;
-        padding: 18px 22px 24px;
+        min-width: 0;
+        padding: 8px;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: stretch;
-        gap: 14px;
+        gap: 8px;
+        border: 1px solid #0c302b;
+        background: #0c302b;
+      }
+
+      .dsh-detail-body .dsh-command-row + .dsh-command-row {
+        margin-top: 10px;
       }
 
       .inline-docs code.dsh-install-command {
         display: flex;
         min-width: 0;
-        min-height: 58px;
-        padding: 15px 18px;
+        min-height: 52px;
+        padding: 12px 14px;
         align-items: center;
-        overflow-x: auto;
-        border: 1px solid rgba(247, 243, 231, 0.34);
+        border: 0;
         color: #ffffff;
         background: #0c302b;
-        font-size: clamp(14px, 1.45vw, 19px);
+        font-size: clamp(13px, 1.25vw, 16px);
         font-weight: 750;
-        line-height: 1.45;
-        white-space: nowrap;
+        line-height: 1.55;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
 
       .dsh-copy-button {
-        min-width: 138px;
-        padding: 0 20px;
+        min-width: 120px;
+        min-height: 52px;
+        padding: 0 18px;
         border: 1px solid var(--hero-accent);
         color: var(--ink);
         background: var(--hero-accent);
@@ -1824,72 +1803,102 @@
         outline-offset: 3px;
       }
 
-      .dsh-install-next {
-        margin: 0 !important;
-        padding: 18px 22px;
-        border-top: 1px solid rgba(247, 243, 231, 0.2);
-        color: var(--hero-muted);
-        font-size: 15px;
-      }
-
-      .inline-docs .dsh-install-next code {
-        color: white;
-        background: rgba(255, 255, 255, 0.12);
-      }
-
-      .dsh-install-next strong {
-        color: white;
-      }
-
-      .dsh-start-row,
-      .dsh-source-path {
-        display: grid;
-        margin: 0 22px 18px;
-        grid-template-columns: 150px minmax(0, 1fr);
+      .dsh-open-target {
+        display: inline-flex;
+        min-height: 52px;
+        padding: 0 20px;
         align-items: center;
-        gap: 14px;
-        color: var(--hero-muted);
-        font-size: 13px;
-        font-weight: 800;
+        gap: 13px;
+        border: 1px solid #0c302b;
+        color: white;
+        background: #0c302b;
+        font-size: 17px;
       }
 
-      .dsh-source-path {
-        margin-top: 18px;
+      .dsh-open-target strong {
+        color: var(--hero-accent);
       }
 
-      .dsh-start-row code,
-      .dsh-source-path code {
-        min-width: 0;
-        padding: 10px 13px;
-        overflow-x: auto;
-        border: 1px solid rgba(12, 48, 43, 0.2);
-        color: var(--hero-ink);
-        background: rgba(255, 255, 255, 0.56);
-        white-space: nowrap;
+      .dsh-help-heading {
+        margin: 42px 0 16px;
       }
 
-      .dsh-cli-note {
+      .inline-docs .dsh-help-heading h3 {
+        margin: 6px 0 0;
+        font-size: 28px;
+      }
+
+      .dsh-detail {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .dsh-detail summary {
+        display: flex;
+        min-height: 58px;
+        padding: 14px 18px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        font-weight: 850;
+        cursor: pointer;
+        list-style: none;
+      }
+
+      .dsh-detail summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .dsh-detail summary::after {
+        content: "+";
+        flex: 0 0 auto;
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .dsh-detail[open] summary {
+        border-bottom: 1px solid var(--line);
+      }
+
+      .dsh-detail[open] summary::after {
+        content: "−";
+      }
+
+      .dsh-detail summary:focus-visible {
+        outline: 3px solid var(--hero-accent);
+        outline-offset: -4px;
+      }
+
+      .dsh-detail-body {
+        padding: 18px;
+      }
+
+      .inline-docs .dsh-detail-body > p {
+        margin: 0 0 14px;
         color: var(--muted);
         font-size: 14px;
       }
 
-      .dsh-known-issue {
-        margin: 18px 0;
-        padding: 18px 20px;
-        border-left: 5px solid #d39b1d;
-        background: #fff4d5;
-        color: #4d3912;
+      .inline-docs .dsh-detail-body > p:last-child {
+        margin-bottom: 0;
       }
 
-      .dsh-known-issue p {
-        margin: 6px 0 0 !important;
-        font-size: 14px;
+      .dsh-warning-detail {
+        border-left: 4px solid #d39b1d;
+        background: #fffaf0;
       }
 
       .dsh-release-note,
       .dsh-secondary-note {
         color: var(--muted);
         font-size: 14px;
+      }
+
+      .dsh-release-note {
+        margin-top: 18px !important;
       }
 
       .dsh-brief-grid {
@@ -1935,6 +1944,34 @@
         font-weight: 800;
         text-align: center;
         text-transform: uppercase;
+      }
+
+      .docs-load-error {
+        display: grid;
+        justify-items: center;
+        gap: 16px;
+        text-transform: none;
+      }
+
+      .docs-retry-button {
+        min-height: 46px;
+        padding: 0 20px;
+        border: 1px solid var(--ink);
+        color: white;
+        background: var(--ink);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .docs-retry-button:hover,
+      .docs-retry-button:focus-visible {
+        color: var(--ink);
+        background: var(--hero-accent);
+      }
+
+      .docs-retry-button:focus-visible {
+        outline: 3px solid var(--hero-accent);
+        outline-offset: 3px;
       }
 
       .footer {
@@ -1997,16 +2034,6 @@
 
         .dsh-copy-button {
           min-height: 52px;
-        }
-
-        .dsh-install-methods > label {
-          padding-inline: 10px;
-          text-align: center;
-        }
-
-        .dsh-start-row,
-        .dsh-source-path {
-          grid-template-columns: 1fr;
         }
 
         .inline-docs .doc-card {
@@ -2230,6 +2257,78 @@
 
         .inline-docs .doc-section h2 {
           font-size: 42px;
+        }
+
+        #dsh-view .inline-docs-header {
+          margin-bottom: 24px;
+          padding-bottom: 20px;
+        }
+
+        #dsh-view .inline-docs-title {
+          font-size: clamp(34px, 10vw, 46px);
+        }
+
+        #dsh-view .inline-docs-title-zh {
+          margin-top: 8px;
+          font-size: 18px;
+        }
+
+        #dsh-view .doc-section h2,
+        #dsh-view .doc-section:not(:first-child) h2 {
+          font-size: clamp(31px, 9vw, 40px);
+        }
+
+        .dsh-prerequisite {
+          display: block;
+          margin: 18px 0;
+          padding: 14px;
+        }
+
+        .dsh-prerequisite strong {
+          display: block;
+          margin-bottom: 4px;
+        }
+
+        .dsh-install-step {
+          grid-template-columns: 44px minmax(0, 1fr);
+        }
+
+        .dsh-step-number {
+          padding-top: 20px;
+          font-size: 16px;
+        }
+
+        .dsh-step-content {
+          padding: 18px 14px;
+        }
+
+        .inline-docs .dsh-step-content h3 {
+          font-size: 22px;
+        }
+
+        .dsh-command-row {
+          padding: 6px;
+        }
+
+        .inline-docs code.dsh-install-command {
+          min-height: 46px;
+          padding: 10px;
+          font-size: 12.5px;
+        }
+
+        .dsh-copy-button {
+          width: 100%;
+          min-width: 0;
+          min-height: 48px;
+        }
+
+        .dsh-detail summary {
+          min-height: 56px;
+          padding: 13px 14px;
+        }
+
+        .dsh-detail-body {
+          padding: 14px;
         }
 
         .footer {
@@ -2636,8 +2735,8 @@
 
           <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
             <header class="inline-docs-header">
-              <h2 class="inline-docs-title" id="inline-dsh-title">Install dsh-Top100.</h2>
-              <p class="inline-docs-title-zh">下载插件并接入 DSH。</p>
+              <h2 class="inline-docs-title" id="inline-dsh-title">安装 dsh-Top100</h2>
+              <p class="inline-docs-title-zh">复制两条命令，三步完成。</p>
             </header>
             <div id="inline-dsh-host">
               <p class="docs-loading">正在加载接入说明…</p>
@@ -2899,6 +2998,19 @@
               idMap.set(oldId, newId);
               element.id = newId;
             }
+            for (const element of sourceLayout.querySelectorAll(
+              "[for], [aria-labelledby], [aria-describedby], [aria-controls]"
+            )) {
+              for (const attribute of ["for", "aria-labelledby", "aria-describedby", "aria-controls"]) {
+                if (!element.hasAttribute(attribute)) continue;
+                const nextValue = element
+                  .getAttribute(attribute)
+                  .split(/\s+/)
+                  .map((id) => idMap.get(id) ?? id)
+                  .join(" ");
+                element.setAttribute(attribute, nextValue);
+              }
+            }
             for (const link of sourceLayout.querySelectorAll('a[href^="#"]')) {
               const oldId = link.getAttribute("href").slice(1);
               if (idMap.has(oldId)) link.href = `#${idMap.get(oldId)}`;
@@ -2907,10 +3019,23 @@
             page.host.replaceChildren(document.importNode(sourceLayout, true));
           })
           .catch((error) => {
-            const message = document.createElement("p");
-            message.className = "docs-loading";
-            message.textContent = "页面暂时无法加载，请稍后重试。";
-            page.host.replaceChildren(message);
+            const errorBox = document.createElement("div");
+            errorBox.className = "docs-loading docs-load-error";
+            const message = document.createElement("span");
+            message.textContent = "页面暂时无法加载。";
+            const retryButton = document.createElement("button");
+            retryButton.className = "docs-retry-button";
+            retryButton.type = "button";
+            retryButton.textContent = "重新加载";
+            retryButton.addEventListener("click", () => {
+              page.host.replaceChildren(Object.assign(document.createElement("p"), {
+                className: "docs-loading",
+                textContent: "正在重新加载…",
+              }));
+              void loadInlineContent(name);
+            });
+            errorBox.append(message, retryButton);
+            page.host.replaceChildren(errorBox);
             contentLoadPromises.delete(name);
             console.error(error);
           });
@@ -2920,6 +3045,7 @@
 
       function setContentView(view, { historyMode = "replace", scroll = false } = {}) {
         currentContentView = contentViewNames.has(view) ? view : "ranking";
+        const requestedContentView = currentContentView;
         const contentViews = {
           ranking: leaderboardView,
           docs: docsView,
@@ -2935,7 +3061,9 @@
           if (isActive) control.setAttribute("aria-current", "page");
           else control.removeAttribute("aria-current");
         }
-        if (currentContentView !== "ranking") void loadInlineContent(currentContentView);
+        const contentPromise = currentContentView !== "ranking"
+          ? loadInlineContent(currentContentView)
+          : Promise.resolve();
 
         if (historyMode !== "none") {
           const url = new URL(window.location.href);
@@ -2949,10 +3077,15 @@
           );
         }
 
-        if (scroll) {
-          document.querySelector("#ranking").scrollIntoView({
-            behavior: reduceMotion ? "auto" : "smooth",
-            block: "start",
+        if (scroll || window.location.hash === `#${currentContentView}`) {
+          void contentPromise.then(() => {
+            if (currentContentView !== requestedContentView) return;
+            window.requestAnimationFrame(() => {
+              document.querySelector("#ranking").scrollIntoView({
+                behavior: scroll && !reduceMotion ? "smooth" : "auto",
+                block: "start",
+              });
+            });
           });
         }
       }
@@ -2972,6 +3105,7 @@
         if (!button) return;
         const command = button.dataset.copyCommand;
         if (!command) return;
+        button.setAttribute("aria-live", "polite");
         try {
           if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
           await navigator.clipboard.writeText(command);
@@ -2981,6 +3115,7 @@
             button.textContent = originalLabel;
           }, 3000);
         } catch {
+          const originalLabel = button.textContent;
           const commandElement = button.closest(".dsh-command-row")?.querySelector(".dsh-install-command");
           const selection = window.getSelection();
           if (!commandElement || !selection) {
@@ -2993,7 +3128,7 @@
           selection.addRange(range);
           button.textContent = "已选中，请复制";
           window.setTimeout(() => {
-            button.textContent = "复制命令";
+            button.textContent = originalLabel;
           }, 5000);
         }
       });
