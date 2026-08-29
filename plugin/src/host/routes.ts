@@ -28,6 +28,7 @@ import { allowPackageBuild } from "../install/allow-builds.js";
 import { withPnpmRecovery } from "../install/pnpm-compat.js";
 import {
   dropFromManifest,
+  INBOX_BUNDLES,
   isDshProfileName,
   profileDir,
   readInstalled,
@@ -38,6 +39,7 @@ import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
 import {
   isProtectedPackage,
+  parseDshPatchText,
   rowIdsForPackage,
   setPackageEnabled,
   userPatchPackageReferences,
@@ -122,13 +124,27 @@ function fileProfileCheck(config: PluginResolvedConfig): InstallResult {
       throw new Error("dsh.profile.bundles 必须是字符串数组");
     }
     for (const name of Array.isArray(bundles) ? bundles : []) {
-      if (manifest.dependencies?.[name] === undefined) throw new Error(`${name} 未声明在 dependencies 中`);
-      const bundle = JSON.parse(readFileSync(join(directory, "node_modules", name, "package.json"), "utf8")) as {
+      // DSH template bundles are host-provided and deliberately absent from
+      // the profile dependency map. Desktop owns their resolution surface.
+      if (manifest.dependencies?.[name] === undefined) {
+        if (INBOX_BUNDLES.has(name)) continue;
+        throw new Error(`${name} 未声明在 dependencies 中`);
+      }
+      const candidates = [
+        join(directory, "node_modules", name),
+        join(dirname(directory), "node_modules", name),
+      ];
+      const packageDirectory = candidates.find((candidate) => existsSync(join(candidate, "package.json")));
+      if (!packageDirectory) throw new Error(`${name} 未安装在 profile 可见的 node_modules 中`);
+      const bundle = JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8")) as {
         dsh?: { bundle?: { patch?: unknown } };
       };
       const patch = bundle.dsh?.bundle?.patch;
-      if (typeof patch !== "string" || !patch.trim() || !existsSync(join(directory, "node_modules", name, patch))) {
+      if (typeof patch !== "string" || !patch.trim() || !existsSync(join(packageDirectory, patch))) {
         throw new Error(`${name} 缺少可加载的 dsh.bundle patch`);
+      }
+      if (parseDshPatchText(readFileSync(join(packageDirectory, patch), "utf8")) === null) {
+        throw new Error(`${name} 的 dsh.bundle patch 不是有效的 DSH 补丁列表`);
       }
     }
     return { exitCode: 0, timedOut: false, stdout: "", stderr: "", cancelled: false };

@@ -4,6 +4,8 @@ export interface PatchState {
     forced: string[];
 }
 export declare function userPatchPath(profile: string, explicitDir?: string): string;
+/** Parse the same entry-list YAML dialect DSH uses, including `!!js` scalars. */
+export declare function parseDshPatchText(source: string): unknown[] | null;
 /**
  * Find user-owned `insert` rows that still load a package. `null` is a
  * fail-closed result: the patch uses a shape this small DSH-dialect reader

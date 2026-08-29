@@ -33,10 +33,17 @@ describe("profile plugin toggle", () => {
     expect(userPatchPackageReferences(patch, "unrelated")).toEqual([]);
   });
 
-  it("fails closed for flow-style inserts it cannot inspect safely", () => {
+  it("parses flow-style inserts with the same YAML dialect as DSH", () => {
     const profile = mkdtempSync(join(tmpdir(), "dsh-top100-patch-flow-"));
     const patch = join(profile, "cordis.patch.yml");
     writeFileSync(patch, "[{ insert: [{ id: demo, name: demo }] }]\n");
-    expect(userPatchPackageReferences(patch, "demo")).toBeNull();
+    expect(userPatchPackageReferences(patch, "demo")).toEqual(["demo"]);
+  });
+
+  it("does not confuse a plugin option named `name` with a loader reference", () => {
+    const profile = mkdtempSync(join(tmpdir(), "dsh-top100-patch-config-"));
+    const patch = join(profile, "cordis.patch.yml");
+    writeFileSync(patch, "- insert:\n    - id: owner\n      name: owner-plugin\n      config:\n        items:\n          - name: demo\n");
+    expect(userPatchPackageReferences(patch, "demo")).toEqual([]);
   });
 });

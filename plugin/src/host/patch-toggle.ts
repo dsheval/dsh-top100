@@ -2,6 +2,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { JSON_SCHEMA, Type, load } from "js-yaml";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
 
 const ROW_ID_RE = /^[A-Za-z0-9_.-]+$/;
@@ -15,6 +16,23 @@ export interface PatchState { disables: string[]; forced: string[] }
 
 export function userPatchPath(profile: string, explicitDir?: string): string {
   return join(profileDir(profile, explicitDir), "cordis.patch.yml");
+}
+
+const jsExpr = new Type("tag:yaml.org,2002:js", {
+  kind: "scalar",
+  resolve: (data: unknown): boolean => typeof data === "string",
+  construct: (data: unknown): unknown => ({ __jsExpr: String(data) }),
+});
+const entrySchema = JSON_SCHEMA.extend(jsExpr);
+
+/** Parse the same entry-list YAML dialect DSH uses, including `!!js` scalars. */
+export function parseDshPatchText(source: string): unknown[] | null {
+  try {
+    const value = load(source, { schema: entrySchema });
+    return Array.isArray(value) ? value : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -32,35 +50,35 @@ export function userPatchPackageReferences(patchPath: string, packageName: strin
       : undefined;
     return code === "ENOENT" ? [] : null;
   }
-  if (source.includes("\t")) return null;
-
-  const references = new Set<string>();
-  const lines = source.split(/\r?\n/);
-  let insertIndent: number | null = null;
-  let sawInsert = false;
-  for (const raw of lines) {
-    const line = raw.replace(/\s+#.*$/, "");
-    if (line.trim() === "" || line.trimStart().startsWith("#")) continue;
-    const indent = line.length - line.trimStart().length;
-    const insert = /^\s*-\s+(?:insert|['"]insert['"]):\s*(.*)$/.exec(line);
-    if (insert?.[1] === "") {
-      sawInsert = true;
-      insertIndent = indent;
-      continue;
+  const rows = parseDshPatchText(source);
+  if (rows === null) return null;
+  const insertedNames = new Set<string>();
+  const visiting = new Set<unknown[]>();
+  const visited = new Set<unknown[]>();
+  const collect = (entries: unknown[]): boolean => {
+    if (visited.has(entries)) return true;
+    if (visiting.has(entries)) return false;
+    visiting.add(entries);
+    for (const entry of entries) {
+      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) return false;
+      const row = entry as Record<string, unknown>;
+      if ("name" in row && typeof row.name !== "string") return false;
+      if (typeof row.name === "string") insertedNames.add(row.name);
+      if (row.group === true && Array.isArray(row.config) && !collect(row.config)) return false;
     }
-    if (insert) return null;
-    if (insertIndent === null) continue;
-    if (indent <= insertIndent && /^\s*-\s+/.test(line)) {
-      insertIndent = null;
-      continue;
-    }
-    if (indent <= insertIndent) return null;
-    const name = /^\s*(?:-\s+)?name:\s*(?:['"]([^'"]+)['"]|([^\s#]+))\s*$/.exec(line);
-    const value = name?.[1] ?? name?.[2];
-    if (value === packageName || value?.startsWith(`${packageName}/`)) references.add(value);
+    visiting.delete(entries);
+    visited.add(entries);
+    return true;
+  };
+  for (const patch of rows) {
+    if (patch === null || typeof patch !== "object" || Array.isArray(patch)) return null;
+    const row = patch as Record<string, unknown>;
+    if (!("insert" in row)) continue;
+    if (!Array.isArray(row.insert) || !collect(row.insert)) return null;
   }
-  if (!sawInsert && /(?:^|[,{]\s*)['"]?insert['"]?\s*:/m.test(source)) return null;
-  return [...references];
+  return [...insertedNames].filter(
+    (reference) => reference === packageName || reference.startsWith(`${packageName}/`),
+  );
 }
 
 export function isProtectedPackage(name: string): boolean {

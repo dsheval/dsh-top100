@@ -130,6 +130,26 @@ describe("plugin lifecycle routes", () => {
     expect(readFileSync(join(directory, "cordis.patch.yml"), "utf8")).not.toContain("custom-loader-id");
   });
 
+  it("accepts host-provided in-box bundles during Desktop profile validation", async () => {
+    const directory = profileFixture("route-desktop-inbox");
+    const manifestPath = join(directory, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+    manifest.dsh.profile.bundles.unshift("@deepseek-ai/dsh-web-app");
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    const harness = routeHarness();
+    const runtime: PluginCommandRuntime = {
+      runPlugin: vi.fn(async () => ok()),
+      cancelActive: () => false,
+    };
+    mountRoutes(harness, { dataUrl: "https://example.invalid/data.json", profile: "desktop", profileDirectory: directory }, runtime);
+    const accepted = await harness.request("/dsh-top100/manage", {
+      method: "POST",
+      body: { action: "update", name: "demo", kind: "bundle" },
+    });
+    const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+    expect(job.phase).toBe("installed");
+  });
+
   it("refuses uninstall while a user insert still references the package", async () => {
     const directory = profileFixture("route-reference");
     writeFileSync(join(directory, "cordis.patch.yml"), "- insert:\n    - id: user-row\n      name: demo/subpath\n");

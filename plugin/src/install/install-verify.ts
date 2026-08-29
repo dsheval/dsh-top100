@@ -174,6 +174,13 @@ async function githubCommit(owner: string, repo: string, ref: string): Promise<s
   return typeof sha === "string" && /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : null;
 }
 
+function githubTargetAtCommit(target: string, sha: string): string | null {
+  if (!/^[0-9a-f]{40}$/.test(sha)) return null;
+  const match = /^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:#path:\/?(.+)|#[^&]+)?$/.exec(target);
+  if (!match) return null;
+  return `github:${match[1]}#${sha}${match[2] ? `&path:/${match[2]}` : ""}`;
+}
+
 async function verifiedGitHubTarget(
   target: string,
   manifest: PackageManifest,
@@ -186,7 +193,8 @@ async function verifiedGitHubTarget(
   if (value.needsBuildApproval && value.buildApprovalKeys.length < 2) {
     throw new InstallVerificationError("GitHub 构建插件无法解析到不可变 commit，已拒绝写入不完整的 allowBuilds", true);
   }
-  return value;
+  const pinned = sha ? githubTargetAtCommit(target, sha) : null;
+  return pinned ? { ...value, target: pinned } : value;
 }
 
 function decodeGitHubManifest(payload: unknown): unknown | null {

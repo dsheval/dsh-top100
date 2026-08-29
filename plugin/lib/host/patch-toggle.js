@@ -1,6 +1,7 @@
 /** Persist enable/disable through the profile user patch layer. */
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { JSON_SCHEMA, Type, load } from "js-yaml";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
 const ROW_ID_RE = /^[A-Za-z0-9_.-]+$/;
 const SELF_PACKAGES = new Set([
@@ -10,6 +11,22 @@ const SELF_PACKAGES = new Set([
 ]);
 export function userPatchPath(profile, explicitDir) {
     return join(profileDir(profile, explicitDir), "cordis.patch.yml");
+}
+const jsExpr = new Type("tag:yaml.org,2002:js", {
+    kind: "scalar",
+    resolve: (data) => typeof data === "string",
+    construct: (data) => ({ __jsExpr: String(data) }),
+});
+const entrySchema = JSON_SCHEMA.extend(jsExpr);
+/** Parse the same entry-list YAML dialect DSH uses, including `!!js` scalars. */
+export function parseDshPatchText(source) {
+    try {
+        const value = load(source, { schema: entrySchema });
+        return Array.isArray(value) ? value : null;
+    }
+    catch {
+        return null;
+    }
 }
 /**
  * Find user-owned `insert` rows that still load a package. `null` is a
@@ -27,41 +44,43 @@ export function userPatchPackageReferences(patchPath, packageName) {
             : undefined;
         return code === "ENOENT" ? [] : null;
     }
-    if (source.includes("\t"))
+    const rows = parseDshPatchText(source);
+    if (rows === null)
         return null;
-    const references = new Set();
-    const lines = source.split(/\r?\n/);
-    let insertIndent = null;
-    let sawInsert = false;
-    for (const raw of lines) {
-        const line = raw.replace(/\s+#.*$/, "");
-        if (line.trim() === "" || line.trimStart().startsWith("#"))
-            continue;
-        const indent = line.length - line.trimStart().length;
-        const insert = /^\s*-\s+(?:insert|['"]insert['"]):\s*(.*)$/.exec(line);
-        if (insert?.[1] === "") {
-            sawInsert = true;
-            insertIndent = indent;
-            continue;
+    const insertedNames = new Set();
+    const visiting = new Set();
+    const visited = new Set();
+    const collect = (entries) => {
+        if (visited.has(entries))
+            return true;
+        if (visiting.has(entries))
+            return false;
+        visiting.add(entries);
+        for (const entry of entries) {
+            if (entry === null || typeof entry !== "object" || Array.isArray(entry))
+                return false;
+            const row = entry;
+            if ("name" in row && typeof row.name !== "string")
+                return false;
+            if (typeof row.name === "string")
+                insertedNames.add(row.name);
+            if (row.group === true && Array.isArray(row.config) && !collect(row.config))
+                return false;
         }
-        if (insert)
+        visiting.delete(entries);
+        visited.add(entries);
+        return true;
+    };
+    for (const patch of rows) {
+        if (patch === null || typeof patch !== "object" || Array.isArray(patch))
             return null;
-        if (insertIndent === null)
+        const row = patch;
+        if (!("insert" in row))
             continue;
-        if (indent <= insertIndent && /^\s*-\s+/.test(line)) {
-            insertIndent = null;
-            continue;
-        }
-        if (indent <= insertIndent)
+        if (!Array.isArray(row.insert) || !collect(row.insert))
             return null;
-        const name = /^\s*(?:-\s+)?name:\s*(?:['"]([^'"]+)['"]|([^\s#]+))\s*$/.exec(line);
-        const value = name?.[1] ?? name?.[2];
-        if (value === packageName || value?.startsWith(`${packageName}/`))
-            references.add(value);
     }
-    if (!sawInsert && /(?:^|[,{]\s*)['"]?insert['"]?\s*:/m.test(source))
-        return null;
-    return [...references];
+    return [...insertedNames].filter((reference) => reference === packageName || reference.startsWith(`${packageName}/`));
 }
 export function isProtectedPackage(name) {
     return INBOX_BUNDLES.has(name) || SELF_PACKAGES.has(name) || name.startsWith("@deepseek-ai/");

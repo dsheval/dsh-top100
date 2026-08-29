@@ -102,11 +102,27 @@ describe("install source verification", () => {
 
     await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo" }))
       .resolves.toMatchObject({
+        target: `github:acme/repo#${sha}`,
         buildApprovalKeys: [
           "demo@git+https://github.com/acme/repo.git",
           `demo@https://codeload.github.com/acme/repo/tar.gz/${sha}`,
         ],
       });
+  });
+
+  it("keeps a monorepo path when pinning a GitHub build target", async () => {
+    const sha = "c".repeat(40);
+    const manifest = Buffer.from(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      scripts: { prepare: "npm run build" },
+    })).toString("base64");
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sha }), { status: 200 })));
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo#path:/packages/demo" }))
+      .resolves.toMatchObject({ target: `github:acme/repo#${sha}&path:/packages/demo` });
   });
 
   it("caches a successful verification", async () => {

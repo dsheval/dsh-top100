@@ -70,6 +70,38 @@ describe("desktop launch environment", () => {
     await runtime.dispose?.();
   });
 
+  it("cancels the Desktop-owned operation and marks an explicit user cancellation", async () => {
+    const profile = mkdtempSync(join(tmpdir(), "dsh-top100-desktop-"));
+    let resolveDone!: (value: { exitCode: number | null; signal: NodeJS.Signals | null }) => void;
+    const done = new Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>((resolve) => { resolveDone = resolve; });
+    const cancel = vi.fn(() => resolveDone({ exitCode: null, signal: "SIGTERM" }));
+    const runtime = createDesktopPluginRuntime({
+      runPlugin: () => ({ stdout: new PassThrough(), stderr: new PassThrough(), done, cancel }),
+    }, profile);
+    const result = runtime.runPlugin("desktop", ["remove", "demo"]);
+    expect(runtime.cancelActive()).toBe(true);
+    await expect(result).resolves.toMatchObject({ exitCode: null, cancelled: true, timedOut: false });
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it("awaits Desktop teardown and rejects reuse of the disposed runtime", async () => {
+    const profile = mkdtempSync(join(tmpdir(), "dsh-top100-desktop-"));
+    let resolveDone!: (value: { exitCode: number | null; signal: NodeJS.Signals | null }) => void;
+    const done = new Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>((resolve) => { resolveDone = resolve; });
+    const cancel = vi.fn(() => resolveDone({ exitCode: null, signal: "SIGTERM" }));
+    const runtime = createDesktopPluginRuntime({
+      runPlugin: () => ({ stdout: new PassThrough(), stderr: new PassThrough(), done, cancel }),
+    }, profile);
+    const active = runtime.runPlugin("desktop", ["remove", "demo"]);
+    await runtime.dispose?.();
+    expect(cancel).toHaveBeenCalledOnce();
+    await expect(active).resolves.toMatchObject({ cancelled: false });
+    await expect(runtime.runPlugin("desktop", ["remove", "demo"])).resolves.toMatchObject({
+      exitCode: 127,
+      stderr: expect.stringContaining("disposed"),
+    });
+  });
+
   it("uses Desktop's recoverable boundary with the requested npm tag resolved exactly", async () => {
     const profile = mkdtempSync(join(tmpdir(), "dsh-top100-desktop-"));
     writeFileSync(join(profile, "pnpm-workspace.yaml"), "packages:\n  - .\n");
