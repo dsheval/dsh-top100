@@ -1,6 +1,8 @@
 /** Read the current DSH profile's installed packages. */
 import type { InstalledMap } from "../shared/types.js";
 export declare const INBOX_BUNDLES: Set<string>;
+/** Match DSH's own profile directory-name rules (dots, spaces, and Unicode are valid). */
+export declare function isDshProfileName(profile: string): boolean;
 export declare function profileDir(profile: string, explicitDir?: string): string;
 export declare function readInstalled(profile: string, explicitDir?: string): InstalledMap;
 export interface ProfileManifestSnapshot {
@@ -10,6 +12,12 @@ export interface ProfileManifestSnapshot {
     } | {
         present: true;
         value: unknown;
+    };
+    lockfile: {
+        present: false;
+    } | {
+        present: true;
+        value: string;
     };
 }
 /** Capture the two package-operation fields mutated by `dsh plugin`. */

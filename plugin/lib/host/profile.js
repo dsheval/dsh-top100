@@ -1,5 +1,5 @@
 /** Read the current DSH profile's installed packages. */
-import { readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { isDeepStrictEqual } from "node:util";
@@ -8,9 +8,21 @@ export const INBOX_BUNDLES = new Set([
     "@deepseek-ai/dsh-web-app",
     "@deepseek-ai/dsh-headless",
 ]);
+/** Match DSH's own profile directory-name rules (dots, spaces, and Unicode are valid). */
+export function isDshProfileName(profile) {
+    return profile !== ""
+        && profile !== "."
+        && profile !== ".."
+        && profile !== "node_modules"
+        && !profile.includes("/")
+        && !profile.includes("\\")
+        && !profile.includes("\0");
+}
 export function profileDir(profile, explicitDir) {
     if (explicitDir !== undefined)
         return explicitDir;
+    if (!isDshProfileName(profile))
+        throw new Error(`dsh-top100: invalid profile name ${JSON.stringify(profile)}`);
     const home = process.env.DSH_HOME ?? join(homedir(), ".dsh");
     return join(home, "profiles", profile);
 }
@@ -44,15 +56,22 @@ export function readProfileManifestSnapshot(profile, explicitDir) {
         const manifest = JSON.parse(readFileSync(join(profileDir(profile, explicitDir), "package.json"), "utf8"));
         const profileManifest = objectRecord(manifest.dsh?.profile);
         const present = profileManifest !== undefined && Object.hasOwn(profileManifest, "bundles");
+        const lockPath = join(profileDir(profile, explicitDir), "pnpm-lock.yaml");
+        let lockfile = { present: false };
+        try {
+            lockfile = { present: true, value: readFileSync(lockPath, "utf8") };
+        }
+        catch { /* absent */ }
         return {
             dependencies: { ...manifest.dependencies },
             profileBundles: present
                 ? { present: true, value: structuredClone(profileManifest.bundles) }
                 : { present: false },
+            lockfile,
         };
     }
     catch {
-        return { dependencies: {}, profileBundles: { present: false } };
+        return { dependencies: {}, profileBundles: { present: false }, lockfile: { present: false } };
     }
 }
 /** Restore only the manifest fields owned by a failed package operation. */
@@ -81,6 +100,17 @@ export function restoreProfileManifest(profile, snapshot, explicitDir) {
             && !isDeepStrictEqual(currentBundles.value, snapshot.profileBundles.value));
     if (bundlesChanged)
         changed.add("dsh.profile.bundles");
+    const lockPath = join(profileDir(profile, explicitDir), "pnpm-lock.yaml");
+    let currentLock = null;
+    try {
+        currentLock = readFileSync(lockPath, "utf8");
+    }
+    catch { /* absent */ }
+    const lockChanged = snapshot.lockfile.present
+        ? currentLock !== snapshot.lockfile.value
+        : currentLock !== null;
+    if (lockChanged)
+        changed.add("pnpm-lock.yaml");
     if (changed.size === 0)
         return [];
     manifest.dependencies = { ...snapshot.dependencies };
@@ -95,6 +125,16 @@ export function restoreProfileManifest(profile, snapshot, explicitDir) {
         delete profileManifest.bundles;
     }
     writeManifestAtomic(path, manifest);
+    if (lockChanged) {
+        if (snapshot.lockfile.present) {
+            const temporary = `${lockPath}.${process.pid}.${Date.now()}.tmp`;
+            writeFileSync(temporary, snapshot.lockfile.value, "utf8");
+            renameSync(temporary, lockPath);
+        }
+        else if (existsSync(lockPath)) {
+            unlinkSync(lockPath);
+        }
+    }
     return [...changed];
 }
 /** Finish a half-uninstall when the package is already gone from disk. */

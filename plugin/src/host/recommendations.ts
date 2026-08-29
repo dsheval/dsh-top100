@@ -237,7 +237,7 @@ export function installRecommendationCapabilities(
         query: args.query,
         limit: args.limit,
         category,
-        installed: readInstalled(config.profile),
+        installed: readInstalled(config.profile, config.profileDirectory),
       });
     },
   }));

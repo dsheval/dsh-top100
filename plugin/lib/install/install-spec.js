@@ -5,7 +5,6 @@ export const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME_SOURCE})(?:@(${NPM_SELECTOR_
 export const GITHUB_SPEC_RE = /^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/:=-]+))?$/i;
 export const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 export const SAFE_TARGET_RE = /^[A-Za-z0-9@:./_#+-]+$/;
-export const PROFILE_RE = /^[A-Za-z0-9_-]+$/;
 const DSH_ADD_RE = /\bdsh\s+plugin\b(?:\s+--profile\s+\S+)?\s+add\s+(.+)$/i;
 const UNSAFE_TOKEN = /[\s|&;<>()$`\\'"!*?]/;
 export function isCordisEntry(entry) {

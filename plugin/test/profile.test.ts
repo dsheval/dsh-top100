@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   dropFromManifest,
+  isDshProfileName,
   readProfileManifestSnapshot,
   resolveActiveProfile,
   restoreProfileManifest,
@@ -27,6 +28,13 @@ describe("profile resolution", () => {
     expect(resolveActiveProfile("custom", ["node", "dsh", "--profile", "testing"])).toBe("custom");
     expect(resolveActiveProfile(undefined, ["node", "dsh"])).toBe("web");
   });
+
+  it("accepts DSH profile names with dots, spaces, and Unicode but rejects traversal", () => {
+    expect(isDshProfileName("test.profile")).toBe(true);
+    expect(isDshProfileName("测试 环境")).toBe(true);
+    expect(isDshProfileName("../web")).toBe(false);
+    expect(isDshProfileName("node_modules")).toBe(false);
+  });
 });
 
 describe("profile manifest recovery", () => {
@@ -48,6 +56,16 @@ describe("profile manifest recovery", () => {
     expect(restored.dependencies).toEqual({ "keep-plugin": "1.0.0" });
     expect(restored.dsh.profile.bundles).toEqual(["@deepseek-ai/dsh-web-app", "keep-plugin"]);
     expect(restored.untouched.value).toBe("preserve me");
+  });
+
+  it("restores the lockfile so an update can rematerialize the previous commit", () => {
+    const directory = profileFixture();
+    const lockPath = join(directory, "pnpm-lock.yaml");
+    writeFileSync(lockPath, "lockfileVersion: '9.0'\ncommit: old\n");
+    const snapshot = readProfileManifestSnapshot("web", directory);
+    writeFileSync(lockPath, "lockfileVersion: '9.0'\ncommit: new\n");
+    expect(restoreProfileManifest("web", snapshot, directory)).toContain("pnpm-lock.yaml");
+    expect(readFileSync(lockPath, "utf8")).toContain("commit: old");
   });
 
   it("removes both manifest references after a half-uninstall", () => {

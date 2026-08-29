@@ -13,4 +13,6 @@ export interface PluginHost {
 export interface PluginResolvedConfig {
     dataUrl: string;
     profile: string;
+    /** Host-owned profile location, used by DSH Desktop instead of ~/.dsh/profiles/<name>. */
+    profileDirectory?: string;
 }

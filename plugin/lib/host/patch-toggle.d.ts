@@ -4,6 +4,12 @@ export interface PatchState {
     forced: string[];
 }
 export declare function userPatchPath(profile: string, explicitDir?: string): string;
+/**
+ * Find user-owned `insert` rows that still load a package. `null` is a
+ * fail-closed result: the patch uses a shape this small DSH-dialect reader
+ * cannot inspect safely, so uninstall must not guess.
+ */
+export declare function userPatchPackageReferences(patchPath: string, packageName: string): string[] | null;
 export declare function isProtectedPackage(name: string): boolean;
 export declare function readUserPatchState(patchPath: string): PatchState;
 export declare function parseInsertedIds(text: string): string[];

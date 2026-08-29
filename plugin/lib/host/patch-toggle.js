@@ -11,6 +11,58 @@ const SELF_PACKAGES = new Set([
 export function userPatchPath(profile, explicitDir) {
     return join(profileDir(profile, explicitDir), "cordis.patch.yml");
 }
+/**
+ * Find user-owned `insert` rows that still load a package. `null` is a
+ * fail-closed result: the patch uses a shape this small DSH-dialect reader
+ * cannot inspect safely, so uninstall must not guess.
+ */
+export function userPatchPackageReferences(patchPath, packageName) {
+    let source;
+    try {
+        source = readFileSync(patchPath, "utf8");
+    }
+    catch (error) {
+        const code = error !== null && typeof error === "object" && "code" in error
+            ? error.code
+            : undefined;
+        return code === "ENOENT" ? [] : null;
+    }
+    if (source.includes("\t"))
+        return null;
+    const references = new Set();
+    const lines = source.split(/\r?\n/);
+    let insertIndent = null;
+    let sawInsert = false;
+    for (const raw of lines) {
+        const line = raw.replace(/\s+#.*$/, "");
+        if (line.trim() === "" || line.trimStart().startsWith("#"))
+            continue;
+        const indent = line.length - line.trimStart().length;
+        const insert = /^\s*-\s+(?:insert|['"]insert['"]):\s*(.*)$/.exec(line);
+        if (insert?.[1] === "") {
+            sawInsert = true;
+            insertIndent = indent;
+            continue;
+        }
+        if (insert)
+            return null;
+        if (insertIndent === null)
+            continue;
+        if (indent <= insertIndent && /^\s*-\s+/.test(line)) {
+            insertIndent = null;
+            continue;
+        }
+        if (indent <= insertIndent)
+            return null;
+        const name = /^\s*(?:-\s+)?name:\s*(?:['"]([^'"]+)['"]|([^\s#]+))\s*$/.exec(line);
+        const value = name?.[1] ?? name?.[2];
+        if (value === packageName || value?.startsWith(`${packageName}/`))
+            references.add(value);
+    }
+    if (!sawInsert && /(?:^|[,{]\s*)['"]?insert['"]?\s*:/m.test(source))
+        return null;
+    return [...references];
+}
 export function isProtectedPackage(name) {
     return INBOX_BUNDLES.has(name) || SELF_PACKAGES.has(name) || name.startsWith("@deepseek-ai/");
 }

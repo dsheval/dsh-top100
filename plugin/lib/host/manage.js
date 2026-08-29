@@ -123,12 +123,12 @@ function listSkills() {
         };
     });
 }
-export async function listManagedPlugins(profile, document) {
-    const plugins = await Promise.all(Object.entries(readInstalled(profile)).map(async ([name, spec]) => {
-        const manifest = readInstalledManifest(profile, name);
+export async function listManagedPlugins(profile, document, explicitDir) {
+    const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
+        const manifest = readInstalledManifest(profile, name, explicitDir);
         const fullName = githubFullName(spec, manifest?.repository);
         const catalog = matchCatalogEntry(document, name, spec, fullName);
-        const version = readInstalledVersion(profile, name);
+        const version = readInstalledVersion(profile, name, explicitDir);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
         const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);
         const description = catalog?.description || manifest?.description || "";
@@ -145,7 +145,7 @@ export async function listManagedPlugins(profile, document) {
             }),
             fullName: catalog?.fullName ?? fullName,
             url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
-            enabled: !packageIsDisabled(profile, name),
+            enabled: !packageIsDisabled(profile, name, explicitDir),
             updateAvailable: updateAvailable(version, latest),
             latest,
             local,
@@ -163,6 +163,6 @@ export function uninstallSkill(name) {
         throw new Error("Skill 未安装");
     rmSync(target, { recursive: true, force: true });
 }
-export function cleanupAfterUninstall(profile, name) {
-    removeRowBlocks(userPatchPath(profile), rowIdsForPackage(profile, name));
+export function cleanupAfterUninstall(profile, name, rowIds = undefined, explicitDir) {
+    removeRowBlocks(userPatchPath(profile, explicitDir), rowIds ?? rowIdsForPackage(profile, name, explicitDir));
 }
