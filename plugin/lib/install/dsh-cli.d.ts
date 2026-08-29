@@ -1,5 +1,7 @@
 /** Spawn `dsh plugin` the same way the official CLI forwards to pnpm. */
 import type { InstallResult, ProgressSnapshot } from "../shared/types.js";
+export declare function toolSearchDirs(platform?: NodeJS.Platform, env?: NodeJS.ProcessEnv, home?: string): string[];
+export declare function proxyEnvForPnpm(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
 export declare const progress: ProgressSnapshot;
 export declare function quoteCmdArg(arg: string): string;
 export declare function cmdCommandLine(argv: readonly string[]): string;

@@ -51,6 +51,10 @@ describe("parseInstallSpec", () => {
       kind: "github",
       spec: "github:owner/repo#abc123",
     });
+    expect(parseInstallSpec("github:owner/repo#path:/packages/plugin")).toEqual({
+      kind: "github",
+      spec: "github:owner/repo#path:/packages/plugin",
+    });
   });
 
   it("rejects shell metacharacters, flags, and non-plugin URLs", () => {

@@ -4,19 +4,20 @@
  */
 import z from "@deepseek-ai/schemastery";
 import { DEFAULT_DATA_URL, normalizeDataUrl } from "./host/catalog.js";
-import { argvProfile } from "./host/profile.js";
+import { resolveActiveProfile } from "./host/profile.js";
 import { mountRoutes } from "./host/routes.js";
 import { installRecommendationCapabilities } from "./host/recommendations.js";
 export const name = "dsh-top100";
 export const inject = ["skills", "tools"];
 export const Config = z.object({
     dataUrl: z.string().default(DEFAULT_DATA_URL),
-    profile: z.string().default("web"),
+    // Empty means "manage the profile this DSH process booted".
+    profile: z.string().default(""),
 });
-export function apply(ctx, config = { dataUrl: DEFAULT_DATA_URL, profile: "web" }) {
+export function apply(ctx, config = { dataUrl: DEFAULT_DATA_URL, profile: "" }) {
     const resolved = {
         dataUrl: normalizeDataUrl(process.env.DSH_TOP100_DATA_URL || config.dataUrl || DEFAULT_DATA_URL),
-        profile: config.profile || argvProfile() || "web",
+        profile: resolveActiveProfile(config.profile),
     };
     void import("./host/settings.js")
         .then((module) => module.installTop100Settings(ctx, resolved))

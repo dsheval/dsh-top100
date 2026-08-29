@@ -52,6 +52,27 @@ describe("install source verification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("verifies an explicit GitHub monorepo path selector", async () => {
+    const manifest = Buffer.from(JSON.stringify({
+      name: "demo",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    })).toString("base64");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/repo#path:/packages/demo" }))
+      .resolves.toMatchObject({
+        target: "github:acme/repo#path:/packages/demo",
+        packageName: "demo",
+      });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "https://api.github.com/repos/acme/repo/contents/packages/demo/package.json?ref=main",
+      expect.any(Object),
+    );
+  });
+
   it("caches a successful verification", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       name: "demo",

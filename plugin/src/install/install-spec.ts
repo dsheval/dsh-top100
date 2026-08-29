@@ -6,7 +6,7 @@ const NPM_NAME_SOURCE = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*
 const NPM_SELECTOR_SOURCE = "[a-z0-9][a-z0-9._+-]*";
 export const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME_SOURCE})(?:@(${NPM_SELECTOR_SOURCE}))?$`, "i");
 export const GITHUB_SPEC_RE =
-  /^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/-]+))?$/i;
+  /^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/:=-]+))?$/i;
 export const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 export const SAFE_TARGET_RE = /^[A-Za-z0-9@:./_#+-]+$/;
 export const PROFILE_RE = /^[A-Za-z0-9_-]+$/;

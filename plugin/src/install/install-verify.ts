@@ -140,24 +140,45 @@ async function verifyNpm(spec: string): Promise<VerifiedInstallTarget> {
   return verifiedTarget(spec, manifest, "npm");
 }
 
+function decodeGitHubManifest(payload: unknown): unknown | null {
+  if (payload === null || typeof payload !== "object" || typeof (payload as { content?: unknown }).content !== "string") {
+    return null;
+  }
+  try {
+    return JSON.parse(Buffer.from((payload as { content: string }).content, "base64").toString("utf8")) as unknown;
+  } catch {
+    return null;
+  }
+}
+
 async function verifyGitHub(spec: string): Promise<VerifiedInstallTarget> {
-  const match = spec.match(/^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._-]+))?$/);
+  const match = spec.match(/^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/:=-]+))?$/);
   if (!match) throw new InstallVerificationError("GitHub 安装源格式无效", true);
-  const [, owner, repo, ref] = match;
+  const [, owner, repo, selector] = match;
+  const pathSelector = selector?.match(/^path:\/?(.+)$/);
+  if (pathSelector) {
+    const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
+    const branch =
+      typeof (repository as { default_branch?: unknown })?.default_branch === "string"
+        ? (repository as { default_branch: string }).default_branch
+        : "main";
+    const packagePath = `${pathSelector[1]}/package.json`;
+    const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
+    const manifest = decodeGitHubManifest(await fetchOptionalJson(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
+    ));
+    if (!isBundleManifest(manifest)) {
+      throw new InstallVerificationError("指定 path 子目录没有 dsh.bundle", true);
+    }
+    return verifiedTarget(spec, manifest, "github");
+  }
+  const ref = selector;
   const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
   const payload = await fetchOptionalJson(
     `https://api.github.com/repos/${owner}/${repo}/contents/package.json${query}`,
   );
-  if (payload !== null && typeof payload === "object" && typeof (payload as { content?: unknown }).content === "string") {
-    try {
-      const manifest = JSON.parse(
-        Buffer.from((payload as { content: string }).content, "base64").toString("utf8"),
-      ) as unknown;
-      if (isBundleManifest(manifest)) return verifiedTarget(spec, manifest, "github");
-    } catch (error) {
-      if (error instanceof InstallVerificationError && error.fatal) throw error;
-    }
-  }
+  const rootManifest = decodeGitHubManifest(payload);
+  if (isBundleManifest(rootManifest)) return verifiedTarget(spec, rootManifest, "github");
   if (ref) throw new InstallVerificationError("指定 ref 的仓库根目录没有 dsh.bundle");
 
   const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
@@ -189,18 +210,9 @@ async function verifyGitHub(spec: string): Promise<VerifiedInstallTarget> {
     const child = await fetchOptionalJson(
       `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`,
     );
-    if (child === null || typeof child !== "object" || typeof (child as { content?: unknown }).content !== "string") {
-      continue;
-    }
-    try {
-      const manifest = JSON.parse(
-        Buffer.from((child as { content: string }).content, "base64").toString("utf8"),
-      ) as unknown;
-      if (isBundleManifest(manifest)) {
-        return verifiedTarget(`github:${owner}/${repo}#path:${directory}`, manifest, "github");
-      }
-    } catch (error) {
-      if (error instanceof InstallVerificationError && error.fatal) throw error;
+    const manifest = decodeGitHubManifest(child);
+    if (isBundleManifest(manifest)) {
+      return verifiedTarget(`github:${owner}/${repo}#path:/${directory}`, manifest, "github");
     }
   }
   throw new InstallVerificationError("仓库根目录及候选子目录均未找到 dsh.bundle");

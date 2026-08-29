@@ -1,5 +1,5 @@
 /** Host HTTP routes for catalog, install, and status. */
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, normalizeDataUrl, } from "./catalog.js";
@@ -8,7 +8,8 @@ import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
 import { FULL_NAME_RE, PROFILE_RE, resolveInstallSpec } from "../install/install-spec.js";
 import { verifyInstallSpec } from "../install/install-verify.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
-import { readInstalled } from "./profile.js";
+import { withPnpmRecovery } from "../install/pnpm-compat.js";
+import { dropFromManifest, profileDir, readInstalled, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
 import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
 import { isProtectedPackage, setPackageEnabled } from "./patch-toggle.js";
@@ -39,10 +40,13 @@ async function safeLoad(config) {
 }
 function installFailure(result) {
     const combined = `${result.stdout}\n${result.stderr}`;
-    const pnpmError = combined.match(/\[ERR_PNPM_[A-Z0-9_]+\][\s\S]*?(?=\n\n|$)/);
-    if (pnpmError)
-        return pnpmError[0].trim().slice(-1200);
-    return result.stderr.trim().slice(-800) || result.stdout.trim().slice(-800) || "install failed";
+    const pnpmErrorOffset = combined.lastIndexOf("ERR_PNPM_");
+    if (pnpmErrorOffset !== -1)
+        return combined.slice(pnpmErrorOffset).trim().slice(0, 1200);
+    return [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n").slice(-1200) || "install failed";
+}
+function runProfilePlugin(config, args, fullName) {
+    return withPnpmRecovery((profile, recoveredArgs) => runDshPlugin(profile, recoveredArgs, { fullName }), config.profile, args);
 }
 function id(prefix) {
     nextId += 1;
@@ -112,11 +116,46 @@ function enqueueManageJob(batch, config, action, name, kind) {
             const target = action === "update" ? resolveUpdateTarget(name, spec) : name;
             if (!target)
                 throw new Error("本地 link/file 插件请在源码目录更新");
-            const result = await runDshPlugin(config.profile, [action === "update" ? "add" : "remove", target], { fullName: name });
-            if (result.exitCode !== 0 || result.timedOut || result.cancelled)
+            const manifestBefore = action === "update" ? readProfileManifestSnapshot(config.profile) : null;
+            const result = await runProfilePlugin(config, [action === "update" ? "add" : "remove", target], name);
+            const failed = result.exitCode !== 0 || result.timedOut || result.cancelled;
+            if (failed) {
+                if (action === "update" && manifestBefore && !result.cancelled) {
+                    const restored = restoreProfileManifest(config.profile, manifestBefore);
+                    if (restored.length > 0) {
+                        const reinstall = await runProfilePlugin(config, ["install", "--no-frozen-lockfile"], name);
+                        if (reinstall.exitCode !== 0 || reinstall.timedOut || reinstall.cancelled) {
+                            throw new Error(`更新失败；profile 清单已回滚，但旧版本文件恢复失败：${installFailure(reinstall)}`);
+                        }
+                    }
+                }
+                if (action === "uninstall" && !result.cancelled) {
+                    const installedOnDisk = existsSync(join(profileDir(config.profile), "node_modules", name, "package.json"));
+                    const stillDeclared = readInstalled(config.profile)[name] !== undefined;
+                    if (!installedOnDisk || !stillDeclared) {
+                        if (!installedOnDisk)
+                            dropFromManifest(config.profile, name);
+                        cleanupAfterUninstall(config.profile, name);
+                        invalidateCatalog();
+                        updateJob(job, "installed", {
+                            requiresRestart: true,
+                            message: "uninstalled",
+                            lastLine: "卸载已完成，并清理了残留配置",
+                        });
+                        return;
+                    }
+                }
                 throw new Error(installFailure(result));
-            if (action === "uninstall")
+            }
+            if (action === "uninstall") {
+                const installedOnDisk = existsSync(join(profileDir(config.profile), "node_modules", name, "package.json"));
+                if (!installedOnDisk)
+                    dropFromManifest(config.profile, name);
+                if (readInstalled(config.profile)[name] !== undefined) {
+                    throw new Error("卸载命令已结束，但插件仍在 profile 清单中");
+                }
                 cleanupAfterUninstall(config.profile, name);
+            }
             invalidateCatalog();
             updateJob(job, "installed", { requiresRestart: true, message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成" : "已卸载" });
         }
@@ -289,17 +328,22 @@ async function prepareJob(job, config) {
                 if (buildPackageName)
                     allowPackageBuild(config.profile, buildPackageName);
                 job.lastLine = "正在写入 DSH profile";
-                const result = await runDshPlugin(config.profile, ["add", target], { fullName: job.fullName });
+                const manifestBefore = readProfileManifestSnapshot(config.profile);
+                const result = await runProfilePlugin(config, ["add", target], job.fullName);
                 const ok = result.exitCode === 0 && !result.timedOut && !result.cancelled;
-                if (!ok)
+                if (!ok) {
+                    if (!result.cancelled)
+                        restoreProfileManifest(config.profile, manifestBefore);
                     throw new Error(installFailure(result));
+                }
                 job.lastLine = "正在验证安装后的 DSH 配置";
                 const after = await runDshProfileCheck(config.profile);
                 if (after.exitCode !== 0 || after.timedOut) {
                     const packageName = resolvedTarget.packageName;
                     const rollback = packageName
-                        ? await runDshPlugin(config.profile, ["remove", packageName], { fullName: job.fullName })
+                        ? await runProfilePlugin(config, ["remove", packageName], job.fullName)
                         : null;
+                    restoreProfileManifest(config.profile, manifestBefore);
                     const rolledBack = rollback !== null
                         && rollback.exitCode === 0
                         && !rollback.timedOut

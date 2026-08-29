@@ -1,13 +1,58 @@
 /** Spawn `dsh plugin` the same way the official CLI forwards to pnpm. */
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { homedir } from "node:os";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
+import { profileDir } from "../host/profile.js";
+import { pluginArgsFor } from "./pnpm-compat.js";
 import { SAFE_TARGET_RE } from "./install-spec.js";
 const INSTALL_TIMEOUT_MS = Number(process.env.DSH_TOP100_INSTALL_TIMEOUT_MS) || 15 * 60 * 1000;
 const PROFILE_CHECK_TIMEOUT_MS = Number(process.env.DSH_TOP100_PROFILE_CHECK_TIMEOUT_MS) || 60 * 1000;
 const CMD_METACHARS = /[\s"&|<>^()%!]/;
 const winCmdShim = process.platform === "win32";
 const COMSPEC = process.env.ComSpec ?? "cmd.exe";
+export function toolSearchDirs(platform = process.platform, env = process.env, home = homedir()) {
+    const directories = [];
+    if (env.PNPM_HOME?.trim())
+        directories.push(env.PNPM_HOME.trim());
+    if (platform === "win32") {
+        if (env.LOCALAPPDATA?.trim())
+            directories.push(join(env.LOCALAPPDATA.trim(), "pnpm"));
+        if (env.APPDATA?.trim())
+            directories.push(join(env.APPDATA.trim(), "npm"));
+    }
+    else {
+        directories.push("/opt/homebrew/bin", "/usr/local/bin", join(home, ".local", "bin"), join(home, "Library", "pnpm"), join(home, ".local", "share", "pnpm"));
+    }
+    directories.push(dirname(nodeExecutable()));
+    return [...new Set(directories.filter(Boolean))];
+}
+export function proxyEnvForPnpm(env = process.env) {
+    const output = {};
+    const httpsProxy = env.https_proxy || env.HTTPS_PROXY || env.http_proxy || env.HTTP_PROXY;
+    const httpProxy = env.http_proxy || env.HTTP_PROXY || httpsProxy;
+    const noProxy = env.no_proxy || env.NO_PROXY;
+    if (httpsProxy && !env.npm_config_https_proxy)
+        output.npm_config_https_proxy = httpsProxy;
+    if (httpProxy && !env.npm_config_proxy)
+        output.npm_config_proxy = httpProxy;
+    if (noProxy && !env.npm_config_noproxy)
+        output.npm_config_noproxy = noProxy;
+    return output;
+}
+function spawnEnvironment() {
+    const paths = (process.env.PATH ?? "").split(delimiter).filter(Boolean);
+    for (const directory of toolSearchDirs()) {
+        if (!paths.includes(directory))
+            paths.push(directory);
+    }
+    return {
+        ...process.env,
+        ...proxyEnvForPnpm(),
+        CI: "true",
+        PATH: paths.join(delimiter),
+    };
+}
 export const progress = {
     active: false,
     fullName: null,
@@ -107,6 +152,7 @@ function rememberLine(text) {
         progress.lastLine = lines[lines.length - 1].slice(0, 200);
 }
 export function runDshPlugin(profile, pluginArgs, meta) {
+    pluginArgs = pluginArgsFor(profileDir(profile), pluginArgs);
     const target = pluginArgs[pluginArgs.length - 1] ?? "";
     if (!SAFE_TARGET_RE.test(target)) {
         return Promise.resolve({
@@ -128,7 +174,7 @@ export function runDshPlugin(profile, pluginArgs, meta) {
     return new Promise((resolvePromise) => {
         const child = spawnShim(file, [...args, "plugin", "--profile", profile, ...pluginArgs], {
             cwd,
-            env: { ...process.env, CI: "true" },
+            env: spawnEnvironment(),
             stdio: ["ignore", "pipe", "pipe"],
             viaShell,
             detached: process.platform !== "win32",
@@ -188,7 +234,7 @@ export function runDshProfileCheck(profile) {
     return new Promise((resolvePromise) => {
         const child = spawnShim(file, [...args, "--profile", profile, "--dump-config"], {
             cwd,
-            env: { ...process.env, CI: "true" },
+            env: spawnEnvironment(),
             stdio: ["ignore", "pipe", "pipe"],
             viaShell,
             detached: process.platform !== "win32",
