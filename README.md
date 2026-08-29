@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="./CHANGELOG.md"><img alt="正式版本 v1.0.1" src="https://img.shields.io/badge/release-v1.0.1-2f6f68?style=flat-square"></a>
+  <a href="./CHANGELOG.md"><img alt="正式版本 v1.0.2" src="https://img.shields.io/badge/release-v1.0.2-2f6f68?style=flat-square"></a>
   <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-Top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
