@@ -4,7 +4,7 @@
 
 **[一键下载并查看接入 DSH 指南](https://www.dsheval.ai/?page=dsh#dsh)**
 
-当前正式版本：**v1.0.2**。
+当前源码版本：**v1.1.0**。
 
 需要 **dsh web 0.1.0-rc.6+**。本机开发按官方手册的 bundle 安装方式挂载。
 
@@ -75,10 +75,11 @@ Host 端读取 DSHeval 的同一份榜单快照。Top 100 和新锐首屏优先�
 ```text
 https://www.dsheval.ai/data/rankings-hot.json
 https://www.dsheval.ai/data/rankings-rising.json
+https://www.dsheval.ai/data/rankings-search.json
 https://www.dsheval.ai/data/rankings.json
 ```
 
-总榜、分类和全库搜索按需读取完整文件。成功响应会缓存在 `$DSH_HOME/cache/dsh-top100/`；缓存过期后先返回上一次有效榜单，再在后台刷新，因此短时网络波动不会阻塞已缓存页面。相同数据请求会自动合并，避免并发重复下载。
+总榜、分类、全库搜索和 Agent 推荐读取紧凑检索索引；体积更大的完整目录只在安装预检需要权威安装元数据时按需读取。成功响应会缓存在 `$DSH_HOME/cache/dsh-top100/`；缓存过期后先返回上一次有效榜单，再在后台刷新，因此短时网络波动不会阻塞已缓存页面。相同数据请求会自动合并，避免并发重复下载。
 
 分类榜与网页版共用该文件中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent增强、外观、编程、知识获取、工具和安全；线上名称、说明和数量更新后，插件会随榜单数据同步。
 
@@ -103,11 +104,13 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 - 浏览器不直连榜单域名，由 Host 拉取。
 - 设置页确认安装只对作者明确提供、且验证通过的 `dsh plugin add` 目标开放；其他条目保持只读浏览。
 - 不执行 README 里的安装命令。
-- npm 目标支持 `@latest` 和精确版本；验证遇到 404、GitHub 限流或缺失 `dsh.bundle` 时立即停止，不再猜测其他来源。
+- 用户确认前，npm selector 会解析成精确版本，GitHub 来源会解析成 40 位 commit；确认页展示目录声明、实际安装目标、完整性信息、生命周期脚本和风险。
+- npm 包声明的 GitHub repository 如与目录仓库冲突会停止安装；未声明可识别仓库时会明确提示身份无法自动绑定。
 - GitHub 验证会复用 `GITHUB_TOKEN` 或 `GH_TOKEN`（如已配置）并缓存成功结果；没有 Token 时受 GitHub 匿名额度限制。
-- Cordis 插件写入当前 profile；Skill 克隆后只复制合法目录到 `~/.dsh/skills`。
+- Cordis 插件写入当前 profile；Skill 固定到预检 commit 后只复制合法目录到 `~/.dsh/skills`，并记录文件清单与 SHA-256 内容摘要。
+- 安装来源证据写入当前 Profile 的 `.dsh-top100/provenance.json`；一次性确认 Token 不会落盘。
 - 同一 profile 的 `pnpm add` 串行执行；Skill 下载最多 3 路并发。
-- 安装前后都会执行 DSH profile 配置检查；新插件导致检查失败时尝试自动移除该插件。
+- 安装前后都会执行 DSH profile 配置检查；新插件导致检查失败时尝试自动移除该插件。配置检查通过只表示 Profile 可组合，界面会继续显示“需重启/运行时未知”，不会宣称插件已经运行。
 - 安装接口只接受同源 POST。
 - 启停只写当前 profile 的用户 `cordis.patch.yml`，不修改第三方插件文件。
 - 更新和卸载复用同一 profile 串行队列；受保护包不能从页面修改。

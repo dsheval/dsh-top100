@@ -2,11 +2,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, normalizeDataUrl, } from "./catalog.js";
+import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, loadSearchRankings, normalizeDataUrl, } from "./catalog.js";
 import { cancelActive, progress, runDshPlugin, runDshProfileCheck, } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
-import { FULL_NAME_RE, resolveInstallSpec } from "../install/install-spec.js";
-import { verifyInstallSpec } from "../install/install-verify.js";
+import { FULL_NAME_RE, isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
 import { withPnpmRecovery } from "../install/pnpm-compat.js";
 import { dropFromManifest, INBOX_BUNDLES, isDshProfileName, profileDir, readInstalled, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
@@ -14,6 +13,8 @@ import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
 import { isProtectedPackage, parseDshPatchText, rowIdsForPackage, setPackageEnabled, userPatchPackageReferences, userPatchPath, } from "./patch-toggle.js";
 import { installSkill } from "../install/skill-install.js";
+import { consumeInstallApproval, createInstallPreflight } from "./install-preflight.js";
+import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
 import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
 const MAX_BATCH_SIZE = 20;
 const MAX_SKILL_CONCURRENCY = 3;
@@ -110,6 +111,8 @@ function publicJob(job) {
         error: job.error,
         message: job.message,
         requiresRestart: job.requiresRestart,
+        activationState: job.activationState,
+        provenance: job.provenance,
         createdAt: job.createdAt,
         startedAt: job.startedAt,
         finishedAt: job.finishedAt,
@@ -121,6 +124,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
         id: id("job"), batchId: batch.id, fullName: name, profile: config.profile, action, kind,
         phase: "queued", lastLine: action === "update" ? "等待更新" : "等待卸载",
         error: null, message: null, requiresRestart: false, cancelRequested: false,
+        activationState: "pending", provenance: null,
         controller: new AbortController(), createdAt: Date.now(), startedAt: null, finishedAt: null,
     };
     jobs.set(job.id, job);
@@ -132,7 +136,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                     throw new Error("Skill 不支持从排行页更新");
                 updateJob(job, "installing", { lastLine: "正在移除 Skill" });
                 uninstallSkill(name);
-                updateJob(job, "installed", { message: "uninstalled", requiresRestart: false, lastLine: "已卸载" });
+                updateJob(job, "installed", { message: "uninstalled", requiresRestart: false, activationState: "not-applicable", lastLine: "已卸载" });
             }
             catch (error) {
                 failJob(job, error);
@@ -197,6 +201,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                         invalidateCatalog();
                         updateJob(job, "installed", {
                             requiresRestart: true,
+                            activationState: "restart-required",
                             message: "uninstalled",
                             lastLine: "卸载已完成，并清理了残留配置",
                         });
@@ -230,7 +235,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                 cleanupAfterUninstall(config.profile, name, cleanupRows, config.profileDirectory);
             }
             invalidateCatalog();
-            updateJob(job, "installed", { requiresRestart: true, message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成" : "已卸载" });
+            updateJob(job, "installed", { requiresRestart: true, activationState: "restart-required", message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成，重启后验证运行状态" : "已卸载，重启后确认运行状态" });
         }
         catch (error) {
             failJob(job, error);
@@ -275,6 +280,7 @@ function updateJob(job, phase, patch = {}) {
 function failJob(job, error) {
     updateJob(job, job.cancelRequested ? "cancelled" : "failed", {
         error: error instanceof Error ? error.message : String(error),
+        activationState: job.cancelRequested ? "unknown" : "broken",
     });
 }
 function pumpProfile(profile) {
@@ -314,12 +320,6 @@ function enqueueSkill(run) {
     skillQueue.push(run);
     pumpSkills();
 }
-function alreadyInstalled(entry, spec, profile, explicitDir) {
-    return Object.entries(readInstalled(profile, explicitDir)).some(([name, value]) => {
-        const haystack = `${name} ${value}`.toLowerCase();
-        return haystack.includes(entry.fullName.toLowerCase()) || haystack.includes(spec.toLowerCase());
-    });
-}
 async function prepareJob(job, config, commandRuntime) {
     try {
         if (job.cancelRequested) {
@@ -327,10 +327,11 @@ async function prepareJob(job, config, commandRuntime) {
             return;
         }
         updateJob(job, "validating", { lastLine: "正在验证安装源" });
-        const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
-        const entry = await findPublishedEntry(dataUrl, job.fullName);
-        if (!entry)
-            throw new Error("plugin is not in the published catalog");
+        const approval = job.approval;
+        if (!approval)
+            throw new Error("缺少安装预检确认，请重新检查来源与风险");
+        assertProvenanceLedgerReadable(config);
+        const entry = approval.entry;
         if (entry.type?.toLowerCase() === "skill") {
             updateJob(job, "queued", { lastLine: "等待 Skill 下载队列" });
             enqueueSkill(async () => {
@@ -340,15 +341,38 @@ async function prepareJob(job, config, commandRuntime) {
                 }
                 try {
                     updateJob(job, "downloading", { lastLine: "正在下载并验证 Skill" });
-                    const skills = await installSkill(entry.fullName, { signal: job.controller.signal });
+                    const commit = approval.skillSource?.commit;
+                    if (!commit)
+                        throw new Error("Skill 安装确认缺少不可变 commit");
+                    const skills = await installSkill(entry.fullName, { signal: job.controller.signal, commit });
                     if (job.cancelRequested) {
                         updateJob(job, "cancelled");
                         return;
                     }
+                    try {
+                        recordInstallProvenance(config, approval.preflight, skills);
+                    }
+                    catch (error) {
+                        const cleanupErrors = [];
+                        for (const skill of skills.filter((item) => !item.alreadyInstalled)) {
+                            try {
+                                uninstallSkill(skill.name);
+                            }
+                            catch (cleanupError) {
+                                cleanupErrors.push(cleanupError instanceof Error ? cleanupError.message : String(cleanupError));
+                            }
+                        }
+                        throw new Error([
+                            `Skill 来源台账写入失败，已撤销本次新增内容：${error instanceof Error ? error.message : String(error)}`,
+                            cleanupErrors.length > 0 ? `清理失败：${cleanupErrors.join("；")}` : "",
+                        ].filter(Boolean).join("；"));
+                    }
                     updateJob(job, "installed", {
                         message: `已安装 Skill：${skills.map((item) => item.name).join("、")}`,
                         requiresRestart: false,
-                        lastLine: "安装完成",
+                        activationState: "not-applicable",
+                        provenance: approval.preflight.provenance,
+                        lastLine: "Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性",
                     });
                 }
                 catch (error) {
@@ -357,13 +381,14 @@ async function prepareJob(job, config, commandRuntime) {
             });
             return;
         }
+        const resolvedTarget = approval.bundleTarget;
+        if (!resolvedTarget)
+            throw new Error("Bundle 安装确认缺少已验证目标");
         const spec = resolveInstallSpec(entry);
         if (!spec)
             throw new Error("this catalog entry has no trusted DSH install source");
-        let target = spec.spec;
+        const target = resolvedTarget.target;
         let buildApprovalKeys = [];
-        const resolvedTarget = await verifyInstallSpec(spec);
-        target = resolvedTarget.target;
         if (resolvedTarget.needsBuildApproval) {
             if (!resolvedTarget.packageName)
                 throw new Error("插件需要构建，但 package.json 缺少 name");
@@ -371,11 +396,13 @@ async function prepareJob(job, config, commandRuntime) {
                 throw new Error("插件需要构建，但没有可验证的 allowBuilds 键");
             buildApprovalKeys = resolvedTarget.buildApprovalKeys;
         }
-        if (alreadyInstalled(entry, spec.spec, config.profile, config.profileDirectory)) {
+        if (isInstalledEntry(entry, readInstalled(config.profile, config.profileDirectory))) {
             updateJob(job, "installed", {
                 message: "already installed",
                 requiresRestart: false,
-                lastLine: "已安装",
+                activationState: "unknown",
+                provenance: null,
+                lastLine: "Profile 已声明该插件；当前进程运行状态尚未验证",
             });
             return;
         }
@@ -401,15 +428,14 @@ async function prepareJob(job, config, commandRuntime) {
                     updateJob(job, "cancelled", { lastLine: "已取消" });
                     return;
                 }
+                const manifestBefore = readProfileManifestSnapshot(config.profile, config.profileDirectory);
                 if (buildApprovalKeys.length > 0)
                     allowPackageBuild(config.profile, buildApprovalKeys, config.profileDirectory);
                 job.lastLine = "正在写入 DSH profile";
-                const manifestBefore = readProfileManifestSnapshot(config.profile, config.profileDirectory);
                 const result = await runProfilePlugin(config, ["add", target], job.fullName, commandRuntime);
                 const ok = result.exitCode === 0 && !result.timedOut && !result.cancelled;
                 if (!ok) {
-                    if (!result.cancelled)
-                        restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
+                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
                     throw new Error(installFailure(result));
                 }
                 job.lastLine = "正在验证安装后的 DSH 配置";
@@ -427,10 +453,27 @@ async function prepareJob(job, config, commandRuntime) {
                     throw new Error(`插件安装后未通过 DSH 配置验证${rolledBack ? "，已自动回滚" : "，自动回滚失败，请手动移除"}：${installFailure(after)}`);
                 }
                 invalidateCatalog();
+                try {
+                    recordInstallProvenance(config, approval.preflight);
+                }
+                catch (error) {
+                    const packageName = resolvedTarget.packageName;
+                    const rollback = packageName
+                        ? await runProfilePlugin(config, ["remove", packageName], job.fullName, commandRuntime)
+                        : null;
+                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
+                    const rolledBack = rollback !== null
+                        && rollback.exitCode === 0
+                        && !rollback.timedOut
+                        && !rollback.cancelled;
+                    throw new Error(`插件已写入但安装来源台账保存失败${rolledBack ? "，已自动回滚" : "，自动回滚失败，请手动移除"}：${error instanceof Error ? error.message : String(error)}`);
+                }
                 updateJob(job, "installed", {
                     requiresRestart: true,
+                    activationState: "restart-required",
+                    provenance: approval.preflight.provenance,
                     message: "installed",
-                    lastLine: "安装完成",
+                    lastLine: "已写入且配置可组合；重启 DSH 后再验证实际运行状态",
                 });
             }
             catch (error) {
@@ -445,22 +488,27 @@ async function prepareJob(job, config, commandRuntime) {
         failJob(job, error);
     }
 }
-function createBatch(fullNames, config, commandRuntime) {
+function createBatch(approvals, config, commandRuntime) {
     const batchId = id("batch");
     const batch = { id: batchId, createdAt: Date.now(), jobIds: [] };
     batches.set(batchId, batch);
-    for (const fullName of [...new Set(fullNames)]) {
+    const unique = new Map(approvals.map((approval) => [approval.entry.fullName, approval]));
+    for (const [fullName, approval] of unique) {
         const job = {
             id: id("job"),
             batchId,
             fullName,
             profile: config.profile,
+            action: "install",
             phase: "queued",
             lastLine: "等待验证",
             error: null,
             message: null,
             requiresRestart: false,
+            activationState: "pending",
+            provenance: approval.preflight.provenance,
             cancelRequested: false,
+            approval,
             controller: new AbortController(),
             createdAt: Date.now(),
             startedAt: null,
@@ -542,12 +590,14 @@ export function mountRoutes(host, config, commandRuntime) {
                     : view === "category" ? "ai" : null;
                 const q = (query.get("q") ?? "").trim();
                 const excludeSkills = query.get("skills") === "0";
+                const compatibleOnly = query.get("scope") !== "all";
                 const offset = Math.max(0, Number(query.get("offset") ?? 0) || 0);
                 const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
                 try {
-                    const document = q === "" && (view === "hot" || view === "rising")
+                    const usesViewShard = q === "" && (view === "hot" || view === "rising");
+                    const document = usesViewShard
                         ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
-                        : await safeLoad(config);
+                        : await loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
                     const installed = readInstalled(config.profile, config.profileDirectory);
                     const { total, items } = filterCatalog(document, {
                         view,
@@ -557,7 +607,9 @@ export function mountRoutes(host, config, commandRuntime) {
                         limit,
                         installed,
                         excludeSkills,
+                        compatibleOnly,
                     });
+                    const cache = await catalogCacheStatus(config.dataUrl || DEFAULT_DATA_URL, usesViewShard ? "view-shard" : "search-index", usesViewShard ? view : undefined);
                     sendJson(response, 200, {
                         view,
                         category,
@@ -567,6 +619,8 @@ export function mountRoutes(host, config, commandRuntime) {
                         dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
                         query: q,
                         excludeSkills,
+                        compatibleOnly,
+                        cache,
                         total,
                         offset,
                         limit,
@@ -575,6 +629,34 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 catch (error) {
                     sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) });
+                }
+            },
+        }),
+        host.webServer.register({
+            kind: "exact",
+            path: "/dsh-top100/install-preflight",
+            async handler(request, response) {
+                if (request.method !== "POST" || !sameOrigin(request)) {
+                    sendJson(response, 403, { error: "same-origin POST required" });
+                    return;
+                }
+                try {
+                    const body = readBodyRecord(await readJsonBody(request));
+                    const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
+                    if (!FULL_NAME_RE.test(fullName)) {
+                        sendJson(response, 400, { error: "fullName must be owner/repo" });
+                        return;
+                    }
+                    const entry = await findPublishedEntry(config.dataUrl || DEFAULT_DATA_URL, fullName);
+                    if (!entry) {
+                        sendJson(response, 404, { error: "plugin is not in the current published catalog" });
+                        return;
+                    }
+                    const approval = await createInstallPreflight(entry, config.profile);
+                    sendJson(response, 200, approval.preflight);
+                }
+                catch (error) {
+                    sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
                 }
             },
         }),
@@ -623,15 +705,22 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
-                    const requested = Array.isArray(body.fullNames) ? body.fullNames : [];
-                    const fullNames = requested
-                        .filter((value) => typeof value === "string")
-                        .map((value) => value.trim());
-                    if (fullNames.length === 0 || fullNames.length > MAX_BATCH_SIZE || fullNames.some((value) => !FULL_NAME_RE.test(value))) {
-                        sendJson(response, 400, { error: `fullNames must contain 1-${MAX_BATCH_SIZE} owner/repo values` });
+                    const requested = Array.isArray(body.approvals) ? body.approvals : [];
+                    const references = requested.flatMap((value) => {
+                        if (value === null || typeof value !== "object")
+                            return [];
+                        const record = value;
+                        const fullName = typeof record.fullName === "string" ? record.fullName.trim() : "";
+                        const approvalToken = typeof record.approvalToken === "string" ? record.approvalToken.trim() : "";
+                        const risksAccepted = record.risksAccepted === true;
+                        return fullName && approvalToken ? [{ fullName, approvalToken, risksAccepted }] : [];
+                    });
+                    if (references.length === 0 || references.length > MAX_BATCH_SIZE || references.some(({ fullName }) => !FULL_NAME_RE.test(fullName))) {
+                        sendJson(response, 400, { error: `approvals must contain 1-${MAX_BATCH_SIZE} preflight tokens` });
                         return;
                     }
-                    sendJson(response, 202, createBatch(fullNames, config, commandRuntime));
+                    const approvals = references.map(({ fullName, approvalToken, risksAccepted }) => (consumeInstallApproval(approvalToken, fullName, config.profile, risksAccepted)));
+                    sendJson(response, 202, createBatch(approvals, config, commandRuntime));
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -660,7 +749,7 @@ export function mountRoutes(host, config, commandRuntime) {
                             }], commandRuntime));
                         return;
                     }
-                    sendJson(response, 202, createBatch([previous.fullName], config, commandRuntime));
+                    sendJson(response, 409, { error: "install retry requires a new preflight and risk confirmation" });
                 }
                 catch (error) {
                     sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
@@ -830,12 +919,19 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 const record = readBodyRecord(body);
                 const fullName = typeof record.fullName === "string" ? record.fullName.trim() : "";
+                const approvalToken = typeof record.approvalToken === "string" ? record.approvalToken.trim() : "";
+                const risksAccepted = record.risksAccepted === true;
                 if (!FULL_NAME_RE.test(fullName)) {
                     sendJson(response, 400, { error: "fullName must be owner/repo" });
                     return;
                 }
+                if (!approvalToken) {
+                    sendJson(response, 409, { error: "install preflight approval is required" });
+                    return;
+                }
                 try {
-                    const snapshot = createBatch([fullName], config, commandRuntime);
+                    const approval = consumeInstallApproval(approvalToken, fullName, config.profile, risksAccepted);
+                    const snapshot = createBatch([approval], config, commandRuntime);
                     sendJson(response, 202, {
                         ok: true,
                         ...snapshot,

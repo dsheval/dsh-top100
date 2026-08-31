@@ -12,7 +12,7 @@ import type {
   PluginCategoryId,
   RankingsDocument,
 } from "../shared/types.js";
-import { filterCatalog, loadRankings } from "./catalog.js";
+import { filterCatalog, loadSearchRankings } from "./catalog.js";
 import type { PluginResolvedConfig } from "./contracts.js";
 import { readInstalled } from "./profile.js";
 
@@ -45,6 +45,10 @@ export interface RecommendationItem {
   categories: string[];
   installable: boolean;
   installed: boolean;
+  formFactor: string;
+  trustLevel: string;
+  trustSignals: string[];
+  trustCaveat: string;
   repositoryUrl: string;
 }
 
@@ -122,6 +126,7 @@ export function recommendationResult(
     offset: 0,
     limit,
     installed: options.installed ?? {},
+    compatibleOnly: true,
   });
   return {
     query,
@@ -140,6 +145,10 @@ export function recommendationResult(
       categories: categoryLabels(document, item),
       installable: item.installable,
       installed: item.installed,
+      formFactor: item.evidence.formFactor,
+      trustLevel: item.evidence.trustLevel,
+      trustSignals: item.evidence.signals,
+      trustCaveat: item.evidence.caveat,
       repositoryUrl: item.url,
     })),
   };
@@ -161,6 +170,8 @@ export function formatRecommendationResult(result: RecommendationSearchResult): 
     lines.push(
       `${index + 1}. ${item.fullName} — ${item.description}`,
       `   类型：${item.type}；分类：${category}；Stars：${item.stars}；日增：${item.dailyStars}；周增：${item.weeklyStars}；${install}`,
+      `   形态：${item.formFactor}；信任层：${item.trustLevel}；证据：${item.trustSignals.join("、")}`,
+      `   注意：${item.trustCaveat}`,
       `   ${item.repositoryUrl}`,
     );
   }
@@ -221,6 +232,10 @@ export function installRecommendationCapabilities(
                 categories: { type: "array", required: true, items: { type: "string" } },
                 installable: { type: "boolean", required: true },
                 installed: { type: "boolean", required: true },
+                formFactor: { type: "string", required: true },
+                trustLevel: { type: "string", required: true },
+                trustSignals: { type: "array", required: true, items: { type: "string" } },
+                trustCaveat: { type: "string", required: true },
                 repositoryUrl: { type: "string", required: true },
               },
             },
@@ -232,7 +247,7 @@ export function installRecommendationCapabilities(
     isConcurrencySafe: () => true,
     async execute(args) {
       const category = args.category === undefined ? null : args.category;
-      const document = await loadRankings(config.dataUrl);
+      const document = await loadSearchRankings(config.dataUrl);
       return recommendationResult(document, {
         query: args.query,
         limit: args.limit,

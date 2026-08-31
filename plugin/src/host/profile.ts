@@ -49,6 +49,7 @@ export interface ProfileManifestSnapshot {
   dependencies: Record<string, string>;
   profileBundles: { present: false } | { present: true; value: unknown };
   lockfile: { present: false } | { present: true; value: string };
+  workspace: { present: false } | { present: true; value: string };
 }
 
 function objectRecord(value: unknown): Record<string, unknown> | undefined {
@@ -63,7 +64,7 @@ function writeManifestAtomic(path: string, manifest: unknown): void {
   renameSync(temporary, path);
 }
 
-/** Capture the two package-operation fields mutated by `dsh plugin`. */
+/** Capture every profile file or field that a package operation may mutate. */
 export function readProfileManifestSnapshot(
   profile: string,
   explicitDir?: string,
@@ -77,15 +78,24 @@ export function readProfileManifestSnapshot(
     const lockPath = join(profileDir(profile, explicitDir), "pnpm-lock.yaml");
     let lockfile: ProfileManifestSnapshot["lockfile"] = { present: false };
     try { lockfile = { present: true, value: readFileSync(lockPath, "utf8") }; } catch { /* absent */ }
+    const workspacePath = join(profileDir(profile, explicitDir), "pnpm-workspace.yaml");
+    let workspace: ProfileManifestSnapshot["workspace"] = { present: false };
+    try { workspace = { present: true, value: readFileSync(workspacePath, "utf8") }; } catch { /* absent */ }
     return {
       dependencies: { ...manifest.dependencies },
       profileBundles: present
         ? { present: true, value: structuredClone(profileManifest.bundles) }
         : { present: false },
       lockfile,
+      workspace,
     };
   } catch {
-    return { dependencies: {}, profileBundles: { present: false }, lockfile: { present: false } };
+    return {
+      dependencies: {},
+      profileBundles: { present: false },
+      lockfile: { present: false },
+      workspace: { present: false },
+    };
   }
 }
 
@@ -125,6 +135,13 @@ export function restoreProfileManifest(
     ? currentLock !== snapshot.lockfile.value
     : currentLock !== null;
   if (lockChanged) changed.add("pnpm-lock.yaml");
+  const workspacePath = join(profileDir(profile, explicitDir), "pnpm-workspace.yaml");
+  let currentWorkspace: string | null = null;
+  try { currentWorkspace = readFileSync(workspacePath, "utf8"); } catch { /* absent */ }
+  const workspaceChanged = snapshot.workspace.present
+    ? currentWorkspace !== snapshot.workspace.value
+    : currentWorkspace !== null;
+  if (workspaceChanged) changed.add("pnpm-workspace.yaml");
   if (changed.size === 0) return [];
 
   manifest.dependencies = { ...snapshot.dependencies };
@@ -145,6 +162,15 @@ export function restoreProfileManifest(
       renameSync(temporary, lockPath);
     } else if (existsSync(lockPath)) {
       unlinkSync(lockPath);
+    }
+  }
+  if (workspaceChanged) {
+    if (snapshot.workspace.present) {
+      const temporary = `${workspacePath}.${process.pid}.${Date.now()}.tmp`;
+      writeFileSync(temporary, snapshot.workspace.value, "utf8");
+      renameSync(temporary, workspacePath);
+    } else if (existsSync(workspacePath)) {
+      unlinkSync(workspacePath);
     }
   }
   return [...changed];

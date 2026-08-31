@@ -117,6 +117,7 @@ export function ManagedPage({ t, initialQuery = "" }: { t: Translate; initialQue
                 <div className="facts">
                   <span className="badge">{t(item.kind === "skill" ? "skillKind" : "bundleKind")}</span>
                   <span className={`badge${item.enabled ? "" : " muted"}`}>{t(item.enabled ? "enabled" : "disabled")}</span>
+                  <span className={`badge activation-${item.activationState}`}>{t(`activation_${item.activationState}`)}</span>
                   <span>{t("version")}: {item.version ?? "—"}</span>
                   {item.latest ? <span>{t("latest")}: {item.latest}</span> : null}
                   {item.fullName && item.fullName !== item.name ? <span>{t("project")}: {item.fullName}</span> : null}

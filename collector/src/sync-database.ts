@@ -19,6 +19,7 @@ import {
 } from "./llm.js";
 import { runPool } from "./pool.js";
 import { buildRankings } from "./rankings.js";
+import { buildSearchIndex } from "./search-index.js";
 import {
   categorySourceHash,
   importMarketData,
@@ -29,10 +30,10 @@ import {
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
-function atomicJson(path: string, value: unknown): void {
+function atomicJson(path: string, value: unknown, compact = false): void {
   mkdirSync(dirname(path), { recursive: true });
   const temporary = `${path}.${process.pid}.tmp`;
-  writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, "utf8");
+  writeFileSync(temporary, `${JSON.stringify(value, null, compact ? 0 : 2)}\n`, "utf8");
   renameSync(temporary, path);
 }
 
@@ -182,6 +183,7 @@ async function main(): Promise<void> {
       ...rankings,
       rankings: rankings.rankings.hot,
     });
+    atomicJson(resolve(publicDirectory, "rankings-search.json"), buildSearchIndex(rankings), true);
     atomicJson(resolve(publicDirectory, "top-stars.json"), {
       schemaVersion: 2,
       generatedAt: rankings.generatedAt,

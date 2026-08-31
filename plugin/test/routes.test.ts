@@ -3,13 +3,25 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { WebServerService } from "../src/host/contracts.js";
 import { mountRoutes } from "../src/host/routes.js";
+import { invalidateCatalog } from "../src/host/catalog.js";
+import { clearInstallApprovals } from "../src/host/install-preflight.js";
+import { clearInstallVerificationCache } from "../src/install/install-verify.js";
 import type { InstallResult } from "../src/shared/types.js";
 import type { PluginCommandRuntime } from "../src/install/dsh-cli.js";
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void | Promise<void>;
+const temporaryProfiles: string[] = [];
+
+afterEach(() => {
+  invalidateCatalog();
+  clearInstallApprovals();
+  clearInstallVerificationCache();
+  vi.unstubAllGlobals();
+  for (const directory of temporaryProfiles.splice(0)) rmSync(directory, { recursive: true, force: true });
+});
 
 function routeHarness() {
   const routes = new Map<string, Handler>();
@@ -46,6 +58,7 @@ function ok(): InstallResult {
 
 function profileFixture(name: string): string {
   const directory = mkdtempSync(join(tmpdir(), `dsh-top100-${name}-`));
+  temporaryProfiles.push(directory);
   const packageDir = join(directory, "node_modules", "demo");
   mkdirSync(packageDir, { recursive: true });
   writeFileSync(join(packageDir, "package.json"), JSON.stringify({
@@ -77,6 +90,146 @@ async function waitForBatch(
 }
 
 describe("plugin lifecycle routes", () => {
+  it("carries the preflight's exact npm version through the install job", async () => {
+    invalidateCatalog();
+    clearInstallApprovals();
+    clearInstallVerificationCache();
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-route-install-"));
+    temporaryProfiles.push(directory);
+    writeFileSync(join(directory, "package.json"), `${JSON.stringify({
+      dependencies: {},
+      dsh: { profile: { bundles: [] } },
+    }, null, 2)}\n`);
+    writeFileSync(join(directory, "pnpm-workspace.yaml"), "packages:\n  - .\n");
+    const catalogEntry = {
+      rank: 1, fullName: "acme/fresh", name: "fresh", owner: "acme",
+      description: "Fresh plugin", descriptionZh: "新插件", stars: 1, dailyStars: 0,
+      weeklyStars: 0, hotScore: 0, forks: 0, openIssues: 0, language: null,
+      homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add fresh@latest"] },
+      sources: [], url: "https://github.com/acme/fresh", pushedAt: "", createdAt: "", updatedAt: "",
+    };
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.endsWith("/rankings.json")) {
+        return new Response(JSON.stringify({
+          schemaVersion: 2, generatedAt: "2026-08-31T00:00:00Z", snapshotDate: "2026-08-31",
+          rankings: { hot: [], rising: [], total: [catalogEntry] },
+        }), { status: 200 });
+      }
+      if (value.includes("registry.npmjs.org/fresh/latest")) {
+        return new Response(JSON.stringify({
+          name: "fresh", version: "1.2.3", repository: "https://github.com/acme/fresh.git",
+          dist: { integrity: "sha512-fresh" }, dsh: { bundle: { patch: "./cordis.patch.yml" } },
+        }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const harness = routeHarness();
+    const runPlugin = vi.fn(async () => ok());
+    mountRoutes(harness, {
+      dataUrl: "https://install-flow.example.invalid/data",
+      profile: "web",
+      profileDirectory: directory,
+    }, { runPlugin, checkProfile: vi.fn(async () => ok()), cancelActive: () => false });
+
+    const preflight = await harness.request("/dsh-top100/install-preflight", {
+      method: "POST", body: { fullName: "acme/fresh" },
+    });
+    expect(preflight.status).toBe(200);
+    expect((preflight.body.provenance as Record<string, unknown>).resolvedTarget).toBe("fresh@1.2.3");
+    const accepted = await harness.request("/dsh-top100/install-batch", {
+      method: "POST",
+      body: { approvals: [{ fullName: "acme/fresh", approvalToken: preflight.body.approvalToken }] },
+    });
+    expect(accepted.status).toBe(202);
+    const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+    expect(job).toMatchObject({ phase: "installed", activationState: "restart-required" });
+    expect(runPlugin).toHaveBeenCalledWith("web", ["add", "fresh@1.2.3"], expect.any(Object));
+    expect(readFileSync(join(directory, ".dsh-top100", "provenance.json"), "utf8"))
+      .toContain("fresh@1.2.3");
+  });
+
+  it("rejects direct installs that bypass immutable-source preflight", async () => {
+    const directory = profileFixture("route-preflight-required");
+    const harness = routeHarness();
+    mountRoutes(harness, { dataUrl: "https://example.invalid/data", profile: "web", profileDirectory: directory });
+    const response = await harness.request("/dsh-top100/install", {
+      method: "POST",
+      body: { fullName: "acme/demo" },
+    });
+    expect(response.status).toBe(409);
+    expect(response.body.error).toContain("preflight approval");
+  });
+
+  it("restores build approval changes and requires a fresh preflight before retrying an install", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-route-rollback-"));
+    temporaryProfiles.push(directory);
+    writeFileSync(join(directory, "package.json"), `${JSON.stringify({
+      dependencies: {},
+      dsh: { profile: { bundles: [] } },
+    }, null, 2)}\n`);
+    const workspaceBefore = "packages:\n  - .\n";
+    writeFileSync(join(directory, "pnpm-workspace.yaml"), workspaceBefore);
+    const catalogEntry = {
+      rank: 1, fullName: "acme/risky", name: "risky", owner: "acme",
+      description: "Risky plugin", descriptionZh: "需要构建的插件", stars: 1, dailyStars: 0,
+      weeklyStars: 0, hotScore: 0, forks: 0, openIssues: 0, language: null,
+      homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add risky@latest"] },
+      sources: [], url: "https://github.com/acme/risky", pushedAt: "", createdAt: "", updatedAt: "",
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.endsWith("/rankings.json")) {
+        return new Response(JSON.stringify({
+          schemaVersion: 2, generatedAt: "2026-08-31T00:00:00Z", snapshotDate: "2026-08-31",
+          rankings: { hot: [], rising: [], total: [catalogEntry] },
+        }), { status: 200 });
+      }
+      if (value.includes("registry.npmjs.org/risky/latest")) {
+        return new Response(JSON.stringify({
+          name: "risky", version: "2.0.0", repository: "https://github.com/acme/risky.git",
+          dist: { integrity: "sha512-risky" }, dsh: { bundle: { patch: "./cordis.patch.yml" } },
+          scripts: { prepare: "npm run build" },
+        }), { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    }));
+    const harness = routeHarness();
+    mountRoutes(harness, {
+      dataUrl: "https://rollback.example.invalid/data",
+      profile: "web",
+      profileDirectory: directory,
+    }, {
+      runPlugin: vi.fn(async () => ({ ...ok(), exitCode: 1, stderr: "install failed" })),
+      checkProfile: vi.fn(async () => ok()),
+      cancelActive: () => false,
+    });
+
+    const preflight = await harness.request("/dsh-top100/install-preflight", {
+      method: "POST", body: { fullName: "acme/risky" },
+    });
+    const accepted = await harness.request("/dsh-top100/install-batch", {
+      method: "POST",
+      body: { approvals: [{
+        fullName: "acme/risky",
+        approvalToken: preflight.body.approvalToken,
+        risksAccepted: true,
+      }] },
+    });
+    const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+    expect(job.phase).toBe("failed");
+    expect(readFileSync(join(directory, "pnpm-workspace.yaml"), "utf8")).toBe(workspaceBefore);
+
+    const retry = await harness.request("/dsh-top100/retry", {
+      method: "POST", body: { jobId: job.id },
+    });
+    expect(retry.status).toBe(409);
+    expect(retry.body.error).toContain("preflight");
+  });
+
   it("validates an update and restores the old lockfile when validation fails", async () => {
     const directory = profileFixture("route-update");
     const harness = routeHarness();

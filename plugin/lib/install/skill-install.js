@@ -1,13 +1,15 @@
 /** Install a catalogued Skill without executing repository code or README commands. */
 import { spawn } from "node:child_process";
-import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { basename, join, relative } from "node:path";
 const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-function runGit(args, signal) {
+function runGit(args, signal, cwd) {
     return new Promise((resolve, reject) => {
         const child = spawn("git", args, {
+            cwd,
             shell: false,
             stdio: ["ignore", "pipe", "pipe"],
             signal,
@@ -45,20 +47,98 @@ function rejectSymlinks(path) {
             rejectSymlinks(child);
     }
 }
-function copySkill(source, targetRoot, preferredName) {
+function contentManifest(root) {
+    const files = [];
+    const visit = (directory) => {
+        for (const entry of readdirSync(directory, { withFileTypes: true }).sort((left, right) => left.name.localeCompare(right.name))) {
+            if (entry.name === ".git")
+                continue;
+            const path = join(directory, entry.name);
+            if (entry.isDirectory())
+                visit(path);
+            else if (entry.isFile())
+                files.push(relative(root, path).replaceAll("\\", "/"));
+        }
+    };
+    visit(root);
+    const hash = createHash("sha256");
+    for (const file of files) {
+        hash.update(file);
+        hash.update("\0");
+        hash.update(readFileSync(join(root, file)));
+        hash.update("\0");
+    }
+    return { digest: `sha256-${hash.digest("base64")}`, files };
+}
+function copySkill(source, targetRoot, preferredName, commit) {
     const name = preferredName.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
     if (!SKILL_NAME_RE.test(name))
         throw new Error(`Skill 目录名无效：${name}`);
-    const target = join(targetRoot, name);
-    if (existsSync(target))
-        return { name, alreadyInstalled: true };
     validateSkill(source);
     rejectSymlinks(source);
-    cpSync(source, target, {
-        recursive: true,
-        filter: (path) => basename(path) !== ".git",
-    });
-    return { name, alreadyInstalled: false };
+    const manifest = contentManifest(source);
+    const target = join(targetRoot, name);
+    if (existsSync(target)) {
+        rejectSymlinks(target);
+        const installed = contentManifest(target);
+        if (installed.digest !== manifest.digest) {
+            throw new Error(`Skill ${name} 已存在且内容与已确认 commit 不同；请先备份并卸载旧版本`);
+        }
+        return { name, alreadyInstalled: true, commit, ...installed };
+    }
+    const staging = join(targetRoot, `.${name}.${process.pid}.${Date.now()}.tmp`);
+    try {
+        cpSync(source, staging, {
+            recursive: true,
+            filter: (path) => basename(path) !== ".git",
+        });
+        renameSync(staging, target);
+    }
+    catch (error) {
+        rmSync(staging, { recursive: true, force: true });
+        throw error;
+    }
+    return { name, alreadyInstalled: false, commit, ...manifest };
+}
+function copySkills(candidates, targetRoot, commit, signal) {
+    const installed = [];
+    try {
+        for (const candidate of candidates) {
+            signal?.throwIfAborted();
+            installed.push(copySkill(candidate.source, targetRoot, candidate.name, commit));
+        }
+        return installed;
+    }
+    catch (error) {
+        for (const skill of [...installed].reverse()) {
+            if (!skill.alreadyInstalled)
+                rmSync(join(targetRoot, skill.name), { recursive: true, force: true });
+        }
+        throw error;
+    }
+}
+async function githubJson(url, signal) {
+    const headers = { accept: "application/json", "user-agent": "dsh-top100-plugin" };
+    const token = process.env.GITHUB_TOKEN?.trim() || process.env.GH_TOKEN?.trim();
+    if (token)
+        headers.authorization = `Bearer ${token}`;
+    const response = await fetch(url, { headers, signal: signal ?? AbortSignal.timeout(15_000) });
+    if (!response.ok)
+        throw new Error(`Skill 来源验证失败：${response.status} ${response.statusText || "request failed"}`);
+    return response.json();
+}
+export async function verifySkillSource(fullName, signal) {
+    if (!FULL_NAME_RE.test(fullName))
+        throw new Error("Skill 来源必须是 owner/repo");
+    const repository = await githubJson(`https://api.github.com/repos/${fullName}`, signal);
+    const branch = typeof repository.default_branch === "string" ? repository.default_branch : "main";
+    const commitPayload = await githubJson(`https://api.github.com/repos/${fullName}/commits/${encodeURIComponent(branch)}`, signal);
+    const commit = typeof commitPayload.sha === "string" && /^[0-9a-f]{40}$/i.test(commitPayload.sha)
+        ? commitPayload.sha.toLowerCase()
+        : null;
+    if (!commit)
+        throw new Error("Skill 来源无法解析到不可变 commit");
+    return { fullName, repositoryUrl: `https://github.com/${fullName}`, commit, verifiedAt: Date.now() };
 }
 export async function installSkill(fullName, options = {}) {
     if (!FULL_NAME_RE.test(fullName))
@@ -68,11 +148,23 @@ export async function installSkill(fullName, options = {}) {
     const targetRoot = join(process.env.DSH_HOME ?? join(homedir(), ".dsh"), "skills");
     mkdirSync(targetRoot, { recursive: true });
     try {
-        await runGit(["clone", "--depth", "1", `https://github.com/${fullName}.git`, checkout], options.signal);
+        const source = options.commit
+            ? { commit: options.commit }
+            : await verifySkillSource(fullName, options.signal);
+        if (!/^[0-9a-f]{40}$/i.test(source.commit))
+            throw new Error("Skill commit 格式无效");
+        mkdirSync(checkout, { recursive: true });
+        await runGit(["init", "--quiet"], options.signal, checkout);
+        await runGit(["remote", "add", "origin", `https://github.com/${fullName}.git`], options.signal, checkout);
+        await runGit(["fetch", "--depth", "1", "origin", source.commit], options.signal, checkout);
+        await runGit(["checkout", "--quiet", "--detach", "FETCH_HEAD"], options.signal, checkout);
         options.signal?.throwIfAborted();
         const rootManifest = join(checkout, "SKILL.md");
         if (existsSync(rootManifest)) {
-            return [copySkill(checkout, targetRoot, fullName.split("/")[1] ?? fullName)];
+            return copySkills([{
+                    source: checkout,
+                    name: fullName.split("/")[1] ?? fullName,
+                }], targetRoot, source.commit, options.signal);
         }
         const skillsRoot = ["skills", "skill"]
             .map((name) => join(checkout, name))
@@ -84,7 +176,7 @@ export async function installSkill(fullName, options = {}) {
         if (candidates.length === 0)
             throw new Error("skills/ 下没有可安装的直接子目录");
         options.signal?.throwIfAborted();
-        return candidates.map((entry) => copySkill(join(skillsRoot, entry.name), targetRoot, entry.name));
+        return copySkills(candidates.map((entry) => ({ source: join(skillsRoot, entry.name), name: entry.name })), targetRoot, source.commit, options.signal);
     }
     finally {
         rmSync(temporary, { recursive: true, force: true });

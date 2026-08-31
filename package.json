@@ -1,6 +1,6 @@
 {
   "name": "dsh-top100",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Verified DeepSeek Harness plugin rankings with daily GitHub updates",

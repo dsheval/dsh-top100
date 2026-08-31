@@ -6,6 +6,10 @@ describe("managed plugin updates", () => {
   it("resolves npm and GitHub update targets", () => {
     expect(resolveUpdateTarget("sample-plugin", "^1.0.0")).toBe("sample-plugin@latest");
     expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#main")).toBe("github:owner/repo");
+    expect(resolveUpdateTarget(
+      "sample-plugin",
+      `github:owner/repo#${"a".repeat(40)}&path:/packages/sample`,
+    )).toBe("github:owner/repo#path:/packages/sample");
   });
 
   it("does not overwrite local source links", () => {
@@ -26,8 +30,8 @@ describe("managed plugin Chinese summaries", () => {
 
   it("exposes Chinese management titles, states, kinds, and actions", () => {
     expect(zh.installedManagerTitle).toBe("已安装插件管理");
-    expect(zh.enabled).toBe("已启用");
-    expect(zh.disabled).toBe("已停用");
+    expect(zh.enabled).toBe("配置已启用");
+    expect(zh.disabled).toBe("配置已停用");
     expect(zh.bundleKind).toContain("插件");
     expect(zh.skillKind).toContain("技能");
     expect([zh.enable, zh.disable, zh.update, zh.uninstall]).toEqual(["启用", "停用", "更新", "卸载"]);

@@ -22,7 +22,45 @@ function isBundleManifest(value) {
     const manifest = value;
     return typeof manifest.dsh?.bundle?.patch === "string" && manifest.dsh.bundle.patch.trim().length > 0;
 }
-function verifiedTarget(target, manifest, source, github) {
+function lifecycleScriptEvidence(manifest) {
+    const names = ["preinstall", "install", "postinstall", "prepare"];
+    return names.flatMap((name) => {
+        const command = manifest.scripts?.[name];
+        return typeof command === "string" && command.trim()
+            ? [{ name, command: command.trim() }]
+            : [];
+    });
+}
+function repositoryUrl(value) {
+    if (typeof value === "string" && value.trim())
+        return value.trim();
+    if (value !== null && typeof value === "object") {
+        const url = value.url;
+        return typeof url === "string" && url.trim() ? url.trim() : null;
+    }
+    return null;
+}
+function githubRepositorySlug(value) {
+    const match = value
+        .replace(/^git\+/, "")
+        .replace(/^git@github\.com:/i, "https://github.com/")
+        .match(/github\.com[/:]([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+?)(?:\.git)?(?:[#/]|$)/i);
+    return match ? `${match[1]}/${match[2]}`.toLowerCase() : null;
+}
+function npmRepositoryIdentity(url, expectedRepository) {
+    if (!expectedRepository)
+        return "not-applicable";
+    if (!url)
+        return "unavailable";
+    const actual = githubRepositorySlug(url);
+    if (!actual)
+        return "unavailable";
+    if (actual !== expectedRepository.toLowerCase()) {
+        throw new InstallVerificationError(`npm 包声明的仓库 ${actual} 与目录条目 ${expectedRepository.toLowerCase()} 不一致，已停止安装`, true);
+    }
+    return "matched";
+}
+function verifiedTarget(requestedTarget, target, manifest, source, resolved = {}) {
     // Published npm packages may legitimately keep workspace-only tooling in
     // devDependencies: pnpm does not install it for a registry dependency.
     const sections = source === "github"
@@ -43,25 +81,30 @@ function verifiedTarget(target, manifest, source, github) {
     if (!packageName) {
         throw new InstallVerificationError("项目本身问题：插件 package.json 缺少有效的 name", true);
     }
-    const lifecycleScripts = ["preinstall", "install", "postinstall", "prepare"];
-    const needsBuildApproval = lifecycleScripts.some((name) => {
-        const command = manifest.scripts?.[name];
-        return typeof command === "string" && command.trim() !== "";
-    });
+    const lifecycleScripts = lifecycleScriptEvidence(manifest);
+    const needsBuildApproval = lifecycleScripts.length > 0;
     const buildApprovalKeys = !needsBuildApproval
         ? []
         : source === "npm"
             ? [packageName]
-            : github === undefined
+            : resolved.github === undefined
                 ? []
                 : [
-                    `${packageName}@git+https://github.com/${github.owner}/${github.repo}.git`,
-                    ...(github.sha ? [`${packageName}@https://codeload.github.com/${github.owner}/${github.repo}/tar.gz/${github.sha}`] : []),
+                    `${packageName}@git+https://github.com/${resolved.github.owner}/${resolved.github.repo}.git`,
+                    `${packageName}@https://codeload.github.com/${resolved.github.owner}/${resolved.github.repo}/tar.gz/${resolved.github.sha}`,
                 ];
     return {
+        requestedTarget,
         target,
         source,
         packageName,
+        version: resolved.version ?? (typeof manifest.version === "string" ? manifest.version : null),
+        commit: resolved.commit ?? null,
+        integrity: resolved.integrity ?? null,
+        repositoryUrl: resolved.repositoryUrl ?? null,
+        repositoryIdentity: resolved.repositoryIdentity ?? "not-applicable",
+        lifecycleScripts,
+        verifiedAt: Date.now(),
         needsBuildApproval,
         buildApprovalKeys,
     };
@@ -97,7 +140,7 @@ async function fetchOptionalJson(url) {
         throw error;
     }
 }
-async function verifyNpm(spec) {
+async function verifyNpm(spec, options) {
     const parsed = npmPackageSpec(spec);
     if (!parsed)
         throw new InstallVerificationError("npm 安装源格式无效", true);
@@ -109,12 +152,29 @@ async function verifyNpm(spec) {
     if (!isBundleManifest(manifest)) {
         throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
     }
-    return verifiedTarget(spec, manifest, "npm");
-}
-function hasLifecycleScript(manifest) {
-    return ["preinstall", "install", "postinstall", "prepare"].some((name) => {
-        const command = manifest.scripts?.[name];
-        return typeof command === "string" && command.trim() !== "";
+    const manifestName = manifest.name;
+    const packageName = typeof manifestName === "string" ? manifestName : parsed.name;
+    if (packageName.toLowerCase() !== parsed.name.toLowerCase()) {
+        throw new InstallVerificationError(`npm registry 返回的包名 ${packageName} 与请求目标 ${parsed.name} 不一致，已停止安装`, true);
+    }
+    const version = manifest.version;
+    if (typeof version !== "string" || !version.trim()) {
+        throw new InstallVerificationError("npm registry 返回的包缺少精确 version，已停止安装", true);
+    }
+    const declaredRepository = repositoryUrl(manifest.repository);
+    const integrity = typeof manifest.dist?.integrity === "string"
+        ? manifest.dist?.integrity
+        : typeof manifest.dist?.shasum === "string"
+            ? `sha1-${manifest.dist?.shasum}`
+            : null;
+    if (!integrity) {
+        throw new InstallVerificationError("npm registry 返回的包缺少 integrity/shasum，无法记录可复验摘要", true);
+    }
+    return verifiedTarget(spec, `${packageName}@${version}`, manifest, "npm", {
+        version,
+        integrity,
+        repositoryUrl: declaredRepository,
+        repositoryIdentity: npmRepositoryIdentity(declaredRepository, options.expectedRepository),
     });
 }
 async function githubCommit(owner, repo, ref) {
@@ -123,6 +183,18 @@ async function githubCommit(owner, repo, ref) {
     const payload = await fetchJson(`https://api.github.com/repos/${owner}/${repo}/commits/${encodeURIComponent(ref)}`);
     const sha = payload?.sha;
     return typeof sha === "string" && /^[0-9a-f]{40}$/i.test(sha) ? sha.toLowerCase() : null;
+}
+async function githubDefaultBranch(owner, repo) {
+    const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
+    return typeof repository?.default_branch === "string"
+        ? repository.default_branch
+        : "main";
+}
+async function githubManifest(owner, repo, packagePath, commit) {
+    const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
+    const payload = await fetchOptionalJson(`https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(commit)}`);
+    const manifest = decodeGitHubManifest(payload);
+    return isBundleManifest(manifest) ? manifest : null;
 }
 function githubTargetAtCommit(target, sha) {
     if (!/^[0-9a-f]{40}$/.test(sha))
@@ -133,13 +205,23 @@ function githubTargetAtCommit(target, sha) {
     return `github:${match[1]}#${sha}${match[2] ? `&path:/${match[2]}` : ""}`;
 }
 async function verifiedGitHubTarget(target, manifest, owner, repo, ref) {
-    const sha = hasLifecycleScript(manifest) ? await githubCommit(owner, repo, ref) : null;
-    const value = verifiedTarget(target, manifest, "github", { owner, repo, sha });
+    const sha = await githubCommit(owner, repo, ref);
+    if (!sha)
+        throw new InstallVerificationError("GitHub 安装源无法解析到不可变 commit", true);
+    const pinned = githubTargetAtCommit(target, sha);
+    if (!pinned)
+        throw new InstallVerificationError("GitHub 安装源无法生成不可变安装目标", true);
+    const value = verifiedTarget(target, pinned, manifest, "github", {
+        commit: sha,
+        integrity: `git-sha1-${sha}`,
+        repositoryUrl: `https://github.com/${owner}/${repo}`,
+        repositoryIdentity: "matched",
+        github: { owner, repo, sha },
+    });
     if (value.needsBuildApproval && value.buildApprovalKeys.length < 2) {
         throw new InstallVerificationError("GitHub 构建插件无法解析到不可变 commit，已拒绝写入不完整的 allowBuilds", true);
     }
-    const pinned = sha ? githubTargetAtCommit(target, sha) : null;
-    return pinned ? { ...value, target: pinned } : value;
+    return value;
 }
 function decodeGitHubManifest(payload) {
     if (payload === null || typeof payload !== "object" || typeof payload.content !== "string") {
@@ -152,48 +234,39 @@ function decodeGitHubManifest(payload) {
         return null;
     }
 }
-async function verifyGitHub(spec) {
+async function verifyGitHub(spec, options) {
     const match = spec.match(/^github:([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)(?:#([A-Za-z0-9._~+/:=-]+))?$/);
     if (!match)
         throw new InstallVerificationError("GitHub 安装源格式无效", true);
     const [, owner, repo, selector] = match;
+    const actualRepository = `${owner}/${repo}`.toLowerCase();
+    if (options.expectedRepository && actualRepository !== options.expectedRepository.toLowerCase()) {
+        throw new InstallVerificationError(`GitHub 安装源 ${actualRepository} 与目录条目 ${options.expectedRepository.toLowerCase()} 不一致，已停止安装`, true);
+    }
     const pathSelector = selector?.match(/^path:\/?(.+)$/);
     if (pathSelector) {
-        const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
-        const branch = typeof repository?.default_branch === "string"
-            ? repository.default_branch
-            : "main";
+        const branch = await githubDefaultBranch(owner, repo);
+        const commit = await githubCommit(owner, repo, branch);
+        if (!commit)
+            throw new InstallVerificationError("GitHub 安装源无法解析到不可变 commit", true);
         const packagePath = `${pathSelector[1]}/package.json`;
-        const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
-        const manifest = decodeGitHubManifest(await fetchOptionalJson(`https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`));
-        if (!isBundleManifest(manifest)) {
+        const manifest = await githubManifest(owner, repo, packagePath, commit);
+        if (!manifest) {
             throw new InstallVerificationError("指定 path 子目录没有 dsh.bundle", true);
         }
-        return verifiedGitHubTarget(spec, manifest, owner, repo, branch);
+        return verifiedGitHubTarget(spec, manifest, owner, repo, commit);
     }
     const ref = selector;
-    const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-    const payload = await fetchOptionalJson(`https://api.github.com/repos/${owner}/${repo}/contents/package.json${query}`);
-    const rootManifest = decodeGitHubManifest(payload);
-    if (isBundleManifest(rootManifest)) {
-        if (ref)
-            return verifiedGitHubTarget(spec, rootManifest, owner, repo, ref);
-        if (!hasLifecycleScript(rootManifest)) {
-            return verifiedTarget(spec, rootManifest, "github", { owner, repo, sha: null });
-        }
-        const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
-        const branch = typeof repository?.default_branch === "string"
-            ? repository.default_branch
-            : "main";
-        return verifiedGitHubTarget(spec, rootManifest, owner, repo, branch);
-    }
+    const branch = ref ?? await githubDefaultBranch(owner, repo);
+    const commit = await githubCommit(owner, repo, branch);
+    if (!commit)
+        throw new InstallVerificationError("GitHub 安装源无法解析到不可变 commit", true);
+    const rootManifest = await githubManifest(owner, repo, "package.json", commit);
+    if (rootManifest)
+        return verifiedGitHubTarget(spec, rootManifest, owner, repo, commit);
     if (ref)
         throw new InstallVerificationError("指定 ref 的仓库根目录没有 dsh.bundle");
-    const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`);
-    const branch = typeof repository?.default_branch === "string"
-        ? repository.default_branch
-        : "main";
-    const tree = await fetchJson(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(branch)}?recursive=1`);
+    const tree = await fetchJson(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(commit)}?recursive=1`);
     const treeItems = tree?.tree;
     const candidates = Array.isArray(treeItems)
         ? treeItems
@@ -211,21 +284,19 @@ async function verifyGitHub(spec) {
     for (const candidate of candidates) {
         const packagePath = candidate.path;
         const directory = packagePath.slice(0, -"/package.json".length);
-        const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
-        const child = await fetchOptionalJson(`https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`);
-        const manifest = decodeGitHubManifest(child);
-        if (isBundleManifest(manifest)) {
-            return verifiedGitHubTarget(`github:${owner}/${repo}#path:/${directory}`, manifest, owner, repo, branch);
+        const manifest = await githubManifest(owner, repo, packagePath, commit);
+        if (manifest) {
+            return verifiedGitHubTarget(`github:${owner}/${repo}#path:/${directory}`, manifest, owner, repo, commit);
         }
     }
     throw new InstallVerificationError("仓库根目录及候选子目录均未找到 dsh.bundle");
 }
-export async function verifyInstallSpec(spec) {
-    const key = `${spec.kind}:${spec.spec}`;
+export async function verifyInstallSpec(spec, options = {}) {
+    const key = `${spec.kind}:${spec.spec}:${options.expectedRepository?.toLowerCase() ?? ""}`;
     const cached = verificationCache.get(key);
     if (cached && Date.now() - cached.verifiedAt < VERIFICATION_CACHE_MS)
         return cached.value;
-    const value = spec.kind === "npm" ? await verifyNpm(spec.spec) : await verifyGitHub(spec.spec);
+    const value = spec.kind === "npm" ? await verifyNpm(spec.spec, options) : await verifyGitHub(spec.spec, options);
     verificationCache.set(key, { value, verifiedAt: Date.now() });
     return value;
 }

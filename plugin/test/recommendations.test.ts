@@ -114,6 +114,13 @@ describe("DSH plugin recommendations", () => {
       categories: ["知识获取"],
       installed: true,
       installable: true,
+      formFactor: "dsh-bundle",
+      trustLevel: "install-source",
+      trustSignals: expect.arrayContaining([
+        "已进入 DSHEval 索引",
+        "命中 DSH Bundle 结构",
+        "安装源可解析（github）",
+      ]),
     });
   });
 
@@ -125,6 +132,8 @@ describe("DSH plugin recommendations", () => {
     expect(output).toContain("DSHeval Top100 搜索：ocr");
     expect(output).toContain("acme/vision-reader");
     expect(output).toContain("https://github.com/acme/vision-reader");
+    expect(output).toContain("形态：dsh-bundle；信任层：install-source");
+    expect(output).toContain("注意：这些证据不代表代码已通过安全审核");
     expect(output).toContain(DSHEVAL_CATALOG_URL);
   });
 

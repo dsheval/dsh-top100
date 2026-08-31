@@ -19,8 +19,14 @@ export interface ProfileManifestSnapshot {
         present: true;
         value: string;
     };
+    workspace: {
+        present: false;
+    } | {
+        present: true;
+        value: string;
+    };
 }
-/** Capture the two package-operation fields mutated by `dsh plugin`. */
+/** Capture every profile file or field that a package operation may mutate. */
 export declare function readProfileManifestSnapshot(profile: string, explicitDir?: string): ProfileManifestSnapshot;
 /** Restore only the manifest fields owned by a failed package operation. */
 export declare function restoreProfileManifest(profile: string, snapshot: ProfileManifestSnapshot, explicitDir?: string): string[];

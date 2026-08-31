@@ -98,7 +98,11 @@ export function managedDescriptionZh(options: {
 
 export function resolveUpdateTarget(name: string, spec: string): string | null {
   if (spec.startsWith("link:") || spec.startsWith("file:")) return null;
-  if (spec.startsWith("github:")) return spec.replace(/#.*$/, "");
+  if (spec.startsWith("github:")) {
+    const match = spec.match(/^(github:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:#[^&]+)?(?:&path:(\/?[^\s]+))?$/);
+    if (!match) return null;
+    return match[2] ? `${match[1]}#path:${match[2]}` : match[1];
+  }
   if (NPM_SPEC_RE.test(name)) return `${name}@latest`;
   return null;
 }
@@ -123,6 +127,7 @@ function listSkills(): ManagedPlugin[] {
       local: true,
       protected: false,
       kind: "skill" as const,
+      activationState: "not-applicable" as const,
     };
   });
 }
@@ -136,6 +141,7 @@ export async function listManagedPlugins(profile: string, document: RankingsDocu
     const local = spec.startsWith("link:") || spec.startsWith("file:");
     const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);
     const description = catalog?.description || manifest?.description || "";
+    const enabled = !packageIsDisabled(profile, name, explicitDir);
     return {
       name,
       spec,
@@ -149,12 +155,13 @@ export async function listManagedPlugins(profile: string, document: RankingsDocu
       }),
       fullName: catalog?.fullName ?? fullName,
       url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
-      enabled: !packageIsDisabled(profile, name, explicitDir),
+      enabled,
       updateAvailable: updateAvailable(version, latest),
       latest,
       local,
       protected: isProtectedPackage(name),
       kind: "bundle" as const,
+      activationState: enabled ? "unknown" as const : "inert" as const,
     };
   }));
   return [...plugins, ...listSkills()].sort((left, right) => left.name.localeCompare(right.name));

@@ -70,10 +70,33 @@ export interface InstallSpec {
     kind: "npm" | "github";
     spec: string;
 }
+export type CatalogFormFactor = "dsh-bundle" | "dsh-skill" | "agent-skill" | "theme" | "mcp-integration" | "desktop-app" | "ecosystem-project" | "candidate";
+export type CatalogTrustLevel = "indexed" | "structured" | "install-source";
+export type CatalogEvidenceSignalCode = "indexed" | "dsh-skill" | "agent-skill" | "theme-bundle" | "dsh-bundle" | "install-source";
+export interface CatalogEvidence {
+    formFactor: CatalogFormFactor;
+    compatible: boolean;
+    trustLevel: CatalogTrustLevel;
+    signalCodes: CatalogEvidenceSignalCode[];
+    caveatCode: "not-security-review";
+    /** Human-readable fallback retained for non-UI consumers and older clients. */
+    signals: string[];
+    /** Human-readable fallback retained for non-UI consumers and older clients. */
+    caveat: string;
+}
 export interface CatalogItem extends RankingEntry {
     installable: boolean;
     installSpec: InstallSpec | null;
     installed: boolean;
+    evidence: CatalogEvidence;
+}
+export interface CatalogCacheStatus {
+    fetchedAt: number | null;
+    ageMs: number | null;
+    stale: boolean;
+    reason: string | null;
+    source: "network-or-cache" | "unknown";
+    dataset: "view-shard" | "search-index" | "full-catalog";
 }
 export interface CatalogResponse {
     view: RankingView;
@@ -84,6 +107,8 @@ export interface CatalogResponse {
     dataUrl: string;
     query: string;
     excludeSkills: boolean;
+    compatibleOnly: boolean;
+    cache: CatalogCacheStatus;
     total: number;
     offset: number;
     limit: number;
@@ -101,6 +126,41 @@ export interface ProgressSnapshot {
     error: string | null;
 }
 export type InstallPhase = "queued" | "validating" | "downloading" | "waiting-profile-lock" | "installing" | "installed" | "failed" | "cancelled";
+export type ActivationState = "pending" | "not-applicable" | "configuration-valid" | "restart-required" | "live" | "inert" | "broken" | "unknown";
+export interface LifecycleScriptEvidence {
+    name: "preinstall" | "install" | "postinstall" | "prepare";
+    command: string;
+}
+export interface InstallProvenance {
+    source: "npm" | "github";
+    requestedTarget: string;
+    resolvedTarget: string;
+    packageName: string | null;
+    version: string | null;
+    commit: string | null;
+    integrity: string | null;
+    repositoryUrl: string | null;
+    repositoryIdentity: "matched" | "unavailable" | "not-applicable";
+    verifiedAt: number;
+}
+export interface InstallRiskEvidence {
+    code: "lifecycle-scripts" | "repository-identity" | "skill-content" | "restart-required";
+    severity: "info" | "warning";
+    summary: string;
+    detail: string;
+}
+export interface InstallPreflight {
+    approvalToken: string;
+    expiresAt: number;
+    fullName: string;
+    profile: string;
+    kind: "bundle" | "skill";
+    provenance: InstallProvenance;
+    lifecycleScripts: LifecycleScriptEvidence[];
+    risks: InstallRiskEvidence[];
+    requiresExplicitApproval: boolean;
+    activationExpectation: ActivationState;
+}
 export interface InstallJobSnapshot {
     id: string;
     batchId: string;
@@ -113,6 +173,8 @@ export interface InstallJobSnapshot {
     error: string | null;
     message: string | null;
     requiresRestart: boolean;
+    activationState: ActivationState;
+    provenance: InstallProvenance | null;
     createdAt: number;
     startedAt: number | null;
     finishedAt: number | null;
@@ -149,6 +211,7 @@ export interface ManagedPlugin {
     local: boolean;
     protected: boolean;
     kind: ManagedKind;
+    activationState: ActivationState;
 }
 export interface ManagedListResponse {
     profile: string;
