@@ -68,6 +68,17 @@ describe("profile manifest recovery", () => {
     expect(readFileSync(lockPath, "utf8")).toContain("commit: old");
   });
 
+  it("restores workspace build approvals after a failed package operation", () => {
+    const directory = profileFixture();
+    const workspacePath = join(directory, "pnpm-workspace.yaml");
+    writeFileSync(workspacePath, "packages:\n  - .\n");
+    const snapshot = readProfileManifestSnapshot("web", directory);
+    writeFileSync(workspacePath, "packages:\n  - .\nallowBuilds:\n  risky-plugin: true\n");
+
+    expect(restoreProfileManifest("web", snapshot, directory)).toContain("pnpm-workspace.yaml");
+    expect(readFileSync(workspacePath, "utf8")).toBe("packages:\n  - .\n");
+  });
+
   it("removes both manifest references after a half-uninstall", () => {
     const directory = profileFixture();
     expect(dropFromManifest("web", "keep-plugin", directory)).toBe(true);

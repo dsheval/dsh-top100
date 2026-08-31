@@ -75,10 +75,16 @@ export function isInstalledEntry(entry: RankingEntry, installed: Record<string, 
   const repo = entry.name.toLowerCase();
   for (const [name, value] of Object.entries(installed)) {
     if (name.toLowerCase() === repo) return true;
-    if (spec?.kind === "npm" && name === npmPackageSpec(spec.spec)?.name) return true;
-    const haystack = `${name} ${value}`.toLowerCase();
-    if (haystack.includes(fullName)) return true;
-    if (spec && haystack.includes(spec.spec.toLowerCase())) return true;
+    const packageName = spec?.kind === "npm" ? npmPackageSpec(spec.spec)?.name.toLowerCase() : null;
+    if (packageName && name.toLowerCase() === packageName) return true;
+    const source = value.toLowerCase().replace(/^git\+/, "");
+    if (source === `github:${fullName}` || source.startsWith(`github:${fullName}#`)) return true;
+    if (
+      source.startsWith(`https://github.com/${fullName}.git`)
+      || source.startsWith(`https://github.com/${fullName}#`)
+      || source === `https://github.com/${fullName}`
+      || source.startsWith(`git://github.com/${fullName}.git`)
+    ) return true;
   }
   return false;
 }

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { BUNDLED_SKILL_RANK } from "@deepseek-ai/dsh-skill";
 import { defineTool } from "@deepseek-ai/dsh-tools";
 import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
-import { filterCatalog, loadRankings } from "./catalog.js";
+import { filterCatalog, loadSearchRankings } from "./catalog.js";
 import { readInstalled } from "./profile.js";
 export const RECOMMENDATION_SKILL_NAME = "recommend-dsh-plugins";
 export const RECOMMENDATION_TOOL_NAME = "dsh_top100_search";
@@ -75,6 +75,7 @@ export function recommendationResult(document, options) {
         offset: 0,
         limit,
         installed: options.installed ?? {},
+        compatibleOnly: true,
     });
     return {
         query,
@@ -93,6 +94,10 @@ export function recommendationResult(document, options) {
             categories: categoryLabels(document, item),
             installable: item.installable,
             installed: item.installed,
+            formFactor: item.evidence.formFactor,
+            trustLevel: item.evidence.trustLevel,
+            trustSignals: item.evidence.signals,
+            trustCaveat: item.evidence.caveat,
             repositoryUrl: item.url,
         })),
     };
@@ -110,7 +115,7 @@ export function formatRecommendationResult(result) {
     for (const [index, item] of result.items.entries()) {
         const category = item.categories.length > 0 ? item.categories.join("、") : "未分类";
         const install = item.installed ? "已安装" : item.installable ? "支持安装" : "仅提供项目链接";
-        lines.push(`${index + 1}. ${item.fullName} — ${item.description}`, `   类型：${item.type}；分类：${category}；Stars：${item.stars}；日增：${item.dailyStars}；周增：${item.weeklyStars}；${install}`, `   ${item.repositoryUrl}`);
+        lines.push(`${index + 1}. ${item.fullName} — ${item.description}`, `   类型：${item.type}；分类：${category}；Stars：${item.stars}；日增：${item.dailyStars}；周增：${item.weeklyStars}；${install}`, `   形态：${item.formFactor}；信任层：${item.trustLevel}；证据：${item.trustSignals.join("、")}`, `   注意：${item.trustCaveat}`, `   ${item.repositoryUrl}`);
     }
     return lines.join("\n");
 }
@@ -164,6 +169,10 @@ export function installRecommendationCapabilities(ctx, config) {
                                 categories: { type: "array", required: true, items: { type: "string" } },
                                 installable: { type: "boolean", required: true },
                                 installed: { type: "boolean", required: true },
+                                formFactor: { type: "string", required: true },
+                                trustLevel: { type: "string", required: true },
+                                trustSignals: { type: "array", required: true, items: { type: "string" } },
+                                trustCaveat: { type: "string", required: true },
                                 repositoryUrl: { type: "string", required: true },
                             },
                         },
@@ -175,7 +184,7 @@ export function installRecommendationCapabilities(ctx, config) {
         isConcurrencySafe: () => true,
         async execute(args) {
             const category = args.category === undefined ? null : args.category;
-            const document = await loadRankings(config.dataUrl);
+            const document = await loadSearchRankings(config.dataUrl);
             return recommendationResult(document, {
                 query: args.query,
                 limit: args.limit,

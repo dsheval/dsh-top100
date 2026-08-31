@@ -11,8 +11,10 @@ import {
   loadCachedRankings,
   loadRankingView,
   loadRankings,
+  loadSearchRankings,
   matchesQuery,
   parseRankingViewDocument,
+  parseRankingSearchDocument,
   parseRankingsDocument,
 } from "../src/host/catalog.js";
 import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
@@ -136,6 +138,24 @@ describe("catalog filter", () => {
     expect(result.items.map((item) => item.fullName)).toEqual(["acme/hot-one"]);
   });
 
+  it("keeps ecosystem candidates out of the default compatible scope", () => {
+    const scoped: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/plugin", { type: "cordis-plugin" }),
+          entry("acme/desktop", { type: "project", description: "Electron desktop app for DSH" }),
+        ],
+      },
+    };
+    const result = filterCatalog(scoped, {
+      view: "total", category: null, query: "", offset: 0, limit: 10, installed: {}, compatibleOnly: true,
+    });
+    expect(result.items.map((item) => item.fullName)).toEqual(["acme/plugin"]);
+    expect(result.items[0]?.evidence).toMatchObject({ formFactor: "dsh-bundle", trustLevel: "structured" });
+  });
+
   it("paginates and marks installed github specs", () => {
     const result = filterCatalog(document, {
       view: "total",
@@ -238,6 +258,54 @@ describe("catalog transport", () => {
     expect(shard.rankings.hot).toHaveLength(1);
     expect(shard.rankings.total).toBe(shard.rankings.hot);
     expect(shard.rankings.rising).toEqual([]);
+  });
+
+  it("normalizes the compact search index without requiring full ranking fields", () => {
+    const search = parseRankingSearchDocument(JSON.stringify({
+      schemaVersion: 2,
+      generatedAt: document.generatedAt,
+      snapshotDate: document.snapshotDate,
+      rankings: [{ rank: 1, fullName: "acme/compact", descriptionZh: "轻量检索", type: "skill" }],
+    }));
+    expect(search.rankings.total[0]).toMatchObject({
+      fullName: "acme/compact",
+      description: "",
+      descriptionZh: "轻量检索",
+      stars: 0,
+    });
+  });
+
+  it("uses the compact search index for all-entry search", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      schemaVersion: 2,
+      generatedAt: document.generatedAt,
+      snapshotDate: document.snapshotDate,
+      rankings: document.rankings.total,
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(loadSearchRankings("https://catalog.example/data"))
+      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://catalog.example/data/rankings-search.json");
+  });
+
+  it("falls back to the full catalog when the compact index is temporarily unavailable", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("unavailable", { status: 503, statusText: "Unavailable" }))
+      .mockResolvedValueOnce(new Response(JSON.stringify(document), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadSearchRankings("https://catalog.example/data"))
+      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/rankings-search.json",
+      "https://catalog.example/data/rankings.json",
+    ]);
   });
 
   it("coalesces initial shard downloads and reuses the persistent cache", async () => {

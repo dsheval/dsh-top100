@@ -11,12 +11,12 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="./CHANGELOG.md"><img alt="正式版本 v1.0.2" src="https://img.shields.io/badge/release-v1.0.2-2f6f68?style=flat-square"></a>
+  <a href="./CHANGELOG.md"><img alt="正式版本 v1.1.0" src="https://img.shields.io/badge/release-v1.1.0-2f6f68?style=flat-square"></a>
   <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-Top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
-  <a href="https://www.dsheval.ai/#ranking"><img alt="已收录 3656 个仓库" src="https://img.shields.io/badge/收录-3656-5865f2?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/#ranking"><img alt="收录规模以实时榜单为准" src="https://img.shields.io/badge/收录-实时更新-5865f2?style=flat-square"></a>
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
   <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
   <a href="https://www.dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
@@ -110,6 +110,7 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 | `/data/rankings-hot.json` | Top 100 独立数据 |
 | `/data/rankings-rising.json` | 新锐榜独立数据 |
 | `/data/rankings-total.json` | 总榜与分类榜的完整仓库数据 |
+| `/data/rankings-search.json` | 面向插件总榜、搜索和 Agent 推荐的紧凑索引 |
 
 - 北京时间每天 `06:00` 运行增量发现并刷新全部已收录仓库。
 - 每周日运行完整分片发现。

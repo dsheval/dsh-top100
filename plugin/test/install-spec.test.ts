@@ -124,4 +124,13 @@ describe("installed matching", () => {
     expect(isInstalledEntry(plugin, { "dsh-market": "github:dsh-market/dsh-market#main" })).toBe(true);
     expect(isCordisEntry(plugin)).toBe(true);
   });
+
+  it("does not confuse a package with a longer package name containing it", () => {
+    const plugin = entry({
+      fullName: "acme/demo",
+      type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add demo"] },
+    });
+    expect(isInstalledEntry(plugin, { "demo-helper": "1.0.0" })).toBe(false);
+  });
 });

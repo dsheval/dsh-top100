@@ -9,7 +9,9 @@ import { promisify } from "node:util";
 import { isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
 import { entryMatchesCategory } from "../shared/categories.js";
 import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
+import { catalogEvidence } from "../shared/evidence.js";
 import type {
+  CatalogCacheStatus,
   CatalogItem,
   RankingEntry,
   RankingsDocument,
@@ -49,6 +51,7 @@ class CatalogSourceError extends Error {
 
 const caches = new Map<string, CatalogCache>();
 const inFlight = new Map<string, Promise<RankingsDocument>>();
+const fallbackReasons = new Map<string, string>();
 
 export function normalizeDataUrl(raw: string): string {
   const parsed = new URL(raw);
@@ -73,6 +76,7 @@ function annotate(entry: RankingEntry, installed: Record<string, string>): Catal
     installSpec,
     installable: installSpec !== null,
     installed: isInstalledEntry(entry, installed),
+    evidence: catalogEvidence(entry),
   };
 }
 
@@ -86,6 +90,7 @@ export function filterCatalog(
     limit: number;
     installed: Record<string, string>;
     excludeSkills?: boolean;
+    compatibleOnly?: boolean;
   },
 ): { total: number; items: CatalogItem[] } {
   const hasQuery = tokenizeSearchQuery(options.query).length > 0;
@@ -94,6 +99,7 @@ export function filterCatalog(
     : document.rankings[options.view] ?? [];
   const scored = source
     .filter((entry) => !options.excludeSkills || entry.type?.toLowerCase() !== "skill")
+    .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
     .filter((entry) => options.view !== "category" || (options.category !== null && entryMatchesCategory(entry, options.category)))
     .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
     .filter((item): item is { entry: RankingEntry; score: number } => item.score !== null);
@@ -109,6 +115,7 @@ export function filterCatalog(
 
 export function invalidateCatalog(): void {
   caches.clear();
+  fallbackReasons.clear();
 }
 
 function catalogCacheDirectory(): string {
@@ -283,6 +290,64 @@ export function parseRankingViewDocument(raw: string, view: "hot" | "rising"): R
   };
 }
 
+function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
+  if (value === null || typeof value !== "object") return null;
+  const entry = value as Partial<RankingEntry>;
+  if (typeof entry.fullName !== "string") return null;
+  const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
+  return {
+    rank: Number.isFinite(entry.rank) ? Number(entry.rank) : index + 1,
+    totalRank: Number.isFinite(entry.totalRank) ? Number(entry.totalRank) : undefined,
+    fullName: entry.fullName,
+    name: typeof entry.name === "string" ? entry.name : repositoryName,
+    owner: typeof entry.owner === "string" ? entry.owner : owner,
+    description: typeof entry.description === "string" ? entry.description : "",
+    descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
+    stars: Number(entry.stars) || 0,
+    dailyStars: Number(entry.dailyStars) || 0,
+    weeklyStars: Number(entry.weeklyStars) || 0,
+    hotScore: Number(entry.hotScore) || 0,
+    forks: Number(entry.forks) || 0,
+    openIssues: Number(entry.openIssues) || 0,
+    language: typeof entry.language === "string" ? entry.language : null,
+    homepage: typeof entry.homepage === "string" ? entry.homepage : null,
+    license: typeof entry.license === "string" ? entry.license : null,
+    topics: Array.isArray(entry.topics) ? entry.topics.filter((item): item is string => typeof item === "string") : [],
+    tags: Array.isArray(entry.tags) ? entry.tags.filter((item): item is string => typeof item === "string") : [],
+    categories: entry.categories,
+    type: typeof entry.type === "string" ? entry.type : "candidate",
+    install: entry.install,
+    sources: Array.isArray(entry.sources) ? entry.sources.filter((item): item is string => typeof item === "string") : [],
+    url: typeof entry.url === "string" ? entry.url : `https://github.com/${entry.fullName}`,
+    pushedAt: typeof entry.pushedAt === "string" ? entry.pushedAt : "",
+    createdAt: typeof entry.createdAt === "string" ? entry.createdAt : "",
+    updatedAt: typeof entry.updatedAt === "string" ? entry.updatedAt : "",
+  };
+}
+
+export function parseRankingSearchDocument(raw: string): RankingsDocument {
+  let payload: Omit<RankingsDocument, "rankings"> & { rankings: unknown[] };
+  try { payload = JSON.parse(raw) as typeof payload; }
+  catch { throw new CatalogSourceError("榜单检索索引不是有效 JSON", { fallbackToFull: true }); }
+  if (!Array.isArray(payload?.rankings)) {
+    throw new CatalogSourceError("榜单检索索引缺少 rankings", { fallbackToFull: true });
+  }
+  const entries = payload.rankings
+    .map(normalizeSearchEntry)
+    .filter((entry): entry is RankingEntry => entry !== null);
+  if (entries.length !== payload.rankings.length) {
+    throw new CatalogSourceError("榜单检索索引包含无效条目", { fallbackToFull: true });
+  }
+  return {
+    schemaVersion: payload.schemaVersion,
+    generatedAt: payload.generatedAt,
+    snapshotDate: payload.snapshotDate,
+    definitions: payload.definitions,
+    categories: payload.categories,
+    rankings: { total: entries, hot: [], rising: [] },
+  };
+}
+
 async function downloadCatalog(url: string, parser: CatalogParser): Promise<RankingsDocument> {
   let raw: string;
   try {
@@ -299,6 +364,7 @@ async function downloadCatalog(url: string, parser: CatalogParser): Promise<Rank
     }
   }
   const document = parser(raw);
+  fallbackReasons.delete(url);
   const value: CatalogCache = { dataUrl: url, fetchedAt: Date.now(), document };
   caches.set(url, value);
   await writeDiskCache(value);
@@ -327,14 +393,19 @@ async function loadCatalogDocument(
   if (!force && cached) {
     if (Date.now() - cached.fetchedAt >= CACHE_MS) {
       // Stale-while-revalidate: keep the page responsive and refresh the last-good snapshot off-screen.
-      void refreshCatalog(url, parser).catch(() => undefined);
+      void refreshCatalog(url, parser).catch((error: unknown) => {
+        fallbackReasons.set(url, describeCatalogFetchError(error));
+      });
     }
     return cached.document;
   }
   try {
     return await refreshCatalog(url, parser);
   } catch (error) {
-    if (cached && fallbackToCache) return cached.document;
+    if (cached && fallbackToCache) {
+      fallbackReasons.set(url, describeCatalogFetchError(error));
+      return cached.document;
+    }
     throw error;
   }
 }
@@ -342,6 +413,58 @@ async function loadCatalogDocument(
 export async function loadRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
   const url = `${normalizeDataUrl(dataUrl)}/rankings.json`;
   return loadCatalogDocument(url, parseRankingsDocument, force);
+}
+
+/** Load the compact all-entry index used by total/category/search views. */
+export async function loadSearchRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
+  const baseUrl = normalizeDataUrl(dataUrl);
+  const url = `${baseUrl}/rankings-search.json`;
+  try {
+    return await loadCatalogDocument(url, parseRankingSearchDocument, force);
+  } catch (error) {
+    try {
+      const document = await loadRankings(baseUrl, force);
+      const fullUrl = `${baseUrl}/rankings.json`;
+      const fullReason = fallbackReasons.get(fullUrl);
+      fallbackReasons.set(fullUrl, [
+        `轻量检索索引不可用：${describeCatalogFetchError(error)}`,
+        fullReason,
+      ].filter(Boolean).join("；"));
+      return document;
+    } catch (fallbackError) {
+      throw new Error([
+        `轻量检索索引不可用：${describeCatalogFetchError(error)}`,
+        `完整榜单回退失败：${describeCatalogFetchError(fallbackError)}`,
+      ].join("；"));
+    }
+  }
+}
+
+export async function catalogCacheStatus(
+  dataUrl: string,
+  dataset: CatalogCacheStatus["dataset"],
+  view?: "hot" | "rising",
+): Promise<CatalogCacheStatus> {
+  const baseUrl = normalizeDataUrl(dataUrl);
+  const filenames = dataset === "view-shard" && view
+    ? [`rankings-${view}.json`, "rankings.json"]
+    : dataset === "search-index"
+      ? ["rankings-search.json", "rankings.json"]
+      : ["rankings.json"];
+  for (const filename of filenames) {
+    const cached = await cachedCatalog(`${baseUrl}/${filename}`);
+    if (!cached) continue;
+    const ageMs = Math.max(0, Date.now() - cached.fetchedAt);
+    return {
+      fetchedAt: cached.fetchedAt,
+      ageMs,
+      stale: ageMs >= CACHE_MS,
+      reason: fallbackReasons.get(`${baseUrl}/${filename}`) ?? null,
+      source: "network-or-cache",
+      dataset: filename === "rankings.json" ? "full-catalog" : dataset,
+    };
+  }
+  return { fetchedAt: null, ageMs: null, stale: false, reason: null, source: "unknown", dataset };
 }
 
 async function cachedCatalog(url: string): Promise<CatalogCache | null> {
@@ -374,13 +497,14 @@ export async function findPublishedEntry(
 ): Promise<RankingEntry | undefined> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const fullUrl = `${baseUrl}/rankings.json`;
-  const [full, hot, rising] = await Promise.all([
+  const [full, hot, rising, search] = await Promise.all([
     cachedCatalog(fullUrl),
     cachedCatalog(`${baseUrl}/rankings-hot.json`),
     cachedCatalog(`${baseUrl}/rankings-rising.json`),
+    cachedCatalog(`${baseUrl}/rankings-search.json`),
   ]);
   const newestShardTime = Math.max(
-    ...[hot, rising].filter((value): value is CatalogCache => value !== null).map(catalogSnapshotTime),
+    ...[hot, rising, search].filter((value): value is CatalogCache => value !== null).map(catalogSnapshotTime),
     Number.NEGATIVE_INFINITY,
   );
   if (
@@ -406,7 +530,14 @@ export async function loadRankingView(
     return await loadCatalogDocument(url, (raw) => parseRankingViewDocument(raw, view), force);
   } catch (error) {
     if (error instanceof CatalogSourceError && error.fallbackToFull) {
-      return loadRankings(baseUrl, force);
+      const document = await loadRankings(baseUrl, force);
+      const fullUrl = `${baseUrl}/rankings.json`;
+      const fullReason = fallbackReasons.get(fullUrl);
+      fallbackReasons.set(fullUrl, [
+        `${view} 分片不可用：${describeCatalogFetchError(error)}`,
+        fullReason,
+      ].filter(Boolean).join("；"));
+      return document;
     }
     throw error;
   }

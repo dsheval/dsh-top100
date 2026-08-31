@@ -17,6 +17,10 @@ export interface RecommendationItem {
     categories: string[];
     installable: boolean;
     installed: boolean;
+    formFactor: string;
+    trustLevel: string;
+    trustSignals: string[];
+    trustCaveat: string;
     repositoryUrl: string;
 }
 export interface RecommendationSearchResult {

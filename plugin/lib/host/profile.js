@@ -50,7 +50,7 @@ function writeManifestAtomic(path, manifest) {
     writeFileSync(temporary, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
     renameSync(temporary, path);
 }
-/** Capture the two package-operation fields mutated by `dsh plugin`. */
+/** Capture every profile file or field that a package operation may mutate. */
 export function readProfileManifestSnapshot(profile, explicitDir) {
     try {
         const manifest = JSON.parse(readFileSync(join(profileDir(profile, explicitDir), "package.json"), "utf8"));
@@ -62,16 +62,28 @@ export function readProfileManifestSnapshot(profile, explicitDir) {
             lockfile = { present: true, value: readFileSync(lockPath, "utf8") };
         }
         catch { /* absent */ }
+        const workspacePath = join(profileDir(profile, explicitDir), "pnpm-workspace.yaml");
+        let workspace = { present: false };
+        try {
+            workspace = { present: true, value: readFileSync(workspacePath, "utf8") };
+        }
+        catch { /* absent */ }
         return {
             dependencies: { ...manifest.dependencies },
             profileBundles: present
                 ? { present: true, value: structuredClone(profileManifest.bundles) }
                 : { present: false },
             lockfile,
+            workspace,
         };
     }
     catch {
-        return { dependencies: {}, profileBundles: { present: false }, lockfile: { present: false } };
+        return {
+            dependencies: {},
+            profileBundles: { present: false },
+            lockfile: { present: false },
+            workspace: { present: false },
+        };
     }
 }
 /** Restore only the manifest fields owned by a failed package operation. */
@@ -111,6 +123,17 @@ export function restoreProfileManifest(profile, snapshot, explicitDir) {
         : currentLock !== null;
     if (lockChanged)
         changed.add("pnpm-lock.yaml");
+    const workspacePath = join(profileDir(profile, explicitDir), "pnpm-workspace.yaml");
+    let currentWorkspace = null;
+    try {
+        currentWorkspace = readFileSync(workspacePath, "utf8");
+    }
+    catch { /* absent */ }
+    const workspaceChanged = snapshot.workspace.present
+        ? currentWorkspace !== snapshot.workspace.value
+        : currentWorkspace !== null;
+    if (workspaceChanged)
+        changed.add("pnpm-workspace.yaml");
     if (changed.size === 0)
         return [];
     manifest.dependencies = { ...snapshot.dependencies };
@@ -133,6 +156,16 @@ export function restoreProfileManifest(profile, snapshot, explicitDir) {
         }
         else if (existsSync(lockPath)) {
             unlinkSync(lockPath);
+        }
+    }
+    if (workspaceChanged) {
+        if (snapshot.workspace.present) {
+            const temporary = `${workspacePath}.${process.pid}.${Date.now()}.tmp`;
+            writeFileSync(temporary, snapshot.workspace.value, "utf8");
+            renameSync(temporary, workspacePath);
+        }
+        else if (existsSync(workspacePath)) {
+            unlinkSync(workspacePath);
         }
     }
     return [...changed];

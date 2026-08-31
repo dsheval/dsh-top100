@@ -31,7 +31,7 @@ docker compose ps
 
 ## 3. 当前 Git 状态
 
-正式稳定基线为 `main` 分支的最新正式标签，当前发布目标为 `v1.0.2`，远端为：
+正式稳定基线为 `main` 分支的最新正式标签，当前发布目标为 `v1.1.0`，远端为：
 
 ```text
 origin  https://github.com/dsheval/dsh-top100.git
