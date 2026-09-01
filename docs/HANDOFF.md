@@ -44,12 +44,11 @@ origin  https://github.com/dsheval/dsh-top100.git
 ### 首页与视觉
 
 - 产品名为 `dsh-Top100`。
-- 首页保留绿色、黄色和米白色视觉体系。
-- Hero 区包含 `Top 100`、`接入 DSH`、`Docs`、带 Logo 的 `GitHub` 和 `DSHeval` 按钮。
+- 首页使用白色与中性鼠尾草绿分层，深绿承担交互状态。
+- Hero 区包含全库搜索、插件榜单与安装入口；右侧恢复发布信息卡片，展示 npm 版本、DSH Web 兼容版本、来源与复制命令。星环暂时移除，后续再单独决定是否以及如何融入。
 - `接入 DSH` 会切换到完整的插件介绍、安装、使用、数据安全和排查页面。
 - `DSHeval` 按钮直接打开 `https://www.dsheval.ai/dsheval`。
 - `GitHub` 直达 `https://github.com/dsheval/dsh-top100`。
-- 榜单背景使用两个交错圆形及轻量动画；支持 `prefers-reduced-motion`。
 - 榜单滚动进入视口时按从上到下的顺序显示动画。
 
 ### Docs 同页切换
@@ -68,7 +67,7 @@ origin  https://github.com/dsheval/dsh-top100.git
 - `Top 100`：按综合热度评分排序，但列表展示真实 GitHub Stars。
 - `新锐榜`：按今日新增 Stars 排序。
 - `总榜`：展示全部已验证仓库，按 Stars 总数排序。
-- 支持搜索、隐藏 Skill 仓库和总榜分页加载。
+- 官网与 DSH 设置页都支持搜索、隐藏 Skill 仓库和分页加载；隐藏后分类榜、总榜及分类按钮数量同步扣除 Skill 仓库，并显示本次隐藏数量。
 - 仓库名称本身不可点击；GitHub 圆形按钮负责打开仓库。
 - GitHub 按钮旁有复制按钮，用于复制仓库 `.git` 下载地址。
 - Star 标签已经修复为整行垂直居中；中文简介一行或两行时不应再偏上。
@@ -161,6 +160,18 @@ DSH_DISCOVERY_MODE=incremental
 前端永远不接触 GitHub Token、DeepSeek API Key 或 SQLite，只读取 `/data/*.json`。
 
 ## 9. 本地启动与验证
+
+只做网页视觉与交互开发时，使用同源开发预览。它提供本地 `web/public`，并把
+`/data/*` 按需代理到公开的 DSHeval 榜单接口；`/api/events` 在本地直接返回
+`204`，不会写入线上分析事件：
+
+```bash
+npm run serve
+```
+
+默认地址为 `http://127.0.0.1:4173/`。可使用 `WEB_PORT` 修改端口，或用
+`DSH_DATA_ORIGIN` 指定另一套兼容的公开数据服务。完全不需要榜单数据的静态检查
+仍可运行 `npm run serve:static`。
 
 只构建前端：
 

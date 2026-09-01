@@ -7,7 +7,7 @@
       name="description"
       content="dsh-Top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
     />
-    <meta name="theme-color" content="#e7eeec" />
+    <meta name="theme-color" content="#d9e7e2" />
     <link rel="canonical" href="https://www.dsheval.ai/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
@@ -50,22 +50,27 @@
     <style>
       :root {
         color-scheme: light;
-        --paper: #f5f7f6;
+        --paper: #f7f9f8;
         --card: #ffffff;
-        --ink: #17211f;
-        --muted: #66716d;
-        --accent: #2f6f68;
+        --ink: #13201c;
+        --muted: #4f5e59;
+        --accent: #126657;
         --accent-contrast: #ffffff;
-        --accent-soft: #d7e5e2;
-        --section: #eef2f1;
-        --section-strong: #dce5e3;
-        --line: rgba(23, 33, 31, 0.24);
-        --hero: #e7eeec;
-        --hero-ink: #17211f;
-        --hero-muted: #53625e;
-        --hero-accent: #2f6f68;
-        --code-surface: #eef2f1;
-        --code-ink: #17211f;
+        --accent-soft: #c9ded7;
+        --section: #e5ebe8;
+        --section-strong: #d5dfdb;
+        --line: rgba(19, 32, 28, 0.26);
+        --line-strong: #6f837c;
+        --hero: #d9e7e2;
+        --hero-ink: #13201c;
+        --hero-muted: #4f5e59;
+        --hero-accent: #126657;
+        --code-surface: #e8eeec;
+        --code-ink: #13201c;
+        --signal-mint: #58b491;
+        --signal-brass: #9b8e63;
+        --signal-sage: #7f9f95;
+        --signal-ink: #47645b;
         --content: 1380px;
         --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
           "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -499,9 +504,9 @@
       }
 
       .view-tab[aria-selected="true"] {
-        color: var(--ink);
-        background: var(--section-strong);
-        box-shadow: inset 0 -3px 0 var(--accent);
+        color: var(--accent-contrast);
+        background: var(--accent);
+        box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--ink) 48%, transparent);
       }
 
       .skill-filter {
@@ -591,7 +596,7 @@
         border-radius: 0;
         outline: 0;
         color: var(--ink);
-        background: color-mix(in srgb, var(--card) 90%, transparent);
+        background: var(--card);
         font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
         font-size: 14px;
         font-weight: 500;
@@ -645,6 +650,70 @@
         display: none;
       }
 
+      .search-status-row {
+        display: flex;
+        min-height: 40px;
+        padding: 7px 10px 7px 14px;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border: 1px solid var(--line);
+        border-top: 0;
+        background: color-mix(in srgb, var(--card) 72%, var(--section));
+      }
+
+      .search-result {
+        margin: 0;
+        color: var(--muted);
+        font: 700 10px/1.45 var(--mono);
+        letter-spacing: 0.025em;
+      }
+
+      .search-sort {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        gap: 4px;
+        color: var(--muted);
+        font: 750 9px/1 var(--mono);
+        text-transform: uppercase;
+      }
+
+      .search-sort[hidden] {
+        display: none;
+      }
+
+      .search-sort > span {
+        margin-right: 3px;
+      }
+
+      .search-sort button {
+        min-height: 26px;
+        padding: 0 8px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        background: var(--card);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .search-sort button:hover,
+      .search-sort button:focus-visible {
+        border-color: var(--accent);
+        color: var(--ink);
+      }
+
+      .search-sort button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+
+      .search-sort button[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+        background: var(--accent);
+      }
+
       .category-options {
         display: grid;
         width: 100%;
@@ -657,6 +726,10 @@
         position: relative;
         z-index: 9;
         padding-top: 0;
+      }
+
+      .category-panel + .search-panel {
+        margin-top: -1px;
       }
 
       .category-option {
@@ -1132,6 +1205,32 @@
 
       .status.error {
         color: #a40034;
+      }
+
+      .status.error p {
+        margin: 0;
+      }
+
+      .status-retry {
+        min-height: 38px;
+        margin-top: 18px;
+        padding: 0 14px;
+        border: 1px solid var(--ink);
+        color: var(--accent-contrast);
+        background: var(--ink);
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .status-retry:hover,
+      .status-retry:focus-visible {
+        border-color: var(--accent);
+        background: var(--accent);
+      }
+
+      .status-retry:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 3px;
       }
 
       .sr-only {
@@ -1909,19 +2008,24 @@
 
       .footer {
         display: flex;
-        min-height: 120px;
-        padding: 28px max(24px, calc((100vw - var(--content)) / 2));
+        min-height: 96px;
+        padding: 24px max(24px, calc((100vw - var(--content)) / 2));
         align-items: center;
         justify-content: space-between;
         gap: 30px;
-        border-top: 1px solid var(--line);
-        background: var(--ink);
+        border-top: 1px solid #6f837c;
+        background: #2b443d;
         color: var(--paper);
         font-family: var(--mono);
         font-size: 12px;
         font-weight: 700;
+        line-height: 1.6;
         letter-spacing: 0.05em;
         text-transform: uppercase;
+      }
+
+      .footer span:last-child {
+        color: #c9d6d1;
       }
 
       @media (min-width: 721px) {
@@ -2120,20 +2224,29 @@
         }
 
         .category-options {
-          grid-template-columns: repeat(6, minmax(0, 1fr));
+          grid-template-columns: repeat(3, minmax(0, 1fr));
         }
 
         .category-option {
-          min-height: 44px;
-          padding: 0;
-          gap: 0;
-          font-size: 8.5px;
+          min-height: 48px;
+          padding: 0 8px;
+          gap: 5px;
+          border-bottom: 1px solid var(--line);
+          font-size: 10px;
+        }
+
+        .category-option:nth-last-child(-n + 3) {
+          border-bottom: 0;
+        }
+
+        .category-option:nth-child(3n) {
+          border-right: 0;
         }
 
         .category-icon {
-          width: 8px;
-          height: 8px;
-          flex-basis: 8px;
+          width: 12px;
+          height: 12px;
+          flex-basis: 12px;
         }
 
         .category-count {
@@ -2293,7 +2406,6 @@
         .footer span:last-child {
           display: block;
           margin-top: 10px;
-          color: #b7c3bf;
         }
       }
 
@@ -2341,7 +2453,7 @@
       }
 
       .hero {
-        min-height: 600px;
+        min-height: 640px;
       }
 
       .hero::before {
@@ -2351,8 +2463,8 @@
       }
 
       .hero-inner {
-        min-height: 600px;
-        grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.72fr);
+        min-height: 640px;
+        grid-template-columns: minmax(0, 1.08fr) minmax(400px, 0.72fr);
         gap: clamp(50px, 7vw, 108px);
         padding: 82px 0 88px;
       }
@@ -2450,7 +2562,7 @@
         position: relative;
         display: grid;
         min-width: 0;
-        align-items: center;
+        place-items: center;
         isolation: isolate;
       }
 
@@ -2706,7 +2818,6 @@
       }
 
       @media (max-width: 980px) {
-        .nav-links a:nth-child(2),
         .nav-links a:nth-child(4) {
           display: none;
         }
@@ -2714,6 +2825,7 @@
         .hero-inner {
           grid-template-columns: 1fr;
           gap: 44px;
+          padding: 68px 0 70px;
         }
 
         .install-console {
@@ -2726,7 +2838,6 @@
           width: 100%;
           max-width: 700px;
         }
-
       }
 
       @media (max-width: 720px) {
@@ -2743,9 +2854,9 @@
           font-size: 12px;
         }
 
-        .nav-links a:nth-child(1),
         .nav-links a:nth-child(2),
-        .nav-links a:nth-child(4) {
+        .nav-links a:nth-child(4),
+        .nav-links a:nth-child(5) {
           display: none;
         }
 
@@ -2796,6 +2907,20 @@
           min-height: 44px;
           border-top: 1px solid var(--line);
           border-left: 0;
+        }
+
+        .search-status-row {
+          align-items: flex-start;
+          flex-direction: column;
+          gap: 7px;
+        }
+
+        .search-sort {
+          width: 100%;
+        }
+
+        .search-sort button {
+          flex: 1 1 0;
         }
 
       }
@@ -2981,17 +3106,6 @@
               </button>
               <button
                 class="view-tab"
-                id="tab-all"
-                type="button"
-                role="tab"
-                aria-controls="plugin-list"
-                aria-selected="false"
-                data-view="all"
-              >
-                总榜 <span id="all-count"></span>
-              </button>
-              <button
-                class="view-tab"
                 id="tab-category"
                 type="button"
                 role="tab"
@@ -3000,6 +3114,17 @@
                 data-view="category"
               >
                 分类榜
+              </button>
+              <button
+                class="view-tab"
+                id="tab-all"
+                type="button"
+                role="tab"
+                aria-controls="plugin-list"
+                aria-selected="false"
+                data-view="all"
+              >
+                总榜 <span id="all-count"></span>
               </button>
             </div>
             <button
@@ -3013,84 +3138,7 @@
           </div>
 
           <div class="search-panels">
-            <div class="search-panel" data-search-view="top100" role="search">
-              <div class="search-field">
-                <label class="sr-only" for="search-top100">搜索 Top 100</label>
-                <span class="search-control">
-                  <input
-                    class="search-input"
-                    id="search-top100"
-                    type="search"
-                    autocomplete="off"
-                    maxlength="80"
-                    spellcheck="false"
-                    placeholder="搜索 Top 100：名称、功能或中文关键词"
-                    aria-describedby="search-result-top100"
-                  />
-                  <button
-                    class="search-clear"
-                    type="button"
-                    data-clear-view="top100"
-                    hidden
-                  >
-                    清除
-                  </button>
-                </span>
-              </div>
-              <p class="sr-only search-result" id="search-result-top100">
-                等待插件数据
-              </p>
-            </div>
-
-            <div class="search-panel" data-search-view="rising" role="search" hidden>
-              <div class="search-field">
-                <label class="sr-only" for="search-rising">搜索新锐榜</label>
-                <span class="search-control">
-                  <input
-                    class="search-input"
-                    id="search-rising"
-                    type="search"
-                    autocomplete="off"
-                    maxlength="80"
-                    spellcheck="false"
-                    placeholder="搜索新锐榜：名称、功能或中文关键词"
-                    aria-describedby="search-result-rising"
-                  />
-                  <button class="search-clear" type="button" data-clear-view="rising" hidden>
-                    清除
-                  </button>
-                </span>
-              </div>
-              <p class="sr-only search-result" id="search-result-rising">
-                等待插件数据
-              </p>
-            </div>
-
-            <div class="search-panel" data-search-view="all" role="search" hidden>
-              <div class="search-field">
-                <label class="sr-only" for="search-all">搜索总榜</label>
-                <span class="search-control">
-                  <input
-                    class="search-input"
-                    id="search-all"
-                    type="search"
-                    autocomplete="off"
-                    maxlength="80"
-                    spellcheck="false"
-                    placeholder="搜索全部仓库：名称、功能或中文关键词"
-                    aria-describedby="search-result-all"
-                  />
-                  <button class="search-clear" type="button" data-clear-view="all" hidden>
-                    清除
-                  </button>
-                </span>
-              </div>
-              <p class="sr-only search-result" id="search-result-all">
-                等待插件数据
-              </p>
-            </div>
-
-            <div class="search-panel category-panel" data-search-view="category" hidden>
+            <div class="category-panel" id="category-filter-panel" hidden>
               <div class="category-options" role="group" aria-label="插件分类">
                 <button class="category-option" type="button" data-category="ai" aria-pressed="true" aria-describedby="category-hover-description">
                   <span class="category-icon" aria-hidden="true">
@@ -3141,14 +3189,40 @@
                   <span class="category-description-body"></span>
                 </p>
               </div>
-              <p class="sr-only search-result" id="search-result-category">
-                等待插件数据
-              </p>
+            </div>
+
+            <div class="search-panel" role="search">
+              <div class="search-field">
+                <label class="sr-only" id="ranking-search-label" for="ranking-search">搜索 Top 100</label>
+                <span class="search-control">
+                  <input
+                    class="search-input"
+                    id="ranking-search"
+                    type="search"
+                    autocomplete="off"
+                    maxlength="80"
+                    spellcheck="false"
+                    placeholder="搜索 Top 100：名称、功能或中文关键词"
+                    aria-describedby="ranking-search-result"
+                  />
+                  <button class="search-clear" id="ranking-search-clear" type="button" hidden>
+                    清除
+                  </button>
+                </span>
+              </div>
+              <div class="search-status-row">
+                <p class="search-result" id="ranking-search-result">等待插件数据</p>
+                <div class="search-sort" id="ranking-search-sort" role="group" aria-label="搜索结果排序" hidden>
+                  <span>排序</span>
+                  <button type="button" data-search-sort="rank" aria-pressed="true">榜单顺序</button>
+                  <button type="button" data-search-sort="relevance" aria-pressed="false">相关度</button>
+                </div>
+              </div>
             </div>
           </div>
 
           <div class="list-head" id="list-head" aria-hidden="true">
-            <span>排名</span>
+            <span id="rank-head">排名</span>
             <span>插件</span>
             <span>中文简介</span>
             <span class="signal-head">趋势 / 证据</span>
@@ -3267,6 +3341,7 @@
       const copyFeedback = document.querySelector("#copy-feedback");
       const rankingStatus = document.querySelector("#ranking-status");
       const listHead = document.querySelector("#list-head");
+      const rankHead = document.querySelector("#rank-head");
       const metricHead = document.querySelector("#metric-head");
       const rankingMetaTitle = document.querySelector("#ranking-meta-title");
       const rankingUpdated = document.querySelector("#ranking-updated");
@@ -3285,20 +3360,13 @@
       const heroContentSwitches = [
         ...document.querySelectorAll(".hero-content-switch[data-content-switch]"),
       ];
-      const searchPanels = [...document.querySelectorAll(".search-panel")];
-      const searchInputs = Object.fromEntries(
-        [...document.querySelectorAll(".search-input")].map((input) => [
-          input.closest("[data-search-view]").dataset.searchView,
-          input,
-        ])
-      );
-      const searchResults = Object.fromEntries(
-        [...document.querySelectorAll(".search-result")].map((result) => [
-          result.closest("[data-search-view]").dataset.searchView,
-          result,
-        ])
-      );
-      const searchClearButtons = [...document.querySelectorAll(".search-clear")];
+      const categoryFilterPanel = document.querySelector("#category-filter-panel");
+      const searchInput = document.querySelector("#ranking-search");
+      const searchLabel = document.querySelector("#ranking-search-label");
+      const searchResult = document.querySelector("#ranking-search-result");
+      const searchClear = document.querySelector("#ranking-search-clear");
+      const searchSort = document.querySelector("#ranking-search-sort");
+      const searchSortButtons = [...document.querySelectorAll("[data-search-sort]")];
       const categoryButtons = [...document.querySelectorAll(".category-option")];
       const categoryDescriptionStage = document.querySelector(".category-description-stage");
       const categoryDescription = document.querySelector("#category-hover-description");
@@ -3320,6 +3388,18 @@
         knowledge: "联网搜索、浏览器检索、RAG、知识库、文档问答与研究。",
         tools: "自动化、工作流、连接器、文件处理、通知与效率工具。",
         security: "权限、沙箱、审计、认证、隐私、密钥与安全防护。",
+      };
+      const searchLabels = {
+        top100: "搜索 Top 100",
+        rising: "搜索新锐榜",
+        category: "搜索当前分类",
+        all: "搜索总榜",
+      };
+      const searchPlaceholders = {
+        top100: "搜索 Top 100：名称、功能或中文关键词",
+        rising: "搜索新锐榜：名称、功能或中文关键词",
+        category: "搜索当前分类：名称、功能或中文关键词",
+        all: "搜索全部仓库：名称、功能或中文关键词",
       };
       const categoryKeywords = {
         ai: [
@@ -3357,7 +3437,7 @@
           "连接器", "通知", "插件管理", "剪贴板", "文件管理", "转换", "下载", "计算器", "翻译",
         ],
       };
-      const searchTimers = { top100: null, rising: null, all: null, category: null };
+      let searchTimer = null;
       const searchGenerations = { top100: 0, rising: 0, all: 0, category: 0 };
       const composingViews = new Set();
       const trackedSearchViews = new Set();
@@ -3385,6 +3465,7 @@
       let viewSwitchGeneration = 0;
       let generatedAt = null;
       let hideSkills = false;
+      let activeSearchSort = "rank";
       let copyFeedbackTimer = null;
       const initialParams = new URLSearchParams(window.location.search);
       const requestedView = initialParams.get("view");
@@ -3595,10 +3676,10 @@
           heroSearchInput.focus();
           return;
         }
-        const targetInput = searchInputs.all;
-        targetInput.value = query;
-        viewState.all.query = query;
+        searchInput.value = query;
+        for (const state of Object.values(viewState)) state.query = query;
         viewState.all.visible = PAGE_SIZE;
+        activeSearchSort = "relevance";
         searchGenerations.all += 1;
         setContentView("ranking", { historyMode: "push", scroll: true });
         await setView("all");
@@ -3606,7 +3687,7 @@
           trackedSearchViews.add("all");
           track("search_used", { view: "search" });
         }
-        targetInput.focus({ preventScroll: true });
+        searchInput.focus({ preventScroll: true });
       });
 
       document.addEventListener("click", async (event) => {
@@ -3831,7 +3912,7 @@
           const hot = await fetchJson(manifest.datasets.hot.url);
           hotEntries = makeEntries(hot.rankings);
           if (hotEntries.length === 0) throw new Error("Top 100 榜单为空");
-          allCount.textContent = `(${formatStars(manifest.datasets.total.count)})`;
+          updateAllCount();
           updateCategoryCounts();
           return;
         } catch (manifestError) {
@@ -3895,7 +3976,7 @@
               if (entries.length === 0) throw new Error("兼容总榜为空");
               rankedEntries = entries;
               generatedAt ||= payload.generatedAt;
-              allCount.textContent = `(${formatStars(rankedEntries.length)})`;
+              updateAllCount();
               updateCategoryCounts();
               return rankedEntries;
             })
@@ -3992,6 +4073,44 @@
         return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
       }
 
+      function countSkills(entries, categoryId = null) {
+        return entries.filter((entry) =>
+          entry.plugin.type === "skill"
+          && (categoryId === null || entryMatchesCategory(entry, categoryId))
+        ).length;
+      }
+
+      function manifestSkillCount(dataset, categoryId = null) {
+        const declared = Number(dataset?.skillCount);
+        if (Number.isInteger(declared) && declared >= 0) return declared;
+        if (!searchEntries) return null;
+        return countSkills(searchEntries, categoryId);
+      }
+
+      function filteredPublishedTotal(total, skillCount) {
+        if (!hideSkills || skillCount === null) return total;
+        return Math.max(0, total - skillCount);
+      }
+
+      function hiddenSkillNote(skillCount) {
+        if (!hideSkills) return "";
+        return skillCount === null
+          ? " · 已隐藏 Skill 仓库"
+          : ` · 已隐藏 ${formatStars(skillCount)} 个 Skill 仓库`;
+      }
+
+      function updateAllCount() {
+        if (manifest?.datasets?.total) {
+          const dataset = manifest.datasets.total;
+          const count = filteredPublishedTotal(dataset.count, manifestSkillCount(dataset));
+          allCount.textContent = `(${formatStars(count)})`;
+          return;
+        }
+        allCount.textContent = rankedEntries.length > 0
+          ? `(${formatStars(filteredPublishedTotal(rankedEntries.length, countSkills(rankedEntries)))})`
+          : "";
+      }
+
       function formatUpdateTime(value) {
         const date = new Date(value);
         if (!Number.isFinite(date.getTime())) return "时间未知";
@@ -4018,6 +4137,20 @@
         const months = Math.floor(days / 30);
         if (months < 12) return `${months} 个月前`;
         return `${Math.floor(months / 12)} 年前`;
+      }
+
+      function updateSearchControls() {
+        searchLabel.textContent = searchLabels[currentView];
+        searchInput.setAttribute("aria-label", searchLabels[currentView]);
+        searchInput.placeholder = searchPlaceholders[currentView];
+        searchInput.value = viewState[currentView].query;
+        categoryFilterPanel.hidden = currentView !== "category";
+        for (const button of searchSortButtons) {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.searchSort === activeSearchSort)
+          );
+        }
       }
 
       async function setView(
@@ -4050,9 +4183,7 @@
         };
         rankingMetaTitle.textContent = metaLabels[currentView];
         rankingUpdated.textContent = `更新于：${formatUpdateTime(generatedAt)}`;
-        for (const panel of searchPanels) {
-          panel.hidden = panel.dataset.searchView !== currentView;
-        }
+        updateSearchControls();
         for (const button of categoryButtons) {
           button.setAttribute(
             "aria-pressed",
@@ -4148,12 +4279,14 @@
           .filter((entry) => !hideSkills || entry.plugin.type !== "skill")
           .map((entry) => ({
             entry,
-            score: currentView === "category" ? 0 : scoreSearchEntry(entry.plugin, state.query),
+            score: scoreSearchEntry(entry.plugin, state.query),
           }))
           .filter((item) => item.score !== null);
         if (searchActive) {
           scoredMatches.sort(
-            (left, right) => right.score - left.score || left.entry.rank - right.entry.rank
+            activeSearchSort === "relevance"
+              ? (left, right) => right.score - left.score || left.entry.rank - right.entry.rank
+              : (left, right) => left.entry.rank - right.entry.rank
           );
         }
         const matched = scoredMatches.map(({ entry }) => entry);
@@ -4161,6 +4294,17 @@
           ? matched.slice(0, state.visible)
           : matched;
         const fragment = document.createDocumentFragment();
+        rankHead.textContent = currentView === "category" && searchActive
+          ? "总榜排名"
+          : "排名";
+        searchClear.hidden = !searchActive;
+        searchSort.hidden = !searchActive;
+        for (const button of searchSortButtons) {
+          button.setAttribute(
+            "aria-pressed",
+            String(button.dataset.searchSort === activeSearchSort)
+          );
+        }
 
         if (revealObserver) {
           for (const element of list.querySelectorAll(".reveal-item")) {
@@ -4276,24 +4420,46 @@
         }
         if (currentView === "category") {
           const category = activeCategoryManifest();
-          const categoryTotal = category?.count ?? matched.length;
-          searchResults.category.textContent = `${categoryLabels[activeCategory]}分类共 ${formatStars(categoryTotal)} 个插件`;
-          rankingStatus.textContent = `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${categoryTotal} 个插件`;
-          loadMore.hidden = manifest
-            ? categoryPageLoaded >= (category?.pageCount ?? 0)
-            : shown.length >= matched.length;
+          const categoryTotal = category?.count ?? categoryScoped.length;
+          const categorySkillCount = searchActive
+            ? null
+            : manifestSkillCount(category, activeCategory);
+          const filteredCategoryTotal = searchActive
+            ? matched.length
+            : filteredPublishedTotal(categoryTotal, categorySkillCount);
+          searchResult.textContent = searchActive
+            ? `${categoryLabels[activeCategory]}内匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按总榜顺序"} · 显示总榜排名`
+            : hideSkills && categorySkillCount === null
+              ? `${categoryLabels[activeCategory]}分类${hiddenSkillNote(categorySkillCount)}`
+              : `${categoryLabels[activeCategory]}分类共 ${formatStars(filteredCategoryTotal)} 个插件${hiddenSkillNote(categorySkillCount)}`;
+          rankingStatus.textContent = searchActive
+            ? `${categoryLabels[activeCategory]}内找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
+            : hideSkills && categorySkillCount === null
+              ? `${categoryLabels[activeCategory]}分类已显示 ${shown.length} 个非 Skill 插件`
+              : `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${filteredCategoryTotal} 个插件`;
+          loadMore.hidden = searchActive
+            ? shown.length >= matched.length
+            : manifest
+              ? categoryPageLoaded >= (category?.pageCount ?? 0)
+              : shown.length >= matched.length;
           if (!loadMore.hidden) {
-            const remaining = Math.max(0, (category?.count ?? matched.length) - shown.length);
+            const remaining = Math.max(
+              0,
+              (searchActive ? matched.length : filteredCategoryTotal) - shown.length
+            );
             loadMore.textContent = `继续加载（剩余 ${formatStars(remaining)}）`;
           }
         } else {
+          const totalDataset = manifest?.datasets?.total;
+          const totalSkillCount = currentView === "all" && !searchActive
+            ? manifestSkillCount(totalDataset)
+            : null;
           const publishedTotal = currentView === "all" && !searchActive
-            ? manifest?.datasets?.total?.count ?? matched.length
+            ? filteredPublishedTotal(totalDataset?.count ?? matched.length, totalSkillCount)
             : matched.length;
-          searchResults[currentView].textContent = searchActive
-            ? `匹配 ${formatStars(matched.length)} 个 · 按相关度排序 · 显示原始排名`
-            : `已显示 ${formatStars(shown.length)} / ${formatStars(publishedTotal)} 个`;
-          document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !searchActive;
+          searchResult.textContent = searchActive
+            ? `匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按榜单顺序"} · 显示原榜排名`
+            : `已显示 ${formatStars(shown.length)} / ${formatStars(publishedTotal)} 个${hiddenSkillNote(totalSkillCount)}`;
           rankingStatus.textContent = searchActive
             ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
             : `已显示 ${shown.length} / ${publishedTotal} 个插件`;
@@ -4305,7 +4471,7 @@
                 : shown.length >= matched.length
           );
           if (!loadMore.hidden) {
-            const total = searchActive ? matched.length : manifest?.datasets?.total?.count ?? matched.length;
+            const total = searchActive ? matched.length : publishedTotal;
             loadMore.textContent = `继续加载（剩余 ${formatStars(Math.max(0, total - shown.length))}）`;
           }
         }
@@ -4365,10 +4531,28 @@
         });
       });
 
-      skillFilter.addEventListener("click", () => {
+      skillFilter.addEventListener("click", async () => {
         hideSkills = !hideSkills;
         skillFilter.setAttribute("aria-pressed", String(hideSkills));
         skillFilter.textContent = hideSkills ? "显示 Skill 仓库" : "隐藏 Skill 仓库";
+        if (
+          hideSkills
+          && manifest?.datasets?.total
+          && !Number.isInteger(manifest.datasets.total.skillCount)
+        ) {
+          skillFilter.disabled = true;
+          skillFilter.textContent = "正在统计…";
+          try {
+            await loadSearchEntries();
+          } catch (error) {
+            showFeedback("已隐藏 Skill 仓库，但暂时无法读取精确数量。");
+            console.error(error);
+          } finally {
+            skillFilter.disabled = false;
+            skillFilter.textContent = "显示 Skill 仓库";
+          }
+        }
+        updateAllCount();
         renderRanking();
       });
 
@@ -4376,13 +4560,16 @@
         const state = viewState[view];
         const previousQuery = normalizeSearchText(state.query);
         const nextQuery = normalizeSearchText(value);
-        state.query = value;
+        for (const nextState of Object.values(viewState)) {
+          nextState.query = value;
+          nextState.visible = nextQuery ? PAGE_SIZE : nextState.unfilteredVisible;
+        }
         if (previousQuery === nextQuery) return;
-        const searchGeneration = ++searchGenerations[view];
+        for (const key of Object.keys(searchGenerations)) searchGenerations[key] += 1;
+        const searchGeneration = searchGenerations[view];
         const isCurrentSearchRequest = () =>
           searchGeneration === searchGenerations[view]
           && normalizeSearchText(viewState[view].query) === nextQuery;
-        state.visible = nextQuery ? PAGE_SIZE : state.unfilteredVisible;
         if (nextQuery && !trackedSearchViews.has(view)) {
           trackedSearchViews.add(view);
           track("search_used", {
@@ -4408,12 +4595,9 @@
             else await ensureViewData(view);
           } catch (error) {
             if (!isCurrentSearchRequest()) return;
-            const result = searchResults[view];
-            if (result) {
-              result.textContent = nextQuery
-                ? "搜索索引暂时无法读取"
-                : "榜单数据暂时无法读取";
-            }
+            searchResult.textContent = nextQuery
+              ? "搜索索引暂时无法读取"
+              : "榜单数据暂时无法读取";
             if (currentView === view) {
               const status = document.createElement("p");
               status.className = "status error";
@@ -4432,33 +4616,35 @@
         if (isCurrentSearchRequest() && currentView === view) renderRanking();
       }
 
-      function scheduleSearch(view, value, immediate = false) {
-        window.clearTimeout(searchTimers[view]);
+      function scheduleSearch(value, immediate = false) {
+        window.clearTimeout(searchTimer);
         if (immediate) {
-          void applySearchQuery(view, value);
+          void applySearchQuery(currentView, value);
           return;
         }
-        searchTimers[view] = window.setTimeout(() => void applySearchQuery(view, value), 160);
+        searchTimer = window.setTimeout(() => void applySearchQuery(currentView, value), 160);
       }
 
-      for (const [view, input] of Object.entries(searchInputs)) {
-        input.addEventListener("compositionstart", () => composingViews.add(view));
-        input.addEventListener("compositionend", () => {
-          composingViews.delete(view);
-          scheduleSearch(view, input.value, true);
-        });
-        input.addEventListener("input", () => {
-          if (!composingViews.has(view)) scheduleSearch(view, input.value);
-        });
-      }
+      searchInput.addEventListener("compositionstart", () => composingViews.add("ranking"));
+      searchInput.addEventListener("compositionend", () => {
+        composingViews.delete("ranking");
+        scheduleSearch(searchInput.value, true);
+      });
+      searchInput.addEventListener("input", () => {
+        if (!composingViews.has("ranking")) scheduleSearch(searchInput.value);
+      });
 
-      for (const button of searchClearButtons) {
+      searchClear.addEventListener("click", () => {
+        searchInput.value = "";
+        scheduleSearch("", true);
+        searchInput.focus();
+      });
+
+      for (const button of searchSortButtons) {
         button.addEventListener("click", () => {
-          const view = button.dataset.clearView;
-          const input = searchInputs[view];
-          input.value = "";
-          scheduleSearch(view, "", true);
-          input.focus();
+          activeSearchSort = button.dataset.searchSort;
+          updateSearchControls();
+          renderRanking();
         });
       }
 
@@ -4474,13 +4660,17 @@
         }
         updateCategoryCounts();
         for (const tab of tabs) {
-          tab.addEventListener("click", () => void setView(tab.dataset.view, { historyMode: "push" }));
+          tab.addEventListener("click", () => {
+            for (const state of Object.values(viewState)) state.query = searchInput.value;
+            void setView(tab.dataset.view, { historyMode: "push" });
+          });
           tab.addEventListener("keydown", (event) => {
             if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
             event.preventDefault();
             const currentIndex = tabs.indexOf(tab);
             const offset = event.key === "ArrowRight" ? 1 : -1;
             const next = tabs[(currentIndex + offset + tabs.length) % tabs.length];
+            for (const state of Object.values(viewState)) state.query = searchInput.value;
             next.focus();
             void setView(next.dataset.view, { historyMode: "push" });
           });
@@ -4547,13 +4737,18 @@
         });
         await setView(currentView, { emitEvent: false, updateUrl: false });
       } catch (error) {
-        const status = document.createElement("p");
+        const status = document.createElement("div");
         status.className = "status error";
-        status.textContent = "暂时无法读取插件数据，请稍后重试。";
+        const message = document.createElement("p");
+        message.textContent = "插件数据暂时无法读取。请检查网络连接后重试。";
+        const retry = document.createElement("button");
+        retry.className = "status-retry";
+        retry.type = "button";
+        retry.textContent = "重新加载数据";
+        retry.addEventListener("click", () => window.location.reload());
+        status.append(message, retry);
         list.replaceChildren(status);
-        for (const result of Object.values(searchResults)) {
-          result.textContent = "数据加载失败";
-        }
+        searchResult.textContent = "数据加载失败";
         console.error(error);
       }
     </script>

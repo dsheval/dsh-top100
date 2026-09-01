@@ -113,11 +113,15 @@ describe("v2 ranking publication", () => {
   });
 
   it("publishes six independently paginated categories with continuous category ranks", () => {
-    const publication = buildRankingPublication(rankingsDocument(205, true));
+    const rankings = rankingsDocument(205, true);
+    rankings.rankings.total[3].type = "skill";
+    rankings.rankings.total[104].type = "skill";
+    const publication = buildRankingPublication(rankings);
     expect(publication.manifest.categories.map(({ id }) => id)).toEqual(CATEGORY_IDS);
 
     const ai = publication.manifest.categories.find(({ id }) => id === "ai");
-    expect(ai).toMatchObject({ count: 205, pageSize: 100, pageCount: 3 });
+    expect(publication.manifest.datasets.total.skillCount).toBe(2);
+    expect(ai).toMatchObject({ count: 205, skillCount: 2, pageSize: 100, pageCount: 3 });
     expect(ai?.pages.map(({ count }) => count)).toEqual([100, 100, 5]);
     const entries = ai!.pages.flatMap(
       ({ url }) => payloadForUrl(publication, url).rankings as Array<{
@@ -159,7 +163,7 @@ describe("v2 ranking publication", () => {
       });
     }
     expect(publication.manifest.snapshotId).toMatch(/^2026-08-31-[a-f0-9]{16}$/);
-    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.1");
+    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.2");
   });
 
   it("omits full-catalog-only fields from ranking pages and further trims search entries", () => {
@@ -221,6 +225,12 @@ describe("v2 ranking publication", () => {
     const publication = buildRankingPublication(rankingsDocument(1));
     publication.files[0] = { ...publication.files[0], content: "{}\n" };
     expect(() => validateRankingPublication(publication)).toThrow(/hash or byte size mismatch/);
+  });
+
+  it("rejects a Skill count that no longer matches paginated entries", () => {
+    const publication = buildRankingPublication(rankingsDocument(1));
+    publication.manifest.datasets.total.skillCount = 1;
+    expect(() => validateRankingPublication(publication)).toThrow(/Skill count/);
   });
 
   it("publishes immutable files, manifest, and legacy compatibility endpoints", () => {

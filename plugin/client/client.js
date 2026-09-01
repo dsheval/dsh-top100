@@ -880,6 +880,7 @@ function RankingsPage({ t }) {
 	const preflightsByName = (0, react.useMemo)(() => new Map(preflights.map((preflight) => [preflight.fullName, preflight])), [preflights]);
 	const activeCategory = data?.categories.find((definition) => definition.id === category);
 	const activeFilterCount = Number(hideSkills) + Number(showCandidates);
+	const excludedSkillCount = data?.excludedSkillCount ?? 0;
 	const selectedEvidence = selectedItem ? presentCatalogEvidence(selectedItem.evidence, selectedItem.installSpec?.kind ?? null, t) : null;
 	function resetCatalogFilters() {
 		setHideSkills(false);
@@ -1268,21 +1269,34 @@ function RankingsPage({ t }) {
 				data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "ranking-context",
 					"aria-live": "polite",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: "result-count",
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
-							" / ",
-							data.total,
-							" ",
-							t("entries")
-						]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-						className: "ranking-basis",
-						title: t(rankingBasisKey(view, query)),
-						"aria-label": `${t(rankingBasisShortKey(view, query))}: ${t(rankingBasisKey(view, query))}`,
-						children: t(rankingBasisShortKey(view, query))
-					})]
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: "result-count",
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
+								" / ",
+								data.total,
+								" ",
+								t("entries")
+							]
+						}),
+						hideSkills && excludedSkillCount > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: "filter-summary",
+							children: [
+								t("hiddenSkillsPrefix"),
+								" ",
+								excludedSkillCount,
+								" ",
+								t("skillRepositories")
+							]
+						}) : null,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "ranking-basis",
+							title: t(rankingBasisKey(view, query)),
+							"aria-label": `${t(rankingBasisShortKey(view, query))}: ${t(rankingBasisKey(view, query))}`,
+							children: t(rankingBasisShortKey(view, query))
+						})
+					]
 				}) : null,
 				notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "banner",
@@ -1961,6 +1975,13 @@ const css = `
 .dsh-top100 .result-count strong {
   color: var(--t100-ink);
   font-size: 13px;
+}
+.dsh-top100 .filter-summary {
+  flex: 0 0 auto;
+  color: var(--t100-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 .dsh-top100 .ranking-basis {
   display: inline-flex;
@@ -2855,6 +2876,8 @@ const zh = {
 	categoryFilter: "插件分类",
 	hideSkills: "隐藏 Skill",
 	hideSkillsHint: "只看 Bundle 和其他生态项目",
+	hiddenSkillsPrefix: "已隐藏",
+	skillRepositories: "个 Skill 仓库",
 	showCandidates: "探索候选与生态项目",
 	showCandidatesHint: "同时显示当前不能直接安装的候选项目",
 	clearFilters: "清除筛选",
@@ -3043,7 +3066,7 @@ const zh = {
 	activation_unknown: "运行状态：尚未取得运行时证据",
 	skillHint: "这是 Skill，不能通过 dsh plugin 一键装进 Web profile。",
 	cardTitle: "榜单数据源",
-	cardHint: "Host 端从该地址读取 rankings.json。",
+	cardHint: "Host 端从该地址读取 manifest 与不可变榜单快照；旧数据源会自动回退兼容文件。",
 	diagLoading: "正在扫描当前 DSH Profile…",
 	diagLoadFail: "诊断加载失败",
 	diagOk: "未发现严重问题",
@@ -3080,6 +3103,8 @@ const en = {
 	categoryFilter: "Plugin category",
 	hideSkills: "Hide Skills",
 	hideSkillsHint: "Show Bundles and other ecosystem projects only",
+	hiddenSkillsPrefix: "Hidden",
+	skillRepositories: "Skill repositories",
 	showCandidates: "Explore candidates and ecosystem projects",
 	showCandidatesHint: "Also show candidates that cannot currently be installed directly",
 	clearFilters: "Clear filters",
@@ -3268,7 +3293,7 @@ const en = {
 	activation_unknown: "Runtime: no authoritative evidence yet",
 	skillHint: "This is a Skill and cannot be installed into the Web profile with dsh plugin.",
 	cardTitle: "Rankings source",
-	cardHint: "The host reads rankings.json from this URL.",
+	cardHint: "The host reads the manifest and immutable ranking snapshots from this URL, with legacy fallback.",
 	diagLoading: "Scanning the current DSH profile…",
 	diagLoadFail: "Could not load diagnostics",
 	diagOk: "No critical issues",

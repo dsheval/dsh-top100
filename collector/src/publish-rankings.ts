@@ -26,7 +26,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.1";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.2";
 
 export interface RankingPublicationOptions {
   pageSize?: number;
@@ -229,6 +229,7 @@ export function buildRankingPublication(
       return {
         ...definition,
         count: categoryEntries.length,
+        skillCount: categoryEntries.filter((entry) => entry.type === "skill").length,
         pageSize,
         pageCount,
         pages,
@@ -261,6 +262,7 @@ export function buildRankingPublication(
       search,
       total: {
         count: totalEntries.length,
+        skillCount: totalEntries.filter((entry) => entry.type === "skill").length,
         pageSize,
         pageCount: totalPageCount,
         pages: totalPages,
@@ -323,7 +325,7 @@ export function validateRankingPublication(publication: RankingPublication): voi
     }
   }
 
-  type RankedEntry = Pick<RankingSummaryEntry, "rank" | "fullName" | "categories">;
+  type RankedEntry = Pick<RankingSummaryEntry, "rank" | "fullName" | "categories" | "type">;
 
   function entriesFor(reference: RankingFileReference): RankedEntry[] {
     const relativePath = reference.url.slice(prefix.length);
@@ -364,7 +366,7 @@ export function validateRankingPublication(publication: RankingPublication): voi
     pageSize: number,
     declaredPageCount: number,
     category?: PluginCategoryId
-  ): void {
+  ): RankedEntry[] {
     const expectedPageCount = Math.ceil(expectedCount / pageSize);
     if (declaredPageCount !== expectedPageCount || pageReferences.length !== expectedPageCount) {
       throw new Error(`${name} page count does not match manifest total`);
@@ -389,20 +391,28 @@ export function validateRankingPublication(publication: RankingPublication): voi
       return payload.rankings;
     });
     assertRankSequence(name, entries, expectedCount, category);
+    return entries;
   }
 
   assertRankSequence("hot", entriesFor(manifest.datasets.hot), manifest.datasets.hot.count);
   assertRankSequence("rising", entriesFor(manifest.datasets.rising), manifest.datasets.rising.count);
   assertRankSequence("search", entriesFor(manifest.datasets.search), manifest.datasets.search.count);
-  assertContinuousRanks(
+  const validatedTotalEntries = assertContinuousRanks(
     "total",
     manifest.datasets.total.pages,
     manifest.datasets.total.count,
     manifest.datasets.total.pageSize,
     manifest.datasets.total.pageCount
   );
+  if (
+    manifest.datasets.total.skillCount !== undefined
+    && validatedTotalEntries.filter((entry) => entry.type === "skill").length
+      !== manifest.datasets.total.skillCount
+  ) {
+    throw new Error("total Skill count does not match manifest");
+  }
   for (const category of manifest.categories) {
-    assertContinuousRanks(
+    const validatedCategoryEntries = assertContinuousRanks(
       category.id,
       category.pages,
       category.count,
@@ -410,6 +420,13 @@ export function validateRankingPublication(publication: RankingPublication): voi
       category.pageCount,
       category.id
     );
+    if (
+      category.skillCount !== undefined
+      && validatedCategoryEntries.filter((entry) => entry.type === "skill").length
+        !== category.skillCount
+    ) {
+      throw new Error(`${category.id} Skill count does not match manifest`);
+    }
   }
 }
 

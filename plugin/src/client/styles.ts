@@ -291,6 +291,13 @@ export const css = `
   color: var(--t100-ink);
   font-size: 13px;
 }
+.dsh-top100 .filter-summary {
+  flex: 0 0 auto;
+  color: var(--t100-accent);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .dsh-top100 .ranking-basis {
   display: inline-flex;
   align-items: center;

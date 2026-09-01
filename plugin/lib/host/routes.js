@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, filterCatalog, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadRankings, loadSearchRankings, normalizeDataUrl, } from "./catalog.js";
+import { DEFAULT_DATA_URL, filterCatalog, filteredCatalogCategories, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, loadCachedRankings, loadRankingView, loadSearchRankings, normalizeDataUrl, } from "./catalog.js";
 import { cancelActive, progress, runDshPlugin, runDshProfileCheck, } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
 import { FULL_NAME_RE, isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
@@ -15,7 +15,7 @@ import { isProtectedPackage, parseDshPatchText, rowIdsForPackage, setPackageEnab
 import { installSkill } from "../install/skill-install.js";
 import { consumeInstallApproval, createInstallPreflight } from "./install-preflight.js";
 import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
-import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
+import { isPluginCategoryId } from "../shared/categories.js";
 const MAX_BATCH_SIZE = 20;
 const MAX_SKILL_CONCURRENCY = 3;
 const TERMINAL_PHASES = ["installed", "failed", "cancelled"];
@@ -37,7 +37,7 @@ function pluginVersion() {
     }
 }
 async function safeLoad(config) {
-    return loadRankings(config.dataUrl || DEFAULT_DATA_URL);
+    return loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
 }
 function installFailure(result) {
     const combined = `${result.stdout}\n${result.stderr}`;
@@ -599,7 +599,7 @@ export function mountRoutes(host, config, commandRuntime) {
                         ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
                         : await loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
                     const installed = readInstalled(config.profile, config.profileDirectory);
-                    const { total, items } = filterCatalog(document, {
+                    const { total, excludedSkillCount, items } = filterCatalog(document, {
                         view,
                         category,
                         query: q,
@@ -613,7 +613,7 @@ export function mountRoutes(host, config, commandRuntime) {
                     sendJson(response, 200, {
                         view,
                         category,
-                        categories: catalogCategories(document),
+                        categories: filteredCatalogCategories(document, { excludeSkills, compatibleOnly }),
                         generatedAt: document.generatedAt,
                         snapshotDate: document.snapshotDate,
                         dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
@@ -622,6 +622,7 @@ export function mountRoutes(host, config, commandRuntime) {
                         compatibleOnly,
                         cache,
                         total,
+                        excludedSkillCount,
                         offset,
                         limit,
                         items,

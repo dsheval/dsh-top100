@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   describeCatalogFetchError,
   filterCatalog,
+  filteredCatalogCategories,
   findPublishedEntry,
   invalidateCatalog,
   isRetryableCatalogFetchError,
@@ -224,6 +225,34 @@ describe("catalog filter", () => {
       excludeSkills: true,
     });
     expect(result.items.map((item) => item.fullName)).toEqual(["acme/hot-one"]);
+    expect(result.total).toBe(1);
+    expect(result.excludedSkillCount).toBe(2);
+  });
+
+  it("keeps category counts aligned with Skill and compatibility filters", () => {
+    const categorized: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/plugin", { type: "cordis-plugin", categories: ["ai"] }),
+          entry("acme/skill", { type: "skill", categories: ["ai", "knowledge"] }),
+          entry("acme/app", { type: "project", description: "Desktop companion", categories: ["ai"] }),
+        ],
+      },
+    };
+    const categories = filteredCatalogCategories(categorized, {
+      excludeSkills: true,
+      compatibleOnly: true,
+    });
+    expect(categories.find(({ id }) => id === "ai")).toMatchObject({
+      count: 1,
+      excludedSkillCount: 1,
+    });
+    expect(categories.find(({ id }) => id === "knowledge")).toMatchObject({
+      count: 0,
+      excludedSkillCount: 1,
+    });
   });
 
   it("keeps ecosystem candidates out of the default compatible scope", () => {

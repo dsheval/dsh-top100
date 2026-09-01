@@ -4,6 +4,10 @@ import test from "node:test";
 
 const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const dsh = await readFile(new URL("../public/dsh.html", import.meta.url), "utf8");
+const packageJson = JSON.parse(
+  await readFile(new URL("../../package.json", import.meta.url), "utf8")
+);
+const devServer = await readFile(new URL("../../scripts/serve-dev.mjs", import.meta.url), "utf8");
 
 test("boots from lightweight hot data and never falls back to the full catalog", () => {
   assert.match(html, /const MANIFEST_URL = "\.\/data\/manifest\.json"/);
@@ -41,7 +45,8 @@ test("loads deferred datasets through their manifest URLs", () => {
 test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(html, /id="hero-search-form"/);
   assert.doesNotMatch(html, /market-radar|radar-item|renderMarketRadar/);
-  assert.match(html, /data-copy-command="npx @deepseek-ai\/dsh plugin/);
+  assert.match(html, /data-content-switch="dsh"/);
+  assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh plugin/);
   assert.match(html, /data-track-ranking-view="hot"/);
   assert.match(html, /track\("search_used"/);
   assert.match(html, /closest\("a\.github-link, a\.card-github-link"\)/);
@@ -52,17 +57,51 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.doesNotMatch(html, /github\.githubassets\.com\/favicons/);
 });
 
-test("uses the approved light mineral palette without yellow UI panels", () => {
-  assert.match(html, /--hero: #e7eeec/);
-  assert.match(html, /--hero-accent: #2f6f68/);
-  assert.match(html, /--code-surface: #eef2f1/);
-  assert.match(html, /<meta name="theme-color" content="#e7eeec" \/>/);
+test("uses the approved neutral sage palette", () => {
+  assert.match(html, /--paper: #f7f9f8/);
+  assert.match(html, /--hero: #d9e7e2/);
+  assert.match(html, /--hero-ink: #13201c/);
+  assert.match(html, /--hero-accent: #126657/);
+  assert.match(html, /--code-surface: #e8eeec/);
+  assert.match(html, /--line: rgba\(19, 32, 28, 0\.26\)/);
+  assert.match(html, /--line-strong: #6f837c/);
+  assert.match(html, /--signal-brass: #9b8e63/);
+  assert.match(html, /--signal-sage: #7f9f95/);
+  assert.match(html, /<meta name="theme-color" content="#d9e7e2" \/>/);
   assert.match(html, /\.dsh-step-number \{[\s\S]*?border-radius: 50%/);
   assert.match(html, /\.dsh-copy-button \{[\s\S]*?color: var\(--accent\);[\s\S]*?background: var\(--card\)/);
   assert.doesNotMatch(html, /prefers-color-scheme:\s*dark/);
   assert.doesNotMatch(html, /color-scheme:\s*dark/);
   assert.doesNotMatch(html, /#f1c75b|rgba\(241,\s*199,\s*91|#d39b1d|#fffaf0/i);
   assert.doesNotMatch(html, /#a95a5a|#fbf4f3/i);
+});
+
+test("softens the footer and reports Skill-filtered totals", () => {
+  assert.match(html, /\.footer\s*\{[\s\S]*?min-height:\s*96px/);
+  assert.match(html, /\.footer\s*\{[\s\S]*?background:\s*#2b443d/);
+  assert.match(html, /\.footer span:last-child\s*\{[\s\S]*?color:\s*#c9d6d1/);
+  assert.match(html, /function manifestSkillCount\(dataset, categoryId = null\)/);
+  assert.match(html, /filteredPublishedTotal\(categoryTotal, categorySkillCount\)/);
+  assert.match(html, /已隐藏 \$\{formatStars\(skillCount\)\} 个 Skill 仓库/);
+  assert.match(html, /await loadSearchEntries\(\)/);
+});
+
+test("keeps discovery views ordered and uses one persistent ranking search", () => {
+  assert.match(html, /id="tab-top100"[\s\S]*id="tab-rising"[\s\S]*id="tab-category"[\s\S]*id="tab-all"/);
+  assert.match(html, /id="category-filter-panel"/);
+  assert.match(html, /id="ranking-search"/);
+  assert.match(html, /data-search-sort="rank"/);
+  assert.match(html, /data-search-sort="relevance"/);
+  assert.match(html, /score: scoreSearchEntry\(entry\.plugin, state\.query\)/);
+  assert.match(html, /for \(const nextState of Object\.values\(viewState\)\)/);
+  assert.doesNotMatch(html, /id="search-(?:top100|rising|all)"/);
+});
+
+test("serves local assets with same-origin production ranking data", () => {
+  assert.equal(packageJson.scripts.serve, "node scripts/serve-dev.mjs");
+  assert.match(devServer, /requestUrl\.pathname\.startsWith\("\/data\/"\)/);
+  assert.match(devServer, /https:\/\/www\.dsheval\.ai/);
+  assert.match(devServer, /requestUrl\.pathname === "\/api\/events"/);
 });
 
 test("keeps the install guide balanced and uses the canonical brand name", () => {
@@ -87,7 +126,16 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.match(html, /\.plugin-list\.is-top100-list \.plugin:nth-child\(even\) \{[\s\S]*?var\(--accent-soft\) 22%/);
   assert.doesNotMatch(html, /\.plugin-list\.is-top100-list \.plugin:nth-child\(-n \+ 3\)/);
   assert.doesNotMatch(html, /ranking-(?:glow|orbit-drift)/);
-  assert.doesNotMatch(html, /signal-(?:field|core|float|core-pulse)|orbit-(?:forward|reverse)/);
+  assert.doesNotMatch(html, /class="signal-field"|class="signal-core"/);
+  assert.match(html, /class="hero-side">[\s\S]*?class="install-console"/);
+  assert.match(html, /class="release-grid"/);
+  assert.match(html, /class="hero-command-row"/);
+  assert.match(html, />安装到 DSH<\/a>/);
+  assert.doesNotMatch(html, /hero-release-version/);
+  assert.doesNotMatch(html, /class="release-band"/);
+  assert.match(html, /data-copy-command="npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin"/);
+  assert.match(dsh, /当前发布版本：[\s\S]*?@dsheval\/dsh-top100-plugin@1\.1\.0/);
+  assert.match(dsh, /npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?padding-bottom: 0\.08em/);
