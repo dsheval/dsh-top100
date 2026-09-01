@@ -5,25 +5,67 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-Top100：经过兼容性验证的 DSH 插件排行榜。"
+      content="dsh-Top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
     />
-    <title>dsh-Top100 · DSH 插件排行榜</title>
+    <meta name="theme-color" content="#e7eeec" />
+    <link rel="canonical" href="https://www.dsheval.ai/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="dsh-Top100" />
+    <meta property="og:title" content="dsh-Top100 · 发现值得安装的 DSH 插件" />
+    <meta property="og:description" content="可信的 DSH 插件发现与排行市场。按热度、增长、项目质量和安装证据持续更新。" />
+    <meta property="og:url" content="https://www.dsheval.ai/" />
+    <meta property="og:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="dsh-Top100 · 发现值得安装的 DSH 插件" />
+    <meta name="twitter:description" content="可信的 DSH 插件发现与排行市场。" />
+    <meta name="twitter:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "dsh-Top100",
+        "url": "https://www.dsheval.ai/",
+        "description": "可信的 DSH 插件发现与排行市场",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "DSHeval",
+          "url": "https://www.dsheval.ai/"
+        },
+        "about": {
+          "@type": "SoftwareApplication",
+          "name": "dsh-Top100",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Cross-platform",
+          "softwareVersion": "1.1.0",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.1.0",
+          "license": "https://opensource.org/license/mit"
+        }
+      }
+    </script>
+    <title>dsh-Top100 · 发现值得安装的 DSH 插件</title>
     <style>
       :root {
         color-scheme: light;
-        --paper: #f2f3ef;
-        --card: #fbfcf9;
+        --paper: #f5f7f6;
+        --card: #ffffff;
         --ink: #17211f;
         --muted: #66716d;
         --accent: #2f6f68;
-        --accent-soft: #d5e5e1;
-        --section: #dfeae6;
-        --section-strong: #bdd3cd;
-        --line: rgba(23, 33, 31, 0.34);
-        --hero: #174942;
-        --hero-ink: #f7f3e7;
-        --hero-muted: #c7d8d3;
-        --hero-accent: #f1c75b;
+        --accent-contrast: #ffffff;
+        --accent-soft: #d7e5e2;
+        --section: #eef2f1;
+        --section-strong: #dce5e3;
+        --line: rgba(23, 33, 31, 0.24);
+        --hero: #e7eeec;
+        --hero-ink: #17211f;
+        --hero-muted: #53625e;
+        --hero-accent: #2f6f68;
+        --code-surface: #eef2f1;
+        --code-ink: #17211f;
         --content: 1380px;
         --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
           "PingFang SC", "Microsoft YaHei", sans-serif;
@@ -108,7 +150,7 @@
         isolation: isolate;
         min-height: 520px;
         overflow: hidden;
-        border-bottom: 1px solid rgba(247, 243, 231, 0.2);
+        border-bottom: 1px solid var(--line);
         color: var(--hero-ink);
         background: var(--hero);
       }
@@ -122,8 +164,8 @@
         border-radius: 50%;
         background: radial-gradient(
           circle,
-          rgba(241, 199, 91, 0.2) 0,
-          rgba(241, 199, 91, 0.07) 38%,
+          rgba(47, 111, 104, 0.16) 0,
+          rgba(47, 111, 104, 0.045) 38%,
           transparent 68%
         );
         content: "";
@@ -222,7 +264,7 @@
       }
 
       .hero-link {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
         text-decoration: none;
       }
@@ -237,20 +279,27 @@
       .hero-link:hover,
       .hero-link:focus-visible {
         color: var(--hero-accent);
-        background: transparent;
+        background: var(--card);
       }
 
       .hero-placeholder:hover,
       .hero-placeholder:focus-visible {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
       }
 
       .hero-content-switch.is-active,
       .hero-content-switch.is-active:hover,
       .hero-content-switch.is-active:focus-visible {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
+      }
+
+      .hero-placeholder.hero-content-switch.is-active,
+      .hero-placeholder.hero-content-switch.is-active:hover,
+      .hero-placeholder.hero-content-switch.is-active:focus-visible {
+        color: var(--hero-accent);
+        background: var(--card);
       }
 
       .hero-placeholder:focus-visible {
@@ -273,70 +322,6 @@
         fill: currentColor;
       }
 
-      .signal-field {
-        position: relative;
-        width: min(100%, 490px);
-        aspect-ratio: 1;
-        justify-self: end;
-        border: 1px solid rgba(241, 199, 91, 0.22);
-        border-radius: 50%;
-        background:
-          radial-gradient(circle at 18% 27%, var(--hero-accent) 0 3px, transparent 4px),
-          radial-gradient(circle at 68% 18%, var(--hero-ink) 0 6px, transparent 7px),
-          radial-gradient(circle at 82% 42%, var(--hero-accent) 0 4px, transparent 5px),
-          radial-gradient(circle at 38% 48%, var(--hero-ink) 0 7px, transparent 8px),
-          radial-gradient(circle at 63% 70%, var(--hero-accent) 0 5px, transparent 6px),
-          radial-gradient(circle at 27% 78%, var(--hero-ink) 0 3px, transparent 4px),
-          radial-gradient(
-            circle at 50% 50%,
-            transparent 0 27%,
-            rgba(241, 199, 91, 0.2) 27.3% 27.8%,
-            transparent 28.2% 49%,
-            rgba(241, 199, 91, 0.11) 49.4% 50.1%,
-            transparent 50.5% 82%,
-            rgba(241, 199, 91, 0.16) 82.3% 82.7%,
-            transparent 83.1%
-          );
-        animation: signal-float 6s ease-in-out infinite;
-      }
-
-      .signal-field::before,
-      .signal-field::after {
-        position: absolute;
-        border: 1px solid rgba(241, 199, 91, 0.42);
-        border-radius: 50%;
-        content: "";
-        transform-origin: center;
-      }
-
-      .signal-field::before {
-        inset: 19% -7% 29% 12%;
-        animation: orbit-forward 22s linear infinite;
-      }
-
-      .signal-field::after {
-        inset: 33% 10% 10% -9%;
-        animation: orbit-reverse 17s linear infinite;
-      }
-
-      .signal-core {
-        position: absolute;
-        display: grid;
-        width: 104px;
-        height: 104px;
-        inset: 50% auto auto 50%;
-        place-items: center;
-        border: 1px solid var(--hero-accent);
-        border-radius: 50%;
-        color: var(--hero-accent);
-        background: var(--hero);
-        font-family: var(--mono);
-        font-size: 26px;
-        font-weight: 800;
-        transform: translate(-50%, -50%);
-        animation: signal-core-pulse 4.8s ease-in-out infinite;
-      }
-
       @keyframes hero-enter {
         from {
           opacity: 0;
@@ -356,54 +341,6 @@
         to {
           opacity: 1;
           transform: translate3d(-5%, 7%, 0) scale(1.06);
-        }
-      }
-
-      @keyframes signal-float {
-        0%,
-        100% {
-          translate: 0 0;
-          scale: 0.975;
-        }
-        50% {
-          translate: 0 -10px;
-          scale: 1.025;
-        }
-      }
-
-      @keyframes orbit-forward {
-        from {
-          transform: rotate(28deg) scaleX(0.94) scaleY(1.04);
-        }
-        50% {
-          transform: rotate(208deg) scaleX(1.06) scaleY(0.95);
-        }
-        to {
-          transform: rotate(388deg) scaleX(0.94) scaleY(1.04);
-        }
-      }
-
-      @keyframes orbit-reverse {
-        from {
-          transform: rotate(-24deg) scaleX(1.05) scaleY(0.96);
-        }
-        50% {
-          transform: rotate(-204deg) scaleX(0.93) scaleY(1.07);
-        }
-        to {
-          transform: rotate(-384deg) scaleX(1.05) scaleY(0.96);
-        }
-      }
-
-      @keyframes signal-core-pulse {
-        0%,
-        100% {
-          box-shadow: 0 0 0 0 rgba(241, 199, 91, 0);
-          transform: translate(-50%, -50%) scale(0.96);
-        }
-        50% {
-          box-shadow: 0 0 0 12px rgba(241, 199, 91, 0.055);
-          transform: translate(-50%, -50%) scale(1.04);
         }
       }
 
@@ -465,44 +402,6 @@
         min-height: 100vh;
         overflow: clip;
         background: var(--section);
-      }
-
-      .ranking::before {
-        position: absolute;
-        z-index: -1;
-        width: min(52vw, 720px);
-        aspect-ratio: 1;
-        top: 150px;
-        right: 12%;
-        border-radius: 50%;
-        background:
-          radial-gradient(circle at 80% 24%, rgba(47, 111, 104, 0.5) 0 4px, transparent 5px),
-          radial-gradient(circle at 88% 68%, rgba(241, 199, 91, 0.68) 0 4px, transparent 5px),
-          radial-gradient(circle at 50% 50%, transparent 0 30%, rgba(47, 111, 104, 0.13) 30.2% 30.6%, transparent 31%),
-          radial-gradient(circle at 50% 50%, transparent 0 49%, rgba(47, 111, 104, 0.11) 49.2% 49.6%, transparent 50%),
-          radial-gradient(circle, rgba(47, 111, 104, 0.12) 0, rgba(47, 111, 104, 0.04) 48%, transparent 70%);
-        content: "";
-        pointer-events: none;
-        animation: ranking-glow 16s ease-in-out infinite alternate;
-      }
-
-      .ranking::after {
-        position: absolute;
-        z-index: -1;
-        width: min(48vw, 660px);
-        aspect-ratio: 1;
-        top: 240px;
-        left: 24%;
-        border-radius: 50%;
-        background:
-          radial-gradient(circle at 18% 22%, rgba(241, 199, 91, 0.72) 0 4px, transparent 5px),
-          radial-gradient(circle at 12% 66%, rgba(47, 111, 104, 0.48) 0 5px, transparent 6px),
-          radial-gradient(circle at 50% 50%, transparent 0 34%, rgba(47, 111, 104, 0.16) 34.2% 34.6%, transparent 35%),
-          radial-gradient(circle at 50% 50%, transparent 0 54%, rgba(47, 111, 104, 0.13) 54.2% 54.6%, transparent 55%);
-        content: "";
-        opacity: 0.75;
-        pointer-events: none;
-        animation: ranking-orbit-drift 18s ease-in-out infinite alternate;
       }
 
       .ranking-inner {
@@ -913,18 +812,14 @@
         border-right: 1px solid var(--line);
         border-bottom: 1px solid var(--line);
         background: var(--card);
-        transition: background 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+        transition: background 150ms ease, box-shadow 150ms ease;
       }
 
-      .plugin:nth-child(-n + 4) {
-        background: #edf4f1;
-      }
-
-      .plugin:hover {
+      .plugin:hover,
+      .plugin:focus-within {
         z-index: 2;
-        background: var(--card);
-        box-shadow: 6px 6px 0 var(--accent);
-        transform: translate(-4px, -4px);
+        background: color-mix(in srgb, var(--accent-soft) 36%, var(--card));
+        box-shadow: inset 3px 0 0 var(--accent);
       }
 
       .plugin-title {
@@ -933,23 +828,31 @@
         grid-row: 2;
         min-width: 0;
         margin-top: 18px;
-        align-items: center;
-        gap: 9px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+        column-gap: 9px;
+        row-gap: 10px;
       }
 
       .plugin-name {
+        width: 100%;
         min-width: 0;
         margin: 0;
+        flex: 1 0 100%;
         font-family: var(--serif);
         font-size: clamp(22px, 2vw, 29px);
         font-weight: 500;
         letter-spacing: -0.035em;
-        line-height: 1.04;
-        overflow-wrap: anywhere;
+        line-height: 1.14;
       }
 
       .plugin-name-text {
-        display: block;
+        display: -webkit-box;
+        padding-bottom: 0.08em;
+        overflow: hidden;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
       }
 
       .plugin-description {
@@ -987,7 +890,7 @@
         padding: 0 11px;
         align-items: center;
         border: 1px solid var(--accent);
-        color: white;
+        color: var(--accent-contrast);
         background: var(--accent);
         font-family: var(--mono);
         font-size: 15px;
@@ -1066,7 +969,7 @@
         display: grid;
         min-height: 40px;
         padding: 0 18px;
-        grid-template-columns: 62px minmax(230px, 0.82fr) minmax(260px, 1.35fr) 132px;
+        grid-template-columns: 62px minmax(220px, 0.78fr) minmax(250px, 1.18fr) minmax(160px, 0.48fr) 132px;
         align-items: center;
         gap: 22px;
         border: 1px solid var(--line);
@@ -1093,9 +996,9 @@
       }
 
       .plugin-list.is-top100-list .plugin {
-        min-height: 86px;
+        min-height: 104px;
         padding: 13px 18px;
-        grid-template-columns: 62px minmax(230px, 0.82fr) minmax(260px, 1.35fr) 132px;
+        grid-template-columns: 62px minmax(220px, 0.78fr) minmax(250px, 1.18fr) minmax(160px, 0.48fr) 132px;
         grid-template-rows: auto;
         align-content: center;
         align-items: center;
@@ -1105,34 +1008,20 @@
         background: var(--card);
       }
 
+      .plugin-list.is-top100-list .plugin:nth-child(even) {
+        background: color-mix(in srgb, var(--accent-soft) 22%, var(--card));
+      }
+
       .plugin-list.is-top100-list .plugin:last-child {
         border-bottom: 1px solid var(--line);
-      }
-
-      .plugin-list.is-top100-list .plugin.tone-soft {
-        background: #edf4f1;
-      }
-
-      .plugin-list.is-top100-list .plugin.tone-paper {
-        background: var(--card);
       }
 
       .plugin-list.is-top100-list .plugin:hover,
       .plugin-list.is-top100-list .plugin:focus-within {
         z-index: 3;
-        border-color: var(--accent);
-        box-shadow:
-          0 10px 22px rgba(23, 33, 31, 0.16),
-          inset 0 0 0 1px var(--accent);
-        transform: translateY(-2px);
-      }
-
-      .plugin-list.is-top100-list .plugin:first-child:hover,
-      .plugin-list.is-top100-list .plugin:first-child:focus-within {
-        box-shadow:
-          0 8px 18px rgba(23, 33, 31, 0.14),
-          inset 0 0 0 1px var(--accent);
-        transform: none;
+        border-color: var(--line);
+        background: color-mix(in srgb, var(--accent-soft) 46%, var(--card));
+        box-shadow: inset 4px 0 0 var(--accent);
       }
 
       .plugin-list.is-top100-list .rank,
@@ -1152,9 +1041,12 @@
 
       .plugin-list.is-top100-list .plugin-title {
         grid-column: 2;
+        flex-wrap: wrap;
+        gap: 6px 7px;
       }
 
       .plugin-list.is-top100-list .plugin-name {
+        flex: 1 0 100%;
         font-size: clamp(20px, 1.8vw, 27px);
       }
 
@@ -1163,8 +1055,15 @@
         -webkit-line-clamp: 2;
       }
 
-      .plugin-list.is-top100-list .stars {
+      .plugin-list.is-top100-list .plugin-meta {
         grid-column: 4;
+        grid-row: 1;
+        margin: 0;
+        align-self: center;
+      }
+
+      .plugin-list.is-top100-list .stars {
+        grid-column: 5;
         align-self: center;
       }
 
@@ -1214,28 +1113,6 @@
         to {
           opacity: 1;
           translate: 0 0;
-        }
-      }
-
-      @keyframes ranking-glow {
-        from {
-          opacity: 0.58;
-          transform: translate3d(6%, -3%, 0) rotate(6deg) scale(0.95);
-        }
-        to {
-          opacity: 0.88;
-          transform: translate3d(-8%, 10%, 0) rotate(-10deg) scale(1.05);
-        }
-      }
-
-      @keyframes ranking-orbit-drift {
-        from {
-          opacity: 0.58;
-          transform: translate3d(-6%, -4%, 0) rotate(-8deg) scale(0.94);
-        }
-        to {
-          opacity: 0.86;
-          transform: translate3d(12%, 8%, 0) rotate(12deg) scale(1.06);
         }
       }
 
@@ -1362,7 +1239,7 @@
 
       .docs-return:hover,
       .docs-return:focus-visible {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
       }
 
@@ -1419,7 +1296,7 @@
 
       .inline-docs .toc a:hover,
       .inline-docs .toc a:focus-visible {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
       }
 
@@ -1534,38 +1411,87 @@
         font-size: 15px;
       }
 
-      .inline-docs .pipeline {
+      .dsh-data-note {
         display: grid;
-        margin: 30px 0;
-        grid-template-columns: repeat(5, minmax(0, 1fr));
-        border: 1px solid var(--line);
-        background: var(--card);
+        margin-top: 30px;
+        padding: 16px 0 16px 18px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 30px;
+        border-left: 2px solid color-mix(in srgb, var(--accent) 72%, var(--line));
       }
 
-      .inline-docs .pipeline span {
-        position: relative;
-        display: grid;
-        min-height: 112px;
-        padding: 16px;
-        place-items: center;
-        border-right: 1px solid var(--line);
-        font-family: var(--docs-serif);
-        font-size: clamp(17px, 1.35vw, 21px);
-        font-weight: 600;
-        text-align: center;
+      #dsh-view .doc-section:last-child {
+        padding-bottom: 24px;
+        border-bottom: 0;
       }
 
-      .inline-docs .pipeline span:last-child {
-        border-right: 0;
+      .dsh-data-note p {
+        margin: 0;
       }
 
-      .inline-docs .pipeline span:not(:last-child)::after {
-        position: absolute;
-        z-index: 2;
-        right: -8px;
+      .dsh-data-note-label {
+        margin-bottom: 7px !important;
         color: var(--accent);
-        background: var(--card);
-        content: "→";
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 850;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .dsh-data-note-copy > p:last-child {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .dsh-data-note-copy strong {
+        margin-right: 5px;
+        color: var(--ink);
+      }
+
+      .dsh-data-note-meta {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 18px;
+        color: var(--muted);
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 750;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      .dsh-data-note-meta span + span,
+      .dsh-data-note-meta a {
+        position: relative;
+        padding-left: 18px;
+      }
+
+      .dsh-data-note-meta span + span::before,
+      .dsh-data-note-meta a::before {
+        position: absolute;
+        top: 50%;
+        left: 0;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: var(--accent);
+        content: "";
+        transform: translateY(-50%);
+      }
+
+      .dsh-data-note-meta a {
+        color: var(--accent);
+        font-weight: 850;
+        text-decoration: none;
+      }
+
+      .dsh-data-note-meta a:hover,
+      .dsh-data-note-meta a:focus-visible {
+        text-decoration: underline;
+        text-underline-offset: 4px;
       }
 
       .inline-docs .rule-list,
@@ -1598,7 +1524,7 @@
         left: 16px;
         display: grid;
         place-items: center;
-        color: white;
+        color: var(--accent-contrast);
         background: var(--accent);
         font-family: var(--mono);
         font-size: 11px;
@@ -1691,8 +1617,8 @@
         align-items: flex-start;
         gap: 14px;
         border-left: 4px solid var(--accent);
-        color: #315b55;
-        background: #e7f1ee;
+        color: var(--ink);
+        background: var(--accent-soft);
         font-size: 14px;
       }
 
@@ -1712,22 +1638,27 @@
       .dsh-install-step {
         display: grid;
         overflow: hidden;
-        grid-template-columns: 64px minmax(0, 1fr);
+        grid-template-columns: 72px minmax(0, 1fr);
         border: 1px solid var(--line);
         background: var(--card);
-        box-shadow: 0 12px 28px rgba(23, 73, 66, 0.08);
+        box-shadow: 0 12px 28px rgba(23, 33, 31, 0.07);
       }
 
       .dsh-step-number {
         display: flex;
-        min-height: 100%;
-        align-items: flex-start;
+        width: 34px;
+        height: 34px;
+        align-self: start;
+        justify-self: center;
+        align-items: center;
         justify-content: center;
-        padding-top: 24px;
-        color: #0c302b;
-        background: var(--hero-accent);
+        margin-top: 22px;
+        border: 1px solid var(--accent);
+        border-radius: 50%;
+        color: var(--accent-contrast);
+        background: var(--accent);
         font-family: var(--mono);
-        font-size: 19px;
+        font-size: 15px;
         font-weight: 900;
       }
 
@@ -1750,12 +1681,12 @@
       .dsh-command-row {
         display: grid;
         min-width: 0;
-        padding: 8px;
+        padding: 0;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: stretch;
-        gap: 8px;
-        border: 1px solid #0c302b;
-        background: #0c302b;
+        gap: 0;
+        border: 1px solid var(--line);
+        background: var(--code-surface);
       }
 
       .dsh-detail-body .dsh-command-row + .dsh-command-row {
@@ -1766,11 +1697,11 @@
         display: flex;
         min-width: 0;
         min-height: 52px;
-        padding: 12px 14px;
+        padding: 14px 16px;
         align-items: center;
         border: 0;
-        color: #ffffff;
-        background: #0c302b;
+        color: var(--code-ink);
+        background: transparent;
         font-size: clamp(13px, 1.25vw, 16px);
         font-weight: 750;
         line-height: 1.55;
@@ -1780,12 +1711,13 @@
       }
 
       .dsh-copy-button {
-        min-width: 120px;
+        min-width: 112px;
         min-height: 52px;
         padding: 0 18px;
-        border: 1px solid var(--hero-accent);
-        color: var(--ink);
-        background: var(--hero-accent);
+        border: 0;
+        border-left: 1px solid var(--line);
+        color: var(--accent);
+        background: var(--card);
         font-family: var(--sans);
         font-size: 14px;
         font-weight: 850;
@@ -1794,12 +1726,12 @@
 
       .dsh-copy-button:hover,
       .dsh-copy-button:focus-visible {
-        border-color: white;
-        background: white;
+        color: var(--accent-contrast);
+        background: var(--accent);
       }
 
       .dsh-copy-button:focus-visible {
-        outline: 3px solid var(--hero-accent);
+        outline: 3px solid color-mix(in srgb, var(--accent) 44%, transparent);
         outline-offset: 3px;
       }
 
@@ -1809,14 +1741,14 @@
         padding: 0 20px;
         align-items: center;
         gap: 13px;
-        border: 1px solid #0c302b;
-        color: white;
-        background: #0c302b;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: var(--code-surface);
         font-size: 17px;
       }
 
       .dsh-open-target strong {
-        color: var(--hero-accent);
+        color: var(--accent);
       }
 
       .dsh-help-heading {
@@ -1887,8 +1819,9 @@
       }
 
       .dsh-warning-detail {
-        border-left: 4px solid #d39b1d;
-        background: #fffaf0;
+        border-color: var(--line);
+        background: var(--card);
+        box-shadow: none;
       }
 
       .dsh-release-note,
@@ -1965,7 +1898,7 @@
 
       .docs-retry-button:hover,
       .docs-retry-button:focus-visible {
-        color: var(--ink);
+        color: var(--accent-contrast);
         background: var(--hero-accent);
       }
 
@@ -2005,6 +1938,22 @@
           display: none;
         }
 
+        .list-head,
+        .plugin-list.is-top100-list .plugin {
+          grid-template-columns: 54px minmax(190px, 0.78fr) minmax(220px, 1fr) 118px;
+          gap: 16px;
+        }
+
+        .list-head .signal-head,
+        .plugin-list.is-top100-list .plugin-meta,
+        .plugin-list.is-top100-list .type-pill {
+          display: none;
+        }
+
+        .plugin-list.is-top100-list .stars {
+          grid-column: 4;
+        }
+
         .inline-docs .toc {
           position: static;
           display: flex;
@@ -2023,12 +1972,7 @@
 
         .inline-docs .card-grid,
         .inline-docs .card-grid.four,
-        .inline-docs .pipeline,
         .dsh-brief-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .dsh-command-row {
           grid-template-columns: 1fr;
         }
 
@@ -2040,22 +1984,6 @@
           min-height: auto;
         }
 
-        .inline-docs .pipeline span {
-          min-height: 64px;
-          font-size: 18px;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
-
-        .inline-docs .pipeline span:last-child {
-          border-bottom: 0;
-        }
-
-        .inline-docs .pipeline span:not(:last-child)::after {
-          right: 50%;
-          bottom: -13px;
-          transform: rotate(90deg);
-        }
       }
 
       @media (max-width: 1120px) {
@@ -2071,6 +1999,19 @@
       }
 
       @media (max-width: 860px) {
+        .dsh-data-note {
+          grid-template-columns: 1fr;
+          align-items: start;
+          gap: 16px;
+        }
+
+        .dsh-data-note-meta {
+          justify-content: flex-start;
+          flex-wrap: wrap;
+          gap: 10px 16px;
+          white-space: normal;
+        }
+
         .plugin-list {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -2079,6 +2020,16 @@
         .plugin-list.is-top100-list .plugin {
           grid-template-columns: 54px minmax(190px, 0.78fr) minmax(220px, 1fr) 118px;
           gap: 16px;
+        }
+
+        .list-head .signal-head,
+        .plugin-list.is-top100-list .plugin-meta,
+        .plugin-list.is-top100-list .type-pill {
+          display: none;
+        }
+
+        .plugin-list.is-top100-list .stars {
+          grid-column: 4;
         }
       }
 
@@ -2110,13 +2061,6 @@
 
         h1 {
           font-size: clamp(42px, 11.5vw, 58px);
-        }
-
-        .signal-field {
-          width: min(88vw, 360px);
-          margin: 54px auto -132px;
-          opacity: 0.82;
-          transform: translateX(28%);
         }
 
         .data-strip {
@@ -2259,6 +2203,12 @@
           font-size: 42px;
         }
 
+        #dsh-view .doc-section:last-child {
+          margin-bottom: 0;
+          padding-bottom: 24px;
+          border-bottom: 0;
+        }
+
         #dsh-view .inline-docs-header {
           margin-bottom: 24px;
           padding-bottom: 20px;
@@ -2290,12 +2240,14 @@
         }
 
         .dsh-install-step {
-          grid-template-columns: 44px minmax(0, 1fr);
+          grid-template-columns: 52px minmax(0, 1fr);
         }
 
         .dsh-step-number {
-          padding-top: 20px;
-          font-size: 16px;
+          width: 28px;
+          height: 28px;
+          margin-top: 18px;
+          font-size: 13px;
         }
 
         .dsh-step-content {
@@ -2308,6 +2260,7 @@
 
         .dsh-command-row {
           padding: 6px;
+          grid-template-columns: 1fr;
         }
 
         .inline-docs code.dsh-install-command {
@@ -2320,6 +2273,8 @@
           width: 100%;
           min-width: 0;
           min-height: 48px;
+          border-top: 1px solid var(--line);
+          border-left: 0;
         }
 
         .dsh-detail summary {
@@ -2342,14 +2297,515 @@
         }
       }
 
+      /* Homepage market redesign: one data-led signature, restrained elsewhere. */
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: clamp(14px, 2vw, 28px);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .nav-links a {
+        position: relative;
+        padding: 22px 0 19px;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .nav-links a::after {
+        position: absolute;
+        height: 2px;
+        inset: auto 0 13px;
+        background: var(--accent);
+        content: "";
+        opacity: 0;
+        transform: scaleX(0.4);
+        transition: opacity 150ms ease, transform 150ms ease;
+      }
+
+      .nav-links a:hover,
+      .nav-links a:focus-visible {
+        color: var(--ink);
+      }
+
+      .nav-links a:hover::after,
+      .nav-links a:focus-visible::after {
+        opacity: 1;
+        transform: scaleX(1);
+      }
+
+      .nav-links a:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 4px;
+      }
+
+      .hero {
+        min-height: 600px;
+      }
+
+      .hero::before {
+        width: min(78vw, 1120px);
+        inset: -72% -22% auto auto;
+        opacity: 0.78;
+      }
+
+      .hero-inner {
+        min-height: 600px;
+        grid-template-columns: minmax(0, 1.08fr) minmax(380px, 0.72fr);
+        gap: clamp(50px, 7vw, 108px);
+        padding: 82px 0 88px;
+      }
+
+      .hero-copy {
+        max-width: 780px;
+      }
+
+      .hero-copy h1 {
+        font-size: clamp(54px, 6vw, 88px);
+      }
+
+      .hero-description {
+        max-width: 650px;
+      }
+
+      .hero-search {
+        max-width: 690px;
+        margin-top: 30px;
+      }
+
+      .hero-search-control {
+        display: grid;
+        min-height: 62px;
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 12px;
+        padding: 7px 8px 7px 17px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--card) 92%, transparent);
+        box-shadow: 0 16px 44px rgba(23, 33, 31, 0.1);
+      }
+
+      .hero-search-control:focus-within {
+        border-color: var(--hero-accent);
+        box-shadow: 0 0 0 3px rgba(47, 111, 104, 0.14), 0 16px 44px rgba(23, 33, 31, 0.1);
+      }
+
+      .hero-search-control svg {
+        width: 22px;
+        height: 22px;
+        fill: none;
+        stroke: var(--hero-muted);
+        stroke-linecap: round;
+        stroke-width: 1.7;
+      }
+
+      .hero-search-control input {
+        min-width: 0;
+        border: 0;
+        outline: 0;
+        color: var(--hero-ink);
+        background: transparent;
+        font: 600 16px/1.3 var(--sans);
+      }
+
+      .hero-search-control input::placeholder {
+        color: color-mix(in srgb, var(--hero-muted) 82%, transparent);
+      }
+
+      .hero-search-control button {
+        min-height: 46px;
+        padding: 0 18px;
+        border: 1px solid var(--hero-accent);
+        color: var(--accent-contrast);
+        background: var(--hero-accent);
+        cursor: pointer;
+        font: 800 12px/1 var(--mono);
+        letter-spacing: 0.04em;
+      }
+
+      .hero-search-control button:hover,
+      .hero-search-control button:focus-visible {
+        color: var(--hero-accent);
+        background: var(--card);
+      }
+
+      .hero-search-control button:focus-visible {
+        outline: 2px solid var(--hero-ink);
+        outline-offset: 2px;
+      }
+
+      .hero-search-hint {
+        display: block;
+        margin-top: 8px;
+        color: color-mix(in srgb, var(--hero-muted) 78%, transparent);
+        font: 600 11px/1.5 var(--mono);
+      }
+
+      .hero-actions {
+        margin-top: 24px;
+      }
+
+      .hero-side {
+        position: relative;
+        display: grid;
+        min-width: 0;
+        align-items: center;
+        isolation: isolate;
+      }
+
+      .install-console {
+        position: relative;
+        z-index: 1;
+        align-self: center;
+        min-width: 0;
+        padding: clamp(22px, 3vw, 34px);
+        border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
+        background:
+          linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+          linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
+          color-mix(in srgb, var(--card) 96%, transparent);
+        background-size: 28px 28px;
+        box-shadow: 18px 18px 0 color-mix(in srgb, var(--accent) 14%, transparent);
+      }
+
+      .install-console::before {
+        position: absolute;
+        width: 72px;
+        height: 1px;
+        top: -1px;
+        left: 24px;
+        background: var(--hero-accent);
+        content: "";
+      }
+
+      .install-console-head {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 10px;
+        color: var(--hero-muted);
+        font: 700 11px/1.4 var(--mono);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      .install-console-head p {
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #72d6a5;
+        box-shadow: 0 0 0 4px rgba(114, 214, 165, 0.12);
+      }
+
+      .release-badge {
+        padding: 4px 7px;
+        border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
+        color: var(--accent);
+      }
+
+      .release-grid {
+        display: grid;
+        margin: 26px 0 22px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .release-grid div {
+        min-width: 0;
+        padding: 17px 12px 16px;
+        border-right: 1px solid var(--line);
+      }
+
+      .release-grid div:first-child {
+        padding-left: 0;
+      }
+
+      .release-grid div:last-child {
+        padding-right: 0;
+        border-right: 0;
+      }
+
+      .release-grid dt {
+        color: var(--hero-muted);
+        font: 700 10px/1.3 var(--mono);
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .release-grid dd {
+        margin: 7px 0 0;
+        color: var(--hero-ink);
+        font: 800 clamp(12px, 1vw, 14px)/1.25 var(--mono);
+        overflow-wrap: anywhere;
+      }
+
+      .hero-command-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: stretch;
+        border: 1px solid var(--line);
+        background: var(--code-surface);
+      }
+
+      .hero-command-row code {
+        min-width: 0;
+        padding: 13px 14px;
+        color: var(--code-ink);
+        font: 600 11px/1.5 var(--mono);
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+
+      .hero-command-row button {
+        min-width: 64px;
+        border: 0;
+        border-left: 1px solid var(--accent);
+        color: var(--accent-contrast);
+        background: var(--accent);
+        cursor: pointer;
+        font: 800 11px/1 var(--mono);
+      }
+
+      .hero-command-row button:hover,
+      .hero-command-row button:focus-visible {
+        color: var(--accent);
+        background: var(--card);
+      }
+
+      .install-console-note {
+        margin: 13px 0 0;
+        color: var(--hero-muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .section-kicker {
+        margin: 0 0 8px;
+        color: var(--hero-accent);
+        font: 800 11px/1.3 var(--mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .section-header > div:first-child {
+        max-width: 780px;
+      }
+
+      .section-header .section-kicker {
+        color: var(--accent);
+      }
+
+      .ranking-explainer {
+        max-width: 680px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+      }
+
+      .trust-pill,
+      .type-pill {
+        display: inline-flex;
+        min-height: 22px;
+        padding: 0 7px;
+        align-items: center;
+        border: 1px solid var(--line);
+        color: var(--muted);
+        background: color-mix(in srgb, var(--card) 88%, transparent);
+        font: 750 9px/1 var(--mono);
+        letter-spacing: 0.035em;
+        white-space: nowrap;
+      }
+
+      .trust-pill[data-level="install-source"] {
+        border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .stars.is-heat::before {
+        content: "◇";
+      }
+
+      .plugin-meta {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-row: 4;
+        margin-top: 14px;
+        flex-wrap: wrap;
+        gap: 6px 13px;
+        color: var(--muted);
+        font: 650 10px/1.4 var(--mono);
+      }
+
+      .plugin-actions {
+        display: flex;
+        grid-column: 1 / -1;
+        grid-row: 5;
+        margin-top: 14px;
+        gap: 8px;
+      }
+
+      .plugin-action {
+        display: inline-flex;
+        min-height: 34px;
+        padding: 0 11px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: transparent;
+        cursor: pointer;
+        font: 750 10px/1 var(--mono);
+        text-decoration: none;
+      }
+
+      .plugin-action:hover,
+      .plugin-action:focus-visible {
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+        background: var(--accent);
+        outline: 0;
+      }
+
+      .plugin-action.install-action {
+        border-color: var(--accent);
+        color: var(--accent-contrast);
+        background: var(--accent);
+      }
+
+      .plugin-action.install-action:hover,
+      .plugin-action.install-action:focus-visible {
+        color: var(--accent);
+        background: transparent;
+      }
+
+      .plugin-list:not(.is-top100-list) .plugin {
+        min-height: 282px;
+        grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+      }
+
+      .plugin-list:not(.is-top100-list) .quick-install {
+        display: none;
+      }
+
+      .plugin-list.is-top100-list .plugin-actions,
+      .plugin-list.is-top100-list .copy-link,
+      .plugin-list.is-top100-list .meta-license,
+      .plugin-list.is-top100-list .meta-updated {
+        display: none;
+      }
+
+      @media (max-width: 980px) {
+        .nav-links a:nth-child(2),
+        .nav-links a:nth-child(4) {
+          display: none;
+        }
+
+        .hero-inner {
+          grid-template-columns: 1fr;
+          gap: 44px;
+        }
+
+        .install-console {
+          width: 100%;
+          max-width: 700px;
+          justify-self: start;
+        }
+
+        .hero-side {
+          width: 100%;
+          max-width: 700px;
+        }
+
+      }
+
+      @media (max-width: 720px) {
+        .nav {
+          width: min(calc(100% - 28px), var(--content));
+          gap: 14px;
+        }
+
+        .nav-links {
+          gap: 13px;
+        }
+
+        .nav-links a {
+          font-size: 12px;
+        }
+
+        .nav-links a:nth-child(1),
+        .nav-links a:nth-child(2),
+        .nav-links a:nth-child(4) {
+          display: none;
+        }
+
+        .hero-inner {
+          width: min(calc(100% - 32px), var(--content));
+          padding: 64px 0 70px;
+        }
+
+        .hero-copy h1 {
+          font-size: clamp(43px, 13vw, 62px);
+        }
+
+        .hero-copy h1 span {
+          white-space: normal;
+        }
+
+        .hero-search-control {
+          min-height: 56px;
+          grid-template-columns: 19px minmax(0, 1fr);
+        }
+
+        .hero-search-control button {
+          grid-column: 1 / -1;
+          width: 100%;
+        }
+
+        .release-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .release-grid div,
+        .release-grid div:first-child,
+        .release-grid div:last-child {
+          padding: 12px 0;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        .release-grid div:last-child {
+          border-bottom: 0;
+        }
+
+        .hero-command-row {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-command-row button {
+          min-height: 44px;
+          border-top: 1px solid var(--line);
+          border-left: 0;
+        }
+
+      }
+
       @media (prefers-reduced-motion: reduce) {
         html {
           scroll-behavior: auto;
         }
 
         .data-strip-track,
-        .ranking::before,
-        .ranking::after,
         .motion-ready .reveal-item.is-revealed {
           animation: none;
         }
@@ -2364,24 +2820,8 @@
         }
 
         .hero::before,
-        .hero-copy > *,
-        .signal-field,
-        .signal-field::before,
-        .signal-field::after,
-        .signal-core {
+        .hero-copy > * {
           animation: none;
-        }
-
-        .signal-field::before {
-          transform: rotate(28deg) scaleX(0.94) scaleY(1.04);
-        }
-
-        .signal-field::after {
-          transform: rotate(-24deg) scaleX(1.05) scaleY(0.96);
-        }
-
-        .signal-core {
-          transform: translate(-50%, -50%);
         }
 
         .plugin,
@@ -2423,7 +2863,13 @@
           />
           <span>dsh-Top100</span>
         </a>
-        <p class="nav-label">Verified ecosystem · ranked by GitHub stars</p>
+        <div class="nav-links">
+          <a href="#ranking" data-content-switch="ranking">插件榜单</a>
+          <a href="?view=category#ranking" data-ranking-view="category">分类</a>
+          <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
+          <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </div>
       </nav>
     </div>
 
@@ -2431,73 +2877,65 @@
       <section class="hero">
         <div class="hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow">The verified plugin index for agents</p>
-            <h1><span>找到真正热门的</span><span>DSH 插件。</span></h1>
+            <p class="eyebrow">Verified DSH plugin market · Daily snapshot</p>
+            <h1><span>发现值得安装的</span><span>DSH 插件。</span></h1>
             <p class="hero-description">
-              持续追踪经验证的 DeepSeek Harness 插件，通过 Top 100、新锐榜和完整总榜，
-              发现真正值得关注的开源项目。
+              用增长、活跃度、项目质量和安装证据筛选插件，
+              从具体需求出发，而不只是追逐 Stars。
             </p>
+            <form class="hero-search" id="hero-search-form" role="search">
+              <label class="sr-only" for="hero-search">搜索全部 DSH 插件</label>
+              <span class="hero-search-control">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+                <input
+                  id="hero-search"
+                  type="search"
+                  autocomplete="off"
+                  maxlength="80"
+                  spellcheck="false"
+                  placeholder="搜索功能、插件名或中文关键词"
+                />
+                <button type="submit">搜索插件</button>
+              </span>
+              <span class="hero-search-hint">例如：代码审查、浏览器、知识库、主题</span>
+            </form>
             <div class="hero-actions">
               <a
-                class="hero-placeholder hero-content-switch"
+                class="hero-link hero-content-switch"
                 href="#ranking"
                 data-content-switch="ranking"
-              >TOP 100</a>
+                data-track-ranking-view="hot"
+              >浏览插件榜单</a>
               <a
                 class="hero-placeholder hero-content-switch"
                 href="?page=dsh#dsh"
                 data-content-switch="dsh"
-              >安装 dsh-Top100</a>
-              <a
-                class="hero-placeholder hero-content-switch"
-                href="?page=docs#docs"
-                data-content-switch="docs"
-              >docs</a>
-              <a
-                class="hero-placeholder hero-github"
-                href="https://github.com/dsheval/dsh-top100"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="在 GitHub 查看 dsh-Top100 仓库"
-              >
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z" />
-                </svg>
-                <span>GitHub</span>
-              </a>
-              <a
-                class="hero-placeholder"
-                href="https://www.dsheval.ai/dsheval"
-                target="_blank"
-                rel="noopener noreferrer"
-              >DSHeval</a>
+              >安装到 DSH</a>
             </div>
           </div>
 
-          <div class="signal-field" aria-hidden="true">
-            <span class="signal-core">100</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="data-strip" aria-label="插件生态索引">
-        <div class="data-strip-track">
-          <div class="data-strip-group">
-            <span class="ticker-item">Verified plugins</span>
-            <span class="ticker-item">Skills</span>
-            <span class="ticker-item">Agent tools</span>
-            <span class="ticker-item">Open source</span>
-            <span class="ticker-item">AI summaries</span>
-            <span class="ticker-item">GitHub ranked</span>
-          </div>
-
-          <div class="data-strip-group" aria-hidden="true">
-            <span class="ticker-item">Verified plugins</span>
-            <span class="ticker-item">Skills</span>
-            <span class="ticker-item">Agent tools</span>
-            <span class="ticker-item">Open source</span>
-            <span class="ticker-item">AI summaries</span>
-            <span class="ticker-item">GitHub ranked</span>
+          <div class="hero-side">
+            <aside class="install-console" aria-labelledby="install-console-title">
+              <div class="install-console-head">
+                <span class="status-dot" aria-hidden="true"></span>
+                <p id="install-console-title">dsh-Top100 / release channel</p>
+                <span class="release-badge">latest</span>
+              </div>
+              <dl class="release-grid">
+                <div><dt>npm</dt><dd>v1.1.0</dd></div>
+                <div><dt>DSH Web</dt><dd>0.1.0-rc.6+</dd></div>
+                <div><dt>source</dt><dd>verified catalog</dd></div>
+              </dl>
+              <div class="hero-command-row">
+                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
+                <button
+                  type="button"
+                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin"
+                  data-analytics="install-command"
+                >复制</button>
+              </div>
+              <p class="install-console-note">命令只安装排行插件；具体项目仍需逐项核对来源与权限。</p>
+            </aside>
           </div>
         </div>
       </section>
@@ -2506,7 +2944,11 @@
         <div class="ranking-inner">
           <div class="content-view" id="leaderboard-view">
           <header class="section-header">
-            <h2>True popularity.<br />Readable at a glance.</h2>
+            <div>
+              <p class="section-kicker">Discover · Compare · Install</p>
+              <h2>用证据比较，<br />不只看 Stars。</h2>
+              <p class="ranking-explainer">Top 100 是增长、活跃度、数据质量与总体关注度的综合热度榜；总榜才按 GitHub Stars 排序。</p>
+            </div>
             <div class="ranking-meta" aria-live="polite">
               <p id="ranking-meta-title">DEEPSEEK HARNESS PLUGINS · TOP 100</p>
               <p class="ranking-updated" id="ranking-updated">更新于：加载中</p>
@@ -2709,6 +3151,7 @@
             <span>排名</span>
             <span>插件</span>
             <span>中文简介</span>
+            <span class="signal-head">趋势 / 证据</span>
             <span id="metric-head">GitHub Stars</span>
           </div>
           <div
@@ -2768,14 +3211,10 @@
           <h3 class="plugin-name">
             <span class="plugin-name-text"></span>
           </h3>
+          <span class="trust-pill"></span>
+          <span class="type-pill"></span>
           <a class="github-link" target="_blank" rel="noopener noreferrer">
-            <img
-              class="github-logo"
-              src="https://github.githubassets.com/favicons/favicon.svg"
-              alt=""
-              width="13"
-              height="13"
-            />
+            <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
           </a>
           <button class="github-link copy-link" type="button">
             <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -2783,8 +3222,20 @@
               <path d="M3.5 10.5h-1a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"></path>
             </svg>
           </button>
+          <button class="github-link quick-install" type="button" hidden aria-label="复制安装命令">
+            <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8M4.8 6.7 8 9.9l3.2-3.2M2 12.5h12"></path></svg>
+          </button>
         </div>
         <p class="plugin-description"></p>
+        <div class="plugin-meta" aria-label="项目元数据">
+          <span class="meta-license"></span>
+          <span class="meta-updated"></span>
+          <span class="meta-growth"></span>
+        </div>
+        <div class="plugin-actions">
+          <a class="plugin-action card-github-link" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
+          <button class="plugin-action install-action" type="button" hidden>复制安装命令</button>
+        </div>
         <span class="stars" aria-label="GitHub Stars"></span>
       </article>
     </template>
@@ -2796,10 +3247,16 @@
         scoreSearchEntry,
         tokenizeSearchQuery,
       } from "./search-engine.js";
+      import { catalogPresentation, installCommand } from "./catalog-presentation.js";
+      import { track, trackPageView } from "./analytics.js";
 
-      const sources = [
-        "./data/rankings.json",
-      ];
+      const MANIFEST_URL = "./data/manifest.json";
+      const LEGACY_URLS = Object.freeze({
+        hot: "./data/rankings-hot.json",
+        rising: "./data/rankings-rising.json",
+        total: "./data/rankings-total.json",
+        search: "./data/rankings-search.json",
+      });
 
       const list = document.querySelector("#plugin-list");
       const template = document.querySelector("#plugin-template");
@@ -2813,6 +3270,8 @@
       const metricHead = document.querySelector("#metric-head");
       const rankingMetaTitle = document.querySelector("#ranking-meta-title");
       const rankingUpdated = document.querySelector("#ranking-updated");
+      const heroSearchForm = document.querySelector("#hero-search-form");
+      const heroSearchInput = document.querySelector("#hero-search");
       const sectionHeader = document.querySelector(".section-header");
       const rankingTools = document.querySelector(".ranking-tools");
       const leaderboardView = document.querySelector("#leaderboard-view");
@@ -2898,8 +3357,10 @@
           "连接器", "通知", "插件管理", "剪贴板", "文件管理", "转换", "下载", "计算器", "翻译",
         ],
       };
-      const searchTimers = { top100: null, rising: null, all: null };
+      const searchTimers = { top100: null, rising: null, all: null, category: null };
+      const searchGenerations = { top100: 0, rising: 0, all: 0, category: 0 };
       const composingViews = new Set();
+      const trackedSearchViews = new Set();
       const viewState = {
         top100: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
         rising: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
@@ -2909,6 +3370,19 @@
       let rankedEntries = [];
       let risingEntries = [];
       let hotEntries = [];
+      let searchEntries = null;
+      let manifest = null;
+      let legacyCategoryDefinitions = [];
+      let totalPageLoaded = 0;
+      let categoryPageLoaded = 0;
+      let categoryEntries = [];
+      let searchLoadPromise = null;
+      let legacyTotalLoadPromise = null;
+      let totalPageLoadPromise = null;
+      let initialDataPromise = null;
+      const categoryPageLoadPromises = new Map();
+      const dataLoadPromises = new Map();
+      let viewSwitchGeneration = 0;
       let generatedAt = null;
       let hideSkills = false;
       let copyFeedbackTimer = null;
@@ -3093,6 +3567,12 @@
       for (const control of contentSwitches) {
         control.addEventListener("click", (event) => {
           event.preventDefault();
+          if (control.dataset.contentSwitch === "dsh") {
+            track("install_guide_open", { view: "dsh" });
+          }
+          if (control.dataset.trackRankingView) {
+            track("ranking_view_changed", { view: control.dataset.trackRankingView });
+          }
           setContentView(control.dataset.contentSwitch, {
             historyMode: "push",
             scroll: true,
@@ -3100,45 +3580,115 @@
         });
       }
 
+      for (const control of document.querySelectorAll("[data-ranking-view]")) {
+        control.addEventListener("click", (event) => {
+          event.preventDefault();
+          setContentView("ranking", { historyMode: "push", scroll: true });
+          void setView(control.dataset.rankingView);
+        });
+      }
+
+      heroSearchForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const query = heroSearchInput.value.trim();
+        if (!query) {
+          heroSearchInput.focus();
+          return;
+        }
+        const targetInput = searchInputs.all;
+        targetInput.value = query;
+        viewState.all.query = query;
+        viewState.all.visible = PAGE_SIZE;
+        searchGenerations.all += 1;
+        setContentView("ranking", { historyMode: "push", scroll: true });
+        await setView("all");
+        if (!trackedSearchViews.has("all")) {
+          trackedSearchViews.add("all");
+          track("search_used", { view: "search" });
+        }
+        targetInput.focus({ preventScroll: true });
+      });
+
       document.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-copy-command]");
         if (!button) return;
         const command = button.dataset.copyCommand;
         if (!command) return;
-        button.setAttribute("aria-live", "polite");
+        const iconOnly = button.classList.contains("quick-install");
+        const originalLabel = button.textContent;
+        const originalAriaLabel = button.getAttribute("aria-label");
+        const originalTitle = button.title;
+        let copied = false;
         try {
           if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
           await navigator.clipboard.writeText(command);
-          const originalLabel = button.textContent;
-          button.textContent = "已复制";
-          window.setTimeout(() => {
-            button.textContent = originalLabel;
-          }, 3000);
+          copied = true;
         } catch {
-          const originalLabel = button.textContent;
-          const commandElement = button.closest(".dsh-command-row")?.querySelector(".dsh-install-command");
-          const selection = window.getSelection();
-          if (!commandElement || !selection) {
-            button.textContent = "请手动复制";
-            return;
-          }
-          const range = document.createRange();
-          range.selectNodeContents(commandElement);
-          selection.removeAllRanges();
-          selection.addRange(range);
-          button.textContent = "已选中，请复制";
-          window.setTimeout(() => {
-            button.textContent = originalLabel;
-          }, 5000);
+          const fallback = document.createElement("textarea");
+          fallback.value = command;
+          fallback.setAttribute("readonly", "");
+          fallback.style.position = "fixed";
+          fallback.style.opacity = "0";
+          document.body.appendChild(fallback);
+          fallback.select();
+          copied = document.execCommand("copy");
+          fallback.remove();
         }
+        if (iconOnly) {
+          button.setAttribute("aria-label", copied ? "安装命令已复制" : "请手动复制安装命令");
+          button.title = copied ? "已复制安装命令" : "请手动复制安装命令";
+          button.classList.toggle("is-copied", copied);
+        } else {
+          button.setAttribute("aria-live", "polite");
+          button.textContent = copied ? "已复制" : "请手动复制";
+        }
+        window.setTimeout(() => {
+          if (iconOnly) {
+            if (originalAriaLabel) button.setAttribute("aria-label", originalAriaLabel);
+            else button.removeAttribute("aria-label");
+            button.title = originalTitle;
+            button.classList.remove("is-copied");
+          } else {
+            button.textContent = originalLabel;
+          }
+        }, copied ? 3000 : 5000);
+        if (!copied) return;
+        showFeedback("安装命令已复制；运行前请核对来源与权限。");
+        track("install_command_copy", {
+          view: currentContentView === "dsh"
+            ? "dsh"
+            : currentView === "top100"
+              ? "hot"
+              : currentView === "all"
+                ? "total"
+                : currentView,
+          ...(button.dataset.plugin ? { plugin: button.dataset.plugin } : {}),
+          ...(button.dataset.rank ? { rank: Number(button.dataset.rank) } : {}),
+        });
       });
 
       window.addEventListener("popstate", () => {
-        const page = new URLSearchParams(window.location.search).get("page");
+        const params = new URLSearchParams(window.location.search);
+        const page = params.get("page");
         setContentView(contentViewNames.has(page) ? page : "ranking", { historyMode: "none" });
+        if (!page || page === "ranking") {
+          const view = params.get("view");
+          const category = params.get("category");
+          if (category && Object.hasOwn(categoryLabels, category) && category !== activeCategory) {
+            activeCategory = category;
+            categoryEntries = [];
+            categoryPageLoaded = 0;
+          }
+          void setView(["rising", "all", "category"].includes(view) ? view : "top100", {
+            emitEvent: false,
+            updateUrl: false,
+          });
+        }
       });
 
       setContentView(currentContentView, { historyMode: "none" });
+      trackPageView();
+      if (currentContentView === "dsh") track("install_guide_open", { view: "dsh" });
 
       function observeReveal(element, delay = 0) {
         if (!revealObserver || !element) return;
@@ -3188,7 +3738,9 @@
       function updateCategoryCounts() {
         for (const button of categoryButtons) {
           const category = button.dataset.category;
-          const count = rankedEntries.filter((entry) =>
+          const publishedCategory = (manifest?.categories ?? legacyCategoryDefinitions)
+            .find((item) => item.id === category);
+          const count = publishedCategory?.count ?? rankedEntries.filter((entry) =>
             entryMatchesCategory(entry, category)
           ).length;
           const countElement = button.querySelector("[data-category-count]");
@@ -3228,32 +3780,216 @@
         categoryDescription.hidden = true;
       }
 
-      async function loadMarketData() {
-        let lastError;
-        for (const source of sources) {
-          try {
-            const response = await fetch(source, { cache: "no-cache" });
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return await response.json();
-          } catch (error) {
-            lastError = error;
+      async function fetchJson(url, { manifestRequest = false } = {}) {
+        if (dataLoadPromises.has(url)) return dataLoadPromises.get(url);
+        const promise = fetch(url, { cache: manifestRequest ? "no-cache" : "force-cache" })
+          .then((response) => {
+            if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+            const type = response.headers.get("content-type") ?? "";
+            if (!type.includes("json")) throw new Error(`${url} returned ${type || "unknown content"}`);
+            return response.json();
+          })
+          .catch((error) => {
+            dataLoadPromises.delete(url);
+            throw error;
+          });
+        dataLoadPromises.set(url, promise);
+        return promise;
+      }
+
+      function makeEntries(plugins) {
+        return (Array.isArray(plugins) ? plugins : [])
+          .filter((plugin) => plugin && typeof plugin.fullName === "string")
+          .map((plugin, index) => {
+            const name = plugin.name || plugin.fullName.split("/").pop() || plugin.fullName;
+            const descriptionZh = cleanChineseSummary(plugin.descriptionZh || plugin.description);
+            const categoryValues = (plugin.categories ?? []).map((item) =>
+              typeof item === "string" ? item : item?.id
+            ).filter(Boolean);
+            const searchText = normalizeSearchText(
+              `${name} ${plugin.fullName} ${descriptionZh} ${(plugin.tags ?? []).join(" ")} ${(plugin.topics ?? []).join(" ")} ${categoryValues.join(" ")}`
+            );
+            return {
+              plugin,
+              rank: Number(plugin.rank) || Number(plugin.totalRank) || index + 1,
+              name,
+              descriptionZh,
+              searchText,
+              searchWords: searchText.split(" ").filter(Boolean),
+            };
+          });
+      }
+
+      async function loadManifestAndHot() {
+        try {
+          const nextManifest = await fetchJson(MANIFEST_URL, { manifestRequest: true });
+          if (nextManifest?.schemaVersion !== 2 || !nextManifest?.datasets?.hot?.url) {
+            throw new Error("manifest schema is unsupported");
+          }
+          manifest = nextManifest;
+          generatedAt = manifest.generatedAt;
+          const hot = await fetchJson(manifest.datasets.hot.url);
+          hotEntries = makeEntries(hot.rankings);
+          if (hotEntries.length === 0) throw new Error("Top 100 榜单为空");
+          allCount.textContent = `(${formatStars(manifest.datasets.total.count)})`;
+          updateCategoryCounts();
+          return;
+        } catch (manifestError) {
+          console.warn("Manifest unavailable; falling back to the lightweight legacy hot list.", manifestError);
+        }
+
+        const data = await fetchJson(LEGACY_URLS.hot, { manifestRequest: true });
+        manifest = null;
+        generatedAt = data.generatedAt;
+        legacyCategoryDefinitions = Array.isArray(data.categories) ? data.categories : [];
+        hotEntries = makeEntries(data.rankings);
+        if (hotEntries.length === 0) {
+          throw new Error("兼容 Top 100 榜单为空");
+        }
+        allCount.textContent = "";
+        updateCategoryCounts();
+      }
+
+      async function ensureViewData(view) {
+        if (initialDataPromise) await initialDataPromise;
+        if (view === "top100") return;
+        if ((view === "all" || view === "category") && tokenizeSearchQuery(viewState[view].query).length > 0) {
+          await loadSearchEntries();
+          return;
+        }
+        if (view === "rising" && risingEntries.length === 0) {
+          const payload = await fetchJson(
+            manifest ? manifest.datasets.rising.url : LEGACY_URLS.rising
+          );
+          risingEntries = makeEntries(payload.rankings);
+          if (risingEntries.length === 0) throw new Error("新锐榜为空");
+          return;
+        }
+        if (view === "all" && rankedEntries.length === 0) {
+          if (manifest) await loadNextTotalPage();
+          else await loadLegacyTotalEntries();
+          return;
+        }
+        if (view === "category" && categoryEntries.length === 0) {
+          if (manifest) {
+            await loadNextCategoryPage();
+          } else {
+            await loadLegacyTotalEntries();
+            categoryEntries = rankedEntries
+              .filter((entry) => entryMatchesCategory(entry, activeCategory))
+              .map((entry, index) => ({
+                ...entry,
+                totalRank: entry.totalRank ?? entry.rank,
+                rank: index + 1,
+              }));
           }
         }
-        throw lastError ?? new Error("unknown data error");
+      }
+
+      async function loadLegacyTotalEntries() {
+        if (rankedEntries.length > 0) return rankedEntries;
+        if (!legacyTotalLoadPromise) {
+          legacyTotalLoadPromise = fetchJson(LEGACY_URLS.total)
+            .then((payload) => {
+              const entries = makeEntries(payload.rankings);
+              if (entries.length === 0) throw new Error("兼容总榜为空");
+              rankedEntries = entries;
+              generatedAt ||= payload.generatedAt;
+              allCount.textContent = `(${formatStars(rankedEntries.length)})`;
+              updateCategoryCounts();
+              return rankedEntries;
+            })
+            .catch((error) => {
+              legacyTotalLoadPromise = null;
+              throw error;
+            });
+        }
+        return legacyTotalLoadPromise;
+      }
+
+      async function loadNextTotalPage() {
+        if (!manifest) return;
+        if (totalPageLoadPromise) return totalPageLoadPromise;
+        const pages = manifest.datasets.total.pages ?? [];
+        const pageIndex = totalPageLoaded;
+        const nextPage = pages[pageIndex];
+        if (!nextPage) return;
+        totalPageLoadPromise = fetchJson(nextPage.url)
+          .then((payload) => {
+            if (totalPageLoaded !== pageIndex) return;
+            rankedEntries = rankedEntries.concat(makeEntries(payload.rankings));
+            totalPageLoaded = pageIndex + 1;
+          })
+          .finally(() => {
+            totalPageLoadPromise = null;
+          });
+        return totalPageLoadPromise;
+      }
+
+      function activeCategoryManifest() {
+        return manifest?.categories?.find((category) => category.id === activeCategory) ?? null;
+      }
+
+      async function loadNextCategoryPage() {
+        if (!manifest) return;
+        const categoryId = activeCategory;
+        const pageIndex = categoryPageLoaded;
+        const requestKey = `${categoryId}:${pageIndex}`;
+        if (categoryPageLoadPromises.has(requestKey)) {
+          return categoryPageLoadPromises.get(requestKey);
+        }
+        const category = manifest.categories?.find((item) => item.id === categoryId);
+        const nextPage = category?.pages?.[pageIndex];
+        if (!nextPage) return;
+        const promise = fetchJson(nextPage.url)
+          .then((payload) => {
+            if (activeCategory !== categoryId || categoryPageLoaded !== pageIndex) return;
+            categoryEntries = categoryEntries.concat(makeEntries(payload.rankings));
+            categoryPageLoaded = pageIndex + 1;
+          })
+          .finally(() => {
+            categoryPageLoadPromises.delete(requestKey);
+          });
+        categoryPageLoadPromises.set(requestKey, promise);
+        return promise;
+      }
+
+      async function loadSearchEntries() {
+        if (initialDataPromise) await initialDataPromise;
+        if (searchEntries) return searchEntries;
+        if (!searchLoadPromise) {
+          const primaryUrl = manifest?.datasets?.search?.url ?? LEGACY_URLS.search;
+          searchLoadPromise = fetchJson(primaryUrl)
+            .catch((primaryError) => {
+              if (!manifest || primaryUrl === LEGACY_URLS.search) throw primaryError;
+              return fetchJson(LEGACY_URLS.search);
+            })
+            .then((payload) => {
+              const entries = makeEntries(payload.rankings);
+              if (entries.length === 0) throw new Error("搜索索引为空");
+              searchEntries = entries;
+              return searchEntries;
+            })
+            .catch(async (error) => {
+              if (!manifest) {
+                try {
+                  await loadLegacyTotalEntries();
+                  searchEntries = rankedEntries;
+                  return searchEntries;
+                } catch (fallbackError) {
+                  searchLoadPromise = null;
+                  throw fallbackError;
+                }
+              }
+              searchLoadPromise = null;
+              throw error;
+            });
+        }
+        return searchLoadPromise;
       }
 
       function formatStars(value) {
         return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
-      }
-
-      function formatStarRate(value) {
-        if (!Number.isFinite(value) || value <= 0) return "0";
-        if (value >= 1000) {
-          return `${new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(value / 1000)}K`;
-        }
-        return new Intl.NumberFormat("zh-CN", {
-          maximumFractionDigits: value < 10 ? 1 : 0,
-        }).format(value);
       }
 
       function formatUpdateTime(value) {
@@ -3272,7 +4008,24 @@
         return `${part("year")}年${part("month")}月${part("day")}日 ${part("hour")}:${part("minute")}`;
       }
 
-      function setView(view) {
+      function formatRelativeDate(value) {
+        const timestamp = Date.parse(value);
+        if (!Number.isFinite(timestamp)) return "时间未知";
+        const days = Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000));
+        if (days === 0) return "今天";
+        if (days === 1) return "昨天";
+        if (days < 30) return `${days} 天前`;
+        const months = Math.floor(days / 30);
+        if (months < 12) return `${months} 个月前`;
+        return `${Math.floor(months / 12)} 年前`;
+      }
+
+      async function setView(
+        view,
+        { emitEvent = true, updateUrl = true, historyMode = "replace" } = {}
+      ) {
+        const switchGeneration = ++viewSwitchGeneration;
+        const previousView = currentView;
         currentView = ["top100", "rising", "all", "category"].includes(view)
           ? view
           : "top100";
@@ -3284,9 +4037,11 @@
         list.setAttribute("aria-labelledby", `tab-${currentView}`);
         list.classList.toggle("is-top100-list", currentView !== "all");
         listHead.hidden = currentView === "all";
-        metricHead.textContent = currentView === "rising"
-          ? "今日新增 Stars"
-          : "GitHub Stars";
+        metricHead.textContent = currentView === "top100"
+          ? "综合热度"
+          : currentView === "rising"
+            ? "今日新增 Stars"
+            : "GitHub Stars";
         const metaLabels = {
           top100: "DEEPSEEK HARNESS PLUGINS · TOP 100",
           rising: "DEEPSEEK HARNESS PLUGINS · 新锐榜",
@@ -3304,35 +4059,91 @@
             String(button.dataset.category === activeCategory)
           );
         }
-        const url = new URL(window.location.href);
-        if (currentView === "top100") url.searchParams.delete("view");
-        else url.searchParams.set("view", currentView);
-        if (currentView === "category") url.searchParams.set("category", activeCategory);
-        else url.searchParams.delete("category");
-        const contentPrefix = `#${currentContentView}-`;
-        const contentHash = currentContentView === "ranking"
-          ? "#ranking"
-          : (window.location.hash.startsWith(contentPrefix)
-              ? window.location.hash
-              : `#${currentContentView}`);
-        history.replaceState(null, "", `${url.pathname}${url.search}${contentHash}`);
-        renderRanking();
+        if (updateUrl) {
+          const url = new URL(window.location.href);
+          if (currentView === "top100") url.searchParams.delete("view");
+          else url.searchParams.set("view", currentView);
+          if (currentView === "category") url.searchParams.set("category", activeCategory);
+          else url.searchParams.delete("category");
+          const contentPrefix = `#${currentContentView}-`;
+          const contentHash = currentContentView === "ranking"
+            ? "#ranking"
+            : (window.location.hash.startsWith(contentPrefix)
+                ? window.location.hash
+                : `#${currentContentView}`);
+          history[historyMode === "push" ? "pushState" : "replaceState"](
+            null,
+            "",
+            `${url.pathname}${url.search}${contentHash}`
+          );
+        }
+        if (emitEvent && previousView !== currentView) {
+          track("ranking_view_changed", {
+            view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
+          });
+        }
+        const hasDeferredSearch = tokenizeSearchQuery(viewState[currentView].query).length > 0
+          && (currentView === "all" || currentView === "category")
+          && !searchEntries;
+        const needsData = (
+          hasDeferredSearch
+          ||
+          (currentView === "rising" && risingEntries.length === 0)
+          || (currentView === "all" && !hasDeferredSearch && rankedEntries.length === 0)
+          || (currentView === "category" && !hasDeferredSearch && categoryEntries.length === 0)
+        );
+        if (needsData) {
+          const status = document.createElement("p");
+          status.className = "status";
+          status.textContent = `正在加载${currentView === "rising" ? "新锐榜" : currentView === "all" ? "总榜" : categoryLabels[activeCategory]}…`;
+          list.replaceChildren(status);
+        }
+        try {
+          const requestedRankingView = currentView;
+          while (switchGeneration === viewSwitchGeneration) {
+            const dataSearchGeneration = searchGenerations[requestedRankingView];
+            try {
+              await ensureViewData(requestedRankingView);
+            } catch (error) {
+              if (switchGeneration !== viewSwitchGeneration) return;
+              if (dataSearchGeneration !== searchGenerations[requestedRankingView]) continue;
+              throw error;
+            }
+            if (switchGeneration !== viewSwitchGeneration) return;
+            if (dataSearchGeneration !== searchGenerations[requestedRankingView]) continue;
+            renderRanking();
+            return;
+          }
+        } catch (error) {
+          if (switchGeneration !== viewSwitchGeneration) return;
+          const status = document.createElement("p");
+          status.className = "status error";
+          status.textContent = "这一榜单暂时无法读取，请稍后重试。";
+          list.replaceChildren(status);
+          console.error(error);
+        }
       }
 
       function renderRanking() {
         const state = viewState[currentView];
+        const searchActive = tokenizeSearchQuery(state.query).length > 0;
+        loadMore.disabled = !searchActive && (
+          currentView === "all"
+            ? Boolean(totalPageLoadPromise)
+            : currentView === "category"
+              ? [...categoryPageLoadPromises.keys()].some((key) => key.startsWith(`${activeCategory}:`))
+              : false
+        );
         const scoped = currentView === "top100"
           ? hotEntries
           : currentView === "rising"
             ? risingEntries
-            : rankedEntries;
-        const categoryScoped = currentView === "category"
+            : currentView === "category"
+              ? (searchActive && searchEntries ? searchEntries : categoryEntries)
+              : (searchActive && searchEntries ? searchEntries : rankedEntries);
+        const categoryScoped = currentView === "category" && searchActive
           ? scoped.filter((entry) => entryMatchesCategory(entry, activeCategory))
           : scoped;
-        const categoryRanks = currentView === "category"
-          ? new Map(categoryScoped.map((entry, index) => [entry.plugin.fullName, index + 1]))
-          : null;
-        const searchActive = currentView !== "category" && tokenizeSearchQuery(state.query).length > 0;
         const scoredMatches = categoryScoped
           .filter((entry) => !hideSkills || entry.plugin.type !== "skill")
           .map((entry) => ({
@@ -3359,29 +4170,84 @@
 
         for (const entry of shown) {
           const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
-          const displayRank = currentView === "category"
-            ? categoryRanks.get(plugin.fullName)
-            : absoluteRank;
+          const displayRank = absoluteRank;
           const item = template.content.cloneNode(true);
           const pluginElement = item.querySelector(".plugin");
           const rank = item.querySelector(".rank");
           const nameText = item.querySelector(".plugin-name-text");
           const githubLink = item.querySelector(".github-link");
           const copyLink = item.querySelector(".copy-link");
+          const quickInstall = item.querySelector(".quick-install");
           const description = item.querySelector(".plugin-description");
           const stars = item.querySelector(".stars");
+          const trustPill = item.querySelector(".trust-pill");
+          const typePill = item.querySelector(".type-pill");
+          const license = item.querySelector(".meta-license");
+          const updated = item.querySelector(".meta-updated");
+          const growth = item.querySelector(".meta-growth");
+          const cardGithubLink = item.querySelector(".card-github-link");
+          const installAction = item.querySelector(".install-action");
           const starText = formatStars(plugin.stars);
           const repositoryUrl = `https://github.com/${plugin.fullName}`;
+          const presentation = catalogPresentation(plugin);
+          const command = installCommand(plugin);
 
           rank.textContent = `#${String(displayRank).padStart(3, "0")}`;
           nameText.textContent = name;
+          nameText.title = name;
           githubLink.href = repositoryUrl;
+          githubLink.dataset.plugin = plugin.fullName;
+          githubLink.dataset.rank = String(displayRank);
           githubLink.setAttribute("aria-label", `在 GitHub 打开 ${name}`);
           copyLink.dataset.copyUrl = repositoryUrl;
+          copyLink.dataset.plugin = plugin.fullName;
+          copyLink.dataset.rank = String(displayRank);
           copyLink.setAttribute("aria-label", `复制 ${name} 的 GitHub 仓库地址`);
           copyLink.title = "复制 GitHub 仓库地址";
+          trustPill.textContent = presentation.trustLabel;
+          trustPill.dataset.level = presentation.trustLevel;
+          trustPill.title = "信任证据不代表代码已经过安全审核";
+          typePill.textContent = presentation.formFactor;
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
-          if (currentView === "rising") {
+          const hasLicense = Object.prototype.hasOwnProperty.call(plugin, "license");
+          const updatedAt = plugin.pushedAt || plugin.updatedAt;
+          const hasGrowth =
+            Object.prototype.hasOwnProperty.call(plugin, "dailyStars") ||
+            Object.prototype.hasOwnProperty.call(plugin, "weeklyStars");
+          license.hidden = !hasLicense;
+          license.textContent = hasLicense ? `License · ${plugin.license || "未声明"}` : "";
+          updated.hidden = !updatedAt;
+          updated.textContent = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
+          growth.hidden = !hasGrowth;
+          growth.textContent = hasGrowth
+            ? `日增 +${formatStars(plugin.dailyStars)} · 周增 +${formatStars(plugin.weeklyStars)}`
+            : "";
+          cardGithubLink.href = repositoryUrl;
+          cardGithubLink.dataset.plugin = plugin.fullName;
+          cardGithubLink.dataset.rank = String(displayRank);
+          cardGithubLink.setAttribute("aria-label", `在 GitHub 查看 ${name}`);
+          if (command) {
+            installAction.hidden = false;
+            installAction.dataset.copyCommand = command;
+            installAction.dataset.plugin = plugin.fullName;
+            installAction.dataset.rank = String(displayRank);
+            installAction.setAttribute("aria-label", `复制 ${name} 的 DSH 安装命令`);
+            quickInstall.hidden = false;
+            quickInstall.dataset.copyCommand = command;
+            quickInstall.dataset.plugin = plugin.fullName;
+            quickInstall.dataset.rank = String(displayRank);
+            quickInstall.title = "复制 DSH 安装命令";
+            quickInstall.setAttribute("aria-label", `复制 ${name} 的 DSH 安装命令`);
+          }
+          if (currentView === "top100") {
+            const heatText = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(plugin.hotScore || 0);
+            stars.classList.add("is-heat");
+            stars.textContent = heatText;
+            stars.setAttribute(
+              "aria-label",
+              `综合热度 ${heatText}，当前 ${starText} GitHub Stars`
+            );
+          } else if (currentView === "rising") {
             const rateText = formatStars(plugin.dailyStars);
             stars.textContent = `↑ ${rateText}`;
             stars.setAttribute(
@@ -3392,9 +4258,6 @@
             stars.textContent = starText;
             stars.setAttribute("aria-label", `${starText} GitHub Stars`);
           }
-          pluginElement.classList.add(
-            Math.floor((displayRank - 1) / 5) % 2 === 0 ? "tone-soft" : "tone-paper"
-          );
           fragment.appendChild(item);
         }
 
@@ -3412,18 +4275,39 @@
           observeReveal(pluginElement);
         }
         if (currentView === "category") {
-          searchResults.category.textContent = `${categoryLabels[activeCategory]}分类共 ${formatStars(matched.length)} 个插件`;
-          rankingStatus.textContent = `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${matched.length} 个插件`;
-          loadMore.hidden = shown.length >= matched.length;
+          const category = activeCategoryManifest();
+          const categoryTotal = category?.count ?? matched.length;
+          searchResults.category.textContent = `${categoryLabels[activeCategory]}分类共 ${formatStars(categoryTotal)} 个插件`;
+          rankingStatus.textContent = `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${categoryTotal} 个插件`;
+          loadMore.hidden = manifest
+            ? categoryPageLoaded >= (category?.pageCount ?? 0)
+            : shown.length >= matched.length;
+          if (!loadMore.hidden) {
+            const remaining = Math.max(0, (category?.count ?? matched.length) - shown.length);
+            loadMore.textContent = `继续加载（剩余 ${formatStars(remaining)}）`;
+          }
         } else {
+          const publishedTotal = currentView === "all" && !searchActive
+            ? manifest?.datasets?.total?.count ?? matched.length
+            : matched.length;
           searchResults[currentView].textContent = searchActive
             ? `匹配 ${formatStars(matched.length)} 个 · 按相关度排序 · 显示原始排名`
-            : `已显示 ${formatStars(shown.length)} / ${formatStars(matched.length)} 个`;
+            : `已显示 ${formatStars(shown.length)} / ${formatStars(publishedTotal)} 个`;
           document.querySelector(`[data-clear-view="${currentView}"]`).hidden = !searchActive;
           rankingStatus.textContent = searchActive
             ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
-            : `已显示 ${shown.length} / ${matched.length} 个插件`;
-          loadMore.hidden = currentView !== "all" || shown.length >= matched.length;
+            : `已显示 ${shown.length} / ${publishedTotal} 个插件`;
+          loadMore.hidden = currentView !== "all" || (
+            searchActive
+              ? shown.length >= matched.length
+              : manifest
+                ? totalPageLoaded >= manifest.datasets.total.pageCount
+                : shown.length >= matched.length
+          );
+          if (!loadMore.hidden) {
+            const total = searchActive ? matched.length : manifest?.datasets?.total?.count ?? matched.length;
+            loadMore.textContent = `继续加载（剩余 ${formatStars(Math.max(0, total - shown.length))}）`;
+          }
         }
       }
 
@@ -3439,8 +4323,11 @@
       async function copyDownloadUrl(button) {
         const value = button.dataset.copyUrl;
         if (!value) return;
+        let copied = false;
         try {
+          if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
           await navigator.clipboard.writeText(value);
+          copied = true;
         } catch {
           const input = document.createElement("textarea");
           input.value = value;
@@ -3448,15 +4335,34 @@
           input.style.opacity = "0";
           document.body.appendChild(input);
           input.select();
-          document.execCommand("copy");
+          copied = document.execCommand("copy");
           input.remove();
         }
+        if (!copied) {
+          showFeedback("复制失败，请手动复制 GitHub 仓库地址。");
+          return;
+        }
         showFeedback(`已复制 GitHub 仓库地址：${value}`);
+        track("plugin_link_copy", {
+          view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
+          plugin: button.dataset.plugin,
+          rank: Number(button.dataset.rank),
+        });
       }
 
       list.addEventListener("click", (event) => {
         const button = event.target.closest(".copy-link");
         if (button) void copyDownloadUrl(button);
+      });
+
+      document.addEventListener("click", (event) => {
+        const link = event.target.closest("a.github-link, a.card-github-link");
+        if (!link?.dataset.plugin) return;
+        track("plugin_github_click", {
+          view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
+          plugin: link.dataset.plugin,
+          rank: Number(link.dataset.rank),
+        });
       });
 
       skillFilter.addEventListener("click", () => {
@@ -3466,23 +4372,73 @@
         renderRanking();
       });
 
-      function applySearchQuery(view, value) {
+      async function applySearchQuery(view, value) {
         const state = viewState[view];
         const previousQuery = normalizeSearchText(state.query);
         const nextQuery = normalizeSearchText(value);
         state.query = value;
         if (previousQuery === nextQuery) return;
+        const searchGeneration = ++searchGenerations[view];
+        const isCurrentSearchRequest = () =>
+          searchGeneration === searchGenerations[view]
+          && normalizeSearchText(viewState[view].query) === nextQuery;
         state.visible = nextQuery ? PAGE_SIZE : state.unfilteredVisible;
-        if (currentView === view) renderRanking();
+        if (nextQuery && !trackedSearchViews.has(view)) {
+          trackedSearchViews.add(view);
+          track("search_used", {
+            view: view === "top100" ? "hot" : view === "all" ? "total" : view,
+            ...(view === "category" ? { category: activeCategory } : {}),
+          });
+        }
+        if (view === "all" || view === "category") {
+          const needsUnfilteredData = !nextQuery && (
+            (view === "all" && rankedEntries.length === 0)
+            || (view === "category" && categoryEntries.length === 0)
+          );
+          if (currentView === view && (nextQuery || needsUnfilteredData)) {
+            const status = document.createElement("p");
+            status.className = "status";
+            status.textContent = nextQuery
+              ? "正在加载全站搜索索引…"
+              : `正在恢复${view === "all" ? "总榜" : categoryLabels[activeCategory]}…`;
+            list.replaceChildren(status);
+          }
+          try {
+            if (nextQuery) await loadSearchEntries();
+            else await ensureViewData(view);
+          } catch (error) {
+            if (!isCurrentSearchRequest()) return;
+            const result = searchResults[view];
+            if (result) {
+              result.textContent = nextQuery
+                ? "搜索索引暂时无法读取"
+                : "榜单数据暂时无法读取";
+            }
+            if (currentView === view) {
+              const status = document.createElement("p");
+              status.className = "status error";
+              status.textContent = nextQuery
+                ? "全站搜索索引暂时无法读取，请稍后重试。"
+                : "这一榜单暂时无法读取，请稍后重试。";
+              list.replaceChildren(status);
+              rankingStatus.textContent = nextQuery
+                ? "全站搜索索引加载失败"
+                : "榜单数据加载失败";
+            }
+            console.error(error);
+            return;
+          }
+        }
+        if (isCurrentSearchRequest() && currentView === view) renderRanking();
       }
 
       function scheduleSearch(view, value, immediate = false) {
         window.clearTimeout(searchTimers[view]);
         if (immediate) {
-          applySearchQuery(view, value);
+          void applySearchQuery(view, value);
           return;
         }
-        searchTimers[view] = window.setTimeout(() => applySearchQuery(view, value), 160);
+        searchTimers[view] = window.setTimeout(() => void applySearchQuery(view, value), 160);
       }
 
       for (const [view, input] of Object.entries(searchInputs)) {
@@ -3507,44 +4463,18 @@
       }
 
       try {
-        const data = await loadMarketData();
-        const rankings = data.rankings ?? {};
-        for (const definition of data.categories ?? []) {
+        initialDataPromise = loadManifestAndHot();
+        await initialDataPromise;
+        for (const definition of manifest?.categories ?? legacyCategoryDefinitions) {
           if (!Object.hasOwn(categoryLabels, definition.id)) continue;
           if (definition.label) categoryLabels[definition.id] = definition.label;
           if (definition.description) {
             categoryDescriptions[definition.id] = definition.description;
           }
         }
-        generatedAt = data.generatedAt;
-        const makeEntries = (plugins) => plugins
-          .filter((plugin) => plugin && typeof plugin.fullName === "string")
-          .map((plugin, index) => {
-            const name = plugin.name || plugin.fullName;
-            const descriptionZh = cleanChineseSummary(
-              plugin.descriptionZh || plugin.description
-            );
-            const searchText = normalizeSearchText(
-              `${name} ${plugin.fullName} ${descriptionZh} ${(plugin.tags ?? []).join(" ")} ${(plugin.topics ?? []).join(" ")}`
-            );
-            return {
-              plugin,
-              rank: Number(plugin.rank) || index + 1,
-              name,
-              descriptionZh,
-              searchText,
-              searchWords: searchText.split(" ").filter(Boolean),
-            };
-          });
-        rankedEntries = makeEntries(Array.isArray(rankings.total) ? rankings.total : []);
-        risingEntries = makeEntries(Array.isArray(rankings.rising) ? rankings.rising : []);
-        hotEntries = makeEntries(Array.isArray(rankings.hot) ? rankings.hot : []);
-        if (rankedEntries.length === 0) throw new Error("榜单数据为空");
-
-        allCount.textContent = `(${formatStars(rankedEntries.length)})`;
         updateCategoryCounts();
         for (const tab of tabs) {
-          tab.addEventListener("click", () => setView(tab.dataset.view));
+          tab.addEventListener("click", () => void setView(tab.dataset.view, { historyMode: "push" }));
           tab.addEventListener("keydown", (event) => {
             if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
             event.preventDefault();
@@ -3552,7 +4482,7 @@
             const offset = event.key === "ArrowRight" ? 1 : -1;
             const next = tabs[(currentIndex + offset + tabs.length) % tabs.length];
             next.focus();
-            setView(next.dataset.view);
+            void setView(next.dataset.view, { historyMode: "push" });
           });
         }
         for (const button of categoryButtons) {
@@ -3562,21 +4492,60 @@
           button.addEventListener("blur", hideCategoryDescription);
           button.addEventListener("click", () => {
             activeCategory = button.dataset.category;
+            categoryEntries = [];
+            categoryPageLoaded = 0;
             viewState.category.visible = PAGE_SIZE;
             viewState.category.unfilteredVisible = PAGE_SIZE;
-            setView("category");
+            track("category_selected", { view: "category", category: activeCategory });
+            void setView("category", { historyMode: "push" });
           });
         }
-        loadMore.addEventListener("click", () => {
+        loadMore.addEventListener("click", async () => {
           if (currentView !== "all" && currentView !== "category") return;
-          const state = viewState[currentView];
-          state.visible += PAGE_SIZE;
-          if (currentView === "category" || !normalizeSearchText(state.query)) {
-            state.unfilteredVisible = state.visible;
+          const requestedRankingView = currentView;
+          const requestedCategory = requestedRankingView === "category" ? activeCategory : null;
+          const requestedSearchGeneration = searchGenerations[requestedRankingView];
+          const state = viewState[requestedRankingView];
+          const searchActive = tokenizeSearchQuery(state.query).length > 0;
+          const requestedQuery = normalizeSearchText(state.query);
+          const isSameSearchState = () =>
+            searchGenerations[requestedRankingView] === requestedSearchGeneration
+            && normalizeSearchText(state.query) === requestedQuery;
+          const isSameRankingContext = () =>
+            currentView === requestedRankingView
+            && (requestedRankingView !== "category" || activeCategory === requestedCategory);
+          const isCurrentLoadMoreRequest = () =>
+            isSameRankingContext() && isSameSearchState();
+          loadMore.disabled = true;
+          loadMore.textContent = "正在加载…";
+          try {
+            if (!searchActive && manifest) {
+              if (requestedRankingView === "all") await loadNextTotalPage();
+              else await loadNextCategoryPage();
+              const categoryStillMatches = requestedRankingView !== "category"
+                || activeCategory === requestedCategory;
+              if (categoryStillMatches) {
+                state.unfilteredVisible = requestedRankingView === "all"
+                  ? rankedEntries.length
+                  : categoryEntries.length;
+                if (isSameSearchState()) state.visible = state.unfilteredVisible;
+              }
+            } else {
+              state.visible += PAGE_SIZE;
+              if (!searchActive) state.unfilteredVisible = state.visible;
+            }
+            if (isCurrentLoadMoreRequest()) renderRanking();
+          } catch (error) {
+            if (isCurrentLoadMoreRequest()) {
+              showFeedback("下一页暂时无法加载，请重试。");
+            }
+            console.error(error);
+          } finally {
+            if (isCurrentLoadMoreRequest()) loadMore.disabled = false;
+            else if (isSameRankingContext()) renderRanking();
           }
-          renderRanking();
         });
-        setView(currentView);
+        await setView(currentView, { emitEvent: false, updateUrl: false });
       } catch (error) {
         const status = document.createElement("p");
         status.className = "status error";

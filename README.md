@@ -109,11 +109,21 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 
 | 公开文件 | 内容 |
 | --- | --- |
+| `/data/manifest.json` | 官网使用的短缓存入口，引用同一 `snapshotId` 下的不可变榜单分片 |
+| `/data/snapshots/{snapshotId}/hot.json` | 官网首屏使用的精简 Top 100 综合热度榜 |
+| `/data/snapshots/{snapshotId}/rising.json` | 点击新锐榜后按需加载的精简数据 |
+| `/data/snapshots/{snapshotId}/total/page-NNN.json` | GitHub Stars 总榜，每页 100 条 |
+| `/data/snapshots/{snapshotId}/categories/{id}/page-NNN.json` | 六个分类榜的独立 100 条分页 |
+| `/data/snapshots/{snapshotId}/search.json` | 用户首次全站搜索时才加载的紧凑索引 |
 | `/data/rankings.json` | 完整聚合数据、榜单定义、分类定义和四个榜单视图所需数据 |
 | `/data/rankings-hot.json` | Top 100 独立数据 |
 | `/data/rankings-rising.json` | 新锐榜独立数据 |
 | `/data/rankings-total.json` | 总榜与分类榜的完整仓库数据 |
 | `/data/rankings-search.json` | 面向插件总榜、搜索和 Agent 推荐的紧凑索引 |
+
+官网与当前源码插件优先消费 `manifest + snapshot 分片`；插件安装校验通过紧凑索引定位单个总榜分页。已有 `rankings*.json` 接口继续发布，供已发布的 `@dsheval/dsh-top100-plugin@1.1.0` 和其他既有消费者兼容使用。
+
+搜索快照中的可选 `installTarget` 只保留语法白名单内的 npm/GitHub 单一目标；GitHub 目标还必须与当前卡片仓库一致。该字段表示安装源可安全生成命令，不等同于代码安全审计或 npm 归属认证。
 
 - 北京时间每天 `06:00` 运行增量发现并刷新全部已收录仓库。
 - 每周日运行完整分片发现。

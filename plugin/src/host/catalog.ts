@@ -6,13 +6,14 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promise
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
-import { entryMatchesCategory } from "../shared/categories.js";
+import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
 import { catalogEvidence } from "../shared/evidence.js";
 import type {
   CatalogCacheStatus,
   CatalogItem,
+  PluginCategoryDefinition,
   RankingEntry,
   RankingsDocument,
   RankingView,
@@ -37,6 +38,52 @@ interface CatalogDiskCache extends CatalogCache {
 
 type CatalogParser = (raw: string) => RankingsDocument;
 
+interface RankingFileReferenceV2 {
+  url: string;
+  count: number;
+  bytes: number;
+  sha256: string;
+}
+
+interface RankingPageReferenceV2 extends RankingFileReferenceV2 {
+  page: number;
+}
+
+interface RankingManifestV2 {
+  schemaVersion: 2;
+  snapshotId: string;
+  generatedAt: string;
+  snapshotDate: string;
+  pageSize: number;
+  definitions?: RankingsDocument["definitions"];
+  datasets: {
+    hot: RankingFileReferenceV2;
+    rising: RankingFileReferenceV2;
+    search: RankingFileReferenceV2;
+    total: {
+      count: number;
+      pageSize: number;
+      pageCount: number;
+      pages: RankingPageReferenceV2[];
+    };
+  };
+  categories: Array<PluginCategoryDefinition & {
+    pageSize: number;
+    pageCount: number;
+    pages: RankingPageReferenceV2[];
+  }>;
+}
+
+interface RankingManifestCache {
+  fetchedAt: number;
+  manifest: RankingManifestV2;
+}
+
+interface RankingManifestDiskCache extends RankingManifestCache {
+  schemaVersion: 1;
+  dataUrl: string;
+}
+
 class CatalogSourceError extends Error {
   fallbackToFull: boolean;
   status: number | null;
@@ -52,6 +99,8 @@ class CatalogSourceError extends Error {
 const caches = new Map<string, CatalogCache>();
 const inFlight = new Map<string, Promise<RankingsDocument>>();
 const fallbackReasons = new Map<string, string>();
+const manifestCaches = new Map<string, RankingManifestCache>();
+const manifestInFlight = new Map<string, Promise<RankingManifestV2>>();
 
 export function normalizeDataUrl(raw: string): string {
   const parsed = new URL(raw);
@@ -59,6 +108,107 @@ export function normalizeDataUrl(raw: string): string {
     throw new Error("dataUrl must be http or https");
   }
   return raw.replace(/\/+$/, "");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function validFileReference(value: unknown): value is RankingFileReferenceV2 {
+  if (!isRecord(value)) return false;
+  return typeof value.url === "string"
+    && typeof value.count === "number"
+    && Number.isInteger(value.count)
+    && typeof value.bytes === "number"
+    && Number.isInteger(value.bytes)
+    && typeof value.sha256 === "string"
+    && /^[a-f0-9]{64}$/.test(value.sha256);
+}
+
+function validPageReference(value: unknown): value is RankingPageReferenceV2 {
+  const page = isRecord(value) ? value.page : undefined;
+  return validFileReference(value)
+    && typeof page === "number"
+    && Number.isInteger(page)
+    && page > 0;
+}
+
+function validManifestCategory(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return typeof value.id === "string"
+    && isPluginCategoryId(value.id)
+    && typeof value.label === "string"
+    && typeof value.description === "string"
+    && typeof value.count === "number"
+    && Number.isInteger(value.count)
+    && typeof value.pageSize === "number"
+    && Number.isInteger(value.pageSize)
+    && typeof value.pageCount === "number"
+    && Number.isInteger(value.pageCount)
+    && Array.isArray(value.pages)
+    && value.pages.every(validPageReference);
+}
+
+export function parseRankingManifest(raw: string): RankingManifestV2 {
+  let value: unknown;
+  try { value = JSON.parse(raw); }
+  catch { throw new CatalogSourceError("榜单 manifest 不是有效 JSON", { fallbackToFull: true }); }
+  if (!isRecord(value)
+    || value.schemaVersion !== 2
+    || typeof value.snapshotId !== "string"
+    || value.snapshotId.length === 0
+    || typeof value.generatedAt !== "string"
+    || typeof value.snapshotDate !== "string"
+    || typeof value.pageSize !== "number"
+    || !Number.isInteger(value.pageSize)
+    || value.pageSize <= 0
+  ) {
+    throw new CatalogSourceError("榜单 manifest 版本不受支持", { fallbackToFull: true });
+  }
+  const datasets = value.datasets;
+  if (!isRecord(datasets)
+    || !validFileReference(datasets.hot)
+    || !validFileReference(datasets.rising)
+    || !validFileReference(datasets.search)
+    || !isRecord(datasets.total)
+    || typeof datasets.total.count !== "number"
+    || !Number.isInteger(datasets.total.count)
+    || typeof datasets.total.pageSize !== "number"
+    || !Number.isInteger(datasets.total.pageSize)
+    || datasets.total.pageSize <= 0
+    || typeof datasets.total.pageCount !== "number"
+    || !Number.isInteger(datasets.total.pageCount)
+    || !Array.isArray(datasets.total.pages)
+    || !datasets.total.pages.every(validPageReference)
+  ) {
+    throw new CatalogSourceError("榜单 manifest 缺少有效的数据引用", { fallbackToFull: true });
+  }
+  if (!Array.isArray(value.categories) || !value.categories.every(validManifestCategory)) {
+    throw new CatalogSourceError("榜单 manifest 缺少分类定义", { fallbackToFull: true });
+  }
+  return value as unknown as RankingManifestV2;
+}
+
+function manifestFileUrl(dataUrl: string, reference: RankingFileReferenceV2): string {
+  const base = new URL(`${normalizeDataUrl(dataUrl)}/`);
+  const resolved = new URL(reference.url, base);
+  const basePath = base.pathname.endsWith("/") ? base.pathname : `${base.pathname}/`;
+  if (resolved.origin !== base.origin || !resolved.pathname.startsWith(`${basePath}snapshots/`)) {
+    throw new CatalogSourceError("榜单 manifest 引用了不受信任的数据地址", { fallbackToFull: true });
+  }
+  return resolved.toString();
+}
+
+function verifySnapshot(raw: string, reference: RankingFileReferenceV2): void {
+  const bytes = Buffer.byteLength(raw);
+  const digest = createHash("sha256").update(raw).digest("hex");
+  if (bytes !== reference.bytes || digest !== reference.sha256) {
+    throw new CatalogSourceError("榜单快照完整性校验失败", { fallbackToFull: true });
+  }
+}
+
+function manifestCategories(manifest: RankingManifestV2): PluginCategoryDefinition[] {
+  return manifest.categories.map(({ id, label, description, count }) => ({ id, label, description, count }));
 }
 
 export function isRankingView(value: string | null): value is RankingView {
@@ -116,6 +266,8 @@ export function filterCatalog(
 export function invalidateCatalog(): void {
   caches.clear();
   fallbackReasons.clear();
+  manifestCaches.clear();
+  manifestInFlight.clear();
 }
 
 function catalogCacheDirectory(): string {
@@ -127,6 +279,11 @@ function catalogCacheDirectory(): string {
 function catalogCachePath(url: string): string {
   const key = createHash("sha256").update(url).digest("hex").slice(0, 24);
   return join(catalogCacheDirectory(), `${key}.json`);
+}
+
+function manifestCachePath(dataUrl: string): string {
+  const key = createHash("sha256").update(`${dataUrl}/manifest.json`).digest("hex").slice(0, 24);
+  return join(catalogCacheDirectory(), `${key}.manifest.json`);
 }
 
 function validDocument(value: unknown): value is RankingsDocument {
@@ -155,6 +312,22 @@ async function readDiskCache(url: string): Promise<CatalogCache | null> {
   }
 }
 
+async function readManifestDiskCache(dataUrl: string): Promise<RankingManifestCache | null> {
+  try {
+    const payload = JSON.parse(await readFile(manifestCachePath(dataUrl), "utf8")) as Partial<RankingManifestDiskCache>;
+    if (payload.schemaVersion !== 1
+      || payload.dataUrl !== dataUrl
+      || !Number.isFinite(payload.fetchedAt)
+      || !payload.manifest
+    ) return null;
+    const manifest = parseRankingManifest(JSON.stringify(payload.manifest));
+    for (const reference of manifestReferences(manifest)) manifestFileUrl(dataUrl, reference);
+    return { fetchedAt: Number(payload.fetchedAt), manifest };
+  } catch {
+    return null;
+  }
+}
+
 async function writeDiskCache(value: CatalogCache): Promise<void> {
   const path = catalogCachePath(value.dataUrl);
   const temporary = `${path}.${process.pid}.tmp`;
@@ -166,6 +339,34 @@ async function writeDiskCache(value: CatalogCache): Promise<void> {
       await rename(temporary, path);
     } catch {
       // Windows does not replace an existing destination with rename(). Keep a restorable last-good copy.
+      const backup = `${path}.${process.pid}.${Date.now()}.bak`;
+      await rename(path, backup);
+      try {
+        await rename(temporary, path);
+      } catch (replacementError) {
+        await rename(backup, path).catch(() => undefined);
+        throw replacementError;
+      }
+      await rm(backup, { force: true }).catch(() => undefined);
+    }
+  } catch {
+    await rm(temporary, { force: true }).catch(() => undefined);
+  }
+}
+
+async function writeManifestDiskCache(
+  dataUrl: string,
+  value: RankingManifestCache,
+): Promise<void> {
+  const path = manifestCachePath(dataUrl);
+  const temporary = `${path}.${process.pid}.tmp`;
+  try {
+    await mkdir(catalogCacheDirectory(), { recursive: true });
+    const payload: RankingManifestDiskCache = { schemaVersion: 1, dataUrl, ...value };
+    await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
+    try {
+      await rename(temporary, path);
+    } catch {
       const backup = `${path}.${process.pid}.${Date.now()}.bak`;
       await rename(path, backup);
       try {
@@ -256,6 +457,67 @@ async function fetchCatalogTextWindows(url: string): Promise<string> {
   }
 }
 
+function manifestReferences(manifest: RankingManifestV2): RankingFileReferenceV2[] {
+  return [
+    manifest.datasets.hot,
+    manifest.datasets.rising,
+    manifest.datasets.search,
+    ...manifest.datasets.total.pages,
+    ...manifest.categories.flatMap((category) => category.pages),
+  ];
+}
+
+async function downloadRankingManifest(baseUrl: string): Promise<RankingManifestV2> {
+  const url = `${baseUrl}/manifest.json`;
+  let raw: string;
+  try {
+    raw = await fetchCatalogText(url);
+  } catch (error) {
+    if (process.platform === "win32" && isRetryableCatalogFetchError(error)) {
+      raw = await fetchCatalogTextWindows(url);
+    } else {
+      throw error;
+    }
+  }
+  const manifest = parseRankingManifest(raw);
+  for (const reference of manifestReferences(manifest)) manifestFileUrl(baseUrl, reference);
+  const value = { fetchedAt: Date.now(), manifest };
+  manifestCaches.set(baseUrl, value);
+  await writeManifestDiskCache(baseUrl, value);
+  fallbackReasons.delete(url);
+  return manifest;
+}
+
+function refreshRankingManifest(baseUrl: string): Promise<RankingManifestV2> {
+  const pending = manifestInFlight.get(baseUrl);
+  if (pending) return pending;
+  const task = downloadRankingManifest(baseUrl);
+  manifestInFlight.set(baseUrl, task);
+  const cleanup = (): void => {
+    if (manifestInFlight.get(baseUrl) === task) manifestInFlight.delete(baseUrl);
+  };
+  void task.then(cleanup, cleanup);
+  return task;
+}
+
+export async function loadRankingManifest(
+  dataUrl: string,
+  force = false,
+): Promise<RankingManifestV2> {
+  const baseUrl = normalizeDataUrl(dataUrl);
+  const cached = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
+  if (cached) manifestCaches.set(baseUrl, cached);
+  if (!force && cached) {
+    if (Date.now() - cached.fetchedAt >= CACHE_MS) {
+      void refreshRankingManifest(baseUrl).catch((error: unknown) => {
+        fallbackReasons.set(`${baseUrl}/manifest.json`, describeCatalogFetchError(error));
+      });
+    }
+    return cached.manifest;
+  }
+  return refreshRankingManifest(baseUrl);
+}
+
 export function parseRankingsDocument(raw: string): RankingsDocument {
   let document: RankingsDocument;
   try { document = JSON.parse(raw) as RankingsDocument; }
@@ -292,9 +554,18 @@ export function parseRankingViewDocument(raw: string, view: "hot" | "rising"): R
 
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
-  const entry = value as Partial<RankingEntry>;
+  const entry = value as Partial<RankingEntry> & { installTarget?: unknown };
   if (typeof entry.fullName !== "string") return null;
   const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
+  const parsedTarget = typeof entry.installTarget === "string"
+    ? parseInstallSpec(entry.installTarget)
+    : null;
+  const install = entry.install ?? (parsedTarget ? {
+    method: "manifest-v2",
+    target: parsedTarget.spec,
+    commands: [`dsh plugin add ${parsedTarget.spec}`],
+    commandSource: "manifest-v2",
+  } : undefined);
   return {
     rank: Number.isFinite(entry.rank) ? Number(entry.rank) : index + 1,
     totalRank: Number.isFinite(entry.totalRank) ? Number(entry.totalRank) : undefined,
@@ -316,7 +587,7 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     tags: Array.isArray(entry.tags) ? entry.tags.filter((item): item is string => typeof item === "string") : [],
     categories: entry.categories,
     type: typeof entry.type === "string" ? entry.type : "candidate",
-    install: entry.install,
+    install,
     sources: Array.isArray(entry.sources) ? entry.sources.filter((item): item is string => typeof item === "string") : [],
     url: typeof entry.url === "string" ? entry.url : `https://github.com/${entry.fullName}`,
     pushedAt: typeof entry.pushedAt === "string" ? entry.pushedAt : "",
@@ -345,6 +616,51 @@ export function parseRankingSearchDocument(raw: string): RankingsDocument {
     definitions: payload.definitions,
     categories: payload.categories,
     rankings: { total: entries, hot: [], rising: [] },
+  };
+}
+
+function parseSnapshotPayload(
+  raw: string,
+  manifest: RankingManifestV2,
+  dataset: "hot" | "rising" | "search" | "total",
+): { rankings: RankingEntry[] } {
+  let value: unknown;
+  try { value = JSON.parse(raw); }
+  catch { throw new CatalogSourceError("榜单快照不是有效 JSON", { fallbackToFull: true }); }
+  if (!isRecord(value)
+    || value.schemaVersion !== 2
+    || value.snapshotId !== manifest.snapshotId
+    || value.dataset !== dataset
+    || !Array.isArray(value.rankings)
+  ) {
+    throw new CatalogSourceError("榜单快照与 manifest 不匹配", { fallbackToFull: true });
+  }
+  const rankings = value.rankings
+    .map(normalizeSearchEntry)
+    .filter((entry): entry is RankingEntry => entry !== null);
+  if (rankings.length !== value.rankings.length) {
+    throw new CatalogSourceError("榜单快照包含无效条目", { fallbackToFull: true });
+  }
+  return { rankings };
+}
+
+function snapshotDocument(
+  raw: string,
+  manifest: RankingManifestV2,
+  dataset: "hot" | "rising" | "search" | "total",
+): RankingsDocument {
+  const { rankings } = parseSnapshotPayload(raw, manifest, dataset);
+  return {
+    schemaVersion: 2,
+    generatedAt: manifest.generatedAt,
+    snapshotDate: manifest.snapshotDate,
+    definitions: manifest.definitions,
+    categories: manifestCategories(manifest),
+    rankings: {
+      total: rankings,
+      hot: dataset === "hot" ? rankings : [],
+      rising: dataset === "rising" ? rankings : [],
+    },
   };
 }
 
@@ -410,6 +726,20 @@ async function loadCatalogDocument(
   }
 }
 
+async function loadManifestDataset(
+  dataUrl: string,
+  manifest: RankingManifestV2,
+  reference: RankingFileReferenceV2,
+  dataset: "hot" | "rising" | "search" | "total",
+  force = false,
+): Promise<RankingsDocument> {
+  const url = manifestFileUrl(dataUrl, reference);
+  return loadCatalogDocument(url, (raw) => {
+    verifySnapshot(raw, reference);
+    return snapshotDocument(raw, manifest, dataset);
+  }, force);
+}
+
 export async function loadRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
   const url = `${normalizeDataUrl(dataUrl)}/rankings.json`;
   return loadCatalogDocument(url, parseRankingsDocument, force);
@@ -419,14 +749,24 @@ export async function loadRankings(dataUrl: string, force = false): Promise<Rank
 export async function loadSearchRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const url = `${baseUrl}/rankings-search.json`;
+  let manifestError: unknown = null;
   try {
-    return await loadCatalogDocument(url, parseRankingSearchDocument, force);
+    const manifest = await loadRankingManifest(baseUrl, force);
+    return await loadManifestDataset(baseUrl, manifest, manifest.datasets.search, "search", force);
+  } catch (error) {
+    manifestError = error;
+  }
+  try {
+    const document = await loadCatalogDocument(url, parseRankingSearchDocument, force);
+    fallbackReasons.set(url, `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`);
+    return document;
   } catch (error) {
     try {
       const document = await loadRankings(baseUrl, force);
       const fullUrl = `${baseUrl}/rankings.json`;
       const fullReason = fallbackReasons.get(fullUrl);
       fallbackReasons.set(fullUrl, [
+        `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`,
         `轻量检索索引不可用：${describeCatalogFetchError(error)}`,
         fullReason,
       ].filter(Boolean).join("；"));
@@ -446,22 +786,32 @@ export async function catalogCacheStatus(
   view?: "hot" | "rising",
 ): Promise<CatalogCacheStatus> {
   const baseUrl = normalizeDataUrl(dataUrl);
-  const filenames = dataset === "view-shard" && view
-    ? [`rankings-${view}.json`, "rankings.json"]
-    : dataset === "search-index"
-      ? ["rankings-search.json", "rankings.json"]
-      : ["rankings.json"];
-  for (const filename of filenames) {
-    const cached = await cachedCatalog(`${baseUrl}/${filename}`);
+  const manifestCache = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
+  if (manifestCache) manifestCaches.set(baseUrl, manifestCache);
+  const manifest = manifestCache?.manifest;
+  const candidates: Array<{ url: string; dataset: CatalogCacheStatus["dataset"] }> = [];
+  if (manifest && dataset === "view-shard" && view) {
+    candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets[view]), dataset });
+  } else if (manifest && dataset === "search-index") {
+    candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.search), dataset });
+  }
+  if (dataset === "view-shard" && view) {
+    candidates.push({ url: `${baseUrl}/rankings-${view}.json`, dataset });
+  } else if (dataset === "search-index") {
+    candidates.push({ url: `${baseUrl}/rankings-search.json`, dataset });
+  }
+  candidates.push({ url: `${baseUrl}/rankings.json`, dataset: "full-catalog" });
+  for (const candidate of candidates) {
+    const cached = await cachedCatalog(candidate.url);
     if (!cached) continue;
     const ageMs = Math.max(0, Date.now() - cached.fetchedAt);
     return {
       fetchedAt: cached.fetchedAt,
       ageMs,
       stale: ageMs >= CACHE_MS,
-      reason: fallbackReasons.get(`${baseUrl}/${filename}`) ?? null,
+      reason: fallbackReasons.get(candidate.url) ?? null,
       source: "network-or-cache",
-      dataset: filename === "rankings.json" ? "full-catalog" : dataset,
+      dataset: candidate.dataset,
     };
   }
   return { fetchedAt: null, ageMs: null, stale: false, reason: null, source: "unknown", dataset };
@@ -478,8 +828,22 @@ async function cachedCatalog(url: string): Promise<CatalogCache | null> {
 /** Return a last-good full or view cache without ever delaying local management on the network. */
 export async function loadCachedRankings(dataUrl: string): Promise<RankingsDocument | null> {
   const baseUrl = normalizeDataUrl(dataUrl);
-  for (const filename of ["rankings.json", "rankings-hot.json", "rankings-rising.json"]) {
-    const cached = await cachedCatalog(`${baseUrl}/${filename}`);
+  const manifestCache = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
+  if (manifestCache) manifestCaches.set(baseUrl, manifestCache);
+  const manifest = manifestCache?.manifest;
+  const urls = manifest ? [
+    manifestFileUrl(baseUrl, manifest.datasets.search),
+    manifestFileUrl(baseUrl, manifest.datasets.hot),
+    manifestFileUrl(baseUrl, manifest.datasets.rising),
+  ] : [];
+  urls.push(
+    `${baseUrl}/rankings-search.json`,
+    `${baseUrl}/rankings-hot.json`,
+    `${baseUrl}/rankings-rising.json`,
+    `${baseUrl}/rankings.json`,
+  );
+  for (const url of urls) {
+    const cached = await cachedCatalog(url);
     if (cached) return cached.document;
   }
   return null;
@@ -496,6 +860,31 @@ export async function findPublishedEntry(
   fullName: string,
 ): Promise<RankingEntry | undefined> {
   const baseUrl = normalizeDataUrl(dataUrl);
+  try {
+    const manifest = await loadRankingManifest(baseUrl, true);
+    const search = await loadManifestDataset(
+      baseUrl,
+      manifest,
+      manifest.datasets.search,
+      "search",
+    );
+    const indexed = findEntry(search, fullName);
+    if (!indexed) return undefined;
+    const pageNumber = Math.floor((indexed.rank - 1) / manifest.datasets.total.pageSize) + 1;
+    const pageReference = manifest.datasets.total.pages.find((page) => page.page === pageNumber);
+    if (!pageReference) {
+      throw new CatalogSourceError("榜单 manifest 缺少插件对应的总榜分页", { fallbackToFull: true });
+    }
+    const page = await loadManifestDataset(baseUrl, manifest, pageReference, "total");
+    const entry = findEntry(page, fullName);
+    if (!entry) {
+      throw new CatalogSourceError("搜索索引与总榜分页不一致", { fallbackToFull: true });
+    }
+    return entry;
+  } catch (error) {
+    fallbackReasons.set(`${baseUrl}/manifest.json`, `安装校验回退旧目录：${describeCatalogFetchError(error)}`);
+  }
+
   const fullUrl = `${baseUrl}/rankings.json`;
   const [full, hot, rising, search] = await Promise.all([
     cachedCatalog(fullUrl),
@@ -526,14 +915,24 @@ export async function loadRankingView(
 ): Promise<RankingsDocument> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const url = `${baseUrl}/rankings-${view}.json`;
+  let manifestError: unknown = null;
   try {
-    return await loadCatalogDocument(url, (raw) => parseRankingViewDocument(raw, view), force);
+    const manifest = await loadRankingManifest(baseUrl, force);
+    return await loadManifestDataset(baseUrl, manifest, manifest.datasets[view], view, force);
+  } catch (error) {
+    manifestError = error;
+  }
+  try {
+    const document = await loadCatalogDocument(url, (raw) => parseRankingViewDocument(raw, view), force);
+    fallbackReasons.set(url, `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`);
+    return document;
   } catch (error) {
     if (error instanceof CatalogSourceError && error.fallbackToFull) {
       const document = await loadRankings(baseUrl, force);
       const fullUrl = `${baseUrl}/rankings.json`;
       const fullReason = fallbackReasons.get(fullUrl);
       fallbackReasons.set(fullUrl, [
+        `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`,
         `${view} 分片不可用：${describeCatalogFetchError(error)}`,
         fullReason,
       ].filter(Boolean).join("；"));

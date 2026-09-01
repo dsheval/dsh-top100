@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -9,12 +10,14 @@ import {
   invalidateCatalog,
   isRetryableCatalogFetchError,
   loadCachedRankings,
+  loadRankingManifest,
   loadRankingView,
   loadRankings,
   loadSearchRankings,
   matchesQuery,
   parseRankingViewDocument,
   parseRankingSearchDocument,
+  parseRankingManifest,
   parseRankingsDocument,
 } from "../src/host/catalog.js";
 import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
@@ -70,6 +73,91 @@ const document: RankingsDocument = {
     ],
   },
 };
+
+function json(value: unknown): string {
+  return `${JSON.stringify(value)}\n`;
+}
+
+function reference(url: string, raw: string, count: number, page?: number) {
+  return {
+    ...(page === undefined ? {} : { page }),
+    url,
+    count,
+    bytes: Buffer.byteLength(raw),
+    sha256: createHash("sha256").update(raw).digest("hex"),
+  };
+}
+
+function v2Publication() {
+  const snapshotId = "2026-08-22-0123456789abcdef";
+  const prefix = `/data/snapshots/${snapshotId}`;
+  const base = {
+    schemaVersion: 2,
+    snapshotId,
+    generatedAt: document.generatedAt,
+    snapshotDate: document.snapshotDate,
+  };
+  const hotRaw = json({ ...base, dataset: "hot", total: 1, rankings: document.rankings.hot });
+  const risingRaw = json({ ...base, dataset: "rising", total: 1, rankings: document.rankings.rising });
+  const searchRankings = document.rankings.total.map((item) => ({
+    rank: item.rank,
+    fullName: item.fullName,
+    name: item.name,
+    description: item.description,
+    descriptionZh: item.descriptionZh,
+    stars: item.stars,
+    tags: item.tags,
+    categories: item.categories ?? [],
+    type: item.type,
+    ...(item.install?.commands?.[0] ? { installTarget: item.install.commands[0].split(" ").at(-1) } : {}),
+  }));
+  const searchRaw = json({ ...base, dataset: "search", total: searchRankings.length, rankings: searchRankings });
+  const totalRaw = json({
+    ...base,
+    dataset: "total",
+    page: 1,
+    pageSize: 100,
+    pageCount: 1,
+    total: document.rankings.total.length,
+    rankings: document.rankings.total,
+  });
+  const manifest = {
+    ...base,
+    pageSize: 100,
+    definitions: { total: "stars", rising: "growth", hot: "composite" },
+    datasets: {
+      hot: reference(`${prefix}/hot.json`, hotRaw, 1),
+      rising: reference(`${prefix}/rising.json`, risingRaw, 1),
+      search: reference(`${prefix}/search.json`, searchRaw, searchRankings.length),
+      total: {
+        count: document.rankings.total.length,
+        pageSize: 100,
+        pageCount: 1,
+        pages: [reference(`${prefix}/total/page-001.json`, totalRaw, document.rankings.total.length, 1)],
+      },
+    },
+    categories: [],
+  };
+  const manifestRaw = json(manifest);
+  const responses = new Map<string, string>([
+    ["https://catalog.example/data/manifest.json", manifestRaw],
+    [`https://catalog.example${prefix}/hot.json`, hotRaw],
+    [`https://catalog.example${prefix}/rising.json`, risingRaw],
+    [`https://catalog.example${prefix}/search.json`, searchRaw],
+    [`https://catalog.example${prefix}/total/page-001.json`, totalRaw],
+  ]);
+  return { manifest, manifestRaw, responses };
+}
+
+function fetchPublication(publication: ReturnType<typeof v2Publication>) {
+  return vi.fn(async (input: string | URL | Request) => {
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const raw = publication.responses.get(url);
+    return raw === undefined
+      ? new Response("not found", { status: 404, statusText: "Not Found" })
+      : new Response(raw, { status: 200, headers: { "content-type": "application/json" } });
+  });
+}
 
 const temporaryCaches: string[] = [];
 const originalCacheDirectory = process.env.DSH_TOP100_CACHE_DIR;
@@ -275,20 +363,60 @@ describe("catalog transport", () => {
     });
   });
 
+  it("validates manifest v2 and refuses cross-origin snapshot references", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = v2Publication();
+    expect(parseRankingManifest(publication.manifestRaw).snapshotId).toBe(publication.manifest.snapshotId);
+    const unsafe = {
+      ...publication.manifest,
+      datasets: {
+        ...publication.manifest.datasets,
+        search: { ...publication.manifest.datasets.search, url: "https://evil.example/search.json" },
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(json(unsafe), { status: 200 })));
+    await expect(loadRankingManifest("https://catalog.example/data", true))
+      .rejects.toThrow("不受信任的数据地址");
+  });
+
+  it("locates install metadata through the compact index and one immutable total page", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = v2Publication();
+    const fetchMock = fetchPublication(publication);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(findPublishedEntry("https://catalog.example/data", "acme/hot-one"))
+      .resolves.toMatchObject({
+        fullName: "acme/hot-one",
+        install: { commands: ["dsh plugin --profile web add @acme/hot-one"] },
+      });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
+      `https://catalog.example${publication.manifest.datasets.search.url}`,
+      `https://catalog.example${publication.manifest.datasets.total.pages[0]?.url}`,
+    ]);
+  });
+
   it("uses the compact search index for all-entry search", async () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
     temporaryCaches.push(cacheDirectory);
     process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      schemaVersion: 2,
-      generatedAt: document.generatedAt,
-      snapshotDate: document.snapshotDate,
-      rankings: document.rankings.total,
-    }), { status: 200 }));
+    const publication = v2Publication();
+    const fetchMock = fetchPublication(publication);
     vi.stubGlobal("fetch", fetchMock);
-    await expect(loadSearchRankings("https://catalog.example/data"))
-      .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://catalog.example/data/rankings-search.json");
+    const result = await loadSearchRankings("https://catalog.example/data");
+    expect(result).toMatchObject({ snapshotDate: document.snapshotDate });
+    expect(result.rankings.total[0]?.install?.commands).toEqual([
+      "dsh plugin add @acme/hot-one",
+    ]);
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
+      `https://catalog.example${publication.manifest.datasets.search.url}`,
+    ]);
   });
 
   it("falls back to the full catalog when the compact index is temporarily unavailable", async () => {
@@ -296,6 +424,7 @@ describe("catalog transport", () => {
     temporaryCaches.push(cacheDirectory);
     process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("not found", { status: 404, statusText: "Not Found" }))
       .mockResolvedValueOnce(new Response("unavailable", { status: 503, statusText: "Unavailable" }))
       .mockResolvedValueOnce(new Response(JSON.stringify(document), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
@@ -303,6 +432,7 @@ describe("catalog transport", () => {
     await expect(loadSearchRankings("https://catalog.example/data"))
       .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
       "https://catalog.example/data/rankings-search.json",
       "https://catalog.example/data/rankings.json",
     ]);
@@ -312,10 +442,8 @@ describe("catalog transport", () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
     temporaryCaches.push(cacheDirectory);
     process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
-    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      ...document,
-      rankings: document.rankings.hot,
-    }), { status: 200, headers: { "content-type": "application/json" } }));
+    const publication = v2Publication();
+    const fetchMock = fetchPublication(publication);
     vi.stubGlobal("fetch", fetchMock);
 
     const [left, right] = await Promise.all([
@@ -324,8 +452,11 @@ describe("catalog transport", () => {
     ]);
     expect(left.rankings.hot).toHaveLength(1);
     expect(right.rankings.hot).toHaveLength(1);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[0]).toBe("https://catalog.example/data/rankings-hot.json");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
+      `https://catalog.example${publication.manifest.datasets.hot.url}`,
+    ]);
 
     invalidateCatalog();
     const offlineFetch = vi.fn().mockRejectedValue(new Error("offline"));
@@ -342,6 +473,7 @@ describe("catalog transport", () => {
     temporaryCaches.push(cacheDirectory);
     process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("not found", { status: 404, statusText: "Not Found" }))
       .mockResolvedValueOnce(new Response("<html>upstream warning</html>", {
         status: 200,
         headers: { "content-type": "text/html" },
@@ -355,6 +487,7 @@ describe("catalog transport", () => {
     await expect(loadRankingView("https://catalog.example/data", "hot"))
       .resolves.toMatchObject({ snapshotDate: document.snapshotDate });
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
       "https://catalog.example/data/rankings-hot.json",
       "https://catalog.example/data/rankings.json",
     ]);
@@ -372,14 +505,16 @@ describe("catalog transport", () => {
       rankings: { hot: [], rising: [], total: document.rankings.total.filter((entry) => entry.fullName !== target.fullName) },
     };
     const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response("not found", { status: 404, statusText: "Not Found" }))
       .mockResolvedValueOnce(new Response(JSON.stringify(oldShard), { status: 200 }))
-      .mockResolvedValueOnce(new Response(JSON.stringify(newFull), { status: 200 }));
+      .mockResolvedValueOnce(new Response(JSON.stringify(newFull), { status: 200 }))
+      .mockResolvedValueOnce(new Response("not found", { status: 404, statusText: "Not Found" }));
     vi.stubGlobal("fetch", fetchMock);
 
     await loadRankingView("https://catalog.example/data", "hot", true);
     await loadRankings("https://catalog.example/data", true);
     await expect(findPublishedEntry("https://catalog.example/data", target.fullName))
       .resolves.toBeUndefined();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });

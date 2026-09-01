@@ -178,3 +178,137 @@ export interface MarketData {
   /** 整合包通道（v2 新增；旧数据缺省为空数组） */
   packs?: DshPack[];
 }
+
+/** v2 静态榜单协议的可按需加载数据集。 */
+export type RankingSnapshotDataset =
+  | "hot"
+  | "rising"
+  | "total"
+  | "category"
+  | "search";
+
+/**
+ * 榜单页的精简条目。
+ *
+ * 分类证据、README、forks 等不参与首页展示的字段不进入静态分片。
+ */
+export interface RankingSummaryEntry {
+  /** 当前数据集内的连续名次。 */
+  rank: number;
+  /** 在 GitHub Stars 总榜中的名次。 */
+  totalRank: number;
+  fullName: string;
+  name: string;
+  description: string;
+  descriptionZh?: string;
+  stars: number;
+  dailyStars: number;
+  weeklyStars: number;
+  hotScore: number;
+  license: string | null;
+  topics: string[];
+  tags: string[];
+  categories: PluginCategoryId[];
+  type: string;
+  install: InstallInfo;
+  url: string;
+  pushedAt: string;
+}
+
+/** 全量搜索索引条目，只保留检索和结果摘要所需字段。 */
+export interface RankingSearchEntry {
+  rank: number;
+  fullName: string;
+  name: string;
+  description: string;
+  descriptionZh?: string;
+  stars: number;
+  tags: string[];
+  categories: PluginCategoryId[];
+  type: string;
+  /** A single allow-listed npm or GitHub target; never a shell command. */
+  installTarget?: string;
+}
+
+export interface RankingSnapshotBase {
+  schemaVersion: 2;
+  snapshotId: string;
+  generatedAt: string;
+  snapshotDate: string;
+  dataset: RankingSnapshotDataset;
+}
+
+/** Top 100 或新锐榜的单文件快照。 */
+export interface RankingListSnapshot extends RankingSnapshotBase {
+  dataset: "hot" | "rising";
+  total: number;
+  rankings: RankingSummaryEntry[];
+}
+
+/** 总榜或分类榜的 100 条分页快照。 */
+export interface RankingPageSnapshot extends RankingSnapshotBase {
+  dataset: "total" | "category";
+  category?: PluginCategoryId;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  total: number;
+  rankings: RankingSummaryEntry[];
+}
+
+/** 全量紧凑搜索索引快照。 */
+export interface RankingSearchSnapshot extends RankingSnapshotBase {
+  dataset: "search";
+  total: number;
+  rankings: RankingSearchEntry[];
+}
+
+/** manifest 中可校验的不可变文件引用。 */
+export interface RankingFileReference {
+  /** 从站点根开始的公开 URL。 */
+  url: string;
+  count: number;
+  bytes: number;
+  sha256: string;
+}
+
+export interface RankingPageReference extends RankingFileReference {
+  page: number;
+}
+
+export interface RankingPaginatedDatasetManifest {
+  count: number;
+  pageSize: number;
+  pageCount: number;
+  pages: RankingPageReference[];
+}
+
+export interface RankingCategoryManifest extends RankingPaginatedDatasetManifest {
+  id: PluginCategoryId;
+  label: string;
+  description: string;
+}
+
+/**
+ * `/data/manifest.json` 协议。manifest 本身短缓存，其引用的 snapshotId
+ * 路径内文件均为不可变内容。
+ */
+export interface RankingManifestV2 {
+  schemaVersion: 2;
+  snapshotId: string;
+  generatedAt: string;
+  snapshotDate: string;
+  pageSize: number;
+  definitions: {
+    total: string;
+    rising: string;
+    hot: string;
+  };
+  datasets: {
+    hot: RankingFileReference;
+    rising: RankingFileReference;
+    search: RankingFileReference;
+    total: RankingPaginatedDatasetManifest;
+  };
+  categories: RankingCategoryManifest[];
+}
