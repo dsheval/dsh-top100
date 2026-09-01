@@ -134,7 +134,7 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.doesNotMatch(html, /hero-release-version/);
   assert.doesNotMatch(html, /class="release-band"/);
   assert.match(html, /data-copy-command="npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin"/);
-  assert.match(dsh, /当前发布版本：[\s\S]*?@dsheval\/dsh-top100-plugin@1\.1\.0/);
+  assert.match(dsh, /当前发布版本：[\s\S]*?@dsheval\/dsh-top100-plugin@1\.1\.1/);
   assert.match(dsh, /npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);
