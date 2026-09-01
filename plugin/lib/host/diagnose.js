@@ -2,7 +2,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, loadRankings, normalizeDataUrl } from "./catalog.js";
+import { DEFAULT_DATA_URL, loadSearchRankings, normalizeDataUrl } from "./catalog.js";
 import { matchCatalogEntry, skillsRoot } from "./manage.js";
 import { isProtectedPackage, packageIsDisabled, parseInsertedIds, readUserPatchState, userPatchPath } from "./patch-toggle.js";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
@@ -127,7 +127,7 @@ export async function buildDiagnosticReport(profile, options = {}) {
     let catalogError = null;
     if (!document && options.fetchCatalog !== false) {
         try {
-            document = await loadRankings(dataUrl);
+            document = await loadSearchRankings(dataUrl);
         }
         catch (error) {
             catalogError = error instanceof Error ? error.message : String(error);

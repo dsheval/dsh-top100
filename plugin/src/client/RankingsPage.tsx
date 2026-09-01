@@ -248,6 +248,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
 
   const activeCategory = data?.categories.find((definition) => definition.id === category);
   const activeFilterCount = Number(hideSkills) + Number(showCandidates);
+  const excludedSkillCount = data?.excludedSkillCount ?? 0;
   const selectedEvidence = selectedItem
     ? presentCatalogEvidence(selectedItem.evidence, selectedItem.installSpec?.kind ?? null, t)
     : null;
@@ -551,6 +552,11 @@ export function RankingsPage({ t }: RankingsPageProps) {
       {data ? (
         <div className="ranking-context" aria-live="polite">
           <span className="result-count"><strong>{items.length}</strong> / {data.total} {t("entries")}</span>
+          {hideSkills && excludedSkillCount > 0 ? (
+            <span className="filter-summary">
+              {t("hiddenSkillsPrefix")} {excludedSkillCount} {t("skillRepositories")}
+            </span>
+          ) : null}
           <span
             className="ranking-basis"
             title={t(rankingBasisKey(view, query))}

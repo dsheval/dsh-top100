@@ -278,6 +278,8 @@ export interface RankingPageReference extends RankingFileReference {
 
 export interface RankingPaginatedDatasetManifest {
   count: number;
+  /** Number of Skill repositories included in count; absent on older v2 manifests. */
+  skillCount?: number;
   pageSize: number;
   pageCount: number;
   pages: RankingPageReference[];

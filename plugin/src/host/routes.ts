@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   DEFAULT_DATA_URL,
   filterCatalog,
+  filteredCatalogCategories,
   findPublishedEntry,
   catalogCacheStatus,
   invalidateCatalog,
@@ -48,7 +49,7 @@ import {
 import { installSkill } from "../install/skill-install.js";
 import { consumeInstallApproval, createInstallPreflight, type ApprovedInstall } from "./install-preflight.js";
 import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
-import { catalogCategories, isPluginCategoryId } from "../shared/categories.js";
+import { isPluginCategoryId } from "../shared/categories.js";
 import type { InstallAction, InstallBatchSnapshot, InstallJobSnapshot, InstallPhase, InstallResult, ManagedKind } from "../shared/types.js";
 import type { PluginHost, PluginResolvedConfig } from "./contracts.js";
 
@@ -675,7 +676,7 @@ export function mountRoutes(
             ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
             : await loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
           const installed = readInstalled(config.profile, config.profileDirectory);
-          const { total, items } = filterCatalog(document, {
+          const { total, excludedSkillCount, items } = filterCatalog(document, {
             view,
             category,
             query: q,
@@ -693,7 +694,7 @@ export function mountRoutes(
           sendJson(response, 200, {
             view,
             category,
-            categories: catalogCategories(document),
+            categories: filteredCatalogCategories(document, { excludeSkills, compatibleOnly }),
             generatedAt: document.generatedAt,
             snapshotDate: document.snapshotDate,
             dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
@@ -702,6 +703,7 @@ export function mountRoutes(
             compatibleOnly,
             cache,
             total,
+            excludedSkillCount,
             offset,
             limit,
             items,

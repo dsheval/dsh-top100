@@ -21,6 +21,10 @@ export interface PluginCategoryDefinition {
     description: string;
     count: number;
 }
+export interface CatalogCategoryDefinition extends PluginCategoryDefinition {
+    /** Skill entries removed by the active catalog scope. */
+    excludedSkillCount: number;
+}
 export interface RankingEntry {
     rank: number;
     totalRank?: number;
@@ -101,7 +105,7 @@ export interface CatalogCacheStatus {
 export interface CatalogResponse {
     view: RankingView;
     category: PluginCategoryId | null;
-    categories: PluginCategoryDefinition[];
+    categories: CatalogCategoryDefinition[];
     generatedAt: string;
     snapshotDate: string;
     dataUrl: string;
@@ -110,6 +114,7 @@ export interface CatalogResponse {
     compatibleOnly: boolean;
     cache: CatalogCacheStatus;
     total: number;
+    excludedSkillCount: number;
     offset: number;
     limit: number;
     items: CatalogItem[];

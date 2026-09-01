@@ -1,12 +1,48 @@
 /** Fetch and filter the published rankings document. */
-import type { CatalogCacheStatus, CatalogItem, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
+import type { CatalogCacheStatus, CatalogCategoryDefinition, CatalogItem, PluginCategoryDefinition, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
 export declare const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 export interface CatalogCache {
     dataUrl: string;
     fetchedAt: number;
     document: RankingsDocument;
 }
+interface RankingFileReferenceV2 {
+    url: string;
+    count: number;
+    bytes: number;
+    sha256: string;
+}
+interface RankingPageReferenceV2 extends RankingFileReferenceV2 {
+    page: number;
+}
+interface RankingManifestV2 {
+    schemaVersion: 2;
+    snapshotId: string;
+    generatedAt: string;
+    snapshotDate: string;
+    pageSize: number;
+    definitions?: RankingsDocument["definitions"];
+    datasets: {
+        hot: RankingFileReferenceV2;
+        rising: RankingFileReferenceV2;
+        search: RankingFileReferenceV2;
+        total: {
+            count: number;
+            skillCount?: number;
+            pageSize: number;
+            pageCount: number;
+            pages: RankingPageReferenceV2[];
+        };
+    };
+    categories: Array<PluginCategoryDefinition & {
+        skillCount?: number;
+        pageSize: number;
+        pageCount: number;
+        pages: RankingPageReferenceV2[];
+    }>;
+}
 export declare function normalizeDataUrl(raw: string): string;
+export declare function parseRankingManifest(raw: string): RankingManifestV2;
 export declare function isRankingView(value: string | null): value is RankingView;
 export declare function matchesQuery(entry: RankingEntry, query: string): boolean;
 export declare function filterCatalog(document: RankingsDocument, options: {
@@ -20,11 +56,17 @@ export declare function filterCatalog(document: RankingsDocument, options: {
     compatibleOnly?: boolean;
 }): {
     total: number;
+    excludedSkillCount: number;
     items: CatalogItem[];
 };
+export declare function filteredCatalogCategories(document: RankingsDocument, options: {
+    excludeSkills?: boolean;
+    compatibleOnly?: boolean;
+}): CatalogCategoryDefinition[];
 export declare function invalidateCatalog(): void;
 export declare function describeCatalogFetchError(error: unknown): string;
 export declare function isRetryableCatalogFetchError(error: unknown): boolean;
+export declare function loadRankingManifest(dataUrl: string, force?: boolean): Promise<RankingManifestV2>;
 export declare function parseRankingsDocument(raw: string): RankingsDocument;
 export declare function parseRankingViewDocument(raw: string, view: "hot" | "rising"): RankingsDocument;
 export declare function parseRankingSearchDocument(raw: string): RankingsDocument;
@@ -39,3 +81,4 @@ export declare function findPublishedEntry(dataUrl: string, fullName: string): P
 /** Load the small published shard used by the initial hot/rising tabs. */
 export declare function loadRankingView(dataUrl: string, view: "hot" | "rising", force?: boolean): Promise<RankingsDocument>;
 export declare function findEntry(document: RankingsDocument, fullName: string): RankingEntry | undefined;
+export {};

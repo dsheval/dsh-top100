@@ -53,7 +53,7 @@ Daily mode reads bounded high-value search windows and refreshes known repositor
 
 ### Web
 
-`web/public/` is a static HTML/CSS/JavaScript application. It reads the short-cached `/data/manifest.json`, loads the immutable hot snapshot for the first screen, and requests rising, total/category pages or the compact search index only when the user asks for them. During staggered upgrades the homepage falls back to `/data/rankings-hot.json` first and only requests the matching legacy rising, search or total file after that view is opened; it never loads `/data/rankings.json`. The full legacy file remains available for released plugin clients. The website never connects to GitHub, DeepSeek or SQLite and never receives a secret.
+`web/public/` is a static HTML/CSS/JavaScript application. It reads the short-cached `/data/manifest.json`, including total and per-category Skill counts, loads the immutable hot snapshot for the first screen, and requests rising, total/category pages or the compact search index only when the user asks for them. During staggered upgrades the homepage falls back to `/data/rankings-hot.json` first and only requests the matching legacy rising, search or total file after that view is opened; it never loads `/data/rankings.json`. The full legacy file remains available for released plugin clients. The website never connects to GitHub, DeepSeek or SQLite and never receives a secret.
 
 ### DSH plugin
 

@@ -7,11 +7,12 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
-import { entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
+import { catalogCategories, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
 import { catalogEvidence } from "../shared/evidence.js";
 import type {
   CatalogCacheStatus,
+  CatalogCategoryDefinition,
   CatalogItem,
   PluginCategoryDefinition,
   RankingEntry,
@@ -62,12 +63,14 @@ interface RankingManifestV2 {
     search: RankingFileReferenceV2;
     total: {
       count: number;
+      skillCount?: number;
       pageSize: number;
       pageCount: number;
       pages: RankingPageReferenceV2[];
     };
   };
   categories: Array<PluginCategoryDefinition & {
+    skillCount?: number;
     pageSize: number;
     pageCount: number;
     pages: RankingPageReferenceV2[];
@@ -141,6 +144,12 @@ function validManifestCategory(value: unknown): boolean {
     && typeof value.description === "string"
     && typeof value.count === "number"
     && Number.isInteger(value.count)
+    && (value.skillCount === undefined || (
+      typeof value.skillCount === "number"
+      && Number.isInteger(value.skillCount)
+      && value.skillCount >= 0
+      && value.skillCount <= value.count
+    ))
     && typeof value.pageSize === "number"
     && Number.isInteger(value.pageSize)
     && typeof value.pageCount === "number"
@@ -173,6 +182,12 @@ export function parseRankingManifest(raw: string): RankingManifestV2 {
     || !isRecord(datasets.total)
     || typeof datasets.total.count !== "number"
     || !Number.isInteger(datasets.total.count)
+    || (datasets.total.skillCount !== undefined && (
+      typeof datasets.total.skillCount !== "number"
+      || !Number.isInteger(datasets.total.skillCount)
+      || datasets.total.skillCount < 0
+      || datasets.total.skillCount > datasets.total.count
+    ))
     || typeof datasets.total.pageSize !== "number"
     || !Number.isInteger(datasets.total.pageSize)
     || datasets.total.pageSize <= 0
@@ -242,25 +257,58 @@ export function filterCatalog(
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
   },
-): { total: number; items: CatalogItem[] } {
+): { total: number; excludedSkillCount: number; items: CatalogItem[] } {
   const hasQuery = tokenizeSearchQuery(options.query).length > 0;
   const source = hasQuery || options.view === "category"
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
   const scored = source
-    .filter((entry) => !options.excludeSkills || entry.type?.toLowerCase() !== "skill")
     .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
     .filter((entry) => options.view !== "category" || (options.category !== null && entryMatchesCategory(entry, options.category)))
     .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
     .filter((item): item is { entry: RankingEntry; score: number } => item.score !== null);
+  const excludedSkillCount = options.excludeSkills
+    ? scored.filter(({ entry }) => entry.type?.toLowerCase() === "skill").length
+    : 0;
+  const visible = options.excludeSkills
+    ? scored.filter(({ entry }) => entry.type?.toLowerCase() !== "skill")
+    : scored;
   if (hasQuery) {
-    scored.sort((left, right) => right.score - left.score || left.entry.rank - right.entry.rank);
+    visible.sort((left, right) => right.score - left.score || left.entry.rank - right.entry.rank);
   }
-  const matched = scored.map(({ entry }) => annotate(entry, options.installed));
+  const matched = visible.map(({ entry }) => annotate(entry, options.installed));
   return {
     total: matched.length,
+    excludedSkillCount,
     items: matched.slice(options.offset, options.offset + options.limit),
   };
+}
+
+export function filteredCatalogCategories(
+  document: RankingsDocument,
+  options: { excludeSkills?: boolean; compatibleOnly?: boolean },
+): CatalogCategoryDefinition[] {
+  const definitions = catalogCategories(document);
+  const stats = new Map(definitions.map(({ id }) => [id, { count: 0, excludedSkillCount: 0 }]));
+  for (const entry of document.rankings.total) {
+    if (options.compatibleOnly && !catalogEvidence(entry).compatible) continue;
+    const excluded = Boolean(options.excludeSkills && entry.type?.toLowerCase() === "skill");
+    const categoryIds = new Set(
+      (entry.categories ?? []).map((assignment) =>
+        typeof assignment === "string" ? assignment : assignment?.id
+      ),
+    );
+    for (const categoryId of categoryIds) {
+      const category = stats.get(categoryId as PluginCategoryId);
+      if (!category) continue;
+      if (excluded) category.excludedSkillCount += 1;
+      else category.count += 1;
+    }
+  }
+  return definitions.map((definition) => ({
+    ...definition,
+    ...stats.get(definition.id)!,
+  }));
 }
 
 export function invalidateCatalog(): void {
