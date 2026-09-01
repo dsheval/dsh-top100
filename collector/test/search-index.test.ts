@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { buildSearchIndex } from "../src/search-index.js";
+import {
+  buildSearchIndex,
+  resolveSearchInstallTarget,
+  toSnapshotSearchEntry,
+} from "../src/search-index.js";
 import type { RankingsDocument } from "../src/rankings.js";
 
 describe("compact search index", () => {
@@ -43,6 +47,7 @@ describe("compact search index", () => {
     const compact = buildSearchIndex(document);
     expect(compact.rankings[0]).toMatchObject({
       fullName: "acme/demo",
+      name: "demo",
       description: "English description",
       descriptionZh: "中文简介",
       license: "MIT",
@@ -52,5 +57,31 @@ describe("compact search index", () => {
     });
     expect(compact.rankings[0]).not.toHaveProperty("forks");
     expect(compact.rankings[0]).not.toHaveProperty("owner");
+    expect(compact.rankings[0]).not.toHaveProperty("hotScore");
+
+    const snapshot = toSnapshotSearchEntry(document.rankings.total[0]);
+    expect(snapshot.installTarget).toBe("demo");
+    expect(snapshot).not.toHaveProperty("install");
+  });
+
+  it("rejects unsafe install targets before publishing the compact index", () => {
+    const base = {
+      fullName: "acme/demo",
+      type: "cordis-plugin" as const,
+      install: { method: "pnpm-profile", commands: [] as string[] },
+    } as RankingsDocument["rankings"]["total"][number];
+
+    expect(resolveSearchInstallTarget({
+      ...base,
+      install: { ...base.install, commands: ["dsh plugin add @acme/demo@1.2.3"] },
+    })).toBe("@acme/demo@1.2.3");
+    expect(resolveSearchInstallTarget({
+      ...base,
+      install: { ...base.install, commands: ["dsh plugin add demo;curl bad.example"] },
+    })).toBeNull();
+    expect(resolveSearchInstallTarget({
+      ...base,
+      install: { ...base.install, commands: ["dsh plugin add github:owner/repo"] },
+    })).toBeNull();
   });
 });

@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Allow: /data/manifest.json
+Allow: /data/snapshots/
+Allow: /data/rankings-hot.json
+Disallow: /data/
+
+Sitemap: https://www.dsheval.ai/sitemap.xml

@@ -12,7 +12,6 @@ import {
   isRankingView,
   loadCachedRankings,
   loadRankingView,
-  loadRankings,
   loadSearchRankings,
   normalizeDataUrl,
 } from "./catalog.js";
@@ -92,7 +91,7 @@ function pluginVersion(): string {
 }
 
 async function safeLoad(config: PluginResolvedConfig) {
-  return loadRankings(config.dataUrl || DEFAULT_DATA_URL);
+  return loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
 }
 
 function installFailure(result: InstallResult): string {

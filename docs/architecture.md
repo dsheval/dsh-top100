@@ -53,11 +53,11 @@ Daily mode reads bounded high-value search windows and refreshes known repositor
 
 ### Web
 
-`web/public/` is a static HTML/CSS/JavaScript application. It reads `/data/rankings.json`; it never connects to GitHub, DeepSeek or SQLite and never receives a secret.
+`web/public/` is a static HTML/CSS/JavaScript application. It reads the short-cached `/data/manifest.json`, loads the immutable hot snapshot for the first screen, and requests rising, total/category pages or the compact search index only when the user asks for them. During staggered upgrades the homepage falls back to `/data/rankings-hot.json` first and only requests the matching legacy rising, search or total file after that view is opened; it never loads `/data/rankings.json`. The full legacy file remains available for released plugin clients. The website never connects to GitHub, DeepSeek or SQLite and never receives a secret.
 
 ### DSH plugin
 
-`plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process fetches and caches the same published `rankings.json` used by the website, exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings. The package also registers the bundled `recommend-dsh-plugins` Skill and the read-only `dsh_top100_search` model tool into DSH's global registries; both disappear with the plugin and never copy files into the user's Skill directory.
+`plugin/` is an independently publishable DeepSeek Harness workspace. Its Host process reads the same short-cached manifest and hash-verified immutable snapshots as the website, while retaining the legacy `rankings*.json` endpoints as a staggered-deployment fallback. Search and diagnostics use the compact index; install preflight locates one authoritative 100-entry total page instead of downloading the full catalog. The Host exposes local same-origin APIs, reads the active DSH Profile and performs validated installs. Its Client bundle adds the rankings page to DSH Settings. The package also registers the bundled `recommend-dsh-plugins` Skill and the read-only `dsh_top100_search` model tool into DSH's global registries; both disappear with the plugin and never copy files into the user's Skill directory.
 
 Website and plugin search use the same weighted search core in `plugin/src/shared/search.ts`. The Host imports it directly; `npm run search:build` bundles the same source to `web/public/search-engine.js`. Search weights exact names and repository identifiers above tags, topics and descriptions, expands Chinese/English synonyms, removes natural-language filler, tolerates one edit or adjacent transposition in longer Latin tokens, and orders matches by relevance while retaining the published rank on each item.
 
@@ -79,8 +79,19 @@ runtime/
     ├── rankings-hot.json
     ├── rankings-rising.json
     ├── rankings-total.json
+    ├── rankings-search.json
+    ├── manifest.json
+    ├── snapshots/
+    │   └── {snapshotId}/
+    │       ├── hot.json
+    │       ├── rising.json
+    │       ├── search.json
+    │       ├── total/page-NNN.json
+    │       └── categories/{id}/page-NNN.json
     └── plugins.json
 ```
+
+The publisher writes and validates a complete immutable snapshot directory before atomically replacing `manifest.json`. The snapshot digest includes both the source rankings and the publication-format version, so a format upgrade cannot reuse an older immutable URL. Compatibility files are replaced independently and remain available for the released DSH plugin. Immutable snapshot retention is an operations policy: each daily snapshot currently occupies about 49 MB with the production dataset, so deployment owners should define a conservative 7–14 day cleanup policy before long-running rollout.
 
 This directory is bind-mounted into Docker and excluded from Git. Copying a consistent `runtime/` directory migrates the complete database, ranking history and caches.
 

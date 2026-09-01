@@ -18,8 +18,8 @@ import {
   isGenericDescriptionZh,
 } from "./llm.js";
 import { runPool } from "./pool.js";
+import { publishRankings } from "./publish-rankings.js";
 import { buildRankings } from "./rankings.js";
-import { buildSearchIndex } from "./search-index.js";
 import {
   categorySourceHash,
   importMarketData,
@@ -166,24 +166,9 @@ async function main(): Promise<void> {
     );
     const plugins = publicPlugins(database, rankings.generatedAt);
 
-    atomicJson(resolve(publicDirectory, "rankings.json"), rankings);
-    atomicJson(resolve(publicDirectory, "rankings-total.json"), {
-      ...rankings,
-      rankings: rankings.rankings.total,
+    const manifest = publishRankings(rankings, publicDirectory, {
+      publicUrlPrefix: process.env.PUBLIC_DATA_URL_PREFIX ?? "/data",
     });
-    atomicJson(resolve(publicDirectory, "rankings-rising.json"), {
-      ...rankings,
-      rankings: rankings.rankings.rising,
-    });
-    atomicJson(resolve(publicDirectory, "rankings-daily.json"), {
-      ...rankings,
-      rankings: rankings.rankings.rising,
-    });
-    atomicJson(resolve(publicDirectory, "rankings-hot.json"), {
-      ...rankings,
-      rankings: rankings.rankings.hot,
-    });
-    atomicJson(resolve(publicDirectory, "rankings-search.json"), buildSearchIndex(rankings), true);
     atomicJson(resolve(publicDirectory, "top-stars.json"), {
       schemaVersion: 2,
       generatedAt: rankings.generatedAt,
@@ -196,7 +181,9 @@ async function main(): Promise<void> {
     console.log(
       `SQLite import complete: ${imported.repositories} repositories, snapshot ${imported.snapshotDate}`
     );
-    console.log(`Published ranking snapshots to ${publicDirectory}`);
+    console.log(
+      `Published ranking snapshot ${manifest.snapshotId} (${manifest.datasets.total.pageCount} total pages) to ${publicDirectory}`
+    );
   } finally {
     database.close();
   }
