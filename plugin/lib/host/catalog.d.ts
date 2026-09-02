@@ -49,6 +49,10 @@ export declare function isCatalogScope(value: string | null): value is CatalogSc
 export declare function isInstallAvailability(value: string | null): value is InstallAvailability;
 export declare function matchesQuery(entry: RankingEntry, query: string): boolean;
 export declare function catalogScopeCounts(document: RankingsDocument, skillsDocument?: RankingsDocument): CatalogScopeCounts;
+export declare function loadCatalogMetadata(dataUrl: string, force?: boolean): Promise<{
+    scopeCounts: CatalogScopeCounts;
+    pluginCategories: PluginCategoryDefinition[];
+}>;
 export declare function filterCatalog(document: RankingsDocument, options: {
     view: RankingView;
     category: PluginCategoryId | null;

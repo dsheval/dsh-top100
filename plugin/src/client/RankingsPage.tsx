@@ -30,7 +30,7 @@ interface RankingsPageProps {
 }
 
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
-const AUXILIARY_CATALOG_SCOPES: CatalogScope[] = ["skills", "ecosystem"];
+const AUXILIARY_CATALOG_SCOPES: CatalogScope[] = ["skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
 type PageSection = "rankings" | "installed" | "diagnostics";
@@ -46,6 +46,45 @@ function RankTrustMark() {
         <path d="M17 32h7" />
       </g>
       <path className="rank-mark-check" d="m28.5 30.5 3.5 3.5 7-9" />
+    </svg>
+  );
+}
+
+function CategoryGlyph({ id }: { id: PluginCategoryId | null }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {id === "ai" ? <>
+        <path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z" />
+        <path d="m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z" />
+      </> : null}
+      {id === "appearance" ? <>
+        <rect x="4" y="4" width="6" height="6" rx="1" />
+        <rect x="14" y="4" width="6" height="6" rx="1" />
+        <rect x="4" y="14" width="6" height="6" rx="1" />
+        <rect x="14" y="14" width="6" height="6" rx="1" />
+      </> : null}
+      {id === "coding" ? <>
+        <path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16" />
+      </> : null}
+      {id === "knowledge" ? <>
+        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z" />
+      </> : null}
+      {id === "tools" ? <>
+        <path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-3-3 2.4-2.4Z" />
+      </> : null}
+      {id === "security" ? <>
+        <path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z" />
+        <path d="m9 12 2 2 4-4" />
+      </> : null}
+      {id === null ? <path d="M4 5h16M4 12h16M4 19h16" /> : null}
+    </svg>
+  );
+}
+
+function ChevronDown() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true">
+      <path d="m5.5 7.5 4.5 4.5 4.5-4.5" />
     </svg>
   );
 }
@@ -124,6 +163,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
   const [draft, setDraft] = useState("");
   const [catalogScope, setCatalogScope] = useState<CatalogScope>("plugins");
   const [installAvailability, setInstallAvailability] = useState<InstallAvailability>("all");
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
   const [data, setData] = useState<CatalogResponse | null>(null);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -257,6 +297,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
 
   function startSearch(value: string): void {
     const nextQuery = value.trim();
+    setCategory(null);
     setDraft(nextQuery);
     setQuery(nextQuery);
   }
@@ -266,6 +307,20 @@ export function RankingsPage({ t }: RankingsPageProps) {
     setView(nextScope === "plugins" ? "hot" : "total");
     setInstallAvailability("all");
     setCategory(null);
+    setQuery("");
+    setDraft("");
+    setCategoryMenuOpen(false);
+  }
+
+  function selectCategory(nextCategory: PluginCategoryId | null): void {
+    setCategory(nextCategory);
+    setQuery("");
+    setDraft("");
+    setCategoryMenuOpen(false);
+  }
+
+  function selectRankingView(nextView: RankingView): void {
+    setView(nextView);
     setQuery("");
     setDraft("");
   }
@@ -520,7 +575,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
         </div>
       </div>
 
-      <div className="toolbar">
+      <div className="toolbar ranking-toolbar">
         <div className="search-cluster">
           <input
             type="search"
@@ -535,59 +590,78 @@ export function RankingsPage({ t }: RankingsPageProps) {
             {t("search")}
           </button>
         </div>
-        <div className="browse-controls">
-          <label className="select-control">
-            <span>{t("categoryFilter")}</span>
-            <select
-              value={category ?? ""}
-              onChange={(event) => {
-                const nextCategory = event.target.value as PluginCategoryId | "";
-                setCategory(nextCategory || null);
-                setQuery("");
-                setDraft("");
-              }}
+        <div className="market-filter-row">
+          <div
+            className="market-category-menu"
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) setCategoryMenuOpen(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setCategoryMenuOpen(false);
+            }}
+          >
+            <button
+              type="button"
+              className="market-category-trigger"
+              aria-expanded={categoryMenuOpen}
+              aria-controls="top100-category-menu"
+              title={activeCategory?.description ?? t("allCategories")}
+              onClick={() => setCategoryMenuOpen((current) => !current)}
             >
-              <option value="">{t("allCategories")}</option>
-              {data?.categories.map((definition) => (
-                <option key={definition.id} value={definition.id}>{definition.label}</option>
-              ))}
-            </select>
-          </label>
-          {catalogScope === "plugins" ? (
-            <label className="select-control">
-              <span>{t("installAvailability")}</span>
-              <select
-                value={installAvailability}
-                onChange={(event) => setInstallAvailability(event.target.value as InstallAvailability)}
+              <span className="market-category-icon"><CategoryGlyph id={category} /></span>
+              <span>{activeCategory?.label ?? t("allCategories")}</span>
+              <ChevronDown />
+            </button>
+            {categoryMenuOpen ? (
+              <div
+                id="top100-category-menu"
+                className="market-category-popover"
+                role="listbox"
+                aria-label={t(catalogScope === "skills" ? "skillCategoryFilter" : "categoryFilter")}
               >
-                <option value="installable">{t("installAvailability_installable")}</option>
-                <option value="all">{t("installAvailability_all")}</option>
-                <option value="unavailable">{t("installAvailability_unavailable")}</option>
-              </select>
-            </label>
-          ) : null}
-          <label className="select-control">
-            <span>{t("sortBy")}</span>
-            <select
-              value={view}
-              onChange={(event) => {
-                setView(event.target.value as RankingView);
-                setQuery("");
-                setDraft("");
-              }}
+                <button
+                  type="button"
+                  className="market-category-choice market-category-choice-all"
+                  role="option"
+                  aria-selected={category === null}
+                  onClick={() => selectCategory(null)}
+                >
+                  <span className="market-category-icon"><CategoryGlyph id={null} /></span>
+                  <span>{t("allCategories")}</span>
+                </button>
+                <div className="market-category-grid">
+                  {data?.categories.map((definition) => (
+                    <button
+                      type="button"
+                      key={definition.id}
+                      className="market-category-choice"
+                      role="option"
+                      aria-selected={definition.id === category}
+                      title={definition.description}
+                      onClick={() => selectCategory(definition.id)}
+                    >
+                      <span className="market-category-icon"><CategoryGlyph id={definition.id} /></span>
+                      <span>{definition.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+          {catalogScope === "plugins" ? (
+            <button
+              type="button"
+              className="install-only-toggle"
+              role="switch"
+              aria-checked={installAvailability === "installable"}
+              onClick={() => setInstallAvailability((current) => current === "installable" ? "all" : "installable")}
             >
-              {(catalogScope === "plugins" ? SORT_VIEWS : ["total" as const])
-                .map((id) => (
-                  <option key={id} value={id}>
-                    {catalogScope === "plugins" ? t(id) : t("starsSort")}
-                  </option>
-                ))}
-            </select>
-          </label>
+              <span className="switch-track" aria-hidden="true"><span /></span>
+              <span>{t("installableOnly")}</span>
+            </button>
+          ) : null}
         </div>
       </div>
-
-      {activeCategory ? <p className="category-description">{activeCategory.description}</p> : null}
 
       {data ? (
         <div className="ranking-context" aria-live="polite">
@@ -597,18 +671,31 @@ export function RankingsPage({ t }: RankingsPageProps) {
               <small> · {t("showingResults")} {items.length}</small>
             </span>
           ) : (
-            <span className="result-count"><strong>{items.length}</strong> / {data.total} {t("entries")}</span>
+            <span className="result-count">
+              <strong>{items.length}</strong> / {data.total} {t(catalogScope === "plugins" ? "pluginEntries" : "skillEntries")}
+            </span>
           )}
-          <span className="scope-summary">{t(`catalogScopeHint_${catalogScope}`)}</span>
-          {catalogScope === "plugins" ? (
-            <span
-              className="ranking-basis"
-              title={t(rankingBasisKey(view, query))}
-              aria-label={`${t(rankingBasisShortKey(view, query))}: ${t(rankingBasisKey(view, query))}`}
-            >
+          {query ? (
+            <span className="ranking-current-label" title={t(rankingBasisKey(view, query))}>
               {t(rankingBasisShortKey(view, query))}
             </span>
-          ) : null}
+          ) : catalogScope === "plugins" ? (
+            <div className="ranking-modes" aria-label={t("sortBy")}>
+              {SORT_VIEWS.map((id) => (
+                <button
+                  type="button"
+                  key={id}
+                  aria-pressed={view === id}
+                  title={t(rankingBasisKey(id, ""))}
+                  onClick={() => selectRankingView(id)}
+                >
+                  {id === "total" ? t("starsShort") : t(id)}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className="ranking-current-label stars-browse">★ {t("starsBrowsing")}</span>
+          )}
         </div>
       ) : null}
 

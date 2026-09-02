@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="./CHANGELOG.md"><img alt="正式版本 v1.1.1" src="https://img.shields.io/badge/release-v1.1.1-2f6f68?style=flat-square"></a>
+  <a href="./CHANGELOG.md"><img alt="正式版本 v1.2.0" src="https://img.shields.io/badge/release-v1.2.0-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
   <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-Top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
@@ -34,7 +34,7 @@
 
 dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页按综合热度、新锐或 Stars 浏览 Plugin，再独立选择功能分类和安装能力。Skills 使用单独的技能库，不参与 Plugin 排名。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
 
-当前稳定版本为 [`@dsheval/dsh-top100-plugin@1.1.1`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.1.1)，已发布到 npm 并标记为 `latest`。
+当前稳定版本为 [`@dsheval/dsh-top100-plugin@1.2.0`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.2.0)，发布后标记为 npm `latest`。
 
 点击下面的安装指南会打开 DSHeval 官网，并显示普通用户所需的安装、启动命令；源码运行方式和问题排查收在页面下方。这个入口不会自动下载文件，也不会自动修改电脑。
 

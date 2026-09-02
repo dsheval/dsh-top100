@@ -14,7 +14,7 @@
         --hero-ink: #13201c;
         --hero-accent: #126657;
         --card: #ffffff;
-        --muted: #60706a;
+        --muted: #4f5e59;
         --line: rgba(19, 32, 28, 0.26);
         --soft: #e8eeec;
         --ink: var(--hero-ink);
@@ -34,6 +34,8 @@
         color: var(--hero-ink);
         background: var(--paper);
         font-family: var(--sans);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
       }
       a { color: inherit; }
       button, input, select { font: inherit; }
@@ -55,9 +57,9 @@
         justify-content: space-between;
         gap: 24px;
       }
-      .wordmark { display: inline-flex; align-items: center; gap: 10px; font-weight: 850; text-decoration: none; }
-      .wordmark img { width: 30px; height: 30px; }
-      .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; font-weight: 750; }
+      .wordmark { display: inline-flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; letter-spacing: -0.03em; text-decoration: none; }
+      .wordmark img { display: block; width: 30px; height: 30px; border: 1px solid rgba(23, 33, 31, 0.14); border-radius: 50%; background: var(--card); object-fit: cover; }
+      .nav-links { display: flex; align-items: center; gap: 28px; font-size: 13px; font-weight: 700; }
       .nav-links a { text-decoration: none; }
       .nav-links a[aria-current="page"] { color: var(--hero-accent); }
 
@@ -106,8 +108,8 @@
         margin-bottom: 24px;
       }
       .directory-head h2 { margin: 0; font: 500 clamp(36px, 4vw, 58px)/1 var(--serif); letter-spacing: -0.045em; }
-      .directory-head p { margin: 10px 0 0; color: var(--muted); line-height: 1.6; }
-      .updated { text-align: right; font: 750 12px/1.6 var(--mono); }
+      .directory-head p { margin: 10px 0 0; color: var(--muted); font-size: 15px; font-weight: 500; line-height: 1.65; }
+      .updated { text-align: right; font: 700 12px/1.6 var(--mono); }
 
       .controls {
         display: grid;
@@ -125,7 +127,7 @@
       }
       .controls input { padding: 0 18px; }
       .controls input:focus { box-shadow: inset 0 -3px 0 var(--hero-accent); }
-      .status { min-height: 24px; margin: 12px 0 18px; color: var(--muted); font-size: 13px; }
+      .status { min-height: 24px; margin: 12px 0 18px; color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.5; }
 
       .skill-grid {
         display: grid;
@@ -149,12 +151,14 @@
       }
       .card-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
       .badge { color: var(--hero-accent); font: 800 11px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-      .stars { color: var(--muted); font: 750 12px/1 var(--mono); }
+      .stars { color: var(--muted); font: 700 12px/1 var(--mono); }
       .skill-card h3 { margin: 24px 0 10px; font: 500 30px/1.05 var(--serif); letter-spacing: -0.04em; overflow-wrap: anywhere; }
-      .skill-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
-      .tags { display: flex; margin-top: 16px; flex-wrap: wrap; gap: 6px; }
-      .tag { padding: 5px 7px; background: var(--soft); font: 700 10px/1 var(--mono); }
-      .card-link { margin-top: auto; padding-top: 22px; color: var(--hero-accent); font-size: 13px; font-weight: 800; text-decoration: none; }
+      .skill-card p { margin: 0; color: var(--muted); font-size: 14px; font-weight: 500; line-height: 1.65; }
+      .tags { display: flex; margin-top: 16px; flex-wrap: wrap; gap: 7px; }
+      .tag { display: inline-flex; min-height: 24px; padding: 5px 8px; align-items: center; border: 1px solid rgba(19, 32, 28, 0.08); color: var(--ink); background: var(--soft); font: 700 11px/1.1 var(--mono); letter-spacing: -0.01em; }
+      .card-link { align-self: flex-start; margin-top: auto; padding-top: 22px; padding-bottom: 2px; border-bottom: 1px solid transparent; color: var(--hero-accent); font-size: 14px; font-weight: 700; line-height: 1.4; text-decoration: none; }
+      .card-link:hover, .card-link:focus-visible { border-bottom-color: currentColor; }
+      .card-link:focus-visible { outline: 2px solid var(--hero-accent); outline-offset: 3px; }
       .empty { grid-column: 1 / -1; padding: 52px 20px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); text-align: center; color: var(--muted); }
 
       footer { padding: 34px 20px; color: #c9d6d1; background: #2b443d; text-align: center; font: 700 12px/1.6 var(--mono); }
