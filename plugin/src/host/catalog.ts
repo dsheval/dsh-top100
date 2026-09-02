@@ -231,6 +231,15 @@ function manifestCategories(manifest: RankingManifestV2): PluginCategoryDefiniti
   return manifest.categories.map(({ id, label, description, count }) => ({ id, label, description, count }));
 }
 
+function manifestPluginCategories(manifest: RankingManifestV2): PluginCategoryDefinition[] {
+  return manifest.categories.map(({ id, label, description, count, skillCount = 0 }) => ({
+    id,
+    label,
+    description,
+    count: Math.max(0, count - skillCount),
+  }));
+}
+
 export function isRankingView(value: string | null): value is RankingView {
   return value === "hot" || value === "rising" || value === "total";
 }
@@ -281,6 +290,59 @@ export function catalogScopeCounts(
     else if (entryMatchesCatalogScope(entry, "ecosystem")) counts.ecosystem += 1;
   }
   return counts;
+}
+
+export async function loadCatalogMetadata(
+  dataUrl: string,
+  force = false,
+): Promise<{
+  scopeCounts: CatalogScopeCounts;
+  pluginCategories: PluginCategoryDefinition[];
+}> {
+  const baseUrl = normalizeDataUrl(dataUrl);
+  try {
+    const manifest = await loadRankingManifest(baseUrl, force);
+    const mixedSkillCount = manifest.datasets.total.skillCount ?? 0;
+    return {
+      scopeCounts: {
+        plugins: Math.max(0, manifest.datasets.total.count - mixedSkillCount),
+        skills: manifest.datasets.skills?.count ?? mixedSkillCount,
+        ecosystem: 0,
+      },
+      pluginCategories: manifestPluginCategories(manifest),
+    };
+  } catch {
+    const [pluginResult, skillsResult] = await Promise.allSettled([
+      loadSearchRankings(baseUrl, force),
+      loadSkillRankings(baseUrl, force),
+    ]);
+    let reference: RankingsDocument;
+    if (pluginResult.status === "fulfilled") reference = pluginResult.value;
+    else if (skillsResult.status === "fulfilled") reference = skillsResult.value;
+    else throw pluginResult.reason;
+    const pluginDirectory = pluginResult.status === "fulfilled"
+      ? pluginResult.value
+      : {
+          ...reference,
+          categories: [],
+          rankings: { total: [], hot: [], rising: [] },
+        };
+    const skillsDirectory = skillsResult.status === "fulfilled"
+      ? skillsResult.value
+      : {
+          ...reference,
+          categories: [],
+          rankings: { total: [], hot: [], rising: [] },
+        };
+    return {
+      scopeCounts: catalogScopeCounts(pluginDirectory, skillsDirectory),
+      pluginCategories: filteredCatalogCategories(pluginDirectory, {
+        excludeSkills: true,
+        compatibleOnly: true,
+        catalogScope: "plugins",
+      }),
+    };
+  }
 }
 
 export function filterCatalog(

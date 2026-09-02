@@ -104,9 +104,18 @@ test("shares one category interaction system across Plugin and Skills directorie
   assert.match(categorySystem, /className = "category-icon"/);
   assert.match(categoryStyles, /grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
   assert.match(categoryStyles, /scroll-snap-type: inline proximity/);
+  assert.match(categoryStyles, /@media \(min-width: 641px\) and \(max-width: 900px\)[\s\S]*?\.category-count \{ display: none; \}/);
   assert.doesNotMatch(skills, /<select[^>]+id="category"/);
   assert.match(skills, /aria-label="Skill 分类"/);
   assert.match(html, /当前快照：.*个已验证插件.*已排除.*个 Skills/);
+});
+
+test("keeps Skills utility text legible and aligned with Plugin typography", () => {
+  assert.match(skills, /--muted: #4f5e59/);
+  assert.match(skills, /\.directory-head p \{[^}]*font-size: 15px;[^}]*font-weight: 500/);
+  assert.match(skills, /\.status \{[^}]*font-size: 13px;[^}]*font-weight: 500/);
+  assert.match(skills, /\.tag \{[^}]*min-height: 24px;[^}]*font: 700 11px\/1\.1 var\(--mono\)/);
+  assert.match(skills, /\.card-link \{[^}]*align-self: flex-start;[^}]*font-size: 14px;[^}]*font-weight: 700/);
 });
 
 test("keeps discovery views ordered and uses one persistent ranking search", () => {
@@ -160,7 +169,7 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.doesNotMatch(html, /hero-release-version/);
   assert.doesNotMatch(html, /class="release-band"/);
   assert.match(html, /data-copy-command="npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin"/);
-  assert.match(dsh, /当前发布版本：[\s\S]*?@dsheval\/dsh-top100-plugin@1\.1\.1/);
+  assert.match(dsh, /当前发布版本：[\s\S]*?@dsheval\/dsh-top100-plugin@1\.2\.0/);
   assert.match(dsh, /npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);

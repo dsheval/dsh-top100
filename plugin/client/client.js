@@ -275,7 +275,7 @@ function presentInstallCapability(item) {
 	};
 	return {
 		kind: "browse",
-		labelKey: "capabilityBrowse",
+		labelKey: "capabilityUnavailable",
 		reasonKey: "capabilityNoSourceReason"
 	};
 }
@@ -681,7 +681,7 @@ const SORT_VIEWS = [
 	"rising",
 	"total"
 ];
-const AUXILIARY_CATALOG_SCOPES = ["skills", "ecosystem"];
+const AUXILIARY_CATALOG_SCOPES = ["skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
 function RankTrustMark() {
@@ -714,6 +714,57 @@ function RankTrustMark() {
 			className: "rank-mark-check",
 			d: "m28.5 30.5 3.5 3.5 7-9"
 		})]
+	});
+}
+function CategoryGlyph({ id }) {
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
+		viewBox: "0 0 24 24",
+		"aria-hidden": "true",
+		children: [
+			id === "ai" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z" })] }) : null,
+			id === "appearance" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+					x: "4",
+					y: "4",
+					width: "6",
+					height: "6",
+					rx: "1"
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+					x: "14",
+					y: "4",
+					width: "6",
+					height: "6",
+					rx: "1"
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+					x: "4",
+					y: "14",
+					width: "6",
+					height: "6",
+					rx: "1"
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("rect", {
+					x: "14",
+					y: "14",
+					width: "6",
+					height: "6",
+					rx: "1"
+				})
+			] }) : null,
+			id === "coding" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16" }) }) : null,
+			id === "knowledge" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z" }) }) : null,
+			id === "tools" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-3-3 2.4-2.4Z" }) }) : null,
+			id === "security" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z" }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m9 12 2 2 4-4" })] }) : null,
+			id === null ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M4 5h16M4 12h16M4 19h16" }) : null
+		]
+	});
+}
+function ChevronDown() {
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+		viewBox: "0 0 20 20",
+		"aria-hidden": "true",
+		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m5.5 7.5 4.5 4.5 4.5-4.5" })
 	});
 }
 function rankingBasisKey(view, query) {
@@ -784,6 +835,7 @@ function RankingsPage({ t }) {
 	const [draft, setDraft] = (0, react.useState)("");
 	const [catalogScope, setCatalogScope] = (0, react.useState)("plugins");
 	const [installAvailability, setInstallAvailability] = (0, react.useState)("all");
+	const [categoryMenuOpen, setCategoryMenuOpen] = (0, react.useState)(false);
 	const [data, setData] = (0, react.useState)(null);
 	const [items, setItems] = (0, react.useState)([]);
 	const [error, setError] = (0, react.useState)(null);
@@ -910,6 +962,7 @@ function RankingsPage({ t }) {
 	const activeCategory = data?.categories.find((definition) => definition.id === category);
 	function startSearch(value) {
 		const nextQuery = value.trim();
+		setCategory(null);
 		setDraft(nextQuery);
 		setQuery(nextQuery);
 	}
@@ -918,6 +971,18 @@ function RankingsPage({ t }) {
 		setView(nextScope === "plugins" ? "hot" : "total");
 		setInstallAvailability("all");
 		setCategory(null);
+		setQuery("");
+		setDraft("");
+		setCategoryMenuOpen(false);
+	}
+	function selectCategory(nextCategory) {
+		setCategory(nextCategory);
+		setQuery("");
+		setDraft("");
+		setCategoryMenuOpen(false);
+	}
+	function selectRankingView(nextView) {
+		setView(nextView);
 		setQuery("");
 		setDraft("");
 	}
@@ -1229,7 +1294,7 @@ function RankingsPage({ t }) {
 					})]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "toolbar",
+					className: "toolbar ranking-toolbar",
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "search-cluster",
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
@@ -1247,110 +1312,120 @@ function RankingsPage({ t }) {
 							children: t("search")
 						})]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: "browse-controls",
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: "select-control",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("categoryFilter") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-									value: category ?? "",
-									onChange: (event) => {
-										const nextCategory = event.target.value;
-										setCategory(nextCategory || null);
-										setQuery("");
-										setDraft("");
-									},
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: "",
-										children: t("allCategories")
-									}), data?.categories.map((definition) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: definition.id,
-										children: definition.label
-									}, definition.id))]
+						className: "market-filter-row",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "market-category-menu",
+							onBlur: (event) => {
+								if (!event.currentTarget.contains(event.relatedTarget)) setCategoryMenuOpen(false);
+							},
+							onKeyDown: (event) => {
+								if (event.key === "Escape") setCategoryMenuOpen(false);
+							},
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+								type: "button",
+								className: "market-category-trigger",
+								"aria-expanded": categoryMenuOpen,
+								"aria-controls": "top100-category-menu",
+								title: activeCategory?.description ?? t("allCategories"),
+								onClick: () => setCategoryMenuOpen((current) => !current),
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "market-category-icon",
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CategoryGlyph, { id: category })
+									}),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: activeCategory?.label ?? t("allCategories") }),
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ChevronDown, {})
+								]
+							}), categoryMenuOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								id: "top100-category-menu",
+								className: "market-category-popover",
+								role: "listbox",
+								"aria-label": t(catalogScope === "skills" ? "skillCategoryFilter" : "categoryFilter"),
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+									type: "button",
+									className: "market-category-choice market-category-choice-all",
+									role: "option",
+									"aria-selected": category === null,
+									onClick: () => selectCategory(null),
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "market-category-icon",
+										children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CategoryGlyph, { id: null })
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("allCategories") })]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: "market-category-grid",
+									children: data?.categories.map((definition) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										className: "market-category-choice",
+										role: "option",
+										"aria-selected": definition.id === category,
+										title: definition.description,
+										onClick: () => selectCategory(definition.id),
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "market-category-icon",
+											children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(CategoryGlyph, { id: definition.id })
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: definition.label })]
+									}, definition.id))
 								})]
-							}),
-							catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: "select-control",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installAvailability") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-									value: installAvailability,
-									onChange: (event) => setInstallAvailability(event.target.value),
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "installable",
-											children: t("installAvailability_installable")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "all",
-											children: t("installAvailability_all")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-											value: "unavailable",
-											children: t("installAvailability_unavailable")
-										})
-									]
-								})]
-							}) : null,
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: "select-control",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("sortBy") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
-									value: view,
-									onChange: (event) => {
-										setView(event.target.value);
-										setQuery("");
-										setDraft("");
-									},
-									children: (catalogScope === "plugins" ? SORT_VIEWS : ["total"]).map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-										value: id,
-										children: catalogScope === "plugins" ? t(id) : t("starsSort")
-									}, id))
-								})]
-							})
-						]
+							}) : null]
+						}), catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+							type: "button",
+							className: "install-only-toggle",
+							role: "switch",
+							"aria-checked": installAvailability === "installable",
+							onClick: () => setInstallAvailability((current) => current === "installable" ? "all" : "installable"),
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: "switch-track",
+								"aria-hidden": "true",
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {})
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installableOnly") })]
+						}) : null]
 					})]
 				}),
-				activeCategory ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-					className: "category-description",
-					children: activeCategory.description
-				}) : null,
 				data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "ranking-context",
 					"aria-live": "polite",
-					children: [
-						query ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: "result-count search-result-count",
-							children: [
-								t("catalogMatches"),
+					children: [query ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: "result-count search-result-count",
+						children: [
+							t("catalogMatches"),
+							" ",
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: data.total }),
+							" ",
+							t("entries"),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
+								" · ",
+								t("showingResults"),
 								" ",
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: data.total }),
-								" ",
-								t("entries"),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
-									" · ",
-									t("showingResults"),
-									" ",
-									items.length
-								] })
-							]
-						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: "result-count",
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
-								" / ",
-								data.total,
-								" ",
-								t("entries")
-							]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: "scope-summary",
-							children: t(`catalogScopeHint_${catalogScope}`)
-						}),
-						catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: "ranking-basis",
-							title: t(rankingBasisKey(view, query)),
-							"aria-label": `${t(rankingBasisShortKey(view, query))}: ${t(rankingBasisKey(view, query))}`,
-							children: t(rankingBasisShortKey(view, query))
-						}) : null
-					]
+								items.length
+							] })
+						]
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: "result-count",
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
+							" / ",
+							data.total,
+							" ",
+							t(catalogScope === "plugins" ? "pluginEntries" : "skillEntries")
+						]
+					}), query ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						className: "ranking-current-label",
+						title: t(rankingBasisKey(view, query)),
+						children: t(rankingBasisShortKey(view, query))
+					}) : catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "ranking-modes",
+						"aria-label": t("sortBy"),
+						children: SORT_VIEWS.map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							"aria-pressed": view === id,
+							title: t(rankingBasisKey(id, "")),
+							onClick: () => selectRankingView(id),
+							children: id === "total" ? t("starsShort") : t(id)
+						}, id))
+					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						className: "ranking-current-label stars-browse",
+						children: ["★ ", t("starsBrowsing")]
+					})]
 				}) : null,
 				notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "banner",
@@ -1808,6 +1883,13 @@ const css = `
   gap: 8px;
   min-width: 0;
 }
+.dsh-top100 .ranking-toolbar {
+  flex-direction: column;
+  align-items: stretch;
+}
+.dsh-top100 .ranking-toolbar .search-cluster {
+  width: 100%;
+}
 .dsh-top100 .page-tabs {
   display: flex;
   gap: 2px;
@@ -1883,30 +1965,6 @@ const css = `
   background: var(--t100-accent-soft);
 }
 .dsh-top100 .catalog-explore button small { font-size: 10px; }
-.dsh-top100 .browse-controls {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-}
-.dsh-top100 .select-control {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--t100-muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.dsh-top100 .select-control select {
-  height: 36px;
-  max-width: 118px;
-  padding: 0 25px 0 9px;
-  border: 1px solid var(--t100-line);
-  border-radius: 9px;
-  background: var(--t100-surface);
-  color: var(--t100-ink);
-  font: inherit;
-}
 .dsh-top100 input[type="search"] {
   flex: 1 1 auto;
   min-width: 180px;
@@ -2058,18 +2116,159 @@ const css = `
   color: var(--t100-muted);
   font-variant-numeric: tabular-nums;
 }
-.dsh-top100 .category-description {
-  margin: 0;
-  color: var(--t100-muted);
-  font-size: 12px;
-  line-height: 1.45;
+.dsh-top100 .market-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
 }
+.dsh-top100 .market-category-menu {
+  position: relative;
+  flex: 0 1 176px;
+}
+.dsh-top100 button.market-category-trigger {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr) 15px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--t100-surface);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+  white-space: nowrap;
+}
+.dsh-top100 button.market-category-trigger:hover,
+.dsh-top100 button.market-category-trigger[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--t100-accent) 52%, var(--t100-line));
+  color: var(--t100-accent);
+  background: color-mix(in srgb, var(--t100-accent) 7%, var(--t100-surface));
+}
+.dsh-top100 .market-category-trigger > svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  transition: transform 140ms ease;
+}
+.dsh-top100 .market-category-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.dsh-top100 .market-category-icon {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  color: var(--t100-accent);
+}
+.dsh-top100 .market-category-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.65;
+}
+.dsh-top100 .market-category-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 7px);
+  left: 0;
+  width: min(330px, calc(100vw - 56px));
+  padding: 7px;
+  border: 1px solid var(--t100-line);
+  border-radius: 12px;
+  background: var(--t100-surface);
+  box-shadow: 0 14px 34px color-mix(in srgb, #17211f 17%, transparent);
+}
+.dsh-top100 .market-category-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding-top: 4px;
+  border-top: 1px solid var(--t100-line);
+}
+.dsh-top100 button.market-category-choice {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 38px;
+  padding: 0 8px;
+  border-color: transparent;
+  border-radius: 7px;
+  color: var(--t100-body);
+  font-size: 11px;
+  text-align: left;
+}
+.dsh-top100 button.market-category-choice:hover { background: var(--t100-fill); }
+.dsh-top100 button.market-category-choice[aria-selected="true"] {
+  color: var(--t100-accent);
+  background: var(--t100-accent-soft);
+  font-weight: 700;
+}
+.dsh-top100 .market-category-choice > span:nth-child(2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsh-top100 button.market-category-choice-all {
+  width: 100%;
+  margin-bottom: 4px;
+}
+.dsh-top100 button.install-only-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--t100-surface);
+  color: var(--t100-body);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dsh-top100 button.install-only-toggle:hover { color: var(--t100-ink); }
+.dsh-top100 button.install-only-toggle[aria-checked="true"] {
+  border-color: color-mix(in srgb, var(--t100-accent) 42%, var(--t100-line));
+  color: var(--t100-accent);
+  background: color-mix(in srgb, var(--t100-accent) 7%, var(--t100-surface));
+}
+.dsh-top100 .switch-track {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  border-radius: 99px;
+  background: color-mix(in srgb, var(--t100-muted) 28%, transparent);
+  transition: background 140ms ease;
+}
+.dsh-top100 .switch-track > span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--t100-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, #17211f 24%, transparent);
+  transition: transform 140ms ease;
+}
+.dsh-top100 .install-only-toggle[aria-checked="true"] .switch-track { background: var(--t100-accent); }
+.dsh-top100 .install-only-toggle[aria-checked="true"] .switch-track > span { transform: translateX(12px); }
 .dsh-top100 .ranking-context {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
-  min-height: 24px;
-  padding: 0 2px;
+  min-height: 32px;
+  padding: 0 1px;
   color: var(--t100-muted);
   font-size: 11px;
   line-height: 18px;
@@ -2099,26 +2298,38 @@ const css = `
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.dsh-top100 .scope-summary {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dsh-top100 .ranking-basis {
+.dsh-top100 .ranking-current-label {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  min-width: 0;
-  cursor: help;
-}
-.dsh-top100 .ranking-basis::before {
-  content: "";
+  gap: 5px;
   flex: 0 0 auto;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: var(--t100-accent);
+  color: var(--t100-muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.dsh-top100 .ranking-modes {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--t100-line);
+  border-radius: 9px;
+  background: var(--t100-fill);
+}
+.dsh-top100 .ranking-modes button {
+  height: 27px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--t100-muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+.dsh-top100 .ranking-modes button:hover { color: var(--t100-ink); }
+.dsh-top100 .ranking-modes button[aria-pressed="true"] {
+  color: var(--t100-accent);
+  background: var(--t100-surface);
+  box-shadow: 0 1px 3px color-mix(in srgb, #17211f 12%, transparent);
 }
 .dsh-top100 .list {
   display: grid;
@@ -2386,7 +2597,20 @@ const css = `
 }
 .dsh-top100 .actions > button,
 .dsh-top100 .actions > .project-link {
+  box-sizing: border-box;
+  display: inline-flex;
   flex: 0 0 124px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
 }
 .dsh-top100 .card-footer {
   display: grid;
@@ -2402,19 +2626,9 @@ const css = `
   margin-top: 0;
 }
 .dsh-top100 .project-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-height: 30px;
-  padding: 0 10px;
   border: 1px solid var(--t100-line);
-  border-radius: 8px;
   color: var(--t100-ink);
   background: var(--t100-fill);
-  font-size: 12px;
-  font-weight: 650;
-  line-height: 1;
   text-decoration: none;
   transition: border-color 120ms ease, background 120ms ease, color 120ms ease, transform 120ms ease;
 }
@@ -3388,9 +3602,10 @@ const css = `
   .dsh-top100 .search-cluster > button.primary { flex: 0 0 auto; }
   .dsh-top100 .catalog-navigation { align-items: flex-start; flex-direction: column; gap: 4px; }
   .dsh-top100 .catalog-explore { flex-wrap: wrap; justify-content: flex-start; }
-  .dsh-top100 .browse-controls { width: 100%; justify-content: space-between; }
-  .dsh-top100 .select-control { flex: 1 1 0; }
-  .dsh-top100 .select-control select { flex: 1 1 auto; max-width: none; min-width: 0; }
+  .dsh-top100 .market-filter-row { width: 100%; flex-wrap: wrap; }
+  .dsh-top100 .market-category-menu { flex: 1 1 150px; }
+  .dsh-top100 .market-category-popover { width: min(330px, calc(100vw - 36px)); }
+  .dsh-top100 .ranking-context { flex-wrap: wrap; }
   .dsh-top100 .confirm-summary { grid-template-columns: 1fr; }
   .dsh-top100 .card-footer { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
   .dsh-top100 .managed-list .row-actions { grid-column: 1 / -1; }
@@ -3453,8 +3668,11 @@ const zh = {
 	installAvailability_installable: "可安装",
 	installAvailability_all: "全部插件",
 	installAvailability_unavailable: "暂无安装源",
+	installableOnly: "仅看可安装",
 	sortBy: "排序",
 	starsSort: "GitHub Stars",
+	starsShort: "Stars",
+	starsBrowsing: "按 Stars 浏览",
 	allCategories: "全部分类",
 	categoryRanking: "分类筛选结果",
 	hot: "综合热度",
@@ -3462,6 +3680,7 @@ const zh = {
 	total: "总榜",
 	category: "分类筛选",
 	categoryFilter: "插件分类",
+	skillCategoryFilter: "Skill 分类",
 	hideSkills: "Skills 技能库",
 	hideSkillsHint: "Skills 使用独立目录，不参与 Plugin 排名",
 	hiddenSkillsPrefix: "已隐藏",
@@ -3470,6 +3689,8 @@ const zh = {
 	showCandidatesHint: "同时显示当前不能直接安装的候选项目",
 	clearFilters: "清除筛选",
 	entries: "项",
+	pluginEntries: "个插件",
+	skillEntries: "个 Skills",
 	cachedFresh: "本地快照可用",
 	cachedStale: "正在显示较旧快照",
 	cacheAgeUnknown: "缓存时间未知",
@@ -3547,6 +3768,7 @@ const zh = {
 	capabilityManual: "安装后需配置",
 	capabilityManualReason: "目录提供安装目标，但作者标注安装后还需配置",
 	capabilityBrowse: "生态项目",
+	capabilityUnavailable: "暂无安装源",
 	capabilityNoSourceReason: "目录暂未提供可预检的安装目标",
 	capabilityUnverifiedReason: "尚未确认符合 DSH 插件结构",
 	capabilityInstalled: "已安装",
@@ -3757,8 +3979,11 @@ const en = {
 	installAvailability_installable: "Available",
 	installAvailability_all: "All plugins",
 	installAvailability_unavailable: "No source",
+	installableOnly: "Installable only",
 	sortBy: "Sort",
 	starsSort: "GitHub Stars",
+	starsShort: "Stars",
+	starsBrowsing: "Browse by Stars",
 	allCategories: "All categories",
 	categoryRanking: "Category ranking",
 	hot: "Trending",
@@ -3766,6 +3991,7 @@ const en = {
 	total: "All",
 	category: "Category filter",
 	categoryFilter: "Plugin category",
+	skillCategoryFilter: "Skill category",
 	hideSkills: "Skills directory",
 	hideSkillsHint: "Skills use a separate directory and do not participate in Plugin rankings",
 	hiddenSkillsPrefix: "Hidden",
@@ -3774,6 +4000,8 @@ const en = {
 	showCandidatesHint: "Also show candidates that cannot currently be installed directly",
 	clearFilters: "Clear filters",
 	entries: "entries",
+	pluginEntries: "plugins",
+	skillEntries: "Skills",
 	cachedFresh: "Local snapshot available",
 	cachedStale: "Showing an older snapshot",
 	cacheAgeUnknown: "cache age unknown",
@@ -3851,6 +4079,7 @@ const en = {
 	capabilityManual: "Configure after install",
 	capabilityManualReason: "The catalog has an install target, and the author marks additional configuration as required",
 	capabilityBrowse: "Ecosystem project",
+	capabilityUnavailable: "No install source",
 	capabilityNoSourceReason: "The catalog does not provide an install target that can be preflighted",
 	capabilityUnverifiedReason: "DSH plugin structure has not been confirmed",
 	capabilityInstalled: "Installed",

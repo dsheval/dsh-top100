@@ -22,5 +22,5 @@ export function presentInstallCapability(item: CatalogItem): InstallCapabilityPr
   if (!item.evidence.compatible) {
     return { kind: "browse", labelKey: "capabilityBrowse", reasonKey: "capabilityUnverifiedReason" };
   }
-  return { kind: "browse", labelKey: "capabilityBrowse", reasonKey: "capabilityNoSourceReason" };
+  return { kind: "browse", labelKey: "capabilityUnavailable", reasonKey: "capabilityNoSourceReason" };
 }

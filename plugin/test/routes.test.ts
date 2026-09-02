@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -133,6 +134,86 @@ describe("plugin lifecycle routes", () => {
     });
     expect(response.body.items).toEqual([
       expect.objectContaining({ fullName: "acme/plugin", installable: true }),
+    ]);
+  });
+
+  it("loads the hot Plugin view without downloading search or Skills directories", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-route-hot-metadata-"));
+    temporaryProfiles.push(directory);
+    writeFileSync(join(directory, "package.json"), `${JSON.stringify({
+      dependencies: {},
+      dsh: { profile: { bundles: [] } },
+    }, null, 2)}\n`);
+    const snapshotId = "2026-09-02-hot-metadata";
+    const generatedAt = "2026-09-02T00:00:00Z";
+    const prefix = `/data/snapshots/${snapshotId}`;
+    const catalogEntry = {
+      rank: 1, fullName: "acme/hot", name: "hot", owner: "acme",
+      description: "Hot Plugin", descriptionZh: "热门插件", stars: 10, dailyStars: 1,
+      weeklyStars: 2, hotScore: 90, forks: 0, openIssues: 0, language: null,
+      homepage: null, license: null, topics: [], tags: [], categories: ["tools"], type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add acme-hot"] },
+      sources: [], url: "https://github.com/acme/hot", pushedAt: "", createdAt: "", updatedAt: "",
+    };
+    const hotRaw = JSON.stringify({
+      schemaVersion: 2,
+      snapshotId,
+      generatedAt,
+      snapshotDate: "2026-09-02",
+      dataset: "hot",
+      total: 1,
+      rankings: [catalogEntry],
+    });
+    const reference = (url: string, content = "{}", count = 0) => ({
+      url,
+      count,
+      bytes: Buffer.byteLength(content),
+      sha256: createHash("sha256").update(content).digest("hex"),
+    });
+    const manifest = {
+      schemaVersion: 2,
+      snapshotId,
+      generatedAt,
+      snapshotDate: "2026-09-02",
+      pageSize: 100,
+      definitions: { total: "stars", rising: "growth", hot: "composite" },
+      datasets: {
+        hot: reference(`${prefix}/hot.json`, hotRaw, 1),
+        rising: reference(`${prefix}/rising.json`),
+        skills: reference(`${prefix}/skills.json`, "{}", 7),
+        search: reference(`${prefix}/search.json`, "{}", 50),
+        total: { count: 50, skillCount: 0, pageSize: 100, pageCount: 0, pages: [] },
+      },
+      categories: [{
+        id: "tools", label: "工具", description: "效率工具", count: 12, skillCount: 0,
+        pageSize: 100, pageCount: 0, pages: [],
+      }],
+    };
+    const fetchMock = vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.endsWith("/manifest.json")) return new Response(JSON.stringify(manifest), { status: 200 });
+      if (value.endsWith(`${prefix}/hot.json`)) return new Response(hotRaw, { status: 200 });
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const harness = routeHarness();
+    mountRoutes(harness, {
+      dataUrl: "https://hot-metadata.example.invalid/data",
+      profile: "web",
+      profileDirectory: directory,
+    });
+
+    const response = await harness.request("/dsh-top100/rankings?view=hot&catalogScope=plugins");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      total: 1,
+      scopeCounts: { plugins: 50, skills: 7, ecosystem: 0 },
+      categories: [{ id: "tools", count: 12 }],
+    });
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
+      "https://hot-metadata.example.invalid/data/manifest.json",
+      `https://hot-metadata.example.invalid${prefix}/hot.json`,
     ]);
   });
 

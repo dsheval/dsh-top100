@@ -5,7 +5,6 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_DATA_URL,
-  catalogScopeCounts,
   filterCatalog,
   filteredCatalogCategories,
   findPublishedEntry,
@@ -15,6 +14,7 @@ import {
   isCatalogScope,
   isInstallAvailability,
   loadCachedRankings,
+  loadCatalogMetadata,
   loadRankingView,
   loadSearchRankings,
   loadSkillRankings,
@@ -61,7 +61,6 @@ import type {
   InstallPhase,
   InstallResult,
   ManagedKind,
-  RankingsDocument,
 } from "../shared/types.js";
 import type { PluginHost, PluginResolvedConfig } from "./contracts.js";
 
@@ -92,17 +91,6 @@ const activeProfileJobs = new Map<string, string>();
 const skillQueue: Array<() => Promise<void>> = [];
 let activeSkills = 0;
 let nextId = 0;
-
-function emptyCatalogDirectory(reference: RankingsDocument): RankingsDocument {
-  return {
-    schemaVersion: reference.schemaVersion,
-    generatedAt: reference.generatedAt,
-    snapshotDate: reference.snapshotDate,
-    definitions: reference.definitions,
-    categories: [],
-    rankings: { total: [], hot: [], rising: [] },
-  };
-}
 
 function pluginVersion(): string {
   try {
@@ -715,27 +703,16 @@ export function mountRoutes(
         const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
         try {
           const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
-          const [pluginResult, skillsResult] = await Promise.allSettled([
-            loadSearchRankings(dataUrl),
-            loadSkillRankings(dataUrl),
-          ]);
-          if (catalogScope === "skills" && skillsResult.status === "rejected") throw skillsResult.reason;
-          if (catalogScope !== "skills" && pluginResult.status === "rejected") throw pluginResult.reason;
-          const primaryDirectory = catalogScope === "skills"
-            ? (skillsResult as PromiseFulfilledResult<RankingsDocument>).value
-            : (pluginResult as PromiseFulfilledResult<RankingsDocument>).value;
-          const pluginDirectory = pluginResult.status === "fulfilled"
-            ? pluginResult.value
-            : emptyCatalogDirectory(primaryDirectory);
-          const skillsDirectory = skillsResult.status === "fulfilled"
-            ? skillsResult.value
-            : emptyCatalogDirectory(primaryDirectory);
           const usesViewShard = catalogScope === "plugins" && q === "" && (view === "hot" || view === "rising");
-          const document = catalogScope === "skills"
-            ? skillsDirectory
+          const documentRequest = catalogScope === "skills"
+            ? loadSkillRankings(dataUrl)
             : usesViewShard
-              ? await loadRankingView(dataUrl, view)
-              : pluginDirectory;
+              ? loadRankingView(dataUrl, view)
+              : loadSearchRankings(dataUrl);
+          const [document, metadata] = await Promise.all([
+            documentRequest,
+            loadCatalogMetadata(dataUrl),
+          ]);
           const installed = readInstalled(config.profile, config.profileDirectory);
           const { total, excludedSkillCount, items } = filterCatalog(document, {
             view,
@@ -757,17 +734,16 @@ export function mountRoutes(
           sendJson(response, 200, {
             view,
             category,
-            categories: filteredCatalogCategories(
-              catalogScope === "skills" ? skillsDirectory : pluginDirectory,
-              { excludeSkills, compatibleOnly, catalogScope },
-            ),
+            categories: catalogScope === "plugins"
+              ? metadata.pluginCategories.map((definition) => ({ ...definition, excludedSkillCount: 0 }))
+              : filteredCatalogCategories(document, { excludeSkills, compatibleOnly, catalogScope }),
             generatedAt: document.generatedAt,
             snapshotDate: document.snapshotDate,
             dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
             query: q,
             catalogScope,
             installAvailability,
-            scopeCounts: catalogScopeCounts(pluginDirectory, skillsDirectory),
+            scopeCounts: metadata.scopeCounts,
             excludeSkills,
             compatibleOnly,
             cache,

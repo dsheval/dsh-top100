@@ -50,13 +50,18 @@ describe("install capability presentation", () => {
   });
 
   it("explains browse-only entries according to the available evidence", () => {
-    expect(presentInstallCapability(item({ installable: false, installSpec: null })).reasonKey)
-      .toBe("capabilityNoSourceReason");
+    expect(presentInstallCapability(item({ installable: false, installSpec: null }))).toMatchObject({
+      labelKey: "capabilityUnavailable",
+      reasonKey: "capabilityNoSourceReason",
+    });
     expect(presentInstallCapability(item({
       installable: false,
       installSpec: null,
       evidence: { ...item().evidence, compatible: false },
-    })).reasonKey).toBe("capabilityUnverifiedReason");
+    }))).toMatchObject({
+      labelKey: "capabilityBrowse",
+      reasonKey: "capabilityUnverifiedReason",
+    });
   });
 
   it("keeps installed state distinct from catalog installability", () => {

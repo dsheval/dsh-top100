@@ -11,6 +11,7 @@ import {
   findPublishedEntry,
   invalidateCatalog,
   isRetryableCatalogFetchError,
+  loadCatalogMetadata,
   loadCachedRankings,
   loadRankingManifest,
   loadRankingView,
@@ -137,6 +138,7 @@ function v2Publication() {
       search: reference(`${prefix}/search.json`, searchRaw, searchRankings.length),
       total: {
         count: document.rankings.total.length,
+        skillCount: document.rankings.total.filter((item) => item.type === "skill").length,
         pageSize: 100,
         pageCount: 1,
         pages: [reference(`${prefix}/total/page-001.json`, totalRaw, document.rankings.total.length, 1)],
@@ -596,6 +598,35 @@ describe("catalog transport", () => {
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "https://catalog.example/data/manifest.json",
       `https://catalog.example${publication.manifest.datasets.skills.url}`,
+    ]);
+  });
+
+  it("reads Plugin, Skills, and Plugin category counts from manifest metadata only", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = v2Publication();
+    publication.manifest.categories = [{
+      id: "tools",
+      label: "工具",
+      description: "效率工具",
+      count: 3,
+      skillCount: 2,
+      pageSize: 100,
+      pageCount: 0,
+      pages: [],
+    }];
+    publication.manifestRaw = json(publication.manifest);
+    publication.responses.set("https://catalog.example/data/manifest.json", publication.manifestRaw);
+    const fetchMock = fetchPublication(publication);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(loadCatalogMetadata("https://catalog.example/data")).resolves.toEqual({
+      scopeCounts: { plugins: 1, skills: 1, ecosystem: 0 },
+      pluginCategories: [{ id: "tools", label: "工具", description: "效率工具", count: 1 }],
+    });
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
     ]);
   });
 

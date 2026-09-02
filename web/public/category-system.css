@@ -134,6 +134,11 @@
 .category-description-body { display: block; color: var(--muted); }
 .category-description[hidden] { display: none; }
 
+@media (min-width: 641px) and (max-width: 900px) {
+  .category-option { padding-inline: 10px; }
+  .category-count { display: none; }
+}
+
 @media (max-width: 640px) {
   .category-options {
     display: flex;

@@ -2,7 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, catalogScopeCounts, filterCatalog, filteredCatalogCategories, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, isCatalogScope, isInstallAvailability, loadCachedRankings, loadRankingView, loadSearchRankings, loadSkillRankings, normalizeDataUrl, } from "./catalog.js";
+import { DEFAULT_DATA_URL, filterCatalog, filteredCatalogCategories, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, isCatalogScope, isInstallAvailability, loadCachedRankings, loadCatalogMetadata, loadRankingView, loadSearchRankings, loadSkillRankings, normalizeDataUrl, } from "./catalog.js";
 import { cancelActive, progress, runDshPlugin, runDshProfileCheck, } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
 import { FULL_NAME_RE, isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
@@ -26,16 +26,6 @@ const activeProfileJobs = new Map();
 const skillQueue = [];
 let activeSkills = 0;
 let nextId = 0;
-function emptyCatalogDirectory(reference) {
-    return {
-        schemaVersion: reference.schemaVersion,
-        generatedAt: reference.generatedAt,
-        snapshotDate: reference.snapshotDate,
-        definitions: reference.definitions,
-        categories: [],
-        rankings: { total: [], hot: [], rising: [] },
-    };
-}
 function pluginVersion() {
     try {
         const manifestPath = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "package.json");
@@ -622,29 +612,16 @@ export function mountRoutes(host, config, commandRuntime) {
                 const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
                 try {
                     const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
-                    const [pluginResult, skillsResult] = await Promise.allSettled([
-                        loadSearchRankings(dataUrl),
-                        loadSkillRankings(dataUrl),
-                    ]);
-                    if (catalogScope === "skills" && skillsResult.status === "rejected")
-                        throw skillsResult.reason;
-                    if (catalogScope !== "skills" && pluginResult.status === "rejected")
-                        throw pluginResult.reason;
-                    const primaryDirectory = catalogScope === "skills"
-                        ? skillsResult.value
-                        : pluginResult.value;
-                    const pluginDirectory = pluginResult.status === "fulfilled"
-                        ? pluginResult.value
-                        : emptyCatalogDirectory(primaryDirectory);
-                    const skillsDirectory = skillsResult.status === "fulfilled"
-                        ? skillsResult.value
-                        : emptyCatalogDirectory(primaryDirectory);
                     const usesViewShard = catalogScope === "plugins" && q === "" && (view === "hot" || view === "rising");
-                    const document = catalogScope === "skills"
-                        ? skillsDirectory
+                    const documentRequest = catalogScope === "skills"
+                        ? loadSkillRankings(dataUrl)
                         : usesViewShard
-                            ? await loadRankingView(dataUrl, view)
-                            : pluginDirectory;
+                            ? loadRankingView(dataUrl, view)
+                            : loadSearchRankings(dataUrl);
+                    const [document, metadata] = await Promise.all([
+                        documentRequest,
+                        loadCatalogMetadata(dataUrl),
+                    ]);
                     const installed = readInstalled(config.profile, config.profileDirectory);
                     const { total, excludedSkillCount, items } = filterCatalog(document, {
                         view,
@@ -662,14 +639,16 @@ export function mountRoutes(host, config, commandRuntime) {
                     sendJson(response, 200, {
                         view,
                         category,
-                        categories: filteredCatalogCategories(catalogScope === "skills" ? skillsDirectory : pluginDirectory, { excludeSkills, compatibleOnly, catalogScope }),
+                        categories: catalogScope === "plugins"
+                            ? metadata.pluginCategories.map((definition) => ({ ...definition, excludedSkillCount: 0 }))
+                            : filteredCatalogCategories(document, { excludeSkills, compatibleOnly, catalogScope }),
                         generatedAt: document.generatedAt,
                         snapshotDate: document.snapshotDate,
                         dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
                         query: q,
                         catalogScope,
                         installAvailability,
-                        scopeCounts: catalogScopeCounts(pluginDirectory, skillsDirectory),
+                        scopeCounts: metadata.scopeCounts,
                         excludeSkills,
                         compatibleOnly,
                         cache,

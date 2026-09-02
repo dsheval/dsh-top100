@@ -4,7 +4,7 @@
 
 **[一键下载并查看接入 DSH 指南](https://www.dsheval.ai/?page=dsh#dsh)**
 
-当前发布版本：[`@dsheval/dsh-top100-plugin@1.1.1`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.1.1)，npm dist-tag 为 `latest`。
+当前发布版本：[`@dsheval/dsh-top100-plugin@1.2.0`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.2.0)，发布后使用 npm `latest` dist-tag。
 
 需要 **dsh web 0.1.0-rc.6+**。本机开发按官方手册的 bundle 安装方式挂载。
 
