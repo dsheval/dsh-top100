@@ -6,7 +6,7 @@
 
 <p align="center">
   <strong>发现、验证并追踪真正值得关注的 DeepSeek Harness 插件。</strong><br>
-  <sub>Verified DSH plugins, Skills and agent tools — discovered from public sources and ranked by GitHub signals.</sub>
+  <sub>Verified DSH plugins ranked by GitHub signals, with Skills in a separate discovery directory.</sub>
 </p>
 
 <p align="center">
@@ -28,11 +28,11 @@
   <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
 </p>
 
-> **dsh-Top100** is an open, verifiable discovery and ranking index for the DeepSeek Harness ecosystem. It tracks public DSH plugins, DSH Skills, Cordis integrations and agent tools, then publishes daily GitHub-based rankings and reusable JSON data.
+> **dsh-Top100** is an open, verifiable discovery index for the DeepSeek Harness ecosystem. Verified DSH Plugins participate in daily GitHub-based rankings; Skills are published in a separate directory and do not affect Plugin positions or score normalization.
 
 ## DSH 插件
 
-dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页浏览 Top 100、新锐榜、总榜和分类榜，搜索插件，并对作者明确提供且验证通过的安装源进行单项确认安装。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
+dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页按综合热度、新锐或 Stars 浏览 Plugin，再独立选择功能分类和安装能力。Skills 使用单独的技能库，不参与 Plugin 排名。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
 
 当前稳定版本为 [`@dsheval/dsh-top100-plugin@1.1.1`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.1.1)，已发布到 npm 并标记为 `latest`。
 
@@ -46,16 +46,16 @@ dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置�
 
 ## 01 · 产品与榜单
 
-dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。排名单位是 GitHub 仓库；同一仓库包含多个 Skill 时只计一次 Stars。
+dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。Plugin 排名单位是 GitHub 仓库；同一仓库即使包含多个插件子包也只占一个名次。Skills 进入独立目录。
 
 | 榜单 | 信号 | 用途 |
 | --- | --- | --- |
-| **Top 100** | 日增、周增、增长率、活跃度、数据质量和总 Stars 的综合评分 | 发现当前最值得关注的 100 个仓库 |
-| **新锐榜** | 当前 Stars 减去上一份每日快照 | 发现今日增长最快的 100 个仓库 |
-| **总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证仓库 |
-| **分类榜** | DeepSeek 阅读仓库 README 后生成的受控多标签分类 | 按实际能力发现同类插件；一个仓库可进入多个分类 |
+| **Top 100** | 日增、周增、增长率、活跃度、数据质量和总 Stars 的综合评分 | 发现当前最值得关注的 100 个 Plugin 仓库 |
+| **新锐榜** | 当前 Stars 减去上一份每日快照 | 发现今日增长最快的 100 个 Plugin 仓库 |
+| **Stars 总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证 Plugin |
+| **Skills 技能库** | 独立目录，默认按 Stars 稳定浏览 | 发现可复用的 Agent Skills；不产生 Plugin 名次 |
 
-分类榜包含 Agent增强、外观、编程、知识获取、工具和安全。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类，因此每个仓库通常进入 2–3 个分类榜；分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
+Agent 增强、外观、编程、知识获取、工具和安全是目录筛选条件，不是第四张榜。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类；分类可以叠加在综合热度、新锐或 Stars 排序之上。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
 
 新锐榜中的负增长按 `0` 处理。新部署在生成第二份每日快照后即可得到有效日增排名。
 
@@ -73,14 +73,14 @@ GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召�
 4. **递归分片**：每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。
 5. **稳定去重**：优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。
 
-## 03 · 什么仓库可以入榜
+## 03 · 什么仓库可以进入榜单或目录
 
-Topic 和关键词只负责召回，不直接证明兼容性。候选仓库必须提供可验证的 DSH 插件、Skill、Bundle 或 Cordis 集成证据。
+Topic 和关键词只负责召回，不直接证明兼容性。只有通过 DSH/Cordis 结构验证的 Plugin 才能参与榜单；通过 Skill 结构验证的仓库进入独立 Skills 技能库。
 
 | 检查 | 通过条件 | 处理方式 |
 | --- | --- | --- |
 | 仓库状态 | 公开、未归档、不是 fork | 不符合则排除 |
-| 结构证据 | Skill 文件、Cordis/DSH 配置、package 依赖或可解析插件目录 | 至少命中一种强证据 |
+| 结构证据 | Skill 文件、Cordis/DSH 配置、package 声明或可解析插件子目录 | 按证据类型进入 Plugin 榜单或 Skills 目录 |
 | 数据完整性 | 仓库 ID、名称、Stars、更新时间和来源可读取 | 失败时保留上次有效数据 |
 | 社区提交 | 与自动发现候选使用相同验证规则 | 提交不等于直接入榜 |
 
@@ -112,13 +112,15 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 | `/data/manifest.json` | 官网使用的短缓存入口，引用同一 `snapshotId` 下的不可变榜单分片 |
 | `/data/snapshots/{snapshotId}/hot.json` | 官网首屏使用的精简 Top 100 综合热度榜 |
 | `/data/snapshots/{snapshotId}/rising.json` | 点击新锐榜后按需加载的精简数据 |
+| `/data/snapshots/{snapshotId}/skills.json` | 独立 Skills 技能库；不参与 Plugin 排名 |
 | `/data/snapshots/{snapshotId}/total/page-NNN.json` | GitHub Stars 总榜，每页 100 条 |
-| `/data/snapshots/{snapshotId}/categories/{id}/page-NNN.json` | 六个分类榜的独立 100 条分页 |
+| `/data/snapshots/{snapshotId}/categories/{id}/page-NNN.json` | 六个 Plugin 分类筛选结果的独立 100 条分页 |
 | `/data/snapshots/{snapshotId}/search.json` | 用户首次全站搜索时才加载的紧凑索引 |
-| `/data/rankings.json` | 完整聚合数据、榜单定义、分类定义和四个榜单视图所需数据 |
+| `/data/rankings.json` | 完整聚合数据、Plugin 榜单定义、分类定义和 Skills 目录 |
 | `/data/rankings-hot.json` | Top 100 独立数据 |
 | `/data/rankings-rising.json` | 新锐榜独立数据 |
-| `/data/rankings-total.json` | 总榜与分类榜的完整仓库数据 |
+| `/data/rankings-total.json` | Plugin Stars 总榜的完整仓库数据 |
+| `/data/rankings-skills.json` | Skills 技能库兼容接口 |
 | `/data/rankings-search.json` | 面向插件总榜、搜索和 Agent 推荐的紧凑索引 |
 
 官网与当前源码插件优先消费 `manifest + snapshot 分片`；插件安装校验通过紧凑索引定位单个总榜分页。已有 `rankings*.json` 接口继续发布，供已发布的 `@dsheval/dsh-top100-plugin@1.1.0` 和其他既有消费者兼容使用。

@@ -100,6 +100,7 @@ export function parseRankingManifest(raw) {
     if (!isRecord(datasets)
         || !validFileReference(datasets.hot)
         || !validFileReference(datasets.rising)
+        || (datasets.skills !== undefined && !validFileReference(datasets.skills))
         || !validFileReference(datasets.search)
         || !isRecord(datasets.total)
         || typeof datasets.total.count !== "number"
@@ -142,7 +143,13 @@ function manifestCategories(manifest) {
     return manifest.categories.map(({ id, label, description, count }) => ({ id, label, description, count }));
 }
 export function isRankingView(value) {
-    return value === "hot" || value === "rising" || value === "total" || value === "category";
+    return value === "hot" || value === "rising" || value === "total";
+}
+export function isCatalogScope(value) {
+    return value === "plugins" || value === "skills" || value === "ecosystem";
+}
+export function isInstallAvailability(value) {
+    return value === "all" || value === "installable" || value === "unavailable";
 }
 export function matchesQuery(entry, query) {
     return matchesSearchQuery(entry, query);
@@ -157,14 +164,46 @@ function annotate(entry, installed) {
         evidence: catalogEvidence(entry),
     };
 }
+function entryMatchesCatalogScope(entry, scope) {
+    const evidence = catalogEvidence(entry);
+    const isSkill = entry.type?.toLowerCase() === "skill";
+    if (scope === "plugins")
+        return !isSkill && evidence.compatible;
+    if (scope === "skills")
+        return isSkill;
+    return !isSkill && !evidence.compatible;
+}
+export function catalogScopeCounts(document, skillsDocument) {
+    const counts = { plugins: 0, skills: 0, ecosystem: 0 };
+    const uniqueEntries = new Map([
+        ...document.rankings.total,
+        ...(skillsDocument?.rankings.total ?? []),
+    ].map((entry) => [entry.fullName.toLowerCase(), entry]));
+    for (const entry of uniqueEntries.values()) {
+        if (entryMatchesCatalogScope(entry, "plugins"))
+            counts.plugins += 1;
+        else if (entryMatchesCatalogScope(entry, "skills"))
+            counts.skills += 1;
+        else if (entryMatchesCatalogScope(entry, "ecosystem"))
+            counts.ecosystem += 1;
+    }
+    return counts;
+}
 export function filterCatalog(document, options) {
     const hasQuery = tokenizeSearchQuery(options.query).length > 0;
-    const source = hasQuery || options.view === "category"
+    const source = hasQuery || options.view === "total"
         ? document.rankings.total
         : document.rankings[options.view] ?? [];
     const scored = source
         .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
-        .filter((entry) => options.view !== "category" || (options.category !== null && entryMatchesCategory(entry, options.category)))
+        .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
+        .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
+        .filter((entry) => {
+        if (!options.installAvailability || options.installAvailability === "all")
+            return true;
+        const installable = resolveInstallSpec(entry) !== null;
+        return options.installAvailability === "installable" ? installable : !installable;
+    })
         .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
         .filter((item) => item.score !== null);
     const excludedSkillCount = options.excludeSkills
@@ -188,6 +227,8 @@ export function filteredCatalogCategories(document, options) {
     const stats = new Map(definitions.map(({ id }) => [id, { count: 0, excludedSkillCount: 0 }]));
     for (const entry of document.rankings.total) {
         if (options.compatibleOnly && !catalogEvidence(entry).compatible)
+            continue;
+        if (options.catalogScope && !entryMatchesCatalogScope(entry, options.catalogScope))
             continue;
         const excluded = Boolean(options.excludeSkills && entry.type?.toLowerCase() === "skill");
         const categoryIds = new Set((entry.categories ?? []).map((assignment) => typeof assignment === "string" ? assignment : assignment?.id));
@@ -397,6 +438,7 @@ function manifestReferences(manifest) {
     return [
         manifest.datasets.hot,
         manifest.datasets.rising,
+        ...(manifest.datasets.skills ? [manifest.datasets.skills] : []),
         manifest.datasets.search,
         ...manifest.datasets.total.pages,
         ...manifest.categories.flatMap((category) => category.pages),
@@ -493,6 +535,26 @@ export function parseRankingViewDocument(raw, view) {
         },
     };
 }
+export function parseSkillDirectoryDocument(raw) {
+    let payload;
+    try {
+        payload = JSON.parse(raw);
+    }
+    catch {
+        throw new CatalogSourceError("Skills 目录不是有效 JSON", { fallbackToFull: true });
+    }
+    if (!Array.isArray(payload?.rankings)) {
+        throw new CatalogSourceError("Skills 目录缺少 rankings", { fallbackToFull: true });
+    }
+    return {
+        schemaVersion: payload.schemaVersion,
+        generatedAt: payload.generatedAt,
+        snapshotDate: payload.snapshotDate,
+        definitions: payload.definitions,
+        categories: payload.categories,
+        rankings: { total: payload.rankings, hot: [], rising: [] },
+    };
+}
 function normalizeSearchEntry(value, index) {
     if (value === null || typeof value !== "object")
         return null;
@@ -517,6 +579,7 @@ function normalizeSearchEntry(value, index) {
         owner: typeof entry.owner === "string" ? entry.owner : owner,
         description: typeof entry.description === "string" ? entry.description : "",
         descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
+        ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
         stars: Number(entry.stars) || 0,
         dailyStars: Number(entry.dailyStars) || 0,
         weeklyStars: Number(entry.weeklyStars) || 0,
@@ -712,6 +775,38 @@ export async function loadSearchRankings(dataUrl, force = false) {
         }
     }
 }
+/** Load Skills as a separate discovery directory. Skills never participate in Plugin ranks. */
+export async function loadSkillRankings(dataUrl, force = false) {
+    const baseUrl = normalizeDataUrl(dataUrl);
+    const url = `${baseUrl}/rankings-skills.json`;
+    let manifestError = null;
+    try {
+        const manifest = await loadRankingManifest(baseUrl, force);
+        if (!manifest.datasets.skills) {
+            throw new CatalogSourceError("榜单 manifest 尚未提供 Skills 目录", { fallbackToFull: true });
+        }
+        return await loadManifestDataset(baseUrl, manifest, manifest.datasets.skills, "skills", force);
+    }
+    catch (error) {
+        manifestError = error;
+    }
+    try {
+        const document = await loadCatalogDocument(url, parseSkillDirectoryDocument, force);
+        fallbackReasons.set(url, `manifest v2 Skills 目录不可用：${describeCatalogFetchError(manifestError)}`);
+        return document;
+    }
+    catch (error) {
+        const legacy = await loadRankings(baseUrl, force);
+        return {
+            ...legacy,
+            rankings: {
+                total: legacy.rankings.total.filter((entry) => entry.type?.toLowerCase() === "skill"),
+                hot: [],
+                rising: [],
+            },
+        };
+    }
+}
 export async function catalogCacheStatus(dataUrl, dataset, view) {
     const baseUrl = normalizeDataUrl(dataUrl);
     const manifestCache = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
@@ -725,11 +820,17 @@ export async function catalogCacheStatus(dataUrl, dataset, view) {
     else if (manifest && dataset === "search-index") {
         candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.search), dataset });
     }
+    else if (manifest && dataset === "skill-directory" && manifest.datasets.skills) {
+        candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.skills), dataset });
+    }
     if (dataset === "view-shard" && view) {
         candidates.push({ url: `${baseUrl}/rankings-${view}.json`, dataset });
     }
     else if (dataset === "search-index") {
         candidates.push({ url: `${baseUrl}/rankings-search.json`, dataset });
+    }
+    else if (dataset === "skill-directory") {
+        candidates.push({ url: `${baseUrl}/rankings-skills.json`, dataset });
     }
     candidates.push({ url: `${baseUrl}/rankings.json`, dataset: "full-catalog" });
     for (const candidate of candidates) {
@@ -768,6 +869,7 @@ export async function loadCachedRankings(dataUrl) {
         manifestFileUrl(baseUrl, manifest.datasets.search),
         manifestFileUrl(baseUrl, manifest.datasets.hot),
         manifestFileUrl(baseUrl, manifest.datasets.rising),
+        ...(manifest.datasets.skills ? [manifestFileUrl(baseUrl, manifest.datasets.skills)] : []),
     ] : [];
     urls.push(`${baseUrl}/rankings-search.json`, `${baseUrl}/rankings-hot.json`, `${baseUrl}/rankings-rising.json`, `${baseUrl}/rankings.json`);
     for (const url of urls) {
@@ -782,14 +884,16 @@ function catalogSnapshotTime(value) {
     return Number.isFinite(generatedAt) ? generatedAt : value.fetchedAt;
 }
 /** Resolve installation metadata from a current, authoritative full catalog snapshot. */
-export async function findPublishedEntry(dataUrl, fullName) {
+export async function findPublishedEntry(dataUrl, fullName, forceManifest = true) {
     const baseUrl = normalizeDataUrl(dataUrl);
     try {
-        const manifest = await loadRankingManifest(baseUrl, true);
+        const manifest = await loadRankingManifest(baseUrl, forceManifest);
         const search = await loadManifestDataset(baseUrl, manifest, manifest.datasets.search, "search");
         const indexed = findEntry(search, fullName);
-        if (!indexed)
-            return undefined;
+        if (!indexed) {
+            const skills = await loadSkillRankings(baseUrl);
+            return findEntry(skills, fullName);
+        }
         const pageNumber = Math.floor((indexed.rank - 1) / manifest.datasets.total.pageSize) + 1;
         const pageReference = manifest.datasets.total.pages.find((page) => page.page === pageNumber);
         if (!pageReference) {

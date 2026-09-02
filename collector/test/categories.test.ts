@@ -8,7 +8,7 @@ import {
 describe("controlled repository categories", () => {
   it("exposes the six product categories in display order", () => {
     expect(CATEGORY_DEFINITIONS.map(({ id, label }) => [id, label])).toEqual([
-      ["ai", "Agent增强"],
+      ["ai", "Agent 增强"],
       ["appearance", "外观"],
       ["coding", "编程"],
       ["knowledge", "知识获取"],

@@ -5,15 +5,19 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DEFAULT_DATA_URL,
+  catalogScopeCounts,
   filterCatalog,
   filteredCatalogCategories,
   findPublishedEntry,
   catalogCacheStatus,
   invalidateCatalog,
   isRankingView,
+  isCatalogScope,
+  isInstallAvailability,
   loadCachedRankings,
   loadRankingView,
   loadSearchRankings,
+  loadSkillRankings,
   normalizeDataUrl,
 } from "./catalog.js";
 import {
@@ -50,7 +54,15 @@ import { installSkill } from "../install/skill-install.js";
 import { consumeInstallApproval, createInstallPreflight, type ApprovedInstall } from "./install-preflight.js";
 import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
 import { isPluginCategoryId } from "../shared/categories.js";
-import type { InstallAction, InstallBatchSnapshot, InstallJobSnapshot, InstallPhase, InstallResult, ManagedKind } from "../shared/types.js";
+import type {
+  InstallAction,
+  InstallBatchSnapshot,
+  InstallJobSnapshot,
+  InstallPhase,
+  InstallResult,
+  ManagedKind,
+  RankingsDocument,
+} from "../shared/types.js";
 import type { PluginHost, PluginResolvedConfig } from "./contracts.js";
 
 const MAX_BATCH_SIZE = 20;
@@ -80,6 +92,17 @@ const activeProfileJobs = new Map<string, string>();
 const skillQueue: Array<() => Promise<void>> = [];
 let activeSkills = 0;
 let nextId = 0;
+
+function emptyCatalogDirectory(reference: RankingsDocument): RankingsDocument {
+  return {
+    schemaVersion: reference.schemaVersion,
+    generatedAt: reference.generatedAt,
+    snapshotDate: reference.snapshotDate,
+    definitions: reference.definitions,
+    categories: [],
+    rankings: { total: [], hot: [], rising: [] },
+  };
+}
 
 function pluginVersion(): string {
   try {
@@ -342,6 +365,17 @@ function batchSnapshot(batchId: string): InstallBatchSnapshot | null {
   };
 }
 
+function activeBatchSnapshots(profile: string): InstallBatchSnapshot[] {
+  return [...batches.values()]
+    .map((batch) => batchSnapshot(batch.id))
+    .filter((snapshot): snapshot is InstallBatchSnapshot => (
+      snapshot !== null
+      && snapshot.completed < snapshot.total
+      && snapshot.jobs.some((job) => job.profile === profile)
+    ))
+    .sort((left, right) => right.createdAt - left.createdAt);
+}
+
 function updateJob(job: InstallJob, phase: InstallPhase, patch: Partial<InstallJob> = {}): void {
   job.phase = phase;
   Object.assign(job, patch);
@@ -444,9 +478,11 @@ async function prepareJob(
           updateJob(job, "installed", {
             message: `已安装 Skill：${skills.map((item) => item.name).join("、")}`,
             requiresRestart: false,
-            activationState: "not-applicable",
+            activationState: entry.install?.needsConfig ? "configuration-required" : "not-applicable",
             provenance: approval.preflight.provenance,
-            lastLine: "Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性",
+            lastLine: entry.install?.needsConfig
+              ? "Skill 已复制并记录来源；完成作者要求的配置后，在后续 Agent 会话中验证可见性"
+              : "Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性",
           });
         } catch (error) {
           failJob(job, error);
@@ -540,10 +576,12 @@ async function prepareJob(
         }
         updateJob(job, "installed", {
           requiresRestart: true,
-          activationState: "restart-required",
+          activationState: entry.install?.needsConfig ? "configuration-required" : "restart-required",
           provenance: approval.preflight.provenance,
           message: "installed",
-          lastLine: "已写入且配置可组合；重启 DSH 后再验证实际运行状态",
+          lastLine: entry.install?.needsConfig
+            ? "已写入且配置可组合；完成作者要求的配置并重启 DSH 后再验证"
+            : "已写入且配置可组合；重启 DSH 后再验证实际运行状态",
         });
       } catch (error) {
         failJob(job, error);
@@ -630,6 +668,7 @@ export function mountRoutes(
           dataUrl: config.dataUrl,
           profile: config.profile,
           progress,
+          activeBatches: activeBatchSnapshots(config.profile),
           activeJobs: [...jobs.values()]
             .filter((job) => !TERMINAL_PHASES.includes(job.phase))
             .map(publicJob),
@@ -662,19 +701,41 @@ export function mountRoutes(
         const requestedView = query.get("view");
         const view = isRankingView(requestedView) ? requestedView : "hot";
         const requestedCategory = query.get("category");
-        const category = view === "category" && isPluginCategoryId(requestedCategory)
-          ? requestedCategory
-          : view === "category" ? "ai" : null;
+        const category = isPluginCategoryId(requestedCategory) ? requestedCategory : null;
         const q = (query.get("q") ?? "").trim();
-        const excludeSkills = query.get("skills") === "0";
-        const compatibleOnly = query.get("scope") !== "all";
+        const requestedCatalogScope = query.get("catalogScope");
+        const catalogScope = isCatalogScope(requestedCatalogScope) ? requestedCatalogScope : "plugins";
+        const requestedInstallAvailability = query.get("installAvailability");
+        const installAvailability = isInstallAvailability(requestedInstallAvailability)
+          ? requestedInstallAvailability
+          : "all";
+        const excludeSkills = catalogScope !== "skills";
+        const compatibleOnly = catalogScope !== "ecosystem";
         const offset = Math.max(0, Number(query.get("offset") ?? 0) || 0);
         const limit = Math.min(100, Math.max(1, Number(query.get("limit") ?? 40) || 40));
         try {
-          const usesViewShard = q === "" && (view === "hot" || view === "rising");
-          const document = usesViewShard
-            ? await loadRankingView(config.dataUrl || DEFAULT_DATA_URL, view)
-            : await loadSearchRankings(config.dataUrl || DEFAULT_DATA_URL);
+          const dataUrl = config.dataUrl || DEFAULT_DATA_URL;
+          const [pluginResult, skillsResult] = await Promise.allSettled([
+            loadSearchRankings(dataUrl),
+            loadSkillRankings(dataUrl),
+          ]);
+          if (catalogScope === "skills" && skillsResult.status === "rejected") throw skillsResult.reason;
+          if (catalogScope !== "skills" && pluginResult.status === "rejected") throw pluginResult.reason;
+          const primaryDirectory = catalogScope === "skills"
+            ? (skillsResult as PromiseFulfilledResult<RankingsDocument>).value
+            : (pluginResult as PromiseFulfilledResult<RankingsDocument>).value;
+          const pluginDirectory = pluginResult.status === "fulfilled"
+            ? pluginResult.value
+            : emptyCatalogDirectory(primaryDirectory);
+          const skillsDirectory = skillsResult.status === "fulfilled"
+            ? skillsResult.value
+            : emptyCatalogDirectory(primaryDirectory);
+          const usesViewShard = catalogScope === "plugins" && q === "" && (view === "hot" || view === "rising");
+          const document = catalogScope === "skills"
+            ? skillsDirectory
+            : usesViewShard
+              ? await loadRankingView(dataUrl, view)
+              : pluginDirectory;
           const installed = readInstalled(config.profile, config.profileDirectory);
           const { total, excludedSkillCount, items } = filterCatalog(document, {
             view,
@@ -685,20 +746,28 @@ export function mountRoutes(
             installed,
             excludeSkills,
             compatibleOnly,
+            catalogScope,
+            installAvailability,
           });
           const cache = await catalogCacheStatus(
-            config.dataUrl || DEFAULT_DATA_URL,
-            usesViewShard ? "view-shard" : "search-index",
+            dataUrl,
+            catalogScope === "skills" ? "skill-directory" : usesViewShard ? "view-shard" : "search-index",
             usesViewShard ? view as "hot" | "rising" : undefined,
           );
           sendJson(response, 200, {
             view,
             category,
-            categories: filteredCatalogCategories(document, { excludeSkills, compatibleOnly }),
+            categories: filteredCatalogCategories(
+              catalogScope === "skills" ? skillsDirectory : pluginDirectory,
+              { excludeSkills, compatibleOnly, catalogScope },
+            ),
             generatedAt: document.generatedAt,
             snapshotDate: document.snapshotDate,
             dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
             query: q,
+            catalogScope,
+            installAvailability,
+            scopeCounts: catalogScopeCounts(pluginDirectory, skillsDirectory),
             excludeSkills,
             compatibleOnly,
             cache,
@@ -742,6 +811,27 @@ export function mountRoutes(
     }),
     host.webServer.register({
       kind: "exact",
+      path: "/dsh-top100/catalog-entry",
+      async handler(request, response) {
+        if (request.method !== "GET") {
+          sendJson(response, 405, { error: "method not allowed" });
+          return;
+        }
+        const fullName = (queryOf(request).get("fullName") ?? "").trim();
+        if (!FULL_NAME_RE.test(fullName)) {
+          sendJson(response, 400, { error: "fullName must be owner/repo" });
+          return;
+        }
+        try {
+          const entry = await findPublishedEntry(config.dataUrl || DEFAULT_DATA_URL, fullName, false);
+          sendJson(response, entry ? 200 : 404, entry ? { item: entry } : { error: "catalog entry not found" });
+        } catch (error) {
+          sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) });
+        }
+      },
+    }),
+    host.webServer.register({
+      kind: "exact",
       path: "/dsh-top100/install-jobs",
       handler(request, response) {
         if (request.method !== "GET") {
@@ -749,7 +839,8 @@ export function mountRoutes(
           return;
         }
         const batchId = queryOf(request).get("batchId") ?? "";
-        const snapshot = batchSnapshot(batchId);
+        const candidate = batchSnapshot(batchId);
+        const snapshot = candidate?.jobs.some((job) => job.profile === config.profile) ? candidate : null;
         sendJson(response, snapshot ? 200 : 404, snapshot ?? { error: "batch not found" });
       },
     }),

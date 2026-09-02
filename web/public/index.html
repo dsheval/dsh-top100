@@ -510,6 +510,7 @@
       }
 
       .skill-filter {
+        display: inline-flex;
         min-height: 36px;
         margin-right: 9px;
         padding: 0 13px;
@@ -520,18 +521,14 @@
         font-size: 12px;
         font-weight: 800;
         cursor: pointer;
+        align-items: center;
+        text-decoration: none;
       }
 
       .skill-filter:hover,
       .skill-filter:focus-visible {
         border-color: var(--accent);
         background: var(--accent-soft);
-      }
-
-      .skill-filter[aria-pressed="true"] {
-        border-color: var(--ink);
-        color: white;
-        background: var(--ink);
       }
 
       .skill-filter:focus-visible {
@@ -717,7 +714,7 @@
       .category-options {
         display: grid;
         width: 100%;
-        grid-template-columns: repeat(6, minmax(0, 1fr));
+        grid-template-columns: repeat(7, minmax(0, 1fr));
         overflow: hidden;
         border: 1px solid var(--line);
       }
@@ -2207,7 +2204,7 @@
 
         .view-tabs {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           border-bottom: 1px solid var(--line);
         }
 
@@ -2974,6 +2971,7 @@
         }
       }
     </style>
+    <link rel="stylesheet" href="./category-system.css" />
   </head>
   <body>
     <div class="nav-shell">
@@ -2990,7 +2988,7 @@
         </a>
         <div class="nav-links">
           <a href="#ranking" data-content-switch="ranking">插件榜单</a>
-          <a href="?view=category#ranking" data-ranking-view="category">分类</a>
+          <a href="./skills.html">Skills 技能库</a>
           <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
           <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
           <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -3081,7 +3079,7 @@
           </header>
 
           <div class="ranking-tools">
-            <div class="view-tabs" role="tablist" aria-label="榜单范围">
+            <div class="view-tabs" role="tablist" aria-label="插件排序方式">
               <button
                 class="view-tab"
                 id="tab-top100"
@@ -3091,7 +3089,7 @@
                 aria-selected="true"
                 data-view="top100"
               >
-                Top 100
+                综合热度 Top 100
               </button>
               <button
                 class="view-tab"
@@ -3102,18 +3100,7 @@
                 aria-selected="false"
                 data-view="rising"
               >
-                新锐榜
-              </button>
-              <button
-                class="view-tab"
-                id="tab-category"
-                type="button"
-                role="tab"
-                aria-controls="plugin-list"
-                aria-selected="false"
-                data-view="category"
-              >
-                分类榜
+                新锐
               </button>
               <button
                 class="view-tab"
@@ -3124,65 +3111,21 @@
                 aria-selected="false"
                 data-view="all"
               >
-                总榜 <span id="all-count"></span>
+                Stars 总榜 <span id="all-count"></span>
               </button>
             </div>
-            <button
+            <a
               class="skill-filter"
-              id="skill-filter"
-              type="button"
-              aria-pressed="false"
+              id="skills-directory-link"
+              href="./skills.html"
             >
-              隐藏 Skill 仓库
-            </button>
+              Skills 技能库 <span id="skills-count"></span>
+            </a>
           </div>
 
           <div class="search-panels">
-            <div class="category-panel" id="category-filter-panel" hidden>
-              <div class="category-options" role="group" aria-label="插件分类">
-                <button class="category-option" type="button" data-category="ai" aria-pressed="true" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="m12 3 1.35 4.15L17.5 8.5l-4.15 1.35L12 14l-1.35-4.15L6.5 8.5l4.15-1.35L12 3Z"/><path d="m18.5 14 .7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3Z"/></svg>
-                  </span>
-                  <span>Agent增强</span>
-                  <span class="category-count" data-category-count="ai">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="appearance" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg>
-                  </span>
-                  <span>外观</span>
-                  <span class="category-count" data-category-count="appearance">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="coding" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5M13.5 4l-3 16"/></svg>
-                  </span>
-                  <span>编程</span>
-                  <span class="category-count" data-category-count="coding">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="knowledge" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z"/></svg>
-                  </span>
-                  <span>知识获取</span>
-                  <span class="category-count" data-category-count="knowledge">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="tools" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M14.5 6.5a4 4 0 0 0-5.3 5.3L4 17l3 3 5.2-5.2a4 4 0 0 0 5.3-5.3l-2.4 2.4-3-3 2.4-2.4Z"/></svg>
-                  </span>
-                  <span>工具</span>
-                  <span class="category-count" data-category-count="tools">—</span>
-                </button>
-                <button class="category-option" type="button" data-category="security" aria-pressed="false" aria-describedby="category-hover-description">
-                  <span class="category-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.3-8 10-4.6-1.7-8-5-8-10V6l8-3Z"/><path d="m9 12 2 2 4-4"/></svg>
-                  </span>
-                  <span>安全</span>
-                  <span class="category-count" data-category-count="security">—</span>
-                </button>
-              </div>
+            <div class="category-panel" id="category-filter-panel">
+              <div class="category-options" id="plugin-category-options" role="group" aria-label="插件分类"></div>
               <div class="category-description-stage">
                 <p class="category-description" id="category-hover-description" role="tooltip" hidden>
                   <strong class="category-description-title"></strong>
@@ -3193,7 +3136,7 @@
 
             <div class="search-panel" role="search">
               <div class="search-field">
-                <label class="sr-only" id="ranking-search-label" for="ranking-search">搜索 Top 100</label>
+                <label class="sr-only" id="ranking-search-label" for="ranking-search">搜索插件</label>
                 <span class="search-control">
                   <input
                     class="search-input"
@@ -3202,7 +3145,7 @@
                     autocomplete="off"
                     maxlength="80"
                     spellcheck="false"
-                    placeholder="搜索 Top 100：名称、功能或中文关键词"
+                    placeholder="搜索插件：名称、功能或中文关键词"
                     aria-describedby="ranking-search-result"
                   />
                   <button class="search-clear" id="ranking-search-clear" type="button" hidden>
@@ -3322,13 +3265,19 @@
         tokenizeSearchQuery,
       } from "./search-engine.js";
       import { catalogPresentation, installCommand } from "./catalog-presentation.js";
+      import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
       import { track, trackPageView } from "./analytics.js";
+
+      renderCategoryOptions(document.querySelector("#plugin-category-options"), {
+        describedBy: "category-hover-description",
+      });
 
       const MANIFEST_URL = "./data/manifest.json";
       const LEGACY_URLS = Object.freeze({
         hot: "./data/rankings-hot.json",
         rising: "./data/rankings-rising.json",
         total: "./data/rankings-total.json",
+        skills: "./data/rankings-skills.json",
         search: "./data/rankings-search.json",
       });
 
@@ -3336,8 +3285,8 @@
       const template = document.querySelector("#plugin-template");
       const tabs = [...document.querySelectorAll(".view-tab")];
       const allCount = document.querySelector("#all-count");
+      const skillsCount = document.querySelector("#skills-count");
       const loadMore = document.querySelector("#load-more");
-      const skillFilter = document.querySelector("#skill-filter");
       const copyFeedback = document.querySelector("#copy-feedback");
       const rankingStatus = document.querySelector("#ranking-status");
       const listHead = document.querySelector("#list-head");
@@ -3373,40 +3322,28 @@
       const categoryDescriptionTitle = categoryDescription.querySelector(".category-description-title");
       const categoryDescriptionBody = categoryDescription.querySelector(".category-description-body");
       const PAGE_SIZE = 100;
-      const categoryLabels = {
-        ai: "Agent增强",
-        appearance: "外观",
-        coding: "编程",
-        knowledge: "知识获取",
-        tools: "工具",
-        security: "安全",
-      };
-      const categoryDescriptions = {
-        ai: "模型能力、提示词、记忆、上下文、多 Agent 协作与智能体增强。",
-        appearance: "主题、皮肤、界面组件、桌面体验、图标与可视化面板。",
-        coding: "代码生成、调试、测试、代码审查、终端、Git 与开发辅助。",
-        knowledge: "联网搜索、浏览器检索、RAG、知识库、文档问答与研究。",
-        tools: "自动化、工作流、连接器、文件处理、通知与效率工具。",
-        security: "权限、沙箱、审计、认证、隐私、密钥与安全防护。",
-      };
+      const categoryLabels = Object.fromEntries(
+        CATEGORY_DEFINITIONS.map(({ id, label }) => [id, label])
+      );
+      const categoryDescriptions = Object.fromEntries(
+        CATEGORY_DEFINITIONS.map(({ id, description }) => [id, description])
+      );
       const searchLabels = {
         top100: "搜索 Top 100",
         rising: "搜索新锐榜",
-        category: "搜索当前分类",
         all: "搜索总榜",
       };
       const searchPlaceholders = {
         top100: "搜索 Top 100：名称、功能或中文关键词",
         rising: "搜索新锐榜：名称、功能或中文关键词",
-        category: "搜索当前分类：名称、功能或中文关键词",
-        all: "搜索全部仓库：名称、功能或中文关键词",
+        all: "搜索全部插件：名称、功能或中文关键词",
       };
       const categoryKeywords = {
         ai: [
           "ai agent", "agentic", "multi-agent", "subagent", "llm", "model", "prompt",
           "reasoning", "inference", "multimodal", "assistant", "chatbot", "memory",
           "session", "context", "conversation", "persona", "recall", "模型", "提示词",
-          "推理", "智能体", "代理", "多智能体", "子代理", "记忆", "会话", "上下文", "人格", "Agent增强",
+          "推理", "智能体", "代理", "多智能体", "子代理", "记忆", "会话", "上下文", "人格", "Agent增强", "Agent 增强",
         ],
         appearance: [
           "theme", "skin", "appearance", "ui", "web ui", "dashboard", "desktop",
@@ -3438,18 +3375,18 @@
         ],
       };
       let searchTimer = null;
-      const searchGenerations = { top100: 0, rising: 0, all: 0, category: 0 };
+      const searchGenerations = { top100: 0, rising: 0, all: 0 };
       const composingViews = new Set();
       const trackedSearchViews = new Set();
       const viewState = {
         top100: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
         rising: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
         all: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
-        category: { query: "", visible: PAGE_SIZE, unfilteredVisible: PAGE_SIZE },
       };
       let rankedEntries = [];
       let risingEntries = [];
       let hotEntries = [];
+      let excludedHotSkillCount = 0;
       let searchEntries = null;
       let manifest = null;
       let legacyCategoryDefinitions = [];
@@ -3464,7 +3401,6 @@
       const dataLoadPromises = new Map();
       let viewSwitchGeneration = 0;
       let generatedAt = null;
-      let hideSkills = false;
       let activeSearchSort = "rank";
       let copyFeedbackTimer = null;
       const initialParams = new URLSearchParams(window.location.search);
@@ -3472,8 +3408,8 @@
       const requestedCategory = initialParams.get("category");
       let activeCategory = Object.hasOwn(categoryLabels, requestedCategory)
         ? requestedCategory
-        : "ai";
-      let currentView = ["top100", "rising", "all", "category"].includes(requestedView)
+        : null;
+      let currentView = ["top100", "rising", "all"].includes(requestedView)
         ? requestedView
         : "top100";
       const contentViewNames = new Set(["ranking", "docs", "dsh", "dsheval"]);
@@ -3755,12 +3691,13 @@
         if (!page || page === "ranking") {
           const view = params.get("view");
           const category = params.get("category");
-          if (category && Object.hasOwn(categoryLabels, category) && category !== activeCategory) {
-            activeCategory = category;
+          const nextCategory = category && Object.hasOwn(categoryLabels, category) ? category : null;
+          if (nextCategory !== activeCategory) {
+            activeCategory = nextCategory;
             categoryEntries = [];
             categoryPageLoaded = 0;
           }
-          void setView(["rising", "all", "category"].includes(view) ? view : "top100", {
+          void setView(["rising", "all"].includes(view) ? view : "top100", {
             emitEvent: false,
             updateUrl: false,
           });
@@ -3798,6 +3735,7 @@
       }
 
       function entryMatchesCategory(entry, category) {
+        if (!category) return true;
         const backendCategories = Array.isArray(entry.plugin.categories)
           ? entry.plugin.categories
               .map((item) => typeof item === "string" ? item : item?.id)
@@ -3821,14 +3759,18 @@
           const category = button.dataset.category;
           const publishedCategory = (manifest?.categories ?? legacyCategoryDefinitions)
             .find((item) => item.id === category);
-          const count = publishedCategory?.count ?? rankedEntries.filter((entry) =>
-            entryMatchesCategory(entry, category)
-          ).length;
+          const count = category
+            ? publishedCategory
+              ? Math.max(0, publishedCategory.count - (publishedCategory.skillCount ?? 0))
+              : rankedEntries.filter((entry) => entryMatchesCategory(entry, category)).length
+            : manifest?.datasets?.total
+              ? Math.max(0, manifest.datasets.total.count - (manifest.datasets.total.skillCount ?? 0))
+              : rankedEntries.length;
           const countElement = button.querySelector("[data-category-count]");
           countElement.textContent = formatStars(count);
           button.setAttribute(
             "aria-label",
-            `${categoryLabels[category]}，${formatStars(count)} 个插件`
+            `${categoryLabels[category] ?? "全部分类"}，${formatStars(count)} 个插件`
           );
         }
       }
@@ -3836,7 +3778,7 @@
       function showCategoryDescription(button) {
         const category = button.dataset.category;
         const count = button.querySelector("[data-category-count]").textContent;
-        categoryDescriptionTitle.textContent = `${categoryLabels[category]} · ${count} 个插件`;
+        categoryDescriptionTitle.textContent = `${categoryLabels[category] ?? "全部分类"} · ${count} 个插件`;
         categoryDescriptionBody.textContent = categoryDescriptions[category];
         categoryDescription.hidden = false;
 
@@ -3880,7 +3822,11 @@
 
       function makeEntries(plugins) {
         return (Array.isArray(plugins) ? plugins : [])
-          .filter((plugin) => plugin && typeof plugin.fullName === "string")
+          .filter((plugin) =>
+            plugin
+            && typeof plugin.fullName === "string"
+            && plugin.type?.toLowerCase() === "cordis-plugin"
+          )
           .map((plugin, index) => {
             const name = plugin.name || plugin.fullName.split("/").pop() || plugin.fullName;
             const descriptionZh = cleanChineseSummary(plugin.descriptionZh || plugin.description);
@@ -3909,8 +3855,14 @@
           }
           manifest = nextManifest;
           generatedAt = manifest.generatedAt;
+          const publishedSkills = manifest.datasets.skills?.count ?? manifest.datasets.total?.skillCount;
+          skillsCount.textContent = Number.isFinite(Number(publishedSkills))
+            ? `(${formatStars(publishedSkills)})`
+            : "";
           const hot = await fetchJson(manifest.datasets.hot.url);
-          hotEntries = makeEntries(hot.rankings);
+          const publishedHotEntries = Array.isArray(hot.rankings) ? hot.rankings : [];
+          hotEntries = makeEntries(publishedHotEntries);
+          excludedHotSkillCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
           if (hotEntries.length === 0) throw new Error("Top 100 榜单为空");
           updateAllCount();
           updateCategoryCounts();
@@ -3923,7 +3875,9 @@
         manifest = null;
         generatedAt = data.generatedAt;
         legacyCategoryDefinitions = Array.isArray(data.categories) ? data.categories : [];
-        hotEntries = makeEntries(data.rankings);
+        const publishedHotEntries = Array.isArray(data.rankings) ? data.rankings : [];
+        hotEntries = makeEntries(publishedHotEntries);
+        excludedHotSkillCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
         if (hotEntries.length === 0) {
           throw new Error("兼容 Top 100 榜单为空");
         }
@@ -3934,7 +3888,7 @@
       async function ensureViewData(view) {
         if (initialDataPromise) await initialDataPromise;
         if (view === "top100") return;
-        if ((view === "all" || view === "category") && tokenizeSearchQuery(viewState[view].query).length > 0) {
+        if (view === "all" && tokenizeSearchQuery(viewState[view].query).length > 0) {
           await loadSearchEntries();
           return;
         }
@@ -3946,24 +3900,17 @@
           if (risingEntries.length === 0) throw new Error("新锐榜为空");
           return;
         }
-        if (view === "all" && rankedEntries.length === 0) {
-          if (manifest) await loadNextTotalPage();
-          else await loadLegacyTotalEntries();
-          return;
-        }
-        if (view === "category" && categoryEntries.length === 0) {
+        if (view === "all" && (activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0)) {
           if (manifest) {
-            await loadNextCategoryPage();
+            if (activeCategory) await loadNextCategoryPage();
+            else await loadNextTotalPage();
           } else {
             await loadLegacyTotalEntries();
-            categoryEntries = rankedEntries
-              .filter((entry) => entryMatchesCategory(entry, activeCategory))
-              .map((entry, index) => ({
-                ...entry,
-                totalRank: entry.totalRank ?? entry.rank,
-                rank: index + 1,
-              }));
+            if (activeCategory) {
+              categoryEntries = rankedEntries.filter((entry) => entryMatchesCategory(entry, activeCategory));
+            }
           }
+          return;
         }
       }
 
@@ -4073,41 +4020,14 @@
         return new Intl.NumberFormat("zh-CN").format(Number(value) || 0);
       }
 
-      function countSkills(entries, categoryId = null) {
-        return entries.filter((entry) =>
-          entry.plugin.type === "skill"
-          && (categoryId === null || entryMatchesCategory(entry, categoryId))
-        ).length;
-      }
-
-      function manifestSkillCount(dataset, categoryId = null) {
-        const declared = Number(dataset?.skillCount);
-        if (Number.isInteger(declared) && declared >= 0) return declared;
-        if (!searchEntries) return null;
-        return countSkills(searchEntries, categoryId);
-      }
-
-      function filteredPublishedTotal(total, skillCount) {
-        if (!hideSkills || skillCount === null) return total;
-        return Math.max(0, total - skillCount);
-      }
-
-      function hiddenSkillNote(skillCount) {
-        if (!hideSkills) return "";
-        return skillCount === null
-          ? " · 已隐藏 Skill 仓库"
-          : ` · 已隐藏 ${formatStars(skillCount)} 个 Skill 仓库`;
-      }
-
       function updateAllCount() {
         if (manifest?.datasets?.total) {
           const dataset = manifest.datasets.total;
-          const count = filteredPublishedTotal(dataset.count, manifestSkillCount(dataset));
-          allCount.textContent = `(${formatStars(count)})`;
+          allCount.textContent = `(${formatStars(Math.max(0, dataset.count - (dataset.skillCount ?? 0)))})`;
           return;
         }
         allCount.textContent = rankedEntries.length > 0
-          ? `(${formatStars(filteredPublishedTotal(rankedEntries.length, countSkills(rankedEntries)))})`
+          ? `(${formatStars(rankedEntries.length)})`
           : "";
       }
 
@@ -4144,7 +4064,7 @@
         searchInput.setAttribute("aria-label", searchLabels[currentView]);
         searchInput.placeholder = searchPlaceholders[currentView];
         searchInput.value = viewState[currentView].query;
-        categoryFilterPanel.hidden = currentView !== "category";
+        categoryFilterPanel.hidden = false;
         for (const button of searchSortButtons) {
           button.setAttribute(
             "aria-pressed",
@@ -4159,7 +4079,7 @@
       ) {
         const switchGeneration = ++viewSwitchGeneration;
         const previousView = currentView;
-        currentView = ["top100", "rising", "all", "category"].includes(view)
+        currentView = ["top100", "rising", "all"].includes(view)
           ? view
           : "top100";
         for (const tab of tabs) {
@@ -4179,22 +4099,23 @@
           top100: "DEEPSEEK HARNESS PLUGINS · TOP 100",
           rising: "DEEPSEEK HARNESS PLUGINS · 新锐榜",
           all: "DEEPSEEK HARNESS PLUGINS · 总榜",
-          category: `DEEPSEEK HARNESS PLUGINS · 分类榜 · ${categoryLabels[activeCategory]}`,
         };
-        rankingMetaTitle.textContent = metaLabels[currentView];
+        rankingMetaTitle.textContent = activeCategory
+          ? `${metaLabels[currentView]} · ${categoryLabels[activeCategory]}`
+          : metaLabels[currentView];
         rankingUpdated.textContent = `更新于：${formatUpdateTime(generatedAt)}`;
         updateSearchControls();
         for (const button of categoryButtons) {
           button.setAttribute(
             "aria-pressed",
-            String(button.dataset.category === activeCategory)
+            String((button.dataset.category || null) === activeCategory)
           );
         }
         if (updateUrl) {
           const url = new URL(window.location.href);
           if (currentView === "top100") url.searchParams.delete("view");
           else url.searchParams.set("view", currentView);
-          if (currentView === "category") url.searchParams.set("category", activeCategory);
+          if (activeCategory) url.searchParams.set("category", activeCategory);
           else url.searchParams.delete("category");
           const contentPrefix = `#${currentContentView}-`;
           const contentHash = currentContentView === "ranking"
@@ -4214,19 +4135,20 @@
           });
         }
         const hasDeferredSearch = tokenizeSearchQuery(viewState[currentView].query).length > 0
-          && (currentView === "all" || currentView === "category")
+          && currentView === "all"
           && !searchEntries;
         const needsData = (
           hasDeferredSearch
           ||
           (currentView === "rising" && risingEntries.length === 0)
-          || (currentView === "all" && !hasDeferredSearch && rankedEntries.length === 0)
-          || (currentView === "category" && !hasDeferredSearch && categoryEntries.length === 0)
+          || (currentView === "all" && !hasDeferredSearch && (
+            activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0
+          ))
         );
         if (needsData) {
           const status = document.createElement("p");
           status.className = "status";
-          status.textContent = `正在加载${currentView === "rising" ? "新锐榜" : currentView === "all" ? "总榜" : categoryLabels[activeCategory]}…`;
+          status.textContent = `正在加载${currentView === "rising" ? "新锐榜" : "总榜"}${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}…`;
           list.replaceChildren(status);
         }
         try {
@@ -4259,24 +4181,23 @@
         const state = viewState[currentView];
         const searchActive = tokenizeSearchQuery(state.query).length > 0;
         loadMore.disabled = !searchActive && (
-          currentView === "all"
-            ? Boolean(totalPageLoadPromise)
-            : currentView === "category"
+          currentView === "all" && (
+            activeCategory
               ? [...categoryPageLoadPromises.keys()].some((key) => key.startsWith(`${activeCategory}:`))
-              : false
+              : Boolean(totalPageLoadPromise)
+          )
         );
         const scoped = currentView === "top100"
           ? hotEntries
           : currentView === "rising"
             ? risingEntries
-            : currentView === "category"
-              ? (searchActive && searchEntries ? searchEntries : categoryEntries)
-              : (searchActive && searchEntries ? searchEntries : rankedEntries);
-        const categoryScoped = currentView === "category" && searchActive
+            : (searchActive && searchEntries
+                ? searchEntries
+                : activeCategory ? categoryEntries : rankedEntries);
+        const categoryScoped = activeCategory
           ? scoped.filter((entry) => entryMatchesCategory(entry, activeCategory))
           : scoped;
         const scoredMatches = categoryScoped
-          .filter((entry) => !hideSkills || entry.plugin.type !== "skill")
           .map((entry) => ({
             entry,
             score: scoreSearchEntry(entry.plugin, state.query),
@@ -4290,11 +4211,11 @@
           );
         }
         const matched = scoredMatches.map(({ entry }) => entry);
-        const shown = currentView === "all" || currentView === "category"
+        const shown = currentView === "all"
           ? matched.slice(0, state.visible)
           : matched;
         const fragment = document.createDocumentFragment();
-        rankHead.textContent = currentView === "category" && searchActive
+        rankHead.textContent = activeCategory
           ? "总榜排名"
           : "排名";
         searchClear.hidden = !searchActive;
@@ -4314,7 +4235,9 @@
 
         for (const entry of shown) {
           const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
-          const displayRank = absoluteRank;
+          const displayRank = activeCategory
+            ? Number(plugin.totalRank) || absoluteRank
+            : absoluteRank;
           const item = template.content.cloneNode(true);
           const pluginElement = item.querySelector(".plugin");
           const rank = item.querySelector(".rank");
@@ -4408,9 +4331,11 @@
         if (shown.length === 0) {
           const status = document.createElement("p");
           status.className = "status";
-          status.textContent = currentView === "category"
+          status.textContent = activeCategory
             ? `${categoryLabels[activeCategory]}分类暂时没有匹配的插件。`
-            : `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`;
+            : searchActive
+              ? `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`
+              : "当前榜单暂时没有插件。";
           fragment.appendChild(status);
         }
 
@@ -4418,30 +4343,23 @@
         for (const pluginElement of list.querySelectorAll(".plugin")) {
           observeReveal(pluginElement);
         }
-        if (currentView === "category") {
+        if (activeCategory) {
           const category = activeCategoryManifest();
           const categoryTotal = category?.count ?? categoryScoped.length;
-          const categorySkillCount = searchActive
-            ? null
-            : manifestSkillCount(category, activeCategory);
           const filteredCategoryTotal = searchActive
             ? matched.length
-            : filteredPublishedTotal(categoryTotal, categorySkillCount);
+            : currentView === "all" ? categoryTotal : matched.length;
           searchResult.textContent = searchActive
             ? `${categoryLabels[activeCategory]}内匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按总榜顺序"} · 显示总榜排名`
-            : hideSkills && categorySkillCount === null
-              ? `${categoryLabels[activeCategory]}分类${hiddenSkillNote(categorySkillCount)}`
-              : `${categoryLabels[activeCategory]}分类共 ${formatStars(filteredCategoryTotal)} 个插件${hiddenSkillNote(categorySkillCount)}`;
+            : `${categoryLabels[activeCategory]}筛选 · 已显示 ${formatStars(shown.length)} / ${formatStars(filteredCategoryTotal)} 个插件`;
           rankingStatus.textContent = searchActive
             ? `${categoryLabels[activeCategory]}内找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
-            : hideSkills && categorySkillCount === null
-              ? `${categoryLabels[activeCategory]}分类已显示 ${shown.length} 个非 Skill 插件`
-              : `${categoryLabels[activeCategory]}分类已显示 ${shown.length} / ${filteredCategoryTotal} 个插件`;
-          loadMore.hidden = searchActive
+            : `${categoryLabels[activeCategory]}筛选已显示 ${shown.length} / ${filteredCategoryTotal} 个插件`;
+          loadMore.hidden = currentView !== "all" || (searchActive
             ? shown.length >= matched.length
             : manifest
               ? categoryPageLoaded >= (category?.pageCount ?? 0)
-              : shown.length >= matched.length;
+              : shown.length >= matched.length);
           if (!loadMore.hidden) {
             const remaining = Math.max(
               0,
@@ -4450,19 +4368,18 @@
             loadMore.textContent = `继续加载（剩余 ${formatStars(remaining)}）`;
           }
         } else {
-          const totalDataset = manifest?.datasets?.total;
-          const totalSkillCount = currentView === "all" && !searchActive
-            ? manifestSkillCount(totalDataset)
-            : null;
           const publishedTotal = currentView === "all" && !searchActive
-            ? filteredPublishedTotal(totalDataset?.count ?? matched.length, totalSkillCount)
+            ? manifest?.datasets?.total?.count ?? matched.length
             : matched.length;
+          const migrationStatus = currentView === "top100" && !searchActive && excludedHotSkillCount > 0
+            ? `当前快照：${formatStars(shown.length)} 个已验证插件 · 已排除 ${formatStars(excludedHotSkillCount)} 个 Skills`
+            : null;
           searchResult.textContent = searchActive
             ? `匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按榜单顺序"} · 显示原榜排名`
-            : `已显示 ${formatStars(shown.length)} / ${formatStars(publishedTotal)} 个${hiddenSkillNote(totalSkillCount)}`;
+            : migrationStatus ?? `已显示 ${formatStars(shown.length)} / ${formatStars(publishedTotal)} 个插件`;
           rankingStatus.textContent = searchActive
             ? `找到 ${matched.length} 个匹配插件，已显示 ${shown.length} 个`
-            : `已显示 ${shown.length} / ${publishedTotal} 个插件`;
+            : migrationStatus ?? `已显示 ${shown.length} / ${publishedTotal} 个插件`;
           loadMore.hidden = currentView !== "all" || (
             searchActive
               ? shown.length >= matched.length
@@ -4531,31 +4448,6 @@
         });
       });
 
-      skillFilter.addEventListener("click", async () => {
-        hideSkills = !hideSkills;
-        skillFilter.setAttribute("aria-pressed", String(hideSkills));
-        skillFilter.textContent = hideSkills ? "显示 Skill 仓库" : "隐藏 Skill 仓库";
-        if (
-          hideSkills
-          && manifest?.datasets?.total
-          && !Number.isInteger(manifest.datasets.total.skillCount)
-        ) {
-          skillFilter.disabled = true;
-          skillFilter.textContent = "正在统计…";
-          try {
-            await loadSearchEntries();
-          } catch (error) {
-            showFeedback("已隐藏 Skill 仓库，但暂时无法读取精确数量。");
-            console.error(error);
-          } finally {
-            skillFilter.disabled = false;
-            skillFilter.textContent = "显示 Skill 仓库";
-          }
-        }
-        updateAllCount();
-        renderRanking();
-      });
-
       async function applySearchQuery(view, value) {
         const state = viewState[view];
         const previousQuery = normalizeSearchText(state.query);
@@ -4574,20 +4466,19 @@
           trackedSearchViews.add(view);
           track("search_used", {
             view: view === "top100" ? "hot" : view === "all" ? "total" : view,
-            ...(view === "category" ? { category: activeCategory } : {}),
+            ...(activeCategory ? { category: activeCategory } : {}),
           });
         }
-        if (view === "all" || view === "category") {
+        if (view === "all") {
           const needsUnfilteredData = !nextQuery && (
-            (view === "all" && rankedEntries.length === 0)
-            || (view === "category" && categoryEntries.length === 0)
+            activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0
           );
           if (currentView === view && (nextQuery || needsUnfilteredData)) {
             const status = document.createElement("p");
             status.className = "status";
             status.textContent = nextQuery
               ? "正在加载全站搜索索引…"
-              : `正在恢复${view === "all" ? "总榜" : categoryLabels[activeCategory]}…`;
+              : `正在恢复总榜${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}…`;
             list.replaceChildren(status);
           }
           try {
@@ -4653,7 +4544,6 @@
         await initialDataPromise;
         for (const definition of manifest?.categories ?? legacyCategoryDefinitions) {
           if (!Object.hasOwn(categoryLabels, definition.id)) continue;
-          if (definition.label) categoryLabels[definition.id] = definition.label;
           if (definition.description) {
             categoryDescriptions[definition.id] = definition.description;
           }
@@ -4681,19 +4571,23 @@
           button.addEventListener("focus", () => showCategoryDescription(button));
           button.addEventListener("blur", hideCategoryDescription);
           button.addEventListener("click", () => {
-            activeCategory = button.dataset.category;
+            activeCategory = button.dataset.category || null;
             categoryEntries = [];
             categoryPageLoaded = 0;
-            viewState.category.visible = PAGE_SIZE;
-            viewState.category.unfilteredVisible = PAGE_SIZE;
-            track("category_selected", { view: "category", category: activeCategory });
-            void setView("category", { historyMode: "push" });
+            viewState.all.visible = PAGE_SIZE;
+            viewState.all.unfilteredVisible = PAGE_SIZE;
+            searchGenerations.all += 1;
+            track("category_selected", {
+              view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
+              category: activeCategory ?? "all",
+            });
+            void setView(currentView, { historyMode: "push" });
           });
         }
         loadMore.addEventListener("click", async () => {
-          if (currentView !== "all" && currentView !== "category") return;
+          if (currentView !== "all") return;
           const requestedRankingView = currentView;
-          const requestedCategory = requestedRankingView === "category" ? activeCategory : null;
+          const requestedCategory = activeCategory;
           const requestedSearchGeneration = searchGenerations[requestedRankingView];
           const state = viewState[requestedRankingView];
           const searchActive = tokenizeSearchQuery(state.query).length > 0;
@@ -4703,21 +4597,20 @@
             && normalizeSearchText(state.query) === requestedQuery;
           const isSameRankingContext = () =>
             currentView === requestedRankingView
-            && (requestedRankingView !== "category" || activeCategory === requestedCategory);
+            && activeCategory === requestedCategory;
           const isCurrentLoadMoreRequest = () =>
             isSameRankingContext() && isSameSearchState();
           loadMore.disabled = true;
           loadMore.textContent = "正在加载…";
           try {
             if (!searchActive && manifest) {
-              if (requestedRankingView === "all") await loadNextTotalPage();
-              else await loadNextCategoryPage();
-              const categoryStillMatches = requestedRankingView !== "category"
-                || activeCategory === requestedCategory;
+              if (requestedCategory) await loadNextCategoryPage();
+              else await loadNextTotalPage();
+              const categoryStillMatches = activeCategory === requestedCategory;
               if (categoryStillMatches) {
-                state.unfilteredVisible = requestedRankingView === "all"
-                  ? rankedEntries.length
-                  : categoryEntries.length;
+                state.unfilteredVisible = requestedCategory
+                  ? categoryEntries.length
+                  : rankedEntries.length;
                 if (isSameSearchState()) state.visible = state.unfilteredVisible;
               }
             } else {

@@ -111,7 +111,7 @@ export function ManagedPage({ t, initialQuery = "" }: { t: Translate; initialQue
           return (
             <article key={`${item.kind}-${item.name}`}>
               <div className="status-cell"><span className={`dot${item.enabled ? "" : " off"}`} aria-hidden="true" /></div>
-              <div>
+              <div className="managed-copy">
                 <h3>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.name}</a> : item.name}</h3>
                 <p className="desc">{descriptionFor(item)}</p>
                 <div className="facts">

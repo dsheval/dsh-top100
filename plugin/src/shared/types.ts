@@ -3,6 +3,10 @@
 export interface RankingInstall {
   method?: string;
   target?: string;
+  /** Collector-selected package path inside a monorepo. */
+  repositoryPath?: string;
+  /** package.json name at the selected plugin path. */
+  packageName?: string;
   needsConfig?: boolean;
   commands?: string[];
   commandSource?: string;
@@ -39,6 +43,8 @@ export interface RankingEntry {
   owner: string;
   description: string;
   descriptionZh: string;
+  /** README-derived excerpt, present in authoritative detail pages when published. */
+  readmeSummary?: string;
   stars: number;
   dailyStars: number;
   weeklyStars: number;
@@ -77,7 +83,7 @@ export interface RankingsDocument {
   };
 }
 
-export type RankingView = "hot" | "rising" | "total" | "category";
+export type RankingView = "hot" | "rising" | "total";
 
 export interface InstallSpec {
   kind: "npm" | "github";
@@ -129,7 +135,16 @@ export interface CatalogCacheStatus {
   stale: boolean;
   reason: string | null;
   source: "network-or-cache" | "unknown";
-  dataset: "view-shard" | "search-index" | "full-catalog";
+  dataset: "view-shard" | "search-index" | "skill-directory" | "full-catalog";
+}
+
+export type CatalogScope = "plugins" | "skills" | "ecosystem";
+export type InstallAvailability = "all" | "installable" | "unavailable";
+
+export interface CatalogScopeCounts {
+  plugins: number;
+  skills: number;
+  ecosystem: number;
 }
 
 export interface CatalogResponse {
@@ -140,6 +155,9 @@ export interface CatalogResponse {
   snapshotDate: string;
   dataUrl: string;
   query: string;
+  catalogScope: CatalogScope;
+  installAvailability: InstallAvailability;
+  scopeCounts: CatalogScopeCounts;
   excludeSkills: boolean;
   compatibleOnly: boolean;
   cache: CatalogCacheStatus;
@@ -176,6 +194,7 @@ export type InstallPhase =
 export type ActivationState =
   | "pending"
   | "not-applicable"
+  | "configuration-required"
   | "configuration-valid"
   | "restart-required"
   | "live"
@@ -250,6 +269,15 @@ export interface InstallBatchSnapshot {
   completed: number;
   total: number;
   requiresRestart: boolean;
+}
+
+export interface PluginStatusResponse {
+  ok: true;
+  name: string;
+  version: string;
+  dataUrl: string;
+  profile: string;
+  activeBatches: InstallBatchSnapshot[];
 }
 
 export interface InstallResult {

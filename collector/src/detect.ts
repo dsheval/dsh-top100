@@ -1,11 +1,10 @@
 /**
  * 仓库特征检测：判断一个仓库是不是 DSH 插件，以及它的类型/安装方式
  *
- * 判据（按优先级，只基于根目录文件列表，零额外 API 调用）：
- * 1. 根目录有 SKILL.md            -> skill 型
- * 2. skills/ 目录含 SKILL.md      -> skill 型（技能集合仓库）
- * 3. 根目录有 dsh.profile 或 cordis.patch.yml -> cordis-plugin 型
- * 4. package.json 依赖含 cordis   -> cordis-plugin 型
+ * 判据（按优先级）：
+ * 1. 验证根目录 package.json 与 DSH/Cordis 标记；只有 package.json 不算插件证据
+ * 2. 根目录验证失败后，根据 workspaces 与有限的常见目录检查子包
+ * 3. 若没有 Bundle，再检查根目录或 skills/ 下的 SKILL.md
  *
  * needsConfig 需要 README 内容，由调用方在抓取 README 后单独调用 detectNeedsConfig。
  */
@@ -21,14 +20,186 @@ export interface Detection {
   skillFiles: string[];
   /** 检测依据说明（供报告） */
   evidence: string[];
+  /** 被选为仓库主插件的相对目录；null 表示仓库根目录。 */
+  pluginPath: string | null;
+  /** 被选中插件子包声明的 npm 包名。 */
+  packageName: string | null;
+  /** 仓库内通过验证的所有插件目录；根目录表示为 "."。 */
+  pluginPaths: string[];
 }
 
 const SKILL_MARKER = "SKILL.md";
 const CORDIS_MARKERS = ["dsh.profile", "cordis.patch.yml", "dsh.profile.yml"];
+const MAX_SUBDIR_CANDIDATES = 12;
+
+interface PackageMetadata {
+  name: string | null;
+  workspaces: string[];
+}
+
+interface BundleCandidate {
+  path: string;
+  packageName: string | null;
+  evidence: string;
+  priority: number;
+}
+
+function packageMetadata(content: string | null): PackageMetadata {
+  if (!content) return { name: null, workspaces: [] };
+  try {
+    const pkg = JSON.parse(content) as Record<string, unknown>;
+    const rawWorkspaces = Array.isArray(pkg.workspaces)
+      ? pkg.workspaces
+      : pkg.workspaces && typeof pkg.workspaces === "object"
+        ? (pkg.workspaces as { packages?: unknown }).packages
+        : [];
+    const workspaces = Array.isArray(rawWorkspaces)
+      ? rawWorkspaces.filter((value): value is string => typeof value === "string")
+      : [];
+    return {
+      name: typeof pkg.name === "string" && pkg.name.trim() ? pkg.name.trim() : null,
+      workspaces,
+    };
+  } catch {
+    return { name: null, workspaces: [] };
+  }
+}
+
+function safeWorkspacePath(value: string): string | null {
+  const normalized = value.trim().replace(/^\.\//, "").replace(/\/+$/, "");
+  if (!normalized || normalized.startsWith("/") || normalized.includes("..")) return null;
+  if (!/^[A-Za-z0-9._/@*-]+$/.test(normalized)) return null;
+  if (normalized.includes("*") && !normalized.endsWith("/*")) return null;
+  return normalized;
+}
+
+function hasCordisMarker(items: RepoContentItem[]): boolean {
+  return items.some(
+    (item) => item.type === "file" && CORDIS_MARKERS.includes(item.name.toLowerCase())
+  );
+}
+
+async function readPackage(
+  fullName: string,
+  path: string,
+  branch?: string | null
+): Promise<string | null> {
+  const file = await fetchFileViaApi(
+    fullName,
+    path === "." ? "package.json" : `${path}/package.json`,
+    branch
+  );
+  return file?.content ?? null;
+}
+
+async function subdirCandidatePaths(
+  fullName: string,
+  rootItems: RepoContentItem[],
+  branch: string | null | undefined,
+  rootPackageContent: string | null
+): Promise<Array<{ path: string; priority: number }>> {
+  const repoName = fullName.split("/")[1]?.toLowerCase() ?? "";
+  const paths = new Map<string, number>();
+  const add = (path: string, priority: number): void => {
+    const normalized = safeWorkspacePath(path);
+    if (!normalized || normalized.includes("*")) return;
+    const current = paths.get(normalized);
+    if (current === undefined || priority < current) paths.set(normalized, priority);
+  };
+  const rootDirs = new Map(
+    rootItems
+      .filter((item) => item.type === "dir")
+      .map((item) => [item.path, item])
+  );
+
+  for (const item of rootDirs.values()) {
+    const name = item.name.toLowerCase();
+    if (name === "plugin") add(item.path, 0);
+    else if (name === repoName) add(item.path, 10);
+    else if (/^(dsh|cordis|plugin|bundle|client)(?:[-_]|$)/.test(name)) add(item.path, 20);
+  }
+
+  const metadata = packageMetadata(rootPackageContent);
+  const containerPaths = new Map<string, number>();
+  metadata.workspaces.forEach((workspace, index) => {
+    const normalized = safeWorkspacePath(workspace);
+    if (!normalized) return;
+    if (normalized.endsWith("/*")) {
+      const container = normalized.slice(0, -2);
+      containerPaths.set(container, Math.min(containerPaths.get(container) ?? Number.POSITIVE_INFINITY, 30 + index));
+    } else {
+      add(normalized, 30 + index);
+    }
+  });
+
+  for (const common of ["plugin", "plugins", "packages"]) {
+    const item = [...rootDirs.values()].find((candidate) => candidate.name.toLowerCase() === common);
+    if (item && (common === "plugins" || common === "packages")) {
+      containerPaths.set(item.path, Math.min(containerPaths.get(item.path) ?? Number.POSITIVE_INFINITY, 80));
+    }
+  }
+
+  for (const [container, priority] of containerPaths) {
+    const listing = await fetchRepoRoot(fullName, branch, container);
+    for (const item of listing) {
+      if (item.type === "dir") add(item.path, priority);
+    }
+  }
+
+  return [...paths]
+    .map(([path, priority]) => ({ path, priority }))
+    .sort((left, right) => left.priority - right.priority || left.path.localeCompare(right.path))
+    .slice(0, MAX_SUBDIR_CANDIDATES);
+}
+
+async function detectBundleCandidates(
+  fullName: string,
+  rootItems: RepoContentItem[],
+  branch?: string | null,
+  includeRoot = true
+): Promise<BundleCandidate[]> {
+  const rootHasPackage = rootItems.some(
+    (item) => item.type === "file" && item.name.toLowerCase() === "package.json"
+  );
+  const rootPackageContent = rootHasPackage ? await readPackage(fullName, ".", branch) : null;
+  const candidates: BundleCandidate[] = [];
+
+  if (includeRoot && rootHasPackage && (hasCordisMarker(rootItems) || isCordisPackageJson(rootPackageContent))) {
+    candidates.push({
+      path: ".",
+      packageName: packageMetadata(rootPackageContent).name,
+      evidence: hasCordisMarker(rootItems)
+        ? "root package.json + cordis marker"
+        : "root package.json contains DSH/Cordis declaration",
+      priority: -1,
+    });
+  }
+
+  const paths = await subdirCandidatePaths(fullName, rootItems, branch, rootPackageContent);
+  for (const candidate of paths) {
+    const items = await fetchRepoRoot(fullName, branch, candidate.path);
+    const hasPackage = items.some(
+      (item) => item.type === "file" && item.name.toLowerCase() === "package.json"
+    );
+    if (!hasPackage) continue;
+    const content = await readPackage(fullName, candidate.path, branch);
+    const marker = hasCordisMarker(items);
+    if (!marker && !isCordisPackageJson(content)) continue;
+    candidates.push({
+      ...candidate,
+      packageName: packageMetadata(content).name,
+      evidence: marker
+        ? `subdir ${candidate.path}/ (package.json + cordis marker)`
+        : `subdir ${candidate.path}/（package.json 含 DSH 依赖或声明）`,
+    });
+  }
+  return candidates;
+}
 
 export async function detectPlugin(
   fullName: string,
-  rootItems: RepoContentItem[]
+  rootItems: RepoContentItem[],
+  branch?: string | null
 ): Promise<Detection> {
   const evidence: string[] = [];
   const skillFiles: string[] = [];
@@ -46,7 +217,7 @@ export async function detectPlugin(
       (i) => i.type === "dir" && /^skills?$/i.test(i.name)
     );
     if (skillsDir) {
-      const subItems = await fetchRepoRoot(fullName, undefined, skillsDir.path);
+      const subItems = await fetchRepoRoot(fullName, branch, skillsDir.path);
       const skillDocs = subItems.filter(
         (i) => i.type === "file" && i.name.toUpperCase() === "SKILL.MD"
       );
@@ -57,81 +228,80 @@ export async function detectPlugin(
     }
   }
 
-  // 3. cordis 标记文件
-  const hasCordisMarker = rootItems.some(
-    (i) => i.type === "file" && CORDIS_MARKERS.includes(i.name.toLowerCase())
-  );
-  if (hasCordisMarker) evidence.push("cordis marker file");
-
-  // 4. package.json 需要调用方抓取后调用 isCordisPackageJson 判定
+  // package.json 只是待验证线索，不能单独作为插件证据。
   const hasPackageJson = names.has("package.json");
   if (hasPackageJson) evidence.push("has package.json");
 
+  const bundles = await detectBundleCandidates(fullName, rootItems, branch);
+  if (bundles.length > 0) {
+    const selected = bundles[0];
+    const pluginPaths = bundles.map((candidate) => candidate.path);
+    evidence.push(...bundles.map((candidate) => candidate.evidence));
+    if (bundles.length > 1) {
+      evidence.push(`selected ${selected.path}/ from ${bundles.length} validated plugin packages`);
+    }
+    return {
+      isPlugin: true,
+      type: "cordis-plugin",
+      installMethod: "pnpm-profile",
+      skillFiles: [],
+      evidence,
+      pluginPath: selected.path === "." ? null : selected.path,
+      packageName: selected.packageName,
+      pluginPaths,
+    };
+  }
+
   const isSkill = skillFiles.length > 0;
-  const isCordis = hasCordisMarker || hasPackageJson; // package.json 需二次确认
-  if (!isSkill && !isCordis) {
+  if (!isSkill) {
     return {
       isPlugin: false,
       type: null,
       installMethod: null,
       skillFiles: [],
       evidence,
+      pluginPath: null,
+      packageName: null,
+      pluginPaths: [],
     };
   }
 
-  const type: PluginType = isSkill ? "skill" : "cordis-plugin";
-  const installMethod: InstallMethod = type === "skill" ? "skills-add" : "pnpm-profile";
-
-  return { isPlugin: true, type, installMethod, skillFiles, evidence };
+  const type: PluginType = "skill";
+  const installMethod: InstallMethod = "skills-add";
+  return {
+    isPlugin: true,
+    type,
+    installMethod,
+    skillFiles,
+    evidence,
+    pluginPath: null,
+    packageName: null,
+    pluginPaths: [],
+  };
 }
 
 /** 子目录 bundle 探测：根目录无插件标记时，检查是否存在"子目录内含 package.json + cordis 标记"的插件成品
  * （仓库根目录放素材/文档/工具链，插件在子目录——如 PC2005-cloud/dsh-pet 的 dsh-pet/）
- * 只探测可疑目录（与仓库同名 / dsh- 前缀 / cordis|plugin|bundle|client 开头），最多 3 个，控制 API 调用 */
+ * 只探测 workspace 与可信常见目录，最多 12 个，控制 API 调用。 */
 export async function detectSubdirBundle(
   fullName: string,
   rootItems: RepoContentItem[],
   branch?: string | null
-): Promise<{ subdir: string; evidence: string[] } | null> {
-  const repoName = fullName.split("/")[1]?.toLowerCase();
-  // 常见非插件目录直接跳过（素材/文档/构建目录）
-  const SKIP_DIRS =
-    /^(docs?|assets?|test|tests|scripts?|tools?|examples?|images?|img|public|src|lib|dist|node_modules|vendor|\.github)$/i;
-  const dirs = rootItems.filter((i) => i.type === "dir" && !SKIP_DIRS.test(i.name));
-  const candidates = dirs
-    .filter((d) => {
-      const n = d.name.toLowerCase();
-      // 与仓库同名 / dsh 开头（含裸 dsh、dsh-、dsh_）/ cordis|plugin|bundle|client 开头
-      return n === repoName || /^(dsh|cordis|plugin|bundle|client)/.test(n);
-    })
-    .slice(0, 3);
-  for (const dir of candidates) {
-    const items = await fetchRepoRoot(fullName, branch, dir.path);
-    const names = new Set(items.map((i) => i.name.toLowerCase()));
-    if (names.has("package.json")) {
-      const hasMarker =
-        names.has("cordis.patch.yml") ||
-        names.has("dsh.profile") ||
-        names.has("dsh.profile.yml");
-      // 无批处理文件的子目录也可命中：package.json 依赖含 DSH/cordis 关键字（如 @deepseek-ai/dsh-tools）
-      let depsCordis = false;
-      if (!hasMarker) {
-        const f = await fetchFileViaApi(fullName, `${dir.path}/package.json`);
-        depsCordis = isCordisPackageJson(f?.content ?? null);
-      }
-      if (hasMarker || depsCordis) {
-        return {
-          subdir: dir.path,
-          evidence: [
-            hasMarker
-              ? `subdir ${dir.path}/（package.json + cordis 标记）`
-              : `subdir ${dir.path}/（package.json 含 DSH 依赖）`,
-          ],
-        };
-      }
-    }
-  }
-  return null;
+): Promise<{ subdir: string; evidence: string[]; packageName: string | null; pluginPaths: string[] } | null> {
+  const bundles = await detectBundleCandidates(fullName, rootItems, branch, false);
+  const selected = bundles[0];
+  if (!selected) return null;
+  return {
+    subdir: selected.path,
+    packageName: selected.packageName,
+    pluginPaths: bundles.map((candidate) => candidate.path),
+    evidence: [
+      ...bundles.map((candidate) => candidate.evidence),
+      ...(bundles.length > 1
+        ? [`selected ${selected.path}/ from ${bundles.length} validated plugin packages`]
+        : []),
+    ],
+  };
 }
 
 const CORDIS_PKG_KEYWORDS = [

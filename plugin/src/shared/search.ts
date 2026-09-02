@@ -9,6 +9,7 @@ const SYNONYM_GROUPS = [
   ["代码", "编程", "开发", "code", "coding"],
   ["终端", "命令行", "shell", "cli", "terminal"],
   ["文档", "知识库", "document", "docs", "knowledge"],
+  ["消息", "通知", "飞书", "message", "messages", "messaging", "notification", "notifications", "slack", "webhook"],
   ["自动化", "工作流", "automation", "workflow"],
   ["测试", "评测", "评估", "test", "eval", "evaluation"],
   ["智能体", "代理", "agent"],

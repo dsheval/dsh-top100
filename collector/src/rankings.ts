@@ -32,6 +32,7 @@ export interface RankingEntry {
   owner: string;
   description: string;
   descriptionZh: string;
+  readmeSummary?: string;
   stars: number;
   dailyStars: number;
   weeklyStars: number;
@@ -72,6 +73,10 @@ export interface RankingsDocument {
     total: RankingEntry[];
     rising: RankingEntry[];
     hot: RankingEntry[];
+  };
+  directories: {
+    /** Skills are discoverable, but never participate in Plugin ranking positions or score normalization. */
+    skills: RankingEntry[];
   };
 }
 
@@ -123,6 +128,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     description: repository.description,
     descriptionZh:
       repository.descriptionZh || repository.description || "暂无中文简介，请查看项目 README。",
+    ...(repository.readmeSummary ? { readmeSummary: repository.readmeSummary } : {}),
     stars: repository.stars,
     dailyStars: scored.dailyStars,
     weeklyStars: scored.weeklyStars,
@@ -152,7 +158,9 @@ export function buildRankings(
   configPath = resolve("config/ranking.json")
 ): RankingsDocument {
   const config = JSON.parse(readFileSync(configPath, "utf8")) as RankingConfig;
-  const repositories = readActiveRepositories(database);
+  const activeRepositories = readActiveRepositories(database);
+  const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin");
+  const skills = activeRepositories.filter((repository) => repository.type === "skill");
   const weekDate = subtractDays(snapshotDate, 7);
   const now = new Date();
 
@@ -210,6 +218,18 @@ export function buildRankings(
     )
     .slice(0, config.limits.hot)
     .map((item, index) => toEntry(item, index + 1));
+  const skillDirectory = skills.map((repository, index) => {
+    const yesterday = previousSnapshot(database, repository.id, snapshotDate, false);
+    const lastWeek = previousSnapshot(database, repository.id, weekDate, true);
+    return toEntry({
+      repository,
+      totalRank: index + 1,
+      dailyStars: yesterday ? Math.max(0, repository.stars - yesterday.stars) : 0,
+      weeklyStars: lastWeek ? Math.max(0, repository.stars - lastWeek.stars) : 0,
+      previousWeekStars: lastWeek?.stars ?? repository.stars,
+      hotScore: 0,
+    }, index + 1);
+  });
 
   return {
     schemaVersion: 2,
@@ -227,5 +247,6 @@ export function buildRankings(
       ).length,
     })),
     rankings: { total, rising, hot },
+    directories: { skills: skillDirectory },
   };
 }

@@ -4,6 +4,9 @@ import test from "node:test";
 
 const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const dsh = await readFile(new URL("../public/dsh.html", import.meta.url), "utf8");
+const skills = await readFile(new URL("../public/skills.html", import.meta.url), "utf8");
+const categorySystem = await readFile(new URL("../public/category-system.js", import.meta.url), "utf8");
+const categoryStyles = await readFile(new URL("../public/category-system.css", import.meta.url), "utf8");
 const packageJson = JSON.parse(
   await readFile(new URL("../../package.json", import.meta.url), "utf8")
 );
@@ -36,7 +39,8 @@ test("loads deferred datasets through their manifest URLs", () => {
   assert.match(html, /dataSearchGeneration !== searchGenerations\[requestedRankingView\]/);
   assert.match(html, /else await ensureViewData\(view\)/);
   assert.match(html, /const requestedRankingView = currentView/);
-  assert.match(html, /if \(requestedRankingView === "all"\) await loadNextTotalPage\(\)/);
+  assert.match(html, /if \(requestedCategory\) await loadNextCategoryPage\(\)/);
+  assert.match(html, /else await loadNextTotalPage\(\)/);
   assert.doesNotMatch(html, /if \(currentView === "all"\) await loadNextTotalPage\(\)/);
   assert.match(html, /loadMore\.disabled = !searchActive/);
   assert.match(html, /else if \(isSameRankingContext\(\)\) renderRanking\(\)/);
@@ -76,19 +80,41 @@ test("uses the approved neutral sage palette", () => {
   assert.doesNotMatch(html, /#a95a5a|#fbf4f3/i);
 });
 
-test("softens the footer and reports Skill-filtered totals", () => {
+test("softens the footer and keeps Skills outside plugin totals", () => {
   assert.match(html, /\.footer\s*\{[\s\S]*?min-height:\s*96px/);
   assert.match(html, /\.footer\s*\{[\s\S]*?background:\s*#2b443d/);
   assert.match(html, /\.footer span:last-child\s*\{[\s\S]*?color:\s*#c9d6d1/);
-  assert.match(html, /function manifestSkillCount\(dataset, categoryId = null\)/);
-  assert.match(html, /filteredPublishedTotal\(categoryTotal, categorySkillCount\)/);
-  assert.match(html, /已隐藏 \$\{formatStars\(skillCount\)\} 个 Skill 仓库/);
-  assert.match(html, /await loadSearchEntries\(\)/);
+  assert.match(html, /href="\.\/skills\.html">Skills 技能库/);
+  assert.match(html, /manifest\.datasets\.skills\?\.count/);
+  assert.doesNotMatch(html, /隐藏 Skill 仓库|hideSkills|manifestSkillCount/);
+  assert.match(skills, /manifest\?\.datasets\?\.skills\?\.url/);
+  assert.match(html, /plugin\.type\?\.toLowerCase\(\) === "cordis-plugin"/);
+  assert.match(skills, /const LEGACY_FULL_URL = "\.\/data\/rankings\.json"/);
+  assert.match(skills, /legacy\?\.rankings\?\.total \?\? legacy\?\.rankings \?\? \[\]/);
+  assert.match(skills, /entry\?\.type === "skill"/);
+  assert.match(skills, /不参与插件 Top 100/);
+});
+
+test("shares one category interaction system across Plugin and Skills directories", () => {
+  assert.match(html, /href="\.\/category-system\.css"/);
+  assert.match(skills, /href="\.\/category-system\.css"/);
+  assert.match(html, /renderCategoryOptions\(document\.querySelector\("#plugin-category-options"\)/);
+  assert.match(skills, /renderCategoryOptions\(document\.querySelector\("#skill-category-options"\)/);
+  assert.match(categorySystem, /label: "Agent 增强"/);
+  assert.match(categorySystem, /className = "category-icon"/);
+  assert.match(categoryStyles, /grid-template-columns: repeat\(7, minmax\(0, 1fr\)\)/);
+  assert.match(categoryStyles, /scroll-snap-type: inline proximity/);
+  assert.doesNotMatch(skills, /<select[^>]+id="category"/);
+  assert.match(skills, /aria-label="Skill 分类"/);
+  assert.match(html, /当前快照：.*个已验证插件.*已排除.*个 Skills/);
 });
 
 test("keeps discovery views ordered and uses one persistent ranking search", () => {
-  assert.match(html, /id="tab-top100"[\s\S]*id="tab-rising"[\s\S]*id="tab-category"[\s\S]*id="tab-all"/);
+  assert.match(html, /id="tab-top100"[\s\S]*id="tab-rising"[\s\S]*id="tab-all"/);
+  assert.doesNotMatch(html, /id="tab-category"|data-view="category"|分类榜/);
   assert.match(html, /id="category-filter-panel"/);
+  assert.doesNotMatch(html, /id="category-filter-panel" hidden/);
+  assert.match(categorySystem, /button\.dataset\.category = definition\.id/);
   assert.match(html, /id="ranking-search"/);
   assert.match(html, /data-search-sort="rank"/);
   assert.match(html, /data-search-sort="relevance"/);

@@ -14,6 +14,9 @@ import type {
   CatalogCacheStatus,
   CatalogCategoryDefinition,
   CatalogItem,
+  CatalogScope,
+  CatalogScopeCounts,
+  InstallAvailability,
   PluginCategoryDefinition,
   RankingEntry,
   RankingsDocument,
@@ -60,6 +63,7 @@ interface RankingManifestV2 {
   datasets: {
     hot: RankingFileReferenceV2;
     rising: RankingFileReferenceV2;
+    skills?: RankingFileReferenceV2;
     search: RankingFileReferenceV2;
     total: {
       count: number;
@@ -178,6 +182,7 @@ export function parseRankingManifest(raw: string): RankingManifestV2 {
   if (!isRecord(datasets)
     || !validFileReference(datasets.hot)
     || !validFileReference(datasets.rising)
+    || (datasets.skills !== undefined && !validFileReference(datasets.skills))
     || !validFileReference(datasets.search)
     || !isRecord(datasets.total)
     || typeof datasets.total.count !== "number"
@@ -227,7 +232,15 @@ function manifestCategories(manifest: RankingManifestV2): PluginCategoryDefiniti
 }
 
 export function isRankingView(value: string | null): value is RankingView {
-  return value === "hot" || value === "rising" || value === "total" || value === "category";
+  return value === "hot" || value === "rising" || value === "total";
+}
+
+export function isCatalogScope(value: string | null): value is CatalogScope {
+  return value === "plugins" || value === "skills" || value === "ecosystem";
+}
+
+export function isInstallAvailability(value: string | null): value is InstallAvailability {
+  return value === "all" || value === "installable" || value === "unavailable";
 }
 
 export function matchesQuery(entry: RankingEntry, query: string): boolean {
@@ -245,6 +258,31 @@ function annotate(entry: RankingEntry, installed: Record<string, string>): Catal
   };
 }
 
+function entryMatchesCatalogScope(entry: RankingEntry, scope: CatalogScope): boolean {
+  const evidence = catalogEvidence(entry);
+  const isSkill = entry.type?.toLowerCase() === "skill";
+  if (scope === "plugins") return !isSkill && evidence.compatible;
+  if (scope === "skills") return isSkill;
+  return !isSkill && !evidence.compatible;
+}
+
+export function catalogScopeCounts(
+  document: RankingsDocument,
+  skillsDocument?: RankingsDocument,
+): CatalogScopeCounts {
+  const counts: CatalogScopeCounts = { plugins: 0, skills: 0, ecosystem: 0 };
+  const uniqueEntries = new Map([
+    ...document.rankings.total,
+    ...(skillsDocument?.rankings.total ?? []),
+  ].map((entry) => [entry.fullName.toLowerCase(), entry]));
+  for (const entry of uniqueEntries.values()) {
+    if (entryMatchesCatalogScope(entry, "plugins")) counts.plugins += 1;
+    else if (entryMatchesCatalogScope(entry, "skills")) counts.skills += 1;
+    else if (entryMatchesCatalogScope(entry, "ecosystem")) counts.ecosystem += 1;
+  }
+  return counts;
+}
+
 export function filterCatalog(
   document: RankingsDocument,
   options: {
@@ -256,15 +294,23 @@ export function filterCatalog(
     installed: Record<string, string>;
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
+    catalogScope?: CatalogScope;
+    installAvailability?: InstallAvailability;
   },
 ): { total: number; excludedSkillCount: number; items: CatalogItem[] } {
   const hasQuery = tokenizeSearchQuery(options.query).length > 0;
-  const source = hasQuery || options.view === "category"
+  const source = hasQuery || options.view === "total"
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
   const scored = source
     .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
-    .filter((entry) => options.view !== "category" || (options.category !== null && entryMatchesCategory(entry, options.category)))
+    .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
+    .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
+    .filter((entry) => {
+      if (!options.installAvailability || options.installAvailability === "all") return true;
+      const installable = resolveInstallSpec(entry) !== null;
+      return options.installAvailability === "installable" ? installable : !installable;
+    })
     .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
     .filter((item): item is { entry: RankingEntry; score: number } => item.score !== null);
   const excludedSkillCount = options.excludeSkills
@@ -286,12 +332,13 @@ export function filterCatalog(
 
 export function filteredCatalogCategories(
   document: RankingsDocument,
-  options: { excludeSkills?: boolean; compatibleOnly?: boolean },
+  options: { excludeSkills?: boolean; compatibleOnly?: boolean; catalogScope?: CatalogScope },
 ): CatalogCategoryDefinition[] {
   const definitions = catalogCategories(document);
   const stats = new Map(definitions.map(({ id }) => [id, { count: 0, excludedSkillCount: 0 }]));
   for (const entry of document.rankings.total) {
     if (options.compatibleOnly && !catalogEvidence(entry).compatible) continue;
+    if (options.catalogScope && !entryMatchesCatalogScope(entry, options.catalogScope)) continue;
     const excluded = Boolean(options.excludeSkills && entry.type?.toLowerCase() === "skill");
     const categoryIds = new Set(
       (entry.categories ?? []).map((assignment) =>
@@ -509,6 +556,7 @@ function manifestReferences(manifest: RankingManifestV2): RankingFileReferenceV2
   return [
     manifest.datasets.hot,
     manifest.datasets.rising,
+    ...(manifest.datasets.skills ? [manifest.datasets.skills] : []),
     manifest.datasets.search,
     ...manifest.datasets.total.pages,
     ...manifest.categories.flatMap((category) => category.pages),
@@ -600,6 +648,23 @@ export function parseRankingViewDocument(raw: string, view: "hot" | "rising"): R
   };
 }
 
+export function parseSkillDirectoryDocument(raw: string): RankingsDocument {
+  let payload: Omit<RankingsDocument, "rankings"> & { rankings: RankingEntry[] };
+  try { payload = JSON.parse(raw) as typeof payload; }
+  catch { throw new CatalogSourceError("Skills 目录不是有效 JSON", { fallbackToFull: true }); }
+  if (!Array.isArray(payload?.rankings)) {
+    throw new CatalogSourceError("Skills 目录缺少 rankings", { fallbackToFull: true });
+  }
+  return {
+    schemaVersion: payload.schemaVersion,
+    generatedAt: payload.generatedAt,
+    snapshotDate: payload.snapshotDate,
+    definitions: payload.definitions,
+    categories: payload.categories,
+    rankings: { total: payload.rankings, hot: [], rising: [] },
+  };
+}
+
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
   const entry = value as Partial<RankingEntry> & { installTarget?: unknown };
@@ -622,6 +687,7 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     owner: typeof entry.owner === "string" ? entry.owner : owner,
     description: typeof entry.description === "string" ? entry.description : "",
     descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
+    ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
     stars: Number(entry.stars) || 0,
     dailyStars: Number(entry.dailyStars) || 0,
     weeklyStars: Number(entry.weeklyStars) || 0,
@@ -670,7 +736,7 @@ export function parseRankingSearchDocument(raw: string): RankingsDocument {
 function parseSnapshotPayload(
   raw: string,
   manifest: RankingManifestV2,
-  dataset: "hot" | "rising" | "search" | "total",
+  dataset: "hot" | "rising" | "skills" | "search" | "total",
 ): { rankings: RankingEntry[] } {
   let value: unknown;
   try { value = JSON.parse(raw); }
@@ -695,7 +761,7 @@ function parseSnapshotPayload(
 function snapshotDocument(
   raw: string,
   manifest: RankingManifestV2,
-  dataset: "hot" | "rising" | "search" | "total",
+  dataset: "hot" | "rising" | "skills" | "search" | "total",
 ): RankingsDocument {
   const { rankings } = parseSnapshotPayload(raw, manifest, dataset);
   return {
@@ -778,7 +844,7 @@ async function loadManifestDataset(
   dataUrl: string,
   manifest: RankingManifestV2,
   reference: RankingFileReferenceV2,
-  dataset: "hot" | "rising" | "search" | "total",
+  dataset: "hot" | "rising" | "skills" | "search" | "total",
   force = false,
 ): Promise<RankingsDocument> {
   const url = manifestFileUrl(dataUrl, reference);
@@ -828,6 +894,37 @@ export async function loadSearchRankings(dataUrl: string, force = false): Promis
   }
 }
 
+/** Load Skills as a separate discovery directory. Skills never participate in Plugin ranks. */
+export async function loadSkillRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
+  const baseUrl = normalizeDataUrl(dataUrl);
+  const url = `${baseUrl}/rankings-skills.json`;
+  let manifestError: unknown = null;
+  try {
+    const manifest = await loadRankingManifest(baseUrl, force);
+    if (!manifest.datasets.skills) {
+      throw new CatalogSourceError("榜单 manifest 尚未提供 Skills 目录", { fallbackToFull: true });
+    }
+    return await loadManifestDataset(baseUrl, manifest, manifest.datasets.skills, "skills", force);
+  } catch (error) {
+    manifestError = error;
+  }
+  try {
+    const document = await loadCatalogDocument(url, parseSkillDirectoryDocument, force);
+    fallbackReasons.set(url, `manifest v2 Skills 目录不可用：${describeCatalogFetchError(manifestError)}`);
+    return document;
+  } catch (error) {
+    const legacy = await loadRankings(baseUrl, force);
+    return {
+      ...legacy,
+      rankings: {
+        total: legacy.rankings.total.filter((entry) => entry.type?.toLowerCase() === "skill"),
+        hot: [],
+        rising: [],
+      },
+    };
+  }
+}
+
 export async function catalogCacheStatus(
   dataUrl: string,
   dataset: CatalogCacheStatus["dataset"],
@@ -842,11 +939,15 @@ export async function catalogCacheStatus(
     candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets[view]), dataset });
   } else if (manifest && dataset === "search-index") {
     candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.search), dataset });
+  } else if (manifest && dataset === "skill-directory" && manifest.datasets.skills) {
+    candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.skills), dataset });
   }
   if (dataset === "view-shard" && view) {
     candidates.push({ url: `${baseUrl}/rankings-${view}.json`, dataset });
   } else if (dataset === "search-index") {
     candidates.push({ url: `${baseUrl}/rankings-search.json`, dataset });
+  } else if (dataset === "skill-directory") {
+    candidates.push({ url: `${baseUrl}/rankings-skills.json`, dataset });
   }
   candidates.push({ url: `${baseUrl}/rankings.json`, dataset: "full-catalog" });
   for (const candidate of candidates) {
@@ -883,6 +984,7 @@ export async function loadCachedRankings(dataUrl: string): Promise<RankingsDocum
     manifestFileUrl(baseUrl, manifest.datasets.search),
     manifestFileUrl(baseUrl, manifest.datasets.hot),
     manifestFileUrl(baseUrl, manifest.datasets.rising),
+    ...(manifest.datasets.skills ? [manifestFileUrl(baseUrl, manifest.datasets.skills)] : []),
   ] : [];
   urls.push(
     `${baseUrl}/rankings-search.json`,
@@ -906,10 +1008,11 @@ function catalogSnapshotTime(value: CatalogCache): number {
 export async function findPublishedEntry(
   dataUrl: string,
   fullName: string,
+  forceManifest = true,
 ): Promise<RankingEntry | undefined> {
   const baseUrl = normalizeDataUrl(dataUrl);
   try {
-    const manifest = await loadRankingManifest(baseUrl, true);
+    const manifest = await loadRankingManifest(baseUrl, forceManifest);
     const search = await loadManifestDataset(
       baseUrl,
       manifest,
@@ -917,7 +1020,10 @@ export async function findPublishedEntry(
       "search",
     );
     const indexed = findEntry(search, fullName);
-    if (!indexed) return undefined;
+    if (!indexed) {
+      const skills = await loadSkillRankings(baseUrl);
+      return findEntry(skills, fullName);
+    }
     const pageNumber = Math.floor((indexed.rank - 1) / manifest.datasets.total.pageSize) + 1;
     const pageReference = manifest.datasets.total.pages.find((page) => page.page === pageNumber);
     if (!pageReference) {

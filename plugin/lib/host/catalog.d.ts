@@ -1,5 +1,5 @@
 /** Fetch and filter the published rankings document. */
-import type { CatalogCacheStatus, CatalogCategoryDefinition, CatalogItem, PluginCategoryDefinition, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
+import type { CatalogCacheStatus, CatalogCategoryDefinition, CatalogItem, CatalogScope, CatalogScopeCounts, InstallAvailability, PluginCategoryDefinition, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
 export declare const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 export interface CatalogCache {
     dataUrl: string;
@@ -25,6 +25,7 @@ interface RankingManifestV2 {
     datasets: {
         hot: RankingFileReferenceV2;
         rising: RankingFileReferenceV2;
+        skills?: RankingFileReferenceV2;
         search: RankingFileReferenceV2;
         total: {
             count: number;
@@ -44,7 +45,10 @@ interface RankingManifestV2 {
 export declare function normalizeDataUrl(raw: string): string;
 export declare function parseRankingManifest(raw: string): RankingManifestV2;
 export declare function isRankingView(value: string | null): value is RankingView;
+export declare function isCatalogScope(value: string | null): value is CatalogScope;
+export declare function isInstallAvailability(value: string | null): value is InstallAvailability;
 export declare function matchesQuery(entry: RankingEntry, query: string): boolean;
+export declare function catalogScopeCounts(document: RankingsDocument, skillsDocument?: RankingsDocument): CatalogScopeCounts;
 export declare function filterCatalog(document: RankingsDocument, options: {
     view: RankingView;
     category: PluginCategoryId | null;
@@ -54,6 +58,8 @@ export declare function filterCatalog(document: RankingsDocument, options: {
     installed: Record<string, string>;
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
+    catalogScope?: CatalogScope;
+    installAvailability?: InstallAvailability;
 }): {
     total: number;
     excludedSkillCount: number;
@@ -62,6 +68,7 @@ export declare function filterCatalog(document: RankingsDocument, options: {
 export declare function filteredCatalogCategories(document: RankingsDocument, options: {
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
+    catalogScope?: CatalogScope;
 }): CatalogCategoryDefinition[];
 export declare function invalidateCatalog(): void;
 export declare function describeCatalogFetchError(error: unknown): string;
@@ -69,15 +76,18 @@ export declare function isRetryableCatalogFetchError(error: unknown): boolean;
 export declare function loadRankingManifest(dataUrl: string, force?: boolean): Promise<RankingManifestV2>;
 export declare function parseRankingsDocument(raw: string): RankingsDocument;
 export declare function parseRankingViewDocument(raw: string, view: "hot" | "rising"): RankingsDocument;
+export declare function parseSkillDirectoryDocument(raw: string): RankingsDocument;
 export declare function parseRankingSearchDocument(raw: string): RankingsDocument;
 export declare function loadRankings(dataUrl: string, force?: boolean): Promise<RankingsDocument>;
 /** Load the compact all-entry index used by total/category/search views. */
 export declare function loadSearchRankings(dataUrl: string, force?: boolean): Promise<RankingsDocument>;
+/** Load Skills as a separate discovery directory. Skills never participate in Plugin ranks. */
+export declare function loadSkillRankings(dataUrl: string, force?: boolean): Promise<RankingsDocument>;
 export declare function catalogCacheStatus(dataUrl: string, dataset: CatalogCacheStatus["dataset"], view?: "hot" | "rising"): Promise<CatalogCacheStatus>;
 /** Return a last-good full or view cache without ever delaying local management on the network. */
 export declare function loadCachedRankings(dataUrl: string): Promise<RankingsDocument | null>;
 /** Resolve installation metadata from a current, authoritative full catalog snapshot. */
-export declare function findPublishedEntry(dataUrl: string, fullName: string): Promise<RankingEntry | undefined>;
+export declare function findPublishedEntry(dataUrl: string, fullName: string, forceManifest?: boolean): Promise<RankingEntry | undefined>;
 /** Load the small published shard used by the initial hot/rising tabs. */
 export declare function loadRankingView(dataUrl: string, view: "hot" | "rising", force?: boolean): Promise<RankingsDocument>;
 export declare function findEntry(document: RankingsDocument, fullName: string): RankingEntry | undefined;

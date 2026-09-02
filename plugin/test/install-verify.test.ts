@@ -102,6 +102,58 @@ describe("install source verification", () => {
     );
   });
 
+  it("uses the Collector-selected monorepo path instead of guessing a package", async () => {
+    const sha = "e".repeat(40);
+    const manifest = Buffer.from(JSON.stringify({
+      name: "@acme/selected-plugin",
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    })).toString("base64");
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ default_branch: "main" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ sha }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ content: manifest }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(verifyInstallSpec(
+      { kind: "github", spec: "github:acme/repo" },
+      {
+        expectedRepository: "acme/repo",
+        expectedRepositoryPath: "packages/selected",
+        expectedPackageName: "@acme/selected-plugin",
+      },
+    )).resolves.toMatchObject({
+      target: `github:acme/repo#${sha}&path:/packages/selected`,
+      packageName: "@acme/selected-plugin",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `https://api.github.com/repos/acme/repo/contents/packages/selected/package.json?ref=${sha}`,
+      expect.any(Object),
+    );
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      expect.stringContaining("git/trees"),
+      expect.anything(),
+    );
+  });
+
+  it("rejects an install target that resolves to a different selected package name", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      name: "@acme/other-plugin",
+      version: "1.0.0",
+      repository: { url: "https://github.com/acme/repo.git", directory: "packages/other" },
+      dist: { integrity: "sha512-demo" },
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    }), { status: 200 })));
+
+    await expect(verifyInstallSpec(
+      { kind: "npm", spec: "@acme/other-plugin" },
+      {
+        expectedRepository: "acme/repo",
+        expectedRepositoryPath: "packages/selected",
+        expectedPackageName: "@acme/selected-plugin",
+      },
+    )).rejects.toThrow("与目录选中的插件包 @acme/selected-plugin 不一致");
+  });
+
   it("writes both stable and commit-pinned GitHub build approval keys", async () => {
     const sha = "a".repeat(40);
     const manifest = Buffer.from(JSON.stringify({
