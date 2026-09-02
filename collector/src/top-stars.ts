@@ -8,12 +8,11 @@ import { fileURLToPath } from "node:url";
 import type { InstallMethod } from "@dsh-top100/schema";
 import discoveryConfig from "../config/discovery-sources.json";
 import {
-  fetchFileViaApi,
   fetchRepoRoot,
   githubFetch,
   type GithubRepo,
 } from "./github.js";
-import { detectPlugin, detectSubdirBundle, isCordisPackageJson } from "./detect.js";
+import { detectPlugin } from "./detect.js";
 import { runPool } from "./pool.js";
 import { requestGithubCode } from "./sources/github-code-search.js";
 import { requestGithubRepositories } from "./sources/github-partitioned-search.js";
@@ -103,30 +102,8 @@ async function validateCandidate(candidate: Candidate): Promise<ValidatedReposit
   if (!repo || repo.fork || repo.archived) return null;
 
   const rootItems = await fetchRepoRoot(repo.full_name, repo.default_branch);
-  let detection = await detectPlugin(repo.full_name, rootItems);
-  let evidence = detection.evidence;
-
-  if (!detection.isPlugin) {
-    const subdir = await detectSubdirBundle(repo.full_name, rootItems, repo.default_branch);
-    if (!subdir) return null;
-    detection = {
-      isPlugin: true,
-      type: "cordis-plugin",
-      installMethod: "pnpm-profile",
-      skillFiles: [],
-      evidence: subdir.evidence,
-    };
-    evidence = subdir.evidence;
-  } else if (detection.type === "cordis-plugin") {
-    const packageItem = rootItems.find(
-      (item) => item.type === "file" && item.name.toLowerCase() === "package.json"
-    );
-    if (!packageItem) return null;
-    const packageFile = await fetchFileViaApi(repo.full_name, packageItem.path);
-    if (!isCordisPackageJson(packageFile?.content ?? null)) return null;
-  }
-
-  if (!detection.type || !detection.installMethod) return null;
+  const detection = await detectPlugin(repo.full_name, rootItems, repo.default_branch);
+  if (detection.type !== "cordis-plugin" || !detection.installMethod) return null;
   return {
     fullName: repo.full_name,
     name: repo.name,
@@ -141,7 +118,7 @@ async function validateCandidate(candidate: Candidate): Promise<ValidatedReposit
     topics: repo.topics,
     type: detection.type,
     installMethod: detection.installMethod,
-    evidence,
+    evidence: detection.evidence,
     sources: candidate.sources,
     url: `https://github.com/${repo.full_name}`,
     pushedAt: repo.pushed_at,

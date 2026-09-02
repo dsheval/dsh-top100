@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   describeCatalogFetchError,
+  catalogScopeCounts,
   filterCatalog,
   filteredCatalogCategories,
   findPublishedEntry,
@@ -15,6 +16,7 @@ import {
   loadRankingView,
   loadRankings,
   loadSearchRankings,
+  loadSkillRankings,
   matchesQuery,
   parseRankingViewDocument,
   parseRankingSearchDocument,
@@ -100,6 +102,8 @@ function v2Publication() {
   };
   const hotRaw = json({ ...base, dataset: "hot", total: 1, rankings: document.rankings.hot });
   const risingRaw = json({ ...base, dataset: "rising", total: 1, rankings: document.rankings.rising });
+  const skillRankings = [entry("acme/skill-only", { rank: 1, type: "skill", categories: ["tools"] })];
+  const skillsRaw = json({ ...base, dataset: "skills", total: 1, rankings: skillRankings });
   const searchRankings = document.rankings.total.map((item) => ({
     rank: item.rank,
     fullName: item.fullName,
@@ -129,6 +133,7 @@ function v2Publication() {
     datasets: {
       hot: reference(`${prefix}/hot.json`, hotRaw, 1),
       rising: reference(`${prefix}/rising.json`, risingRaw, 1),
+      skills: reference(`${prefix}/skills.json`, skillsRaw, 1),
       search: reference(`${prefix}/search.json`, searchRaw, searchRankings.length),
       total: {
         count: document.rankings.total.length,
@@ -144,6 +149,7 @@ function v2Publication() {
     ["https://catalog.example/data/manifest.json", manifestRaw],
     [`https://catalog.example${prefix}/hot.json`, hotRaw],
     [`https://catalog.example${prefix}/rising.json`, risingRaw],
+    [`https://catalog.example${prefix}/skills.json`, skillsRaw],
     [`https://catalog.example${prefix}/search.json`, searchRaw],
     [`https://catalog.example${prefix}/total/page-001.json`, totalRaw],
   ]);
@@ -229,6 +235,72 @@ describe("catalog filter", () => {
     expect(result.excludedSkillCount).toBe(2);
   });
 
+  it("partitions project type independently from installation availability", () => {
+    const scoped: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/installable", {
+            type: "cordis-plugin",
+            install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/installable"] },
+          }),
+          entry("acme/skill", { type: "skill" }),
+          entry("acme/no-source", { type: "cordis-plugin" }),
+          entry("acme/ecosystem", { type: "project", description: "Desktop companion for DSH" }),
+        ],
+      },
+    };
+    const common = {
+      view: "total" as const,
+      category: null,
+      query: "",
+      offset: 0,
+      limit: 10,
+      installed: {},
+    };
+
+    expect(filterCatalog(scoped, { ...common, catalogScope: "plugins" }).items.map(({ fullName }) => fullName))
+      .toEqual(["acme/installable", "acme/no-source"]);
+    expect(filterCatalog(scoped, { ...common, catalogScope: "skills" }).items.map(({ fullName }) => fullName))
+      .toEqual(["acme/skill"]);
+    expect(filterCatalog(scoped, { ...common, catalogScope: "ecosystem" }).items.map(({ fullName }) => fullName))
+      .toEqual(["acme/ecosystem"]);
+    expect(catalogScopeCounts(scoped)).toEqual({ plugins: 2, skills: 1, ecosystem: 1 });
+    expect(filterCatalog(scoped, {
+      ...common,
+      catalogScope: "plugins",
+      installAvailability: "installable",
+    }).items.map(({ fullName }) => fullName)).toEqual(["acme/installable"]);
+    expect(filterCatalog(scoped, {
+      ...common,
+      catalogScope: "plugins",
+      installAvailability: "unavailable",
+    }).items.map(({ fullName }) => fullName)).toEqual(["acme/no-source"]);
+  });
+
+  it("keeps category counts inside the active marketplace scope", () => {
+    const scoped: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/installable", {
+            type: "cordis-plugin",
+            categories: ["ai"],
+            install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/installable"] },
+          }),
+          entry("acme/ecosystem", { type: "cordis-plugin", categories: ["ai"] }),
+        ],
+      },
+    };
+    const categories = filteredCatalogCategories(scoped, {
+      compatibleOnly: true,
+      catalogScope: "plugins",
+    });
+    expect(categories.find(({ id }) => id === "ai")?.count).toBe(2);
+  });
+
   it("keeps category counts aligned with Skill and compatibility filters", () => {
     const categorized: RankingsDocument = {
       ...document,
@@ -299,7 +371,7 @@ describe("catalog filter", () => {
       },
     };
     const result = filterCatalog(categorized, {
-      view: "category",
+      view: "total",
       category: "tools",
       query: "",
       offset: 0,
@@ -307,6 +379,34 @@ describe("catalog filter", () => {
       installed: {},
     });
     expect(result.items.map((item) => item.fullName)).toEqual(["acme/tool"]);
+  });
+
+  it("keeps an explicit category filter while searching", () => {
+    const categorized: RankingsDocument = {
+      ...document,
+      rankings: {
+        ...document.rankings,
+        total: [
+          entry("acme/browser", {
+            descriptionZh: "浏览器网页自动化",
+            categories: [{ id: "tools", confidence: 0.9, evidence: "Browser", source: "deepseek" }],
+          }),
+          entry("acme/security", {
+            descriptionZh: "依赖安全扫描",
+            categories: [{ id: "security", confidence: 0.9, evidence: "Security", source: "deepseek" }],
+          }),
+        ],
+      },
+    };
+    const result = filterCatalog(categorized, {
+      view: "total",
+      category: "security",
+      query: "security",
+      offset: 0,
+      limit: 10,
+      installed: {},
+    });
+    expect(result.items.map((item) => item.fullName)).toEqual(["acme/security"]);
   });
 
   it("ranks exact name matches above summary-only matches", () => {
@@ -410,6 +510,40 @@ describe("catalog transport", () => {
       .rejects.toThrow("不受信任的数据地址");
   });
 
+  it("accepts an older manifest v2 that predates the separate Skills dataset", () => {
+    const publication = v2Publication();
+    const { skills: _skills, ...legacyDatasets } = publication.manifest.datasets;
+    const legacyManifest = { ...publication.manifest, datasets: legacyDatasets };
+
+    expect(parseRankingManifest(json(legacyManifest)).datasets.skills).toBeUndefined();
+  });
+
+  it("falls back to the mixed legacy catalog when an older snapshot has no Skills dataset", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = v2Publication();
+    const { skills: _skills, ...legacyDatasets } = publication.manifest.datasets;
+    const legacyManifest = { ...publication.manifest, datasets: legacyDatasets };
+    vi.stubGlobal("fetch", vi.fn(async (input: string | URL | Request) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+      if (url === "https://legacy.example/data/manifest.json") {
+        return new Response(json(legacyManifest), { status: 200 });
+      }
+      if (url === "https://legacy.example/data/rankings.json") {
+        return new Response(json(document), { status: 200 });
+      }
+      return new Response("not found", { status: 404, statusText: "Not Found" });
+    }));
+
+    const result = await loadSkillRankings("https://legacy.example/data");
+
+    expect(result.rankings.total.map((item) => item.fullName)).toEqual([
+      "acme/rise-one",
+      "other/search-me",
+    ]);
+  });
+
   it("locates install metadata through the compact index and one immutable total page", async () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
     temporaryCaches.push(cacheDirectory);
@@ -445,6 +579,23 @@ describe("catalog transport", () => {
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "https://catalog.example/data/manifest.json",
       `https://catalog.example${publication.manifest.datasets.search.url}`,
+    ]);
+  });
+
+  it("loads Skills from their separate directory dataset", async () => {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = v2Publication();
+    const fetchMock = fetchPublication(publication);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await loadSkillRankings("https://catalog.example/data");
+
+    expect(result.rankings.total.map((item) => item.fullName)).toEqual(["acme/skill-only"]);
+    expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
+      "https://catalog.example/data/manifest.json",
+      `https://catalog.example${publication.manifest.datasets.skills.url}`,
     ]);
   });
 

@@ -69,7 +69,7 @@ export function recommendationResult(document, options) {
     }
     const category = options.category ?? null;
     const result = filterCatalog(document, {
-        view: category === null ? "total" : "category",
+        view: "total",
         category,
         query,
         offset: 0,

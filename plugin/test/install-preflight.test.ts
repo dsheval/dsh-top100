@@ -93,4 +93,18 @@ describe("install preflight approval", () => {
       provenance: { resolvedTarget: `github:acme/demo#${sha}`, commit: sha },
     });
   });
+
+  it("keeps configuration-required distinct from restart-only completion", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      name: "demo",
+      version: "1.4.2",
+      repository: "https://github.com/acme/demo.git",
+      dist: { integrity: "sha512-example" },
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    }), { status: 200 })));
+    const approval = await createInstallPreflight(entry({
+      install: { needsConfig: true, commands: ["dsh plugin add demo@latest"] },
+    }), "web");
+    expect(approval.preflight.activationExpectation).toBe("configuration-required");
+  });
 });

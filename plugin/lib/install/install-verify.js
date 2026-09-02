@@ -40,6 +40,30 @@ function repositoryUrl(value) {
     }
     return null;
 }
+function repositoryDirectory(value) {
+    if (value === null || typeof value !== "object")
+        return null;
+    const directory = value.directory;
+    return typeof directory === "string" && directory.trim()
+        ? directory.trim().replace(/^\.\//, "").replace(/\/+$/, "")
+        : null;
+}
+function normalizedRepositoryPath(value) {
+    const normalized = value?.trim().replace(/^\.\//, "").replace(/^\/+|\/+$/g, "") ?? "";
+    return normalized || null;
+}
+function assertExpectedPackage(manifest, options) {
+    const actualName = typeof manifest.name === "string" ? manifest.name.trim() : "";
+    if (options.expectedPackageName
+        && actualName.toLowerCase() !== options.expectedPackageName.trim().toLowerCase()) {
+        throw new InstallVerificationError(`安装包名 ${actualName || "未声明"} 与目录选中的插件包 ${options.expectedPackageName} 不一致，已停止安装`, true);
+    }
+    const expectedPath = normalizedRepositoryPath(options.expectedRepositoryPath);
+    const declaredPath = repositoryDirectory(manifest.repository);
+    if (expectedPath && declaredPath && declaredPath.toLowerCase() !== expectedPath.toLowerCase()) {
+        throw new InstallVerificationError(`安装包声明的仓库子目录 ${declaredPath} 与目录选中的插件子目录 ${expectedPath} 不一致，已停止安装`, true);
+    }
+}
 function githubRepositorySlug(value) {
     const match = value
         .replace(/^git\+/, "")
@@ -152,6 +176,7 @@ async function verifyNpm(spec, options) {
     if (!isBundleManifest(manifest)) {
         throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
     }
+    assertExpectedPackage(manifest, options);
     const manifestName = manifest.name;
     const packageName = typeof manifestName === "string" ? manifestName : parsed.name;
     if (packageName.toLowerCase() !== parsed.name.toLowerCase()) {
@@ -244,7 +269,12 @@ async function verifyGitHub(spec, options) {
         throw new InstallVerificationError(`GitHub 安装源 ${actualRepository} 与目录条目 ${options.expectedRepository.toLowerCase()} 不一致，已停止安装`, true);
     }
     const pathSelector = selector?.match(/^path:\/?(.+)$/);
+    const expectedPath = normalizedRepositoryPath(options.expectedRepositoryPath);
     if (pathSelector) {
+        const requestedPath = normalizedRepositoryPath(pathSelector[1]);
+        if (expectedPath && requestedPath?.toLowerCase() !== expectedPath.toLowerCase()) {
+            throw new InstallVerificationError(`GitHub 安装子目录 ${requestedPath ?? "仓库根目录"} 与目录选中的插件子目录 ${expectedPath ?? "仓库根目录"} 不一致，已停止安装`, true);
+        }
         const branch = await githubDefaultBranch(owner, repo);
         const commit = await githubCommit(owner, repo, branch);
         if (!commit)
@@ -254,6 +284,7 @@ async function verifyGitHub(spec, options) {
         if (!manifest) {
             throw new InstallVerificationError("指定 path 子目录没有 dsh.bundle", true);
         }
+        assertExpectedPackage(manifest, options);
         return verifiedGitHubTarget(spec, manifest, owner, repo, commit);
     }
     const ref = selector;
@@ -261,9 +292,19 @@ async function verifyGitHub(spec, options) {
     const commit = await githubCommit(owner, repo, branch);
     if (!commit)
         throw new InstallVerificationError("GitHub 安装源无法解析到不可变 commit", true);
+    if (expectedPath) {
+        const manifest = await githubManifest(owner, repo, `${expectedPath}/package.json`, commit);
+        if (!manifest) {
+            throw new InstallVerificationError(`目录选中的插件子目录 ${expectedPath} 没有 dsh.bundle`, true);
+        }
+        assertExpectedPackage(manifest, options);
+        return verifiedGitHubTarget(`github:${owner}/${repo}#path:/${expectedPath}`, manifest, owner, repo, commit);
+    }
     const rootManifest = await githubManifest(owner, repo, "package.json", commit);
-    if (rootManifest)
+    if (rootManifest) {
+        assertExpectedPackage(rootManifest, options);
         return verifiedGitHubTarget(spec, rootManifest, owner, repo, commit);
+    }
     if (ref)
         throw new InstallVerificationError("指定 ref 的仓库根目录没有 dsh.bundle");
     const tree = await fetchJson(`https://api.github.com/repos/${owner}/${repo}/git/trees/${encodeURIComponent(commit)}?recursive=1`);
@@ -286,13 +327,20 @@ async function verifyGitHub(spec, options) {
         const directory = packagePath.slice(0, -"/package.json".length);
         const manifest = await githubManifest(owner, repo, packagePath, commit);
         if (manifest) {
+            assertExpectedPackage(manifest, options);
             return verifiedGitHubTarget(`github:${owner}/${repo}#path:/${directory}`, manifest, owner, repo, commit);
         }
     }
     throw new InstallVerificationError("仓库根目录及候选子目录均未找到 dsh.bundle");
 }
 export async function verifyInstallSpec(spec, options = {}) {
-    const key = `${spec.kind}:${spec.spec}:${options.expectedRepository?.toLowerCase() ?? ""}`;
+    const key = [
+        spec.kind,
+        spec.spec,
+        options.expectedRepository?.toLowerCase() ?? "",
+        options.expectedPackageName?.toLowerCase() ?? "",
+        normalizedRepositoryPath(options.expectedRepositoryPath)?.toLowerCase() ?? "",
+    ].join(":");
     const cached = verificationCache.get(key);
     if (cached && Date.now() - cached.verifiedAt < VERIFICATION_CACHE_MS)
         return cached.value;

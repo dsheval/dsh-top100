@@ -2,7 +2,7 @@
  * detectSubdirBundle 单元测试：子目录 bundle 探测（根目录无标记、插件在子目录）
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { detectSubdirBundle, isCordisPackageJson } from "../src/detect.js";
+import { detectPlugin, detectSubdirBundle, isCordisPackageJson } from "../src/detect.js";
 import { fetchRepoRoot, fetchFileViaApi } from "../src/github.js";
 
 vi.mock("../src/github.js", () => ({
@@ -13,8 +13,8 @@ vi.mock("../src/github.js", () => ({
 const mockFetch = fetchRepoRoot as unknown as ReturnType<typeof vi.fn>;
 const mockFetchFile = fetchFileViaApi as unknown as ReturnType<typeof vi.fn>;
 
-function rootItem(name: string, type: "file" | "dir" = "file") {
-  return { name, path: name, type, size: type === "file" ? 1 : 0 };
+function rootItem(name: string, type: "file" | "dir" = "file", path = name) {
+  return { name, path, type, size: type === "file" ? 1 : 0 };
 }
 
 const CORDIS_SUBDIR = [
@@ -79,18 +79,172 @@ describe("detectSubdirBundle", () => {
     expect(r).toBeNull();
   });
 
-  it("最多探测 3 个候选目录", async () => {
+  it("最多探测 12 个候选目录", async () => {
     const root = [
       rootItem("README.md"),
       rootItem("dsh-a", "dir"),
       rootItem("dsh-b", "dir"),
       rootItem("dsh-c", "dir"),
       rootItem("dsh-d", "dir"),
+      rootItem("dsh-e", "dir"),
+      rootItem("dsh-f", "dir"),
+      rootItem("dsh-g", "dir"),
+      rootItem("dsh-h", "dir"),
+      rootItem("dsh-i", "dir"),
+      rootItem("dsh-j", "dir"),
+      rootItem("dsh-k", "dir"),
+      rootItem("dsh-l", "dir"),
+      rootItem("dsh-m", "dir"),
     ];
     mockFetch.mockResolvedValue([rootItem("package.json")]);
     const r = await detectSubdirBundle("someone/some-repo", root as never, "main");
     expect(r).toBeNull();
-    expect(mockFetch).toHaveBeenCalledTimes(3);
+    expect(mockFetch).toHaveBeenCalledTimes(12);
+  });
+});
+
+describe("detectPlugin monorepo validation", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("falls back from a non-plugin workspace root to a valid plugin/ package", async () => {
+    const root = [
+      rootItem("package.json"),
+      rootItem("plugin", "dir"),
+      rootItem("schema", "dir"),
+    ];
+    mockFetch.mockImplementation(async (_fullName: string, _branch: string, path: string) => {
+      if (path === "plugin") return CORDIS_SUBDIR;
+      return [];
+    });
+    mockFetchFile.mockImplementation(async (_fullName: string, path: string) => ({
+      sha: path,
+      content: path === "package.json"
+        ? JSON.stringify({ private: true, workspaces: ["schema", "plugin"] })
+        : JSON.stringify({
+          name: "@dsheval/dsh-top100-plugin",
+          repository: { type: "git", url: "git+https://github.com/dsheval/dsh-top100.git", directory: "plugin" },
+          dsh: { bundle: { patch: "./cordis.patch.yml" } },
+        }),
+    }));
+
+    const result = await detectPlugin("dsheval/dsh-top100", root as never, "main");
+
+    expect(result).toMatchObject({
+      isPlugin: true,
+      type: "cordis-plugin",
+      pluginPath: "plugin",
+      packageName: "@dsheval/dsh-top100-plugin",
+      pluginPaths: ["plugin"],
+    });
+    expect(mockFetchFile).toHaveBeenCalledWith("dsheval/dsh-top100", "package.json", "main");
+    expect(mockFetchFile).toHaveBeenCalledWith("dsheval/dsh-top100", "plugin/package.json", "main");
+  });
+
+  it("does not accept an ordinary Node workspace", async () => {
+    const root = [rootItem("package.json"), rootItem("packages", "dir")];
+    mockFetchFile.mockImplementation(async (_fullName: string, path: string) => ({
+      sha: path,
+      content: path === "package.json"
+        ? JSON.stringify({ private: true, workspaces: ["packages/*"] })
+        : JSON.stringify({ name: "@acme/web", dependencies: { react: "latest" } }),
+    }));
+    mockFetch.mockImplementation(async (_fullName: string, _branch: string, path: string) => {
+      if (path === "packages") return [rootItem("web", "dir", "packages/web")];
+      if (path === "packages/web") return [rootItem("package.json", "file", "packages/web/package.json")];
+      return [];
+    });
+
+    const result = await detectPlugin("acme/web-monorepo", root as never, "main");
+
+    expect(result.isPlugin).toBe(false);
+  });
+
+  it("keeps a valid root plugin at the repository root", async () => {
+    const root = [rootItem("package.json"), rootItem("cordis.patch.yml")];
+    mockFetchFile.mockResolvedValue({
+      sha: "root-package",
+      content: JSON.stringify({
+        name: "dsh-root-plugin",
+        dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      }),
+    });
+
+    const result = await detectPlugin("acme/dsh-root-plugin", root as never, "main");
+
+    expect(result).toMatchObject({
+      isPlugin: true,
+      type: "cordis-plugin",
+      pluginPath: null,
+      packageName: "dsh-root-plugin",
+      pluginPaths: ["."],
+    });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("selects one deterministic primary package and records every valid plugin package once", async () => {
+    const root = [
+      rootItem("package.json"),
+      rootItem("plugin", "dir"),
+      rootItem("plugins", "dir"),
+    ];
+    mockFetchFile.mockImplementation(async (_fullName: string, path: string) => ({
+      sha: path,
+      content: path === "package.json"
+        ? JSON.stringify({ private: true, workspaces: ["plugin", "plugins/*", "plugin"] })
+        : JSON.stringify({
+          name: path.startsWith("plugin/package") ? "@acme/primary" : "@acme/secondary",
+          dsh: { bundle: { patch: "./cordis.patch.yml" } },
+        }),
+    }));
+    mockFetch.mockImplementation(async (_fullName: string, _branch: string, path: string) => {
+      if (path === "plugins") return [rootItem("secondary", "dir", "plugins/secondary")];
+      if (path === "plugin" || path === "plugins/secondary") return [
+        rootItem("package.json", "file", `${path}/package.json`),
+        rootItem("cordis.patch.yml", "file", `${path}/cordis.patch.yml`),
+      ];
+      return [];
+    });
+
+    const result = await detectPlugin("acme/plugin-suite", root as never, "main");
+
+    expect(result.pluginPath).toBe("plugin");
+    expect(result.packageName).toBe("@acme/primary");
+    expect(result.pluginPaths).toEqual(["plugin", "plugins/secondary"]);
+  });
+
+  it("keeps a valid root as primary while recording validated workspace plugins", async () => {
+    const root = [
+      rootItem("package.json"),
+      rootItem("cordis.patch.yml"),
+      rootItem("packages", "dir"),
+    ];
+    mockFetchFile.mockImplementation(async (_fullName: string, path: string) => ({
+      sha: path,
+      content: path === "package.json"
+        ? JSON.stringify({
+            name: "@acme/root-plugin",
+            workspaces: ["packages/*"],
+            dsh: { bundle: { patch: "./cordis.patch.yml" } },
+          })
+        : JSON.stringify({
+            name: "@acme/extra-plugin",
+            dsh: { bundle: { patch: "./cordis.patch.yml" } },
+          }),
+    }));
+    mockFetch.mockImplementation(async (_fullName: string, _branch: string, path: string) => {
+      if (path === "packages") return [rootItem("extra", "dir", "packages/extra")];
+      if (path === "packages/extra") return CORDIS_SUBDIR.map((item) => ({
+        ...item,
+        path: `packages/extra/${item.path}`,
+      }));
+      return [];
+    });
+
+    const result = await detectPlugin("acme/root-suite", root as never, "release");
+
+    expect(result.pluginPath).toBeNull();
+    expect(result.packageName).toBe("@acme/root-plugin");
+    expect(result.pluginPaths).toEqual([".", "packages/extra"]);
   });
 });
 

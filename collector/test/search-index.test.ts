@@ -43,6 +43,7 @@ describe("compact search index", () => {
       definitions: { total: "total", rising: "rising", hot: "hot" },
       categories: [],
       rankings: { total: [entry], rising: [], hot: [] },
+      directories: { skills: [] },
     };
     const compact = buildSearchIndex(document);
     expect(compact.rankings[0]).toMatchObject({

@@ -1,6 +1,6 @@
 # dsh-Top100 DSH 插件
 
-把线上 dsh-Top100 榜单嵌进 DeepSeek Harness Web 的设置页：浏览 Top 100 / 新锐 / 总榜 / 分类榜，搜索全部已收录插件，并对作者明确提供且验证通过的安装源进行单项确认安装。设置页同时提供已安装插件与 Skill 的状态、更新、启停和卸载入口，以及只读的 profile、加载冲突、peer 依赖、榜单数据源和用户补丁诊断。插件还自带 `recommend-dsh-plugins` Skill；用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，模型会加载该 Skill，并通过 `dsh_top100_search` 查询实时榜单后给出推荐。
+把线上 dsh-Top100 榜单嵌进 DeepSeek Harness Web 的设置页：按综合热度、新锐或 Stars 浏览插件，以分类和安装能力独立筛选，并对作者明确提供且验证通过的安装源进行单项确认安装。Skills 使用独立技能库，不参与 Plugin 排名。设置页同时提供已安装 Plugin 与 Skill 的状态、更新、启停和卸载入口，以及只读的 profile、加载冲突、peer 依赖、榜单数据源和用户补丁诊断。插件还自带 `recommend-dsh-plugins` Skill；用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，模型会加载该 Skill，并通过 `dsh_top100_search` 查询实时榜单后给出推荐。
 
 **[一键下载并查看接入 DSH 指南](https://www.dsheval.ai/?page=dsh#dsh)**
 
@@ -55,7 +55,7 @@ dsh plugin --profile web add link:D:/dsh-top100/plugin
 
 页面包含：
 
-- **插件市场**：Top 100、新锐、总榜及 Agent增强 / 外观 / 编程 / 知识获取 / 工具 / 安全六类榜单。
+- **插件市场**：综合热度 Top 100、新锐和 Stars 总榜；Agent 增强 / 外观 / 编程 / 知识获取 / 工具 / 安全是独立筛选条件，安装能力也单独筛选。Skills 使用独立技能库，不参与 Plugin 排名；搜索始终使用对应目录的全库范围，详情会按需读取权威分页补齐 README 摘要与项目元数据。
 - **已安装**：管理当前 profile 的社区 Bundle 和本地 Skill；官方包、排行插件自身及 `link:` / `file:` 源会按安全边界限制操作。
 - **诊断**：只读扫描当前 profile 的加载顺序、重复行、peer 依赖、核心包多版本、榜单可达性和用户补丁层。
 
@@ -79,9 +79,9 @@ https://www.dsheval.ai/data/rankings-search.json
 https://www.dsheval.ai/data/rankings.json
 ```
 
-总榜、分类、全库搜索和 Agent 推荐读取紧凑检索索引；体积更大的完整目录只在安装预检需要权威安装元数据时按需读取。成功响应会缓存在 `$DSH_HOME/cache/dsh-top100/`；缓存过期后先返回上一次有效榜单，再在后台刷新，因此短时网络波动不会阻塞已缓存页面。相同数据请求会自动合并，避免并发重复下载。
+总榜、分类、全库搜索和 Agent 推荐读取紧凑检索索引；详情和安装预检会按需读取权威总榜分页，补齐 README 摘要、项目元数据与安装证据。成功响应会缓存在 `$DSH_HOME/cache/dsh-top100/`；缓存过期后先返回上一次有效榜单，再在后台刷新，因此短时网络波动不会阻塞已缓存页面。相同数据请求会自动合并，避免并发重复下载。
 
-分类榜与网页版共用该文件中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent增强、外观、编程、知识获取、工具和安全；线上名称、说明和数量更新后，插件会随榜单数据同步。
+分类筛选与网页版共用该文件中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent 增强、外观、编程、知识获取、工具和安全；线上名称、说明和数量更新后，插件会随目录数据同步。Plugin 榜单与 Skills 技能库使用不同数据集。
 
 插件市场展示的排名、Stars、涨幅、中文简介、标签和分类全部来自 DSHEval 服务器发布的这份文件，浏览器端不会另外请求 GitHub 生成或补写榜单数据。GitHub 仅用于用户主动打开项目，以及确认安装后验证安装源并交给 DSH 安装。
 

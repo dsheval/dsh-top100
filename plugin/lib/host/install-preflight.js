@@ -84,7 +84,7 @@ export async function createInstallPreflight(entry, profile) {
                     detail: "将复制该 commit 中的 SKILL.md、脚本、模板和资源；安装器拒绝符号链接，但不把结构验证表述为安全审核。",
                 }],
             requiresExplicitApproval: true,
-            activationExpectation: "not-applicable",
+            activationExpectation: entry.install?.needsConfig ? "configuration-required" : "not-applicable",
         };
         const approved = { entry, preflight, bundleTarget: null, skillSource };
         approvals.set(approvalToken, approved);
@@ -93,7 +93,11 @@ export async function createInstallPreflight(entry, profile) {
     const spec = resolveInstallSpec(entry);
     if (!spec)
         throw new Error("this catalog entry has no trusted DSH install source");
-    const bundleTarget = await verifyInstallSpec(spec, { expectedRepository: entry.fullName });
+    const bundleTarget = await verifyInstallSpec(spec, {
+        expectedRepository: entry.fullName,
+        expectedPackageName: entry.install?.packageName,
+        expectedRepositoryPath: entry.install?.repositoryPath,
+    });
     const risks = bundleRisks(bundleTarget);
     const preflight = {
         approvalToken,
@@ -105,7 +109,7 @@ export async function createInstallPreflight(entry, profile) {
         lifecycleScripts: bundleTarget.lifecycleScripts,
         risks,
         requiresExplicitApproval: risks.some((risk) => risk.severity === "warning"),
-        activationExpectation: "restart-required",
+        activationExpectation: entry.install?.needsConfig ? "configuration-required" : "restart-required",
     };
     const approved = { entry, preflight, bundleTarget, skillSource: null };
     approvals.set(approvalToken, approved);

@@ -23,6 +23,8 @@ export interface VerifiedInstallTarget {
 }
 export interface VerifyInstallOptions {
     expectedRepository?: string;
+    expectedPackageName?: string;
+    expectedRepositoryPath?: string;
 }
 export declare function clearInstallVerificationCache(): void;
 export declare function verifyInstallSpec(spec: InstallSpec, options?: VerifyInstallOptions): Promise<VerifiedInstallTarget>;

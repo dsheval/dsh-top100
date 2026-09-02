@@ -110,7 +110,6 @@ export async function fetchRawFile(
   filePath: string,
   branch?: string | null
 ): Promise<string | null> {
-  const ref = branch ? `?ref=${branch}` : "";
   const url = `https://raw.githubusercontent.com/${fullName}/${branch ? branch : "HEAD"}/${filePath}`;
   try {
     const res = await fetch(url, {
@@ -124,14 +123,16 @@ export async function fetchRawFile(
   }
 }
 
-/** 通过 contents API 读取小文件（分支无关，支持默认分支） */
+/** 通过 contents API 读取小文件；可固定到与目录探测相同的分支。 */
 export async function fetchFileViaApi(
   fullName: string,
-  filePath: string
+  filePath: string,
+  branch?: string | null
 ): Promise<{ content: string; sha: string } | null> {
   try {
+    const ref = branch ? `?ref=${encodeURIComponent(branch)}` : "";
     const data = await githubFetch<{ content: string; sha: string }>(
-      `/repos/${fullName}/contents/${filePath}`
+      `/repos/${fullName}/contents/${filePath}${ref}`
     );
     if (!data?.content) return null;
     return { content: Buffer.from(data.content, "base64").toString("utf-8"), sha: data.sha };

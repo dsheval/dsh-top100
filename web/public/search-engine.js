@@ -6,6 +6,7 @@ var SYNONYM_GROUPS = [
   ["\u4EE3\u7801", "\u7F16\u7A0B", "\u5F00\u53D1", "code", "coding"],
   ["\u7EC8\u7AEF", "\u547D\u4EE4\u884C", "shell", "cli", "terminal"],
   ["\u6587\u6863", "\u77E5\u8BC6\u5E93", "document", "docs", "knowledge"],
+  ["\u6D88\u606F", "\u901A\u77E5", "\u98DE\u4E66", "message", "messages", "messaging", "notification", "notifications", "slack", "webhook"],
   ["\u81EA\u52A8\u5316", "\u5DE5\u4F5C\u6D41", "automation", "workflow"],
   ["\u6D4B\u8BD5", "\u8BC4\u6D4B", "\u8BC4\u4F30", "test", "eval", "evaluation"],
   ["\u667A\u80FD\u4F53", "\u4EE3\u7406", "agent"],

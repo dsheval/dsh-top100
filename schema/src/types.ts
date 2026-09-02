@@ -6,7 +6,7 @@
 /** 插件形态 */
 export type PluginType = "skill" | "cordis-plugin";
 
-/** 分类榜使用的受控分类；一个仓库可以同时属于多个分类。 */
+/** 目录筛选使用的受控分类；一个仓库可以同时属于多个分类。 */
 export type PluginCategoryId =
   | "ai"
   | "appearance"
@@ -62,6 +62,10 @@ export interface InstallInfo {
   method: InstallMethod;
   /** skill 型：~/.agents/skills；cordis 型：profile 名 */
   target?: string;
+  /** GitHub 仓库内被验证为主插件的相对目录；根目录插件省略。 */
+  repositoryPath?: string;
+  /** 被选中插件目录的 package.json name，用于核对安装源身份。 */
+  packageName?: string;
   /** 是否需要 token / API key 等额外配置 */
   needsConfig: boolean;
   /** 从 README 安装章节解析出的真实安装命令（精确命令优先于模板） */
@@ -86,7 +90,7 @@ export interface DshPlugin {
   descriptionZh: string | null;
   /** 功能标签（LLM 打标 + 关键词兜底） */
   tags: string[];
-  /** README 语义分类；允许一个仓库进入多个分类榜。 */
+  /** README 语义分类；允许一个仓库进入多个分类筛选结果。 */
   categories?: PluginCategoryAssignment[];
   /** 人工精选标记 */
   curated: boolean;
@@ -183,6 +187,7 @@ export interface MarketData {
 export type RankingSnapshotDataset =
   | "hot"
   | "rising"
+  | "skills"
   | "total"
   | "category"
   | "search";
@@ -201,10 +206,15 @@ export interface RankingSummaryEntry {
   name: string;
   description: string;
   descriptionZh?: string;
+  /** README-derived excerpt, loaded only with a ranked page rather than the search index. */
+  readmeSummary?: string;
   stars: number;
   dailyStars: number;
   weeklyStars: number;
   hotScore: number;
+  openIssues: number;
+  language: string | null;
+  homepage: string | null;
   license: string | null;
   topics: string[];
   tags: string[];
@@ -240,12 +250,12 @@ export interface RankingSnapshotBase {
 
 /** Top 100 或新锐榜的单文件快照。 */
 export interface RankingListSnapshot extends RankingSnapshotBase {
-  dataset: "hot" | "rising";
+  dataset: "hot" | "rising" | "skills";
   total: number;
   rankings: RankingSummaryEntry[];
 }
 
-/** 总榜或分类榜的 100 条分页快照。 */
+/** 总榜或分类筛选结果的 100 条分页快照。 */
 export interface RankingPageSnapshot extends RankingSnapshotBase {
   dataset: "total" | "category";
   category?: PluginCategoryId;
@@ -309,6 +319,8 @@ export interface RankingManifestV2 {
   datasets: {
     hot: RankingFileReference;
     rising: RankingFileReference;
+    /** Skill directory ordered for stable browsing; entries are not Plugin ranks. */
+    skills: RankingFileReference;
     search: RankingFileReference;
     total: RankingPaginatedDatasetManifest;
   };

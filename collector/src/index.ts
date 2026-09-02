@@ -15,7 +15,6 @@ import {
   githubFetch,
   fetchRepoRoot,
   fetchRawFile,
-  fetchFileViaApi,
   type GithubRepo,
 } from "./github.js";
 import { fetchRepositoryUpdates } from "./github-batch.js";
@@ -23,7 +22,7 @@ import { fetchAwesomeEntries } from "./sources/awesome.js";
 import { scanOrg } from "./sources/github-search.js";
 import { discoverRepositories, type DiscoveryMode } from "./sources/discovery.js";
 import { fetchSubmissionRepos, fetchPackSubmissionRepos } from "./sources/issues.js";
-import { detectPlugin, isCordisPackageJson, detectNeedsConfig, detectSubdirBundle } from "./detect.js";
+import { detectPlugin, detectNeedsConfig, type Detection } from "./detect.js";
 import { computePracticalScore, computeP99Stars } from "./scoring.js";
 import { cached, cacheGet, cacheSet } from "./cache.js";
 import { runPool } from "./pool.js";
@@ -39,14 +38,9 @@ import { collectPacks } from "./packs.js";
 
 /** 检测结果缓存（增量核心：repo 未变化时复用，跳过重复检测网络调用） */
 interface DetectCache {
+  schemaVersion: 2;
   pushedAt: string;
-  detection: {
-    isPlugin: boolean;
-    type: import("@dsh-top100/schema").PluginType | null;
-    installMethod: import("@dsh-top100/schema").InstallMethod | null;
-    skillFiles: string[];
-    evidence: string[];
-  };
+  detection: Detection;
   isCordis: boolean;
   needsConfig: boolean;
   readmeSummary: string | null;
@@ -263,7 +257,7 @@ async function main() {
       let readmeContent: string | null;
       let subdir: string | null = null;
 
-      if (cachedDetect && cachedDetect.pushedAt === repo.pushed_at) {
+      if (cachedDetect?.schemaVersion === 2 && cachedDetect.pushedAt === repo.pushed_at) {
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
         detection = cachedDetect.detection;
         isCordis = cachedDetect.isCordis;
@@ -287,56 +281,29 @@ async function main() {
         );
 
         // 特征检测（只基于文件列表）
-        detection = await detectPlugin(candidate.fullName, rootItems);
+        detection = await detectPlugin(candidate.fullName, rootItems, repo!.default_branch);
         if (!detection.isPlugin) {
-          // 子目录 bundle 探测：根目录无标记时，检查子目录内的插件成品（如 dsh-pet/）
-          const sub = await detectSubdirBundle(
-            candidate.fullName,
-            rootItems,
-            repo!.default_branch
-          );
-          if (sub) {
-            detection = {
-              isPlugin: true,
-              type: "cordis-plugin",
-              installMethod: "pnpm-profile",
-              skillFiles: [],
-              evidence: sub.evidence,
-            };
-            subdir = sub.subdir;
-          } else {
-            rejected.push({ fullName: candidate.fullName, reason: "no plugin markers" });
-            return;
-          }
-        }
-
-        // package.json 二次确认（子目录 bundle 时读子目录内的 package.json）
-        let packageJsonContent: string | null = null;
-        const pkgRel = subdir ? `${subdir}/package.json` : "package.json";
-        const hasPkgJson =
-          rootItems.some((i) => i.name.toLowerCase() === "package.json") || Boolean(subdir);
-        if (hasPkgJson) {
-          packageJsonContent = await cached<string | null>(
-            "pkgjson",
-            candidate.fullName + (subdir ? `:${subdir}` : ""),
-            async () => {
-              const f = await fetchFileViaApi(candidate.fullName, pkgRel);
-              return f?.content ?? null;
-            }
-          );
-        }
-        isCordis = isCordisPackageJson(packageJsonContent);
-        if (detection.type === "cordis-plugin" && !isCordis) {
-          rejected.push({ fullName: candidate.fullName, reason: "package.json not cordis" });
+          rejected.push({ fullName: candidate.fullName, reason: "no validated plugin package" });
           return;
         }
+        subdir = detection.pluginPath;
+        isCordis = detection.type === "cordis-plugin";
 
-        // README（缓存 24h）
+        // README（缓存 24h）：monorepo 优先读取被选中插件目录，失败再回退仓库根目录。
+        const readmePath = subdir ? `${subdir}/README.md` : "README.md";
+        const readmeCacheKey = subdir ? `${candidate.fullName}:${subdir}` : candidate.fullName;
         readmeContent = await cached<string | null>(
           "readmes",
-          candidate.fullName,
-          () => fetchRawFile(candidate.fullName, "README.md", repo!.default_branch)
+          readmeCacheKey,
+          () => fetchRawFile(candidate.fullName, readmePath, repo!.default_branch)
         );
+        if (readmeContent === null && subdir) {
+          readmeContent = await cached<string | null>(
+            "readmes",
+            candidate.fullName,
+            () => fetchRawFile(candidate.fullName, "README.md", repo!.default_branch)
+          );
+        }
 
         // skill 型：抓 SKILL.md 做摘要
         let skillMd: string | null = null;
@@ -364,6 +331,7 @@ async function main() {
 
         // 写入检测缓存（含派生产物）
         cacheSet<DetectCache>("detect", candidate.fullName, {
+          schemaVersion: 2,
           pushedAt: repo.pushed_at,
           detection,
           isCordis,
@@ -377,7 +345,11 @@ async function main() {
 
       // 评分用的 readmeContent：检测缓存命中时从 readmes 缓存补取（不重新抓取）
       if (readmeContent === null) {
-        readmeContent = cacheGet<string | null>("readmes", candidate.fullName, 24 * 3600_000);
+        const readmeCacheKey = subdir ? `${candidate.fullName}:${subdir}` : candidate.fullName;
+        readmeContent = cacheGet<string | null>("readmes", readmeCacheKey, 24 * 3600_000);
+        if (readmeContent === null && subdir) {
+          readmeContent = cacheGet<string | null>("readmes", candidate.fullName, 24 * 3600_000);
+        }
       }
 
       const installCommands =
@@ -411,6 +383,8 @@ async function main() {
         install: {
           method: installMethod,
           target: detection.type === "skill" ? "~/.agents/skills" : undefined,
+          repositoryPath: detection.pluginPath ?? undefined,
+          packageName: detection.packageName ?? undefined,
           needsConfig,
           commands: installCommands,
           commandSource: installParsed.source === "template" ? undefined : installParsed.source,

@@ -205,53 +205,83 @@ function DiagnosticsPage({ t }) {
 }
 
 //#endregion
-//#region src/client/install-presentation.ts
-const ACTIVE_RANGES = {
-	queued: [
-		6,
-		10,
-		8e3
-	],
-	validating: [
-		16,
-		30,
-		12e3
-	],
-	downloading: [
-		36,
-		56,
-		18e3
-	],
-	"waiting-profile-lock": [
-		60,
-		66,
-		2e4
-	],
-	installing: [
-		70,
-		92,
-		3e4
-	]
-};
-function easedProgress(start, end, elapsed, duration) {
-	const ratio = 1 - Math.exp(-Math.max(0, elapsed) / duration);
-	return Math.round(start + (end - start) * ratio);
+//#region src/client/install-batch-presentation.ts
+function isInstallBatchComplete(batch) {
+	return batch.completed === batch.total;
 }
-function terminalProgress(job) {
+/** A deliberately coarse stage indicator; it never pretends to be byte progress. */
+function installStage(job) {
+	if (job.phase === "installed") return {
+		current: 4,
+		total: 4,
+		percent: 100
+	};
+	if (job.phase === "queued" || job.phase === "validating") return {
+		current: 1,
+		total: 4,
+		percent: 25
+	};
+	if (job.phase === "downloading") return {
+		current: 2,
+		total: 4,
+		percent: 50
+	};
+	if (job.phase === "waiting-profile-lock" || job.phase === "installing") return {
+		current: 3,
+		total: 4,
+		percent: 75
+	};
 	const output = `${job.lastLine}\n${job.error ?? ""}`;
-	if (/安装源|catalog|trusted source/i.test(output)) return 26;
-	if (/下载|fetch|network|ECONN|ETIMEDOUT|EAI_AGAIN/i.test(output)) return 50;
-	if (/等待.*profile|lockfile|锁/i.test(output)) return 64;
-	if (/Progress:|ERR_PNPM_|写入|配置验证|profile/i.test(output)) return 88;
-	return 76;
+	if (/下载|fetch|network|ECONN|ETIMEDOUT|EAI_AGAIN/i.test(output)) return {
+		current: 2,
+		total: 4,
+		percent: 50
+	};
+	if (/Progress:|ERR_PNPM_|写入|配置验证|profile/i.test(output)) return {
+		current: 3,
+		total: 4,
+		percent: 75
+	};
+	return {
+		current: 1,
+		total: 4,
+		percent: 25
+	};
 }
-/** A phase-based estimate. Active work deliberately stops below 100%. */
-function installProgress(job, now = Date.now()) {
-	if (job.phase === "installed") return 100;
-	if (job.phase === "failed" || job.phase === "cancelled") return terminalProgress(job);
-	const [start, end, duration] = ACTIVE_RANGES[job.phase];
-	return easedProgress(start, end, now - (job.startedAt ?? job.createdAt), duration);
+
+//#endregion
+//#region src/client/install-capability.ts
+/** Explain the next user-visible step without conflating structure, trust, and installability. */
+function presentInstallCapability(item) {
+	if (item.installed) return {
+		kind: "installed",
+		labelKey: "capabilityInstalled",
+		reasonKey: "capabilityInstalledReason"
+	};
+	if (item.installable && item.install?.needsConfig) return {
+		kind: "manual",
+		labelKey: "capabilityManual",
+		reasonKey: "capabilityManualReason"
+	};
+	if (item.installable) return {
+		kind: "ready",
+		labelKey: "capabilityReady",
+		reasonKey: "capabilityReadyReason"
+	};
+	if (!item.evidence.compatible) return {
+		kind: "browse",
+		labelKey: "capabilityBrowse",
+		reasonKey: "capabilityUnverifiedReason"
+	};
+	return {
+		kind: "browse",
+		labelKey: "capabilityBrowse",
+		reasonKey: "capabilityNoSourceReason"
+	};
 }
+
+//#endregion
+//#region src/client/install-presentation.ts
 function progressAddedCount(line) {
 	if (!/\bProgress:/i.test(line)) return null;
 	const added = /\badded\s+(\d+)/i.exec(line)?.[1];
@@ -518,62 +548,65 @@ function ManagedPage({ t, initialQuery = "" }) {
 								"aria-hidden": "true"
 							})
 						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: item.url ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-								href: item.url,
-								target: "_blank",
-								rel: "noreferrer",
-								children: item.name
-							}) : item.name }),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: "desc",
-								children: descriptionFor(item)
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: "facts",
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: "badge",
-										children: t(item.kind === "skill" ? "skillKind" : "bundleKind")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: `badge${item.enabled ? "" : " muted"}`,
-										children: t(item.enabled ? "enabled" : "disabled")
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: `badge activation-${item.activationState}`,
-										children: t(`activation_${item.activationState}`)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										t("version"),
-										": ",
-										item.version ?? "—"
-									] }),
-									item.latest ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										t("latest"),
-										": ",
-										item.latest
-									] }) : null,
-									item.fullName && item.fullName !== item.name ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-										t("project"),
-										": ",
-										item.fullName
-									] }) : null,
-									item.local ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: "badge",
-										children: t("localLink")
-									}) : null,
-									item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: "badge",
-										children: t("protected")
-									}) : null,
-									item.updateAvailable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: "badge warn",
-										children: t("updateAvailable")
-									}) : null
-								]
-							})
-						] }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "managed-copy",
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: item.url ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+									href: item.url,
+									target: "_blank",
+									rel: "noreferrer",
+									children: item.name
+								}) : item.name }),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "desc",
+									children: descriptionFor(item)
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "facts",
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "badge",
+											children: t(item.kind === "skill" ? "skillKind" : "bundleKind")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: `badge${item.enabled ? "" : " muted"}`,
+											children: t(item.enabled ? "enabled" : "disabled")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: `badge activation-${item.activationState}`,
+											children: t(`activation_${item.activationState}`)
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("version"),
+											": ",
+											item.version ?? "—"
+										] }),
+										item.latest ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("latest"),
+											": ",
+											item.latest
+										] }) : null,
+										item.fullName && item.fullName !== item.name ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("project"),
+											": ",
+											item.fullName
+										] }) : null,
+										item.local ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "badge",
+											children: t("localLink")
+										}) : null,
+										item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "badge",
+											children: t("protected")
+										}) : null,
+										item.updateAvailable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "badge warn",
+											children: t("updateAvailable")
+										}) : null
+									]
+								})
+							]
+						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: "actions row-actions",
 							children: [
@@ -620,24 +653,20 @@ function shouldRestartPagination(append, currentGeneratedAt, incomingGeneratedAt
 }
 
 //#endregion
-//#region src/client/trust-presentation.ts
-const SIGNAL_KEYS = {
-	indexed: "evidenceSignalIndexed",
-	"dsh-skill": "evidenceSignalDshSkill",
-	"agent-skill": "evidenceSignalAgentSkill",
-	"theme-bundle": "evidenceSignalThemeBundle",
-	"dsh-bundle": "evidenceSignalDshBundle",
-	"install-source": "evidenceSignalInstallSource"
-};
-function presentCatalogEvidence(evidence, installKind, t) {
+//#region src/client/repository-identity.ts
+function presentRepositoryIdentity(entry) {
+	const path = entry.fullName.split("/").map((part) => part.trim()).filter(Boolean);
+	const repositoryName = path.at(-1) || entry.name.trim() || entry.fullName;
+	const sourceName = entry.name.trim();
+	const nameRepeatsFullPath = sourceName.toLocaleLowerCase() === entry.fullName.trim().toLocaleLowerCase();
 	return {
-		signals: evidence.signalCodes.map((code) => {
-			const label = t(SIGNAL_KEYS[code]);
-			return code === "install-source" && installKind ? `${label} (${installKind})` : label;
-		}),
-		caveat: evidence.caveatCode === "not-security-review" ? t("evidenceCaveatNotSecurityReview") : evidence.caveat
+		name: !sourceName || nameRepeatsFullPath ? repositoryName : sourceName,
+		owner: entry.owner.trim() || path[0] || ""
 	};
 }
+
+//#endregion
+//#region src/client/trust-presentation.ts
 function presentInstallRisk(risk, t) {
 	return {
 		summary: t(`risk_${risk.code}_summary`),
@@ -647,14 +676,13 @@ function presentInstallRisk(risk, t) {
 
 //#endregion
 //#region src/client/RankingsPage.tsx
-const VIEWS = [
+const SORT_VIEWS = [
 	"hot",
 	"rising",
-	"total",
-	"category"
+	"total"
 ];
-const HIDE_SKILLS_KEY = "dsh-top100:hide-skills";
-const SHOW_CANDIDATES_KEY = "dsh-top100:show-candidates";
+const AUXILIARY_CATALOG_SCOPES = ["skills", "ecosystem"];
+const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
 function RankTrustMark() {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
@@ -694,16 +722,8 @@ function rankingBasisKey(view, query) {
 function rankingBasisShortKey(view, query) {
 	return query ? "basisShort_search" : `basisShort_${view}`;
 }
-function dateLabel(value) {
-	const timestamp = Date.parse(value);
-	return Number.isFinite(timestamp) ? new Date(timestamp).toLocaleDateString() : "-";
-}
-function FilterGlyph() {
-	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
-		viewBox: "0 0 16 16",
-		"aria-hidden": "true",
-		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M2.5 4h11M4.5 8h7M6.5 12h3" })
-	});
+function deltaLabel(value) {
+	return value > 0 ? `+${value}` : String(value);
 }
 const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 	className: "card-skeleton",
@@ -725,11 +745,30 @@ const ERROR_LOCALE_KEYS = {
 	source: "source",
 	generic: "generic"
 };
+var HttpError = class extends Error {
+	constructor(message, status) {
+		super(message);
+		this.status = status;
+	}
+};
 async function readJson(url, init) {
 	const response = await fetch(url, init);
 	const body = await response.json();
-	if (!response.ok) throw new Error(body.error || body.message || `${response.status} ${response.statusText}`);
+	if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status);
 	return body;
+}
+function rememberedBatchId() {
+	try {
+		return window.localStorage.getItem(LAST_BATCH_KEY);
+	} catch {
+		return null;
+	}
+}
+function rememberBatch(batchId) {
+	try {
+		if (batchId) window.localStorage.setItem(LAST_BATCH_KEY, batchId);
+		else window.localStorage.removeItem(LAST_BATCH_KEY);
+	} catch {}
 }
 function cacheAgeLabel(ageMs, t) {
 	if (ageMs === null) return t("cacheAgeUnknown");
@@ -740,41 +779,28 @@ function cacheAgeLabel(ageMs, t) {
 function RankingsPage({ t }) {
 	const [section, setSection] = (0, react.useState)("rankings");
 	const [view, setView] = (0, react.useState)("hot");
-	const [category, setCategory] = (0, react.useState)("ai");
+	const [category, setCategory] = (0, react.useState)(null);
 	const [query, setQuery] = (0, react.useState)("");
 	const [draft, setDraft] = (0, react.useState)("");
-	const [hideSkills, setHideSkills] = (0, react.useState)(() => {
-		try {
-			return window.localStorage.getItem(HIDE_SKILLS_KEY) === "1";
-		} catch {
-			return false;
-		}
-	});
-	const [showCandidates, setShowCandidates] = (0, react.useState)(() => {
-		try {
-			return window.localStorage.getItem(SHOW_CANDIDATES_KEY) === "1";
-		} catch {
-			return false;
-		}
-	});
-	const [filtersOpen, setFiltersOpen] = (0, react.useState)(false);
-	const [selectedItem, setSelectedItem] = (0, react.useState)(null);
+	const [catalogScope, setCatalogScope] = (0, react.useState)("plugins");
+	const [installAvailability, setInstallAvailability] = (0, react.useState)("all");
 	const [data, setData] = (0, react.useState)(null);
 	const [items, setItems] = (0, react.useState)([]);
 	const [error, setError] = (0, react.useState)(null);
 	const [errorAction, setErrorAction] = (0, react.useState)("load");
 	const [loading, setLoading] = (0, react.useState)(true);
-	const [busy, setBusy] = (0, react.useState)(null);
+	const [busy, setBusy] = (0, react.useState)(() => rememberedBatchId());
 	const [preparing, setPreparing] = (0, react.useState)(null);
 	const [confirming, setConfirming] = (0, react.useState)(null);
 	const [preflights, setPreflights] = (0, react.useState)([]);
 	const [riskAccepted, setRiskAccepted] = (0, react.useState)(false);
 	const [batch, setBatch] = (0, react.useState)(null);
+	const [installActivityOpen, setInstallActivityOpen] = (0, react.useState)(false);
 	const [notice, setNotice] = (0, react.useState)(null);
 	const loadSequence = (0, react.useRef)(0);
 	const loadedSnapshot = (0, react.useRef)(null);
-	const filterRef = (0, react.useRef)(null);
-	const load = (0, react.useCallback)(async (nextView, nextQuery, nextCategory, nextHideSkills, nextShowCandidates, offset = 0, append = false) => {
+	const recoveryChecked = (0, react.useRef)(false);
+	const load = (0, react.useCallback)(async (nextView, nextQuery, nextCategory, nextCatalogScope, nextInstallAvailability, offset = 0, append = false) => {
 		const requestId = ++loadSequence.current;
 		const requestSnapshot = loadedSnapshot.current;
 		setLoading(true);
@@ -788,9 +814,9 @@ function RankingsPage({ t }) {
 		try {
 			const fetchPage = (pageOffset) => readJson(`/dsh-top100/rankings?${new URLSearchParams({
 				view: nextView,
-				category: nextCategory,
-				skills: nextHideSkills ? "0" : "1",
-				scope: nextShowCandidates ? "all" : "compatible",
+				category: nextCategory ?? "",
+				catalogScope: nextCatalogScope,
+				installAvailability: nextInstallAvailability,
 				q: nextQuery,
 				offset: String(pageOffset),
 				limit: "40"
@@ -816,45 +842,49 @@ function RankingsPage({ t }) {
 	}, []);
 	(0, react.useEffect)(() => {
 		if (section !== "rankings") return;
-		load(view, query, category, hideSkills, showCandidates, 0, false);
+		load(view, query, category, catalogScope, installAvailability, 0, false);
 	}, [
+		catalogScope,
 		category,
-		hideSkills,
+		installAvailability,
 		load,
 		query,
 		section,
-		showCandidates,
 		view
 	]);
 	(0, react.useEffect)(() => {
-		if (!filtersOpen) return void 0;
-		const closeOnOutsideClick = (event) => {
-			if (filterRef.current && !filterRef.current.contains(event.target)) setFiltersOpen(false);
-		};
-		document.addEventListener("pointerdown", closeOnOutsideClick);
-		return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
-	}, [filtersOpen]);
-	(0, react.useEffect)(() => {
-		if (!filtersOpen && !selectedItem) return void 0;
-		const closeOnEscape = (event) => {
-			if (event.key !== "Escape") return;
-			setFiltersOpen(false);
-			setSelectedItem(null);
-		};
-		document.addEventListener("keydown", closeOnEscape);
-		return () => document.removeEventListener("keydown", closeOnEscape);
-	}, [filtersOpen, selectedItem]);
+		if (recoveryChecked.current) return;
+		recoveryChecked.current = true;
+		if (busy) return;
+		readJson("/dsh-top100/status").then((status) => {
+			const recovered = status.activeBatches[0];
+			if (!recovered) return;
+			rememberBatch(recovered.batchId);
+			setBatch(recovered);
+			setBusy(recovered.batchId);
+			setNotice(t("installTaskRecovered"));
+		}).catch(() => {});
+	}, [busy, t]);
 	(0, react.useEffect)(() => {
 		if (!busy) return void 0;
 		const refresh = () => {
 			readJson(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(busy)}`).then(async (snapshot) => {
 				setBatch(snapshot);
-				if (snapshot.completed === snapshot.total) {
+				if (isInstallBatchComplete(snapshot)) {
+					rememberBatch(null);
 					setBusy(null);
 					setNotice(snapshot.requiresRestart ? t("restart") : t("batchComplete"));
-					await load(view, query, category, hideSkills, showCandidates, 0, false);
+					await load(view, query, category, catalogScope, installAvailability, 0, false);
 				}
 			}).catch((cause) => {
+				if (cause instanceof HttpError && cause.status === 404) {
+					rememberBatch(null);
+					setBusy(null);
+					setBatch(null);
+					setNotice(t("installTaskUnavailable"));
+					setError(null);
+					return;
+				}
 				setErrorAction("install");
 				setError(cause instanceof Error ? cause.message : String(cause));
 			});
@@ -864,11 +894,11 @@ function RankingsPage({ t }) {
 		return () => window.clearInterval(timer);
 	}, [
 		busy,
+		catalogScope,
 		category,
-		hideSkills,
+		installAvailability,
 		load,
 		query,
-		showCandidates,
 		t,
 		view
 	]);
@@ -876,21 +906,23 @@ function RankingsPage({ t }) {
 		if (!data) return 0;
 		return Math.max(0, data.total - items.length);
 	}, [data, items.length]);
-	const jobsByName = (0, react.useMemo)(() => new Map((batch?.jobs ?? []).map((job) => [job.fullName, job])), [batch]);
 	const preflightsByName = (0, react.useMemo)(() => new Map(preflights.map((preflight) => [preflight.fullName, preflight])), [preflights]);
 	const activeCategory = data?.categories.find((definition) => definition.id === category);
-	const activeFilterCount = Number(hideSkills) + Number(showCandidates);
-	const excludedSkillCount = data?.excludedSkillCount ?? 0;
-	const selectedEvidence = selectedItem ? presentCatalogEvidence(selectedItem.evidence, selectedItem.installSpec?.kind ?? null, t) : null;
-	function resetCatalogFilters() {
-		setHideSkills(false);
-		setShowCandidates(false);
-		try {
-			window.localStorage.removeItem(HIDE_SKILLS_KEY);
-			window.localStorage.removeItem(SHOW_CANDIDATES_KEY);
-		} catch {}
+	function startSearch(value) {
+		const nextQuery = value.trim();
+		setDraft(nextQuery);
+		setQuery(nextQuery);
+	}
+	function switchCatalogScope(nextScope) {
+		setCatalogScope(nextScope);
+		setView(nextScope === "plugins" ? "hot" : "total");
+		setInstallAvailability("all");
+		setCategory(null);
+		setQuery("");
+		setDraft("");
 	}
 	async function prepareInstall(item) {
+		setInstallActivityOpen(false);
 		setPreparing(item.fullName);
 		setError(null);
 		setNotice(null);
@@ -929,6 +961,8 @@ function RankingsPage({ t }) {
 			});
 			setBatch(result);
 			setBusy(result.batchId);
+			rememberBatch(result.batchId);
+			setInstallActivityOpen(true);
 		} catch (cause) {
 			setErrorAction("install");
 			setError(cause instanceof Error ? cause.message : String(cause));
@@ -938,15 +972,31 @@ function RankingsPage({ t }) {
 		}
 	}
 	async function cancelJob(jobId) {
-		await readJson("/dsh-top100/cancel", {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ jobId })
-		});
+		try {
+			await readJson("/dsh-top100/cancel", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ jobId })
+			});
+		} catch (cause) {
+			setErrorAction("install");
+			setError(`${t("cancelFailed")} ${cause instanceof Error ? cause.message : String(cause)}`);
+		}
 	}
 	async function retryJob(job) {
 		if (!job.action || job.action === "install") {
-			const item = items.find((candidate) => candidate.fullName === job.fullName);
+			let item = items.find((candidate) => candidate.fullName === job.fullName);
+			if (!item) try {
+				item = (await readJson(`/dsh-top100/rankings?${new URLSearchParams({
+					view: "total",
+					category: "",
+					catalogScope: "plugins",
+					installAvailability: "all",
+					q: job.fullName,
+					offset: "0",
+					limit: "20"
+				})}`)).items.find((candidate) => candidate.fullName === job.fullName);
+			} catch {}
 			if (item) await prepareInstall(item);
 			else {
 				setErrorAction("install");
@@ -962,17 +1012,24 @@ function RankingsPage({ t }) {
 			});
 			setBatch(result);
 			setBusy(result.batchId);
+			rememberBatch(result.batchId);
+			setInstallActivityOpen(true);
 		} catch (cause) {
 			setErrorAction("install");
 			setError(cause instanceof Error ? cause.message : String(cause));
 		}
 	}
 	function jobPanel(job) {
-		const progress = installProgress(job);
+		const stage = installStage(job);
 		const status = installStatus(job);
 		const error$1 = job.phase === "failed" ? presentInstallError(job.error ?? job.lastLine) : null;
 		const errorKey = error$1 ? ERROR_LOCALE_KEYS[error$1.kind] : null;
-		const activeStage = progress >= 100 ? 3 : progress >= 70 ? 2 : progress >= 36 ? 1 : 0;
+		const activeStage = stage.current - 1;
+		const terminal = [
+			"installed",
+			"failed",
+			"cancelled"
+		].includes(job.phase);
 		const stages = [
 			"installStageCheck",
 			"installStageDownload",
@@ -985,31 +1042,29 @@ function RankingsPage({ t }) {
 			children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "job-heading",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(`phase_${job.phase}`) }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						t("installProgressEstimate"),
-						" ",
-						progress,
-						"%"
-					] })]
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "job-plugin-name",
+						title: job.fullName,
+						children: job.fullName
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(`phase_${job.phase}`) })]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				!terminal ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "job-progress",
 					role: "progressbar",
 					"aria-label": t("installProgressLabel"),
 					"aria-valuemin": 0,
 					"aria-valuemax": 100,
-					"aria-valuenow": progress,
-					"aria-valuetext": `${t("installProgressEstimate")} ${progress}%`,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { style: { width: `${progress}%` } })
-				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					"aria-valuenow": stage.percent,
+					"aria-valuetext": `${t("installProgressEstimate")} ${stage.current}/${stage.total}`,
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { style: { width: `${stage.percent}%` } })
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "job-stages",
 					"aria-hidden": "true",
 					children: stages.map((key, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: index < activeStage || job.phase === "installed" ? "is-complete" : index === activeStage ? "is-active" : void 0,
+						className: index < activeStage ? "is-complete" : index === activeStage ? "is-active" : void 0,
 						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(key)]
 					}, key))
-				}),
+				})] }) : null,
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
 					className: "job-status",
 					children: [t(status.key), status.count === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [" · ", status.count] })]
@@ -1017,14 +1072,6 @@ function RankingsPage({ t }) {
 				job.phase === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 					className: `activation activation-${job.activationState}`,
 					children: t(`activation_${job.activationState}`)
-				}) : null,
-				job.provenance ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-					className: "job-provenance",
-					children: [
-						t("resolvedSource"),
-						" ",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: job.provenance.resolvedTarget })
-					]
 				}) : null,
 				error$1 && errorKey ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "job-error-message",
@@ -1061,7 +1108,10 @@ function RankingsPage({ t }) {
 					children: t("retry")
 				}) : job.phase === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
-					onClick: () => setSection("installed"),
+					onClick: () => {
+						setInstallActivityOpen(false);
+						setSection("installed");
+					},
 					children: t("manage")
 				}) : null
 			]
@@ -1155,6 +1205,30 @@ function RankingsPage({ t }) {
 			}),
 			section === "rankings" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: "catalog-navigation",
+					"aria-label": t("catalogScope"),
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: "catalog-primary",
+						"aria-current": catalogScope === "plugins" ? "page" : void 0,
+						onClick: () => switchCatalogScope("plugins"),
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("catalogScope_plugins") }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: data.scopeCounts.plugins }) : null]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "catalog-explore",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("exploreMore") }), AUXILIARY_CATALOG_SCOPES.map((scope) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+							type: "button",
+							"aria-pressed": catalogScope === scope,
+							title: t(`catalogScopeHint_${scope}`),
+							onClick: () => switchCatalogScope(scope),
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`catalogScope_${scope}`) }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
+								"(",
+								data.scopeCounts[scope],
+								")"
+							] }) : null]
+						}, scope))]
+					})]
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "toolbar",
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "search-cluster",
@@ -1164,113 +1238,99 @@ function RankingsPage({ t }) {
 							placeholder: t("searchPlaceholder"),
 							onChange: (event) => setDraft(event.target.value),
 							onKeyDown: (event) => {
-								if (event.key === "Enter") setQuery(draft.trim());
+								if (event.key === "Enter") startSearch(draft);
 							}
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
 							className: "primary",
-							onClick: () => setQuery(draft.trim()),
+							onClick: () => startSearch(draft),
 							children: t("search")
 						})]
 					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: "filter-control",
-						ref: filterRef,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							className: "filter-trigger",
-							"aria-expanded": filtersOpen,
-							"aria-controls": "dsh-top100-filters",
-							onClick: () => setFiltersOpen((open) => !open),
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)(FilterGlyph, {}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("filter") }),
-								activeFilterCount > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-									className: "filter-count",
-									children: activeFilterCount
-								}) : null
-							]
-						}), filtersOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "filter-popover",
-							id: "dsh-top100-filters",
-							role: "group",
-							"aria-label": t("filter"),
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("filterHint") }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("hideSkills") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("hideSkillsHint") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: hideSkills,
+						className: "browse-controls",
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+								className: "select-control",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("categoryFilter") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+									value: category ?? "",
 									onChange: (event) => {
-										const checked = event.target.checked;
-										setHideSkills(checked);
-										try {
-											window.localStorage.setItem(HIDE_SKILLS_KEY, checked ? "1" : "0");
-										} catch {}
-									}
-								})] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("showCandidates") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: t("showCandidatesHint") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: showCandidates,
+										const nextCategory = event.target.value;
+										setCategory(nextCategory || null);
+										setQuery("");
+										setDraft("");
+									},
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: "",
+										children: t("allCategories")
+									}), data?.categories.map((definition) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: definition.id,
+										children: definition.label
+									}, definition.id))]
+								})]
+							}),
+							catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+								className: "select-control",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installAvailability") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+									value: installAvailability,
+									onChange: (event) => setInstallAvailability(event.target.value),
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "installable",
+											children: t("installAvailability_installable")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "all",
+											children: t("installAvailability_all")
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+											value: "unavailable",
+											children: t("installAvailability_unavailable")
+										})
+									]
+								})]
+							}) : null,
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+								className: "select-control",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("sortBy") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("select", {
+									value: view,
 									onChange: (event) => {
-										const checked = event.target.checked;
-										setShowCandidates(checked);
-										try {
-											window.localStorage.setItem(SHOW_CANDIDATES_KEY, checked ? "1" : "0");
-										} catch {}
-									}
-								})] }),
-								activeFilterCount > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "filter-reset",
-									onClick: resetCatalogFilters,
-									children: t("clearFilters")
-								}) : null
-							]
-						}) : null]
+										setView(event.target.value);
+										setQuery("");
+										setDraft("");
+									},
+									children: (catalogScope === "plugins" ? SORT_VIEWS : ["total"]).map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+										value: id,
+										children: catalogScope === "plugins" ? t(id) : t("starsSort")
+									}, id))
+								})]
+							})
+						]
 					})]
 				}),
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "tabs ranking-tabs",
-					role: "tablist",
-					children: VIEWS.map((id) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: "tab",
-						role: "tab",
-						"aria-selected": view === id,
-						onClick: () => {
-							setView(id);
-							setQuery("");
-							setDraft("");
-						},
-						children: t(id)
-					}, id))
-				}),
-				view === "category" && data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "category-panel",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						className: "category-options",
-						role: "group",
-						"aria-label": t("categoryFilter"),
-						children: data.categories.map((definition) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							"aria-pressed": category === definition.id,
-							title: definition.description,
-							onClick: () => {
-								setCategory(definition.id);
-								setQuery("");
-								setDraft("");
-							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: definition.label }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: definition.count })]
-						}, definition.id))
-					}), activeCategory ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-						className: "category-description",
-						children: activeCategory.description
-					}) : null]
+				activeCategory ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					className: "category-description",
+					children: activeCategory.description
 				}) : null,
 				data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "ranking-context",
 					"aria-live": "polite",
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+						query ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+							className: "result-count search-result-count",
+							children: [
+								t("catalogMatches"),
+								" ",
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: data.total }),
+								" ",
+								t("entries"),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
+									" · ",
+									t("showingResults"),
+									" ",
+									items.length
+								] })
+							]
+						}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: "result-count",
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
@@ -1280,22 +1340,16 @@ function RankingsPage({ t }) {
 								t("entries")
 							]
 						}),
-						hideSkills && excludedSkillCount > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-							className: "filter-summary",
-							children: [
-								t("hiddenSkillsPrefix"),
-								" ",
-								excludedSkillCount,
-								" ",
-								t("skillRepositories")
-							]
-						}) : null,
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "scope-summary",
+							children: t(`catalogScopeHint_${catalogScope}`)
+						}),
+						catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: "ranking-basis",
 							title: t(rankingBasisKey(view, query)),
 							"aria-label": `${t(rankingBasisShortKey(view, query))}: ${t(rankingBasisKey(view, query))}`,
 							children: t(rankingBasisShortKey(view, query))
-						})
+						}) : null
 					]
 				}) : null,
 				notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1311,94 +1365,105 @@ function RankingsPage({ t }) {
 						" ",
 						errorAction === "load" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
-							onClick: () => void load(view, query, category, hideSkills, showCandidates, 0, false),
+							onClick: () => void load(view, query, category, catalogScope, installAvailability, 0, false),
 							children: t("retry")
 						}) : null
 					]
 				}) : null,
-				busy ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "banner",
-					children: batch ? `${t("batchProgress")} ${batch.completed}/${batch.total}` : t("installing")
+				batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: `install-activity-banner ${busy ? "is-active" : "is-complete"}`,
+					role: "status",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: batch.jobs[0] ? t(`phase_${batch.jobs[0].phase}`) : t(busy ? "installTaskRunning" : "installTaskComplete") }), batch.jobs[0] ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+						title: batch.jobs[0].fullName,
+						children: batch.jobs[0].fullName
+					}) : null] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => setInstallActivityOpen(true),
+						children: t(busy ? "viewInstallProgress" : "viewInstallResult")
+					})]
 				}) : null,
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "list",
 					"aria-busy": loading,
 					"aria-label": loading && items.length === 0 ? t("loadingRankings") : void 0,
 					children: [loading && items.length === 0 && !error ? SKELETON_CARDS : items.map((item) => {
-						const job = jobsByName.get(item.fullName);
-						const rankingMetric = !query && view === "hot" ? {
+						const identity = presentRepositoryIdentity(item);
+						const installCapability = presentInstallCapability(item);
+						const rankingMetric = catalogScope === "plugins" && !query && view === "hot" ? {
 							label: t("hotScore"),
 							value: item.hotScore.toFixed(1)
-						} : !query && view === "rising" ? {
+						} : catalogScope === "plugins" && !query && view === "rising" ? {
 							label: t("daily"),
 							value: `+${item.dailyStars}`
 						} : null;
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
+							className: "ranking-card",
 							"data-rank": item.rank,
 							"data-trust": item.evidence.trustLevel,
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-									className: "rank",
-									children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: "card-copy",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "card-heading",
+									children: [catalogScope === "plugins" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+										className: "rank",
 										"aria-label": `${t("rank")} ${item.rank}`,
-										children: item.rank
-									})
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: "card-copy",
+										children: ["#", item.rank]
+									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "rank",
+										children: t(`catalogScope_${catalogScope}`)
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+										href: item.url || `https://github.com/${item.fullName}`,
+										target: "_blank",
+										rel: "noreferrer",
+										"aria-label": identity.name,
+										title: identity.name,
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "repo-name",
+											children: identity.name
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "title-arrow",
+											"aria-hidden": "true",
+											children: "↗"
+										})]
+									}) })]
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "desc",
+									children: item.descriptionZh || item.description
+								})]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: "card-footer",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "facts",
 									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
-											href: item.url || `https://github.com/${item.fullName}`,
-											target: "_blank",
-											rel: "noreferrer",
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: item.fullName }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: "title-arrow",
-												"aria-hidden": "true",
-												children: "↗"
-											})]
-										}) }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-											className: "desc",
-											children: item.descriptionZh || item.description
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: "star-fact",
+											children: ["★ ", item.stars]
 										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-											className: "facts",
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("weekly"),
+											" ",
+											deltaLabel(item.weeklyStars)
+										] }),
+										rankingMetric ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											className: "ranking-metric",
+											title: t(rankingBasisKey(view, query)),
 											children: [
-												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-													className: "star-fact",
-													children: ["★ ", item.stars]
-												}),
-												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-													t("weekly"),
-													" ",
-													item.weeklyStars
-												] }),
-												rankingMetric ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-													className: "ranking-metric",
-													title: t(rankingBasisKey(view, query)),
-													children: [
-														rankingMetric.label,
-														" ",
-														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: rankingMetric.value })
-													]
-												}) : null,
-												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-													className: `evidence-badge evidence-${item.evidence.trustLevel}`,
-													children: t(`trust_${item.evidence.trustLevel}`)
-												})
+												rankingMetric.label,
+												" ",
+												/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: rankingMetric.value })
 											]
+										}) : null,
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: `capability-label capability-${installCapability.kind}`,
+											title: t(installCapability.reasonKey),
+											children: t(installCapability.labelKey)
 										})
 									]
-								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: "actions",
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									children: item.installed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										type: "button",
-										className: "detail-button",
-										onClick: () => setSelectedItem(item),
-										children: t("viewDetails")
-									}), job ? jobPanel(job) : item.installed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
+										className: "primary",
 										onClick: () => setSection("installed"),
 										children: t("manage")
 									}) : item.installable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -1406,7 +1471,7 @@ function RankingsPage({ t }) {
 										className: "primary",
 										disabled: busy !== null || preparing !== null,
 										onClick: () => void prepareInstall(item),
-										children: preparing === item.fullName ? t("preflighting") : t("install")
+										children: preparing === item.fullName ? t("preflighting") : t("reviewInstall")
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 										className: "project-link",
 										href: item.url || `https://github.com/${item.fullName}`,
@@ -1416,9 +1481,9 @@ function RankingsPage({ t }) {
 											"aria-hidden": "true",
 											children: "↗"
 										})]
-									})]
-								})
-							]
+									})
+								})]
+							})]
 						}, `${item.fullName}-${item.rank}`);
 					}), !loading && items.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 						className: "lede",
@@ -1428,7 +1493,7 @@ function RankingsPage({ t }) {
 				remaining > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
 					disabled: loading,
-					onClick: () => void load(view, query, category, hideSkills, showCandidates, items.length, true),
+					onClick: () => void load(view, query, category, catalogScope, installAvailability, items.length, true),
 					children: [
 						t("more"),
 						" (",
@@ -1436,159 +1501,25 @@ function RankingsPage({ t }) {
 						")"
 					]
 				}) : null,
-				selectedItem && selectedEvidence ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "detail-mask",
-					onMouseDown: (event) => {
-						if (event.target === event.currentTarget) setSelectedItem(null);
-					},
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("aside", {
-						className: "detail-drawer",
-						role: "dialog",
-						"aria-modal": "true",
-						"aria-labelledby": "dsh-top100-detail-title",
-						onKeyDownCapture: (event) => {
-							if (event.key !== "Escape") return;
-							event.stopPropagation();
-							event.nativeEvent.stopImmediatePropagation();
-							setSelectedItem(null);
-						},
-						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: "detail-head",
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: "detail-rank",
-										"aria-label": `${t("rank")} ${selectedItem.rank}`,
-										children: selectedItem.rank
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-										id: "dsh-top100-detail-title",
-										children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
-											href: selectedItem.url || `https://github.com/${selectedItem.fullName}`,
-											target: "_blank",
-											rel: "noreferrer",
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: selectedItem.fullName }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-												className: "title-arrow",
-												"aria-hidden": "true",
-												children: "↗"
-											})]
-										})
-									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(`form_${selectedItem.evidence.formFactor}`) })] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-										type: "button",
-										className: "detail-close",
-										autoFocus: true,
-										"aria-label": t("closeDetails"),
-										onClick: () => setSelectedItem(null),
-										children: "×"
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: "detail-description",
-								children: selectedItem.descriptionZh || selectedItem.description
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-								className: "detail-metrics",
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("rank") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: ["#", selectedItem.rank] })] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("stars") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: selectedItem.stars })] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("weekly") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: ["+", selectedItem.weeklyStars] })] }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("daily") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dd", { children: ["+", selectedItem.dailyStars] })] })
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-								className: "detail-section",
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("rankingDetails") }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(rankingBasisKey(view, query)) }),
-									!query && view === "hot" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-										className: "detail-highlight",
-										children: [
-											t("hotScore"),
-											" ",
-											selectedItem.hotScore.toFixed(1)
-										]
-									}) : null
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-								className: "detail-section",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("projectDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", {
-									className: "detail-properties",
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("projectType") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: t(`form_${selectedItem.evidence.formFactor}`) })] }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("license") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: selectedItem.license || t("notAvailable") })] }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("lastMaintained") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: dateLabel(selectedItem.pushedAt) })] })
-									]
-								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-								className: "detail-section",
-								children: [
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("trustDetails") }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										className: `evidence-badge evidence-${selectedItem.evidence.trustLevel}`,
-										children: t(`trust_${selectedItem.evidence.trustLevel}`)
-									}),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", { children: selectedEvidence.signals.map((signal) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("li", { children: signal }, signal)) }),
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-										className: "detail-caveat",
-										children: selectedEvidence.caveat
-									})
-								]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
-								className: "detail-section",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h4", { children: t("installDetails") }), selectedItem.installable && selectedItem.installSpec ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: "detail-source",
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("catalogInstallSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: selectedItem.installSpec.spec })]
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("preflightNote") })] }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-									className: "browse-note",
-									children: t("browseOnlyHint")
-								})]
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: "detail-actions",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
-									className: "project-link",
-									href: selectedItem.url || `https://github.com/${selectedItem.fullName}`,
-									target: "_blank",
-									rel: "noreferrer",
-									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("viewProject") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-										"aria-hidden": "true",
-										children: "↗"
-									})]
-								}), selectedItem.installed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									onClick: () => {
-										setSelectedItem(null);
-										setSection("installed");
-									},
-									children: t("manage")
-								}) : selectedItem.installable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "primary",
-									disabled: busy !== null || preparing !== null,
-									onClick: () => {
-										const item = selectedItem;
-										setSelectedItem(null);
-										prepareInstall(item);
-									},
-									children: t("install")
-								}) : null]
-							})
-						]
-					})
-				}) : null,
 				confirming ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "mask",
 					role: "dialog",
 					"aria-modal": "true",
+					"aria-labelledby": "dsh-top100-confirm-title",
+					onKeyDownCapture: (event) => {
+						if (event.key !== "Escape") return;
+						event.stopPropagation();
+						setConfirming(null);
+						setPreflights([]);
+						setRiskAccepted(false);
+					},
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "dialog",
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("confirmTitle") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+								id: "dsh-top100-confirm-title",
+								children: t("confirmTitle")
+							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 								className: "lede",
 								children: t("confirmBody")
@@ -1597,44 +1528,103 @@ function RankingsPage({ t }) {
 								className: "confirm-list",
 								children: confirming.map((item) => {
 									const preflight = preflightsByName.get(item.fullName);
-									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.fullName }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-											t("requestedSource"),
-											": ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type })
-										] }),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-											t("resolvedSource"),
-											": ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? "-" })
-										] }),
-										preflight?.provenance.integrity ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-											t("integrity"),
-											": ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.integrity })
-										] }) : null,
-										preflight?.lifecycleScripts.map((script) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-											className: "script-evidence",
-											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: script.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: script.command })]
-										}, script.name)),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-											className: "risk-list",
-											children: preflight?.risks.map((risk) => {
-												const presented = presentInstallRisk(risk, t);
-												return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
-													"data-severity": risk.severity,
-													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: presented.summary }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: presented.detail })]
-												}, risk.code);
+									const identity = presentRepositoryIdentity(item);
+									const scriptCount = preflight?.lifecycleScripts.length ?? 0;
+									const needsRestart = preflight?.risks.some((risk) => risk.code === "restart-required") ?? false;
+									const sourceSummaryKey = preflight?.provenance.source === "github" ? "commitLocked" : preflight?.provenance.repositoryIdentity === "unavailable" ? "sourceIdentityUnavailable" : "sourceMatched";
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: "confirm-item",
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: "confirm-project",
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: identity.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+													identity.owner,
+													" · ",
+													t(`form_${item.evidence.formFactor}`)
+												] })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+													href: item.url || `https://github.com/${item.fullName}`,
+													target: "_blank",
+													rel: "noreferrer",
+													children: [t("viewProject"), " ↗"]
+												})]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+												className: "confirm-description",
+												children: item.descriptionZh || item.description
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: "confirm-source",
+												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("resolvedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? item.installSpec?.spec ?? "-" })]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: "confirm-summary",
+												role: "list",
+												"aria-label": t("installSummary"),
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+														role: "listitem",
+														"data-tone": preflight?.provenance.repositoryIdentity === "unavailable" ? "warning" : "safe",
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(sourceSummaryKey)]
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+														role: "listitem",
+														"data-tone": scriptCount > 0 ? "warning" : "safe",
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), scriptCount > 0 ? `${t("willRunScriptsPrefix")} ${scriptCount} ${t("buildScriptsUnit")}` : t("noBuildScripts")]
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+														role: "listitem",
+														"data-tone": needsRestart ? "warning" : "safe",
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(needsRestart ? "restartAfterInstall" : "noRestartRequired")]
+													})
+												]
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+												className: "confirm-evidence",
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("viewInstallTechnicalEvidence") }),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+														t("requestedSource"),
+														": ",
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type })
+													] }),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+														t("resolvedSource"),
+														": ",
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? "-" })
+													] }),
+													preflight?.provenance.integrity ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+														t("integrity"),
+														": ",
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.integrity })
+													] }) : null,
+													preflight?.lifecycleScripts.map((script) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+														className: "script-evidence",
+														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: script.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: script.command })]
+													}, script.name)),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+														className: "risk-list",
+														children: preflight?.risks.map((risk) => {
+															const presented = presentInstallRisk(risk, t);
+															return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+																"data-severity": risk.severity,
+																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: presented.summary }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: presented.detail })]
+															}, risk.code);
+														})
+													})
+												]
 											})
-										})
-									] }, item.fullName);
+										]
+									}, item.fullName);
 								})
 							}),
 							confirming.some((item) => item.install?.needsConfig) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 								className: "lede",
 								children: t("confirmNeedConfig")
 							}) : null,
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								className: "confirm-caveat",
+								children: t("notSecurityReview")
+							}),
 							preflights.some((value) => value.requiresExplicitApproval) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
 								className: "risk-approval",
 								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
@@ -1653,6 +1643,7 @@ function RankingsPage({ t }) {
 									children: t("confirm")
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
+									autoFocus: true,
 									onClick: () => {
 										setConfirming(null);
 										setPreflights([]);
@@ -1664,7 +1655,42 @@ function RankingsPage({ t }) {
 						]
 					})
 				}) : null
-			] }) : section === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ManagedPage, { t }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DiagnosticsPage, { t })
+			] }) : section === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ManagedPage, { t }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DiagnosticsPage, { t }),
+			batch && installActivityOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "install-activity-mask",
+				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					className: "install-activity-dialog",
+					role: "dialog",
+					"aria-modal": "true",
+					"aria-labelledby": "dsh-top100-install-activity-title",
+					onKeyDownCapture: (event) => {
+						if (event.key !== "Escape") return;
+						event.stopPropagation();
+						event.nativeEvent.stopImmediatePropagation();
+						setInstallActivityOpen(false);
+					},
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+						className: "install-activity-head",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+							id: "dsh-top100-install-activity-title",
+							children: t("installActivityTitle")
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(busy ? "installActivityActiveHint" : "installActivityCompleteHint") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: "install-activity-close",
+							autoFocus: true,
+							"aria-label": t("closeInstallActivity"),
+							onClick: () => setInstallActivityOpen(false),
+							children: "×"
+						})]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "install-activity-list",
+						children: batch.jobs.map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: "install-activity-item",
+							children: jobPanel(job)
+						}, job.id))
+					})]
+				})
+			}) : null
 		]
 	});
 }
@@ -1686,6 +1712,7 @@ function SettingsCard({ t }) {
 const css = `
 .dsh-top100 {
   --t100-ink: var(--dsw-alias-label-primary, color-mix(in srgb, currentColor 92%, transparent));
+  --t100-body: var(--dsw-alias-label-secondary, color-mix(in srgb, currentColor 72%, transparent));
   --t100-muted: var(--dsw-alias-label-tertiary, color-mix(in srgb, currentColor 58%, transparent));
   --t100-line: var(--dsw-alias-border-l2, color-mix(in srgb, currentColor 14%, transparent));
   --t100-surface: var(--dsw-alias-bg-layer-1, Canvas);
@@ -1800,10 +1827,85 @@ const css = `
   border-bottom-color: var(--t100-accent);
   background: transparent;
 }
-.dsh-top100 .ranking-tabs {
+.dsh-top100 .catalog-navigation {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 36px;
+  padding: 2px 1px 7px;
+  border-bottom: 1px solid var(--t100-line);
+}
+.dsh-top100 button.catalog-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 8px;
+  border-color: transparent;
+  color: var(--t100-muted);
+  font-weight: 700;
+}
+.dsh-top100 button.catalog-primary[aria-current="page"] {
+  color: var(--t100-accent);
+  background: var(--t100-accent-soft);
+}
+.dsh-top100 button.catalog-primary small {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  background: color-mix(in srgb, currentColor 10%, transparent);
+  color: inherit;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.dsh-top100 .catalog-explore {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 0;
+  color: var(--t100-muted);
+  font-size: 11px;
+}
+.dsh-top100 .catalog-explore > span { margin-right: 3px; }
+.dsh-top100 .catalog-explore button {
+  height: 28px;
+  padding: 0 5px;
+  border-color: transparent;
+  color: var(--t100-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.dsh-top100 .catalog-explore button:hover,
+.dsh-top100 .catalog-explore button[aria-pressed="true"] {
+  color: var(--t100-accent);
+  background: var(--t100-accent-soft);
+}
+.dsh-top100 .catalog-explore button small { font-size: 10px; }
+.dsh-top100 .browse-controls {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+.dsh-top100 .select-control {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--t100-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.dsh-top100 .select-control select {
+  height: 36px;
+  max-width: 118px;
+  padding: 0 25px 0 9px;
+  border: 1px solid var(--t100-line);
+  border-radius: 9px;
+  background: var(--t100-surface);
+  color: var(--t100-ink);
+  font: inherit;
 }
 .dsh-top100 input[type="search"] {
   flex: 1 1 auto;
@@ -1918,6 +2020,11 @@ const css = `
   font: inherit;
   cursor: pointer;
 }
+.dsh-top100 span.tab {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
 .dsh-top100 .tab[aria-selected="true"],
 .dsh-top100 button.primary {
   background: var(--t100-accent);
@@ -1967,6 +2074,15 @@ const css = `
   font-size: 11px;
   line-height: 18px;
 }
+.dsh-top100 .search-result-count small {
+  color: var(--t100-muted);
+  font-size: 10px;
+}
+.dsh-top100 .search-result-tab[aria-selected="true"]::before {
+  content: "↳";
+  margin-right: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
 .dsh-top100 .result-count {
   flex: 0 0 auto;
   font-variant-numeric: tabular-nums;
@@ -1981,6 +2097,12 @@ const css = `
   color: var(--t100-accent);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dsh-top100 .scope-summary {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .dsh-top100 .ranking-basis {
@@ -2009,9 +2131,9 @@ const css = `
 }
 .dsh-top100 .card-skeleton {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  gap: 8px;
-  min-height: 148px;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 9px;
+  min-height: 126px;
   padding: 13px;
   border: 1px solid var(--t100-line);
   border-radius: 12px;
@@ -2030,9 +2152,9 @@ const css = `
   background: color-mix(in srgb, currentColor 8%, transparent);
 }
 .dsh-top100 .skeleton-rank {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 40px;
+  height: 20px;
+  border-radius: 999px;
 }
 .dsh-top100 .skeleton-line {
   position: relative;
@@ -2060,12 +2182,12 @@ const css = `
   animation: t100-skeleton 1.6s ease-in-out infinite;
 }
 @keyframes t100-skeleton { to { transform: translateX(340%); } }
-.dsh-top100 article {
+.dsh-top100 .ranking-card {
   position: relative;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 10px 8px;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 10px;
   align-items: start;
   min-width: 0;
   padding: 13px;
@@ -2073,11 +2195,9 @@ const css = `
   border-radius: 12px;
   background: var(--t100-surface);
   box-shadow: 0 1px 2px color-mix(in srgb, #17211f 6%, transparent);
-  content-visibility: auto;
-  contain-intrinsic-size: auto 180px;
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
 }
-.dsh-top100 article::before {
+.dsh-top100 .ranking-card::before {
   content: "";
   position: absolute;
   inset: 12px auto 12px 0;
@@ -2085,35 +2205,43 @@ const css = `
   border-radius: 0 3px 3px 0;
   background: var(--t100-line);
 }
-.dsh-top100 article[data-trust="install-source"]::before { background: var(--t100-accent); }
-.dsh-top100 article:hover {
+.dsh-top100 .ranking-card[data-trust="install-source"]::before { background: var(--t100-accent); }
+.dsh-top100 .ranking-card:hover {
   border-color: color-mix(in srgb, var(--t100-accent) 34%, var(--t100-line));
   box-shadow: 0 7px 18px color-mix(in srgb, #17211f 9%, transparent);
-  transform: translateY(-1px);
 }
 .dsh-top100 .rank {
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 21px;
+  padding: 0 7px;
   border: 1px solid color-mix(in srgb, var(--t100-accent) 25%, var(--t100-line));
-  border-radius: 8px 8px 8px 3px;
+  border-radius: 999px;
   background: var(--t100-accent-soft);
+  box-sizing: border-box;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: var(--t100-accent);
 }
-.dsh-top100 article[data-rank="1"] .rank,
-.dsh-top100 article[data-rank="2"] .rank,
-.dsh-top100 article[data-rank="3"] .rank {
+.dsh-top100 .ranking-card[data-rank="1"] .rank,
+.dsh-top100 .ranking-card[data-rank="2"] .rank,
+.dsh-top100 .ranking-card[data-rank="3"] .rank {
   border-color: var(--t100-accent);
   background: var(--t100-accent);
   color: #f8fbfa;
 }
-.dsh-top100 .rank input {
-  margin: 0;
-}
 .dsh-top100 .card-copy { min-width: 0; }
+.dsh-top100 .card-heading {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin-bottom: 7px;
+}
 .dsh-top100 h3 {
   margin: 0 0 5px;
   overflow: hidden;
@@ -2121,6 +2249,11 @@ const css = `
   font-weight: 700;
   line-height: 20px;
   text-overflow: ellipsis;
+}
+.dsh-top100 .card-copy h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: 14px;
 }
 .dsh-top100 h3 a {
   display: flex;
@@ -2136,6 +2269,7 @@ const css = `
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.dsh-top100 .repo-name { font-weight: 720; }
 .dsh-top100 .title-arrow {
   flex: 0 0 auto;
   color: var(--t100-muted);
@@ -2146,16 +2280,21 @@ const css = `
   color: var(--t100-accent);
   text-decoration: underline;
 }
-.dsh-top100 .desc {
-  display: -webkit-box;
-  min-height: 36px;
-  margin: 0;
+.dsh-top100 .repo-owner-name {
+  min-width: 0;
   overflow: hidden;
-  color: var(--t100-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+.dsh-top100 .desc {
+  display: block;
+  min-height: 0;
+  margin: 0;
+  overflow: visible;
+  color: var(--t100-body);
   font-size: 12px;
   line-height: 18px;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
 }
 .dsh-top100 .facts {
   display: flex;
@@ -2170,6 +2309,24 @@ const css = `
   align-items: center;
   min-height: 22px;
 }
+.dsh-top100 .capability-label {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--t100-fill);
+  color: var(--t100-muted);
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.dsh-top100 .capability-label.capability-ready,
+.dsh-top100 .capability-label.capability-installed {
+  background: var(--t100-accent-soft);
+  color: var(--t100-accent);
+}
+.dsh-top100 .capability-label.capability-manual {
+  background: color-mix(in srgb, #f0b429 12%, transparent);
+  color: #8a5c00;
+}
 .dsh-top100 .ranking-metric strong {
   color: var(--t100-accent);
   font-variant-numeric: tabular-nums;
@@ -2180,6 +2337,9 @@ const css = `
 }
 .dsh-top100 .evidence-badge,
 .dsh-top100 .form-factor {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
   min-height: 20px;
   padding: 0 7px;
   border-radius: 999px;
@@ -2219,15 +2379,27 @@ const css = `
 }
 .dsh-top100 .actions {
   display: flex;
-  grid-column: 1 / -1;
+  flex: 0 0 auto;
   gap: 8px;
   align-items: center;
-  padding-top: 10px;
-  border-top: 1px solid var(--t100-line);
+  justify-content: flex-end;
 }
 .dsh-top100 .actions > button,
 .dsh-top100 .actions > .project-link {
-  flex: 1 1 0;
+  flex: 0 0 124px;
+}
+.dsh-top100 .card-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--t100-line);
+}
+.dsh-top100 .card-footer .facts {
+  min-width: 0;
+  margin-top: 0;
 }
 .dsh-top100 .project-link {
   display: inline-flex;
@@ -2256,9 +2428,36 @@ const css = `
   outline: 2px solid var(--t100-accent);
   outline-offset: 2px;
 }
-.dsh-top100 button.detail-button { color: var(--t100-muted); }
 .dsh-top100 .row-actions {
   min-width: 104px;
+}
+.dsh-top100 .managed-list article {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 10px 12px;
+  align-items: start;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--t100-line);
+  border-radius: 12px;
+  background: var(--t100-surface);
+  box-shadow: 0 1px 2px color-mix(in srgb, #17211f 6%, transparent);
+}
+.dsh-top100 .managed-list .status-cell {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 20px;
+  padding-top: 1px;
+}
+.dsh-top100 .managed-list .managed-copy {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+.dsh-top100 .managed-list .row-actions {
+  grid-column: 2;
+  grid-row: 2;
 }
 .dsh-top100 button.danger {
   color: #b42318;
@@ -2348,22 +2547,24 @@ const css = `
   background: color-mix(in srgb, Canvas 94%, var(--t100-accent-soft));
   font-size: 12px;
 }
+.dsh-top100 .job-plugin-name {
+  overflow: hidden;
+  color: var(--t100-ink);
+  font: 700 14px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .dsh-top100 .job-heading {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 .dsh-top100 .job-heading strong {
-  font-size: 13px;
+  flex: 0 0 auto;
+  color: var(--t100-accent);
+  font-size: 11px;
   font-weight: 700;
-}
-.dsh-top100 .job-heading span {
-  color: var(--t100-muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 .dsh-top100 .job-progress {
   position: relative;
@@ -2438,6 +2639,7 @@ const css = `
   line-height: 1.45;
 }
 .dsh-top100 .activation.activation-restart-required,
+.dsh-top100 .activation.activation-configuration-required,
 .dsh-top100 .activation.activation-unknown,
 .dsh-top100 .activation.activation-broken {
   color: #9a6700;
@@ -2475,6 +2677,12 @@ const css = `
 .dsh-top100 .job-installed.activation-restart-required {
   border-color: color-mix(in srgb, #c98300 40%, var(--t100-line));
   background: color-mix(in srgb, Canvas 96%, #f0b429 7%);
+}
+.dsh-top100 .job-installed.activation-configuration-required {
+  border-color: color-mix(in srgb, #c98300 46%, var(--t100-line));
+}
+.dsh-top100 .job-installed.activation-configuration-required .job-progress > span {
+  background: #c98300;
 }
 .dsh-top100 .job-installed.activation-restart-required .job-progress > span {
   background: #c98300;
@@ -2547,6 +2755,117 @@ const css = `
   background: var(--t100-accent-soft);
   font-size: 13px;
 }
+.dsh-top100 .install-activity-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--t100-accent) 25%, var(--t100-line));
+  border-radius: 9px;
+  background: color-mix(in srgb, Canvas 93%, var(--t100-accent-soft));
+}
+.dsh-top100 .install-activity-banner > div {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  gap: 8px;
+  align-items: baseline;
+}
+.dsh-top100 .install-activity-banner strong {
+  font-size: 12px;
+}
+.dsh-top100 .install-activity-banner span {
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--t100-muted);
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsh-top100 .install-activity-banner > button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 5px 10px;
+  border-color: color-mix(in srgb, var(--t100-accent) 34%, var(--t100-line));
+  color: var(--t100-accent);
+  font-size: 11px;
+  font-weight: 700;
+}
+.dsh-top100 .install-activity-banner.is-active {
+  border-left: 3px solid var(--t100-accent);
+}
+.dsh-top100 .install-activity-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, #17211f 44%, transparent);
+}
+.dsh-top100 .install-activity-dialog {
+  display: grid;
+  grid-template-rows: auto auto;
+  width: min(480px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  border: 1px solid color-mix(in srgb, var(--t100-accent) 24%, var(--t100-line));
+  border-radius: 14px;
+  background: var(--t100-surface);
+  color: var(--t100-ink);
+  box-shadow: 0 24px 70px color-mix(in srgb, #17211f 26%, transparent);
+  animation: t100-install-dialog-in 160ms cubic-bezier(.2,.75,.25,1);
+}
+@keyframes t100-install-dialog-in {
+  from { opacity: .6; transform: translateY(8px) scale(.99); }
+}
+.dsh-top100 .install-activity-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 16px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--t100-line);
+}
+.dsh-top100 .install-activity-head h3 {
+  margin: 0 0 3px;
+  font-size: 16px;
+  line-height: 1.3;
+}
+.dsh-top100 .install-activity-head p {
+  margin: 0;
+  color: var(--t100-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.dsh-top100 button.install-activity-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  color: var(--t100-muted);
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+}
+.dsh-top100 button.install-activity-close:hover {
+  background: var(--t100-fill);
+  color: var(--t100-ink);
+}
+.dsh-top100 .install-activity-list {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 16px 16px;
+  overflow: visible;
+}
+.dsh-top100 .install-activity-item > .job {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  padding: 12px;
+  border-radius: 9px;
+}
 .dsh-top100 .error {
   background: color-mix(in srgb, #b42318 12%, transparent);
 }
@@ -2577,15 +2896,18 @@ const css = `
 }
 .dsh-top100 .detail-head {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 32px;
+  grid-template-columns: auto minmax(0, 1fr) 32px;
   gap: 10px;
   align-items: start;
 }
 .dsh-top100 .detail-rank {
-  display: grid;
-  place-items: center;
-  width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
   height: 32px;
+  padding: 0 7px;
+  box-sizing: border-box;
   border-radius: 9px 9px 9px 3px;
   background: var(--t100-accent);
   color: #f8fbfa;
@@ -2623,9 +2945,58 @@ const css = `
   font-size: 12px;
   line-height: 1.6;
 }
+.dsh-top100 .detail-refresh {
+  margin: -2px 0 0;
+  color: var(--t100-accent);
+  font-size: 10px;
+}
+.dsh-top100 .detail-refresh.is-warning { color: #9a6700; }
+.dsh-top100 .detail-decision {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--t100-line);
+  border-left-width: 3px;
+  border-radius: 10px;
+  background: var(--t100-fill);
+}
+.dsh-top100 .detail-decision-installable,
+.dsh-top100 .detail-decision-installed {
+  border-color: color-mix(in srgb, var(--t100-accent) 28%, var(--t100-line));
+  border-left-color: var(--t100-accent);
+  background: color-mix(in srgb, var(--t100-accent) 5%, var(--t100-surface));
+}
+.dsh-top100 .detail-decision-browse {
+  border-left-color: var(--t100-muted);
+  background: var(--t100-fill);
+}
+.dsh-top100 .detail-decision h4 {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.dsh-top100 .detail-decision > p {
+  margin: 0;
+  color: var(--t100-body);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.dsh-top100 .detail-eyebrow {
+  color: var(--t100-muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+.dsh-top100 .detail-decision .detail-caveat {
+  padding: 8px 9px;
+  border-left: 3px solid #c98300;
+  border-radius: 0 7px 7px 0;
+  background: color-mix(in srgb, #f0b429 8%, transparent);
+  color: #7a5200;
+}
 .dsh-top100 .detail-metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   margin: 0;
 }
@@ -2698,11 +3069,82 @@ const css = `
   font-size: 11px;
   text-align: right;
 }
-.dsh-top100 .detail-section .detail-caveat {
+.dsh-top100 .detail-properties a {
+  color: var(--t100-accent);
+  overflow-wrap: anywhere;
+}
+.dsh-top100 details.detail-secondary {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--t100-line);
+  border-radius: 10px;
+  background: transparent;
+}
+.dsh-top100 details.detail-secondary[open] {
+  display: grid;
+  gap: 12px;
+}
+.dsh-top100 .detail-secondary > summary {
+  color: var(--t100-body);
+  font-size: 11px;
+  font-weight: 700;
+}
+.dsh-top100 .detail-ranking-basis {
+  margin: 0;
+  color: var(--t100-muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+.dsh-top100 .detail-secondary .detail-highlight {
+  justify-self: start;
+  margin: -6px 0 0;
+  padding: 3px 7px;
+  border-radius: 99px;
+  background: var(--t100-accent-soft);
+  color: var(--t100-accent);
+  font-size: 10px;
+  font-weight: 700;
+}
+.dsh-top100 .detail-secondary .detail-properties {
+  padding-top: 10px;
+  border-top: 1px solid var(--t100-line);
+}
+.dsh-top100 .decision-properties > div {
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: var(--t100-fill);
+}
+.dsh-top100 .decision-properties dd { color: var(--t100-body); }
+.dsh-top100 .trust-section {
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--t100-accent) 18%, var(--t100-line));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--t100-accent) 4%, var(--t100-surface));
+}
+.dsh-top100 .trust-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.dsh-top100 .trust-heading .evidence-badge {
+  min-height: 22px;
+  border: 1px solid color-mix(in srgb, var(--t100-accent) 22%, var(--t100-line));
+  background: transparent;
+}
+.dsh-top100 .trust-note {
+  margin: 0;
+  color: var(--t100-muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.dsh-top100 .trust-section details.evidence-rail {
+  margin: 0;
   padding: 8px 10px;
-  border-left: 3px solid #c98300;
-  border-radius: 0 6px 6px 0;
-  background: color-mix(in srgb, #f0b429 8%, transparent);
+  border: 0;
+  border-radius: 7px;
+  background: var(--t100-fill);
 }
 .dsh-top100 .detail-source {
   display: grid;
@@ -2769,6 +3211,120 @@ const css = `
   display: grid;
   gap: 7px;
 }
+.dsh-top100 .confirm-item {
+  padding: 11px;
+  border: 1px solid var(--t100-line);
+  border-radius: 9px;
+  background: var(--t100-surface);
+}
+.dsh-top100 .confirm-project {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.dsh-top100 .confirm-project > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.dsh-top100 .confirm-project strong {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsh-top100 .confirm-project span {
+  color: var(--t100-muted);
+  font-size: 10px;
+}
+.dsh-top100 .confirm-project > a {
+  flex: 0 0 auto;
+  color: var(--t100-accent);
+  font-size: 11px;
+  font-weight: 650;
+  text-decoration: none;
+}
+.dsh-top100 .confirm-description {
+  margin: 0;
+  color: var(--t100-body);
+  font-size: 11px;
+  line-height: 1.55;
+}
+.dsh-top100 .confirm-source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 8px 9px;
+  border-radius: 7px;
+  background: var(--t100-fill);
+}
+.dsh-top100 .confirm-source span {
+  color: var(--t100-muted);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.dsh-top100 .confirm-source code {
+  overflow: hidden;
+  color: var(--t100-ink);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dsh-top100 .confirm-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.dsh-top100 .confirm-summary > span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+  padding: 7px 8px;
+  border-radius: 7px;
+  background: var(--t100-fill);
+  color: var(--t100-muted);
+  font-size: 10px;
+  line-height: 1.35;
+}
+.dsh-top100 .confirm-summary i {
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--t100-accent);
+}
+.dsh-top100 .confirm-summary > span[data-tone="warning"] {
+  color: #9a6700;
+  background: color-mix(in srgb, #f0b429 9%, transparent);
+}
+.dsh-top100 .confirm-summary > span[data-tone="warning"] i { background: #c98300; }
+.dsh-top100 .confirm-evidence {
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: var(--t100-fill);
+  color: var(--t100-muted);
+  font-size: 11px;
+}
+.dsh-top100 .confirm-evidence summary {
+  color: var(--t100-accent);
+  font-weight: 650;
+}
+.dsh-top100 .confirm-evidence[open] {
+  display: grid;
+  gap: 8px;
+}
+.dsh-top100 .confirm-caveat {
+  margin: 0;
+  padding: 8px 10px;
+  border-left: 3px solid #c98300;
+  background: color-mix(in srgb, #f0b429 8%, transparent);
+  color: #7a5200;
+  font-size: 11px;
+  line-height: 1.5;
+}
 .dsh-top100 .script-evidence {
   display: grid;
   grid-template-columns: 92px minmax(0, 1fr);
@@ -2813,6 +3369,7 @@ const css = `
 }
 .dsh-top100 button:focus-visible,
 .dsh-top100 input:focus-visible,
+.dsh-top100 select:focus-visible,
 .dsh-top100 summary:focus-visible {
   outline: 2px solid var(--t100-accent);
   outline-offset: 2px;
@@ -2820,9 +3377,6 @@ const css = `
 .dsh-top100 code {
   font-size: 12px;
   word-break: break-all;
-}
-@container (min-width: 540px) {
-  .dsh-top100 .list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @container (max-width: 420px) {
   .dsh-top100 .market-head { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; }
@@ -2832,22 +3386,36 @@ const css = `
   .dsh-top100 .toolbar { flex-wrap: wrap; }
   .dsh-top100 .search-cluster { flex-basis: 100%; }
   .dsh-top100 .search-cluster > button.primary { flex: 0 0 auto; }
-  .dsh-top100 .filter-control { margin-left: auto; }
+  .dsh-top100 .catalog-navigation { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .dsh-top100 .catalog-explore { flex-wrap: wrap; justify-content: flex-start; }
+  .dsh-top100 .browse-controls { width: 100%; justify-content: space-between; }
+  .dsh-top100 .select-control { flex: 1 1 0; }
+  .dsh-top100 .select-control select { flex: 1 1 auto; max-width: none; min-width: 0; }
+  .dsh-top100 .confirm-summary { grid-template-columns: 1fr; }
+  .dsh-top100 .card-footer { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .dsh-top100 .managed-list .row-actions { grid-column: 1 / -1; }
   .dsh-top100 .actions { flex-wrap: wrap; }
   .dsh-top100 .actions > button,
   .dsh-top100 .actions > .project-link { flex-basis: calc(50% - 4px); }
   .dsh-top100 .detail-drawer { width: 100%; padding: 15px; }
   .dsh-top100 .detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dsh-top100 .detail-actions { margin: auto -15px -15px; padding: 11px 15px 15px; }
+  .dsh-top100 .install-activity-banner { align-items: stretch; flex-direction: column; }
+  .dsh-top100 .install-activity-banner > div { justify-content: space-between; }
+  .dsh-top100 .install-activity-banner > button { width: 100%; }
+  .dsh-top100 .install-activity-mask { padding: 8px; }
+  .dsh-top100 .install-activity-dialog { width: calc(100vw - 16px); max-height: calc(100vh - 16px); }
+  .dsh-top100 .install-activity-head { padding: 15px 15px 12px; }
+  .dsh-top100 .install-activity-list { padding: 12px 15px; }
 }
 @media (max-width: 720px) {
   .dsh-top100 .diag-grid { grid-template-columns: 1fr; }
   .dsh-top100 .actions .job { flex: 1 1 100%; width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dsh-top100 article { transition: none; }
-  .dsh-top100 article:hover { transform: none; }
+  .dsh-top100 .ranking-card { transition: none; }
   .dsh-top100 .detail-drawer { animation: none; }
+  .dsh-top100 .install-activity-dialog { animation: none; }
   .dsh-top100 .skeleton-line::after,
   .dsh-top100 .skeleton-rank::after,
   .dsh-top100 .skeleton-pills::after { display: none; animation: none; }
@@ -2861,21 +3429,41 @@ const css = `
 const zh = {
 	nav: "插件排行",
 	title: "DSH-Top100",
-	subtitle: "从线上榜单浏览和搜索 DSH 插件；仅对作者明确提供的安装源开放一键安装",
+	subtitle: "发现、核对并安装 DSH 插件",
 	rankings: "插件市场",
 	installedPage: "已安装",
 	diagnostics: "诊断",
 	search: "搜索",
 	searchPlaceholder: "搜索名称、简介或标签",
+	searchResults: "搜索结果",
+	catalogMatches: "全库匹配",
+	showingResults: "已显示",
+	catalogRank: "全库排名",
 	filter: "筛选",
 	filterHint: "调整榜单的收录范围。",
-	hot: "Top 100",
+	catalogScope: "市场范围",
+	catalogScope_plugins: "插件",
+	catalogScope_skills: "Skills",
+	catalogScope_ecosystem: "生态项目",
+	catalogScopeHint_plugins: "已验证为 DSH Plugin；安装能力作为独立条件筛选",
+	catalogScopeHint_skills: "独立 Skills 技能库，不参与 Plugin 排名",
+	catalogScopeHint_ecosystem: "经确认与 DSH 相关的应用和外围项目，不参与排名",
+	exploreMore: "探索更多",
+	installAvailability: "安装能力",
+	installAvailability_installable: "可安装",
+	installAvailability_all: "全部插件",
+	installAvailability_unavailable: "暂无安装源",
+	sortBy: "排序",
+	starsSort: "GitHub Stars",
+	allCategories: "全部分类",
+	categoryRanking: "分类筛选结果",
+	hot: "综合热度",
 	rising: "新锐",
 	total: "总榜",
-	category: "分类榜",
+	category: "分类筛选",
 	categoryFilter: "插件分类",
-	hideSkills: "隐藏 Skill",
-	hideSkillsHint: "只看 Bundle 和其他生态项目",
+	hideSkills: "Skills 技能库",
+	hideSkillsHint: "Skills 使用独立目录，不参与 Plugin 排名",
 	hiddenSkillsPrefix: "已隐藏",
 	skillRepositories: "个 Skill 仓库",
 	showCandidates: "探索候选与生态项目",
@@ -2890,7 +3478,7 @@ const zh = {
 	cacheFallback: "使用快照原因",
 	updated: "数据日期",
 	source: "数据源",
-	empty: "没有匹配的插件",
+	empty: "此范围内没有匹配项目",
 	loadingRankings: "正在加载榜单…",
 	loadError: "无法读取线上榜单",
 	installError: "插件安装失败",
@@ -2902,6 +3490,24 @@ const zh = {
 	batchInstall: "安装已选择",
 	batchProgress: "批量安装进度",
 	batchComplete: "文件操作已完成；请按各项运行状态继续验证。",
+	installTaskRunning: "安装任务正在运行",
+	installTaskComplete: "安装任务已有结果",
+	viewInstallProgress: "查看安装进度",
+	viewInstallResult: "查看安装结果",
+	installActivityTitle: "安装任务",
+	installActivityActiveHint: "安装会在后台继续；关闭窗口不会中断任务。",
+	installActivityCompleteHint: "任务已经结束，可在这里查看结果或重新尝试。",
+	installTaskRecovered: "已恢复上次未完成的安装任务。",
+	installTaskUnavailable: "上次安装任务已随 DSH 重启结束，无法恢复进度；请检查已安装与诊断页面确认最终状态。",
+	cancelFailed: "取消请求失败，任务可能仍在运行；正在继续读取权威状态。",
+	closeInstallActivity: "关闭安装窗口",
+	continueBrowsing: "继续浏览",
+	batchSucceeded: "成功",
+	batchFailed: "失败",
+	batchCancelled: "取消",
+	batchActive: "进行中",
+	batchRestartRequired: "待重启",
+	batchConfigurationRequired: "待配置",
 	batchLimit: "每批最多安装 20 个项目",
 	select: "选择",
 	installed: "已安装",
@@ -2936,45 +3542,83 @@ const zh = {
 	confirmRemovePlugin: "确定卸载这个插件？",
 	browseOnly: "仅浏览",
 	browseOnlyHint: "未找到作者明确提供且可验证的 dsh plugin add 安装源，请前往 GitHub 查看说明。",
+	capabilityReady: "可预检安装",
+	capabilityReadyReason: "目录提供安装目标；点击后核对精确来源与脚本",
+	capabilityManual: "安装后需配置",
+	capabilityManualReason: "目录提供安装目标，但作者标注安装后还需配置",
+	capabilityBrowse: "生态项目",
+	capabilityNoSourceReason: "目录暂未提供可预检的安装目标",
+	capabilityUnverifiedReason: "尚未确认符合 DSH 插件结构",
+	capabilityInstalled: "已安装",
+	capabilityInstalledReason: "当前 Profile 已包含这个项目",
 	viewDetails: "查看详情",
+	reviewInstall: "查看并安装",
 	viewProject: "查看项目",
 	closeDetails: "关闭详情",
-	rankingDetails: "排名依据",
-	projectDetails: "项目信息",
+	readmeSummary: "README 摘要",
+	detailRefreshing: "正在读取权威详情…",
+	detailFallback: "权威详情暂时不可用，以下显示榜单摘要",
+	installDecision: "安装决策",
+	installAvailableTitle: "可以在 DSH 中预检安装",
+	installAvailableHint: "继续后会先核对精确版本、仓库身份、内容完整性和安装脚本，再由你确认是否写入。",
+	installUnavailableTitle: "暂不支持在 DSH 内安装",
+	installedDecisionTitle: "已安装到当前 Profile",
+	installedDecisionHint: "前往已安装管理，可以启停、更新或卸载这个项目。",
+	installContextMissing: "目录未提供权限、账号和首次使用说明；继续前请查看作者文档。",
+	afterInstall: "安装后",
+	afterInstallConfigure: "完成作者要求的配置，再验证插件是否运行",
+	afterInstallVerify: "可能需要重启 DSH，再验证插件是否运行",
+	projectAndRankingDetails: "项目与排名信息",
+	reviewAndInstall: "核对并安装",
 	trustDetails: "信任证据",
-	installDetails: "安装说明",
 	projectType: "项目形态",
 	license: "许可证",
 	lastMaintained: "最近维护",
+	language: "主要语言",
+	homepage: "项目主页",
+	configurationRequirement: "额外配置",
+	configurationRequiredUnknown: "需要；具体步骤由作者文档说明",
+	configurationNotDeclared: "目录未标注；安装前仍应核对作者文档",
+	notSecurityReview: "这里核对的是结构与来源一致性，不是代码安全认证。",
 	notAvailable: "暂无",
 	catalogInstallSource: "目录安装源",
-	preflightNote: "点击安装后会重新解析不可变版本或 commit，并展示内容完整性、生命周期脚本与风险。",
 	installing: "安装中",
-	confirmTitle: "确认安装",
-	confirmBody: "以下来源已经解析到不可变版本或 commit。请核对脚本与风险后，再允许修改当前 Profile 或 Skills 目录。",
+	confirmTitle: "查看并安装",
+	confirmBody: "这里汇总项目用途、实际安装源和安装影响；只有你最后确认后，才会写入当前 Profile 或 Skills 目录。",
+	installSummary: "安装影响摘要",
+	sourceMatched: "版本已固定，仓库身份匹配",
+	sourceIdentityUnavailable: "版本已固定，发布者身份待人工确认",
+	commitLocked: "仓库 commit 已固定",
+	willRunScriptsPrefix: "将执行",
+	buildScriptsUnit: "个 npm 生命周期脚本",
+	noBuildScripts: "未发现 npm 生命周期脚本",
+	restartAfterInstall: "安装后需重启验证",
+	noRestartRequired: "无需重启",
+	viewInstallTechnicalEvidence: "查看版本、完整性与脚本原文",
+	viewTechnicalEvidence: "查看技术证据",
 	confirmSpec: "安装源",
 	requestedSource: "目录声明",
 	resolvedSource: "实际安装",
 	integrity: "内容完整性",
 	riskApproval: "我已核对上面的精确来源、脚本和风险，并允许执行这次安装。",
 	confirmNeedConfig: "这个插件可能还需要额外配置。",
-	confirm: "确认安装",
+	confirm: "开始安装",
 	cancel: "取消",
 	github: "GitHub",
 	more: "加载更多",
 	stars: "Stars",
-	weekly: "近7日",
+	weekly: "7日",
 	daily: "今日",
 	hotScore: "热度分",
 	basis_hot: "排序依据：日增、周增、增长率、活跃度、质量与总热度",
 	basis_rising: "排序依据：今日新增 Stars",
 	basis_total: "排序依据：GitHub Stars 总数",
-	basis_category: "分类内保持总榜顺序",
+	basis_category: "分类筛选保持总榜顺序",
 	basis_search: "搜索结果按名称与内容相关性排序",
 	basisShort_hot: "综合热度榜",
 	basisShort_rising: "今日增长榜",
 	basisShort_total: "Stars 总榜",
-	basisShort_category: "分类总榜",
+	basisShort_category: "分类筛选",
 	basisShort_search: "相关性排序",
 	restart: "文件已写入且配置可组合；请重启 DSH，再验证插件是否实际运行。",
 	phase_queued: "排队中",
@@ -2986,7 +3630,7 @@ const zh = {
 	phase_failed: "安装失败",
 	phase_cancelled: "已取消",
 	installProgressLabel: "安装进度",
-	installProgressEstimate: "模拟进度",
+	installProgressEstimate: "阶段",
 	installStageCheck: "检查",
 	installStageDownload: "下载",
 	installStageApply: "安装",
@@ -3045,9 +3689,9 @@ const zh = {
 	"risk_skill-content_detail": "将复制该 commit 中的 SKILL.md、脚本、模板和资源；安装器拒绝符号链接，但不把结构验证表述为安全审核。",
 	"risk_restart-required_summary": "写入成功后仍需重启并验证运行状态",
 	"risk_restart-required_detail": "安装后的配置检查只证明 Profile 可以组合，不代表插件已经在当前 DSH 进程中运行。",
-	trust_indexed: "仅收录",
-	trust_structured: "结构已识别",
-	"trust_install-source": "安装源可解析",
+	trust_indexed: "已收录，结构待确认",
+	trust_structured: "符合 DSH 插件结构",
+	"trust_install-source": "目录含安装目标",
 	"form_dsh-bundle": "DSH Bundle",
 	"form_dsh-skill": "DSH Skill",
 	"form_agent-skill": "Agent Skill",
@@ -3058,6 +3702,7 @@ const zh = {
 	form_candidate: "候选项目",
 	activation_pending: "运行状态：等待安装",
 	"activation_not-applicable": "运行状态：不适用于 Bundle loader；后续会话需验证 Skill 可见性",
+	"activation_configuration-required": "状态：已安装，完成作者要求的配置后再验证",
 	"activation_configuration-valid": "运行状态：配置可组合，当前进程尚未验证",
 	"activation_restart-required": "运行状态：需要重启后验证",
 	activation_live: "运行状态：正在运行",
@@ -3088,21 +3733,41 @@ const zh = {
 const en = {
 	nav: "Rankings",
 	title: "DSH-Top100",
-	subtitle: "Browse and search hosted DSH rankings; one-click install is limited to author-provided sources",
+	subtitle: "Discover, review, and install DSH plugins",
 	rankings: "Marketplace",
 	installedPage: "Installed",
 	diagnostics: "Diagnostics",
 	search: "Search",
 	searchPlaceholder: "Search name, summary, or tags",
+	searchResults: "Search results",
+	catalogMatches: "Catalog matches",
+	showingResults: "showing",
+	catalogRank: "Catalog rank",
 	filter: "Filters",
 	filterHint: "Adjust which catalog entries are included.",
-	hot: "Top 100",
+	catalogScope: "Marketplace scope",
+	catalogScope_plugins: "Plugins",
+	catalogScope_skills: "Skills",
+	catalogScope_ecosystem: "Ecosystem",
+	catalogScopeHint_plugins: "Verified DSH Plugins; installation availability is filtered separately",
+	catalogScopeHint_skills: "A separate Skills library that does not participate in Plugin rankings",
+	catalogScopeHint_ecosystem: "Confirmed DSH apps and related projects that do not participate in rankings",
+	exploreMore: "Explore more",
+	installAvailability: "Install",
+	installAvailability_installable: "Available",
+	installAvailability_all: "All plugins",
+	installAvailability_unavailable: "No source",
+	sortBy: "Sort",
+	starsSort: "GitHub Stars",
+	allCategories: "All categories",
+	categoryRanking: "Category ranking",
+	hot: "Trending",
 	rising: "Rising",
 	total: "All",
-	category: "Categories",
+	category: "Category filter",
 	categoryFilter: "Plugin category",
-	hideSkills: "Hide Skills",
-	hideSkillsHint: "Show Bundles and other ecosystem projects only",
+	hideSkills: "Skills directory",
+	hideSkillsHint: "Skills use a separate directory and do not participate in Plugin rankings",
 	hiddenSkillsPrefix: "Hidden",
 	skillRepositories: "Skill repositories",
 	showCandidates: "Explore candidates and ecosystem projects",
@@ -3117,7 +3782,7 @@ const en = {
 	cacheFallback: "Snapshot fallback",
 	updated: "Snapshot",
 	source: "Source",
-	empty: "No matching plugins",
+	empty: "No matching projects in this section",
 	loadingRankings: "Loading rankings…",
 	loadError: "Could not load the hosted rankings",
 	installError: "Plugin installation failed",
@@ -3129,6 +3794,24 @@ const en = {
 	batchInstall: "Install selected",
 	batchProgress: "Batch progress",
 	batchComplete: "File operations finished; continue with the runtime verification shown for each item.",
+	installTaskRunning: "Installation in progress",
+	installTaskComplete: "Installation result available",
+	viewInstallProgress: "View install progress",
+	viewInstallResult: "View install result",
+	installActivityTitle: "Installation task",
+	installActivityActiveHint: "Installation continues in the background; closing this window will not interrupt it.",
+	installActivityCompleteHint: "The task has finished. Review the result or try again here.",
+	installTaskRecovered: "Recovered the previous active installation task.",
+	installTaskUnavailable: "The previous task ended when DSH restarted and its progress cannot be recovered. Check Installed and Diagnostics for the final state.",
+	cancelFailed: "The cancel request failed. The task may still be running; authoritative status polling will continue.",
+	closeInstallActivity: "Close installation window",
+	continueBrowsing: "Continue browsing",
+	batchSucceeded: "Succeeded",
+	batchFailed: "Failed",
+	batchCancelled: "Cancelled",
+	batchActive: "Active",
+	batchRestartRequired: "Restart pending",
+	batchConfigurationRequired: "Configuration pending",
 	batchLimit: "A batch can contain at most 20 items",
 	select: "Select",
 	installed: "Installed",
@@ -3163,45 +3846,83 @@ const en = {
 	confirmRemovePlugin: "Uninstall this plugin?",
 	browseOnly: "Browse only",
 	browseOnlyHint: "No author-provided, verifiable dsh plugin add target was found. Open GitHub for installation details.",
+	capabilityReady: "Ready for preflight",
+	capabilityReadyReason: "The catalog has an install target; exact source and scripts are checked after click",
+	capabilityManual: "Configure after install",
+	capabilityManualReason: "The catalog has an install target, and the author marks additional configuration as required",
+	capabilityBrowse: "Ecosystem project",
+	capabilityNoSourceReason: "The catalog does not provide an install target that can be preflighted",
+	capabilityUnverifiedReason: "DSH plugin structure has not been confirmed",
+	capabilityInstalled: "Installed",
+	capabilityInstalledReason: "This item is already in the current profile",
 	viewDetails: "View details",
+	reviewInstall: "Review and install",
 	viewProject: "View project",
 	closeDetails: "Close details",
-	rankingDetails: "Ranking basis",
-	projectDetails: "Project details",
+	readmeSummary: "README summary",
+	detailRefreshing: "Loading authoritative details…",
+	detailFallback: "Authoritative details are unavailable; showing the ranking summary",
+	installDecision: "Install decision",
+	installAvailableTitle: "Available for DSH preflight",
+	installAvailableHint: "Continue to verify the exact version, repository identity, content integrity, and install scripts before anything is written.",
+	installUnavailableTitle: "Not installable inside DSH",
+	installedDecisionTitle: "Installed in the current profile",
+	installedDecisionHint: "Open Installed management to enable, disable, update, or uninstall this item.",
+	installContextMissing: "Permissions, accounts, and first-use instructions are not in the catalog; review the author's documentation before continuing.",
+	afterInstall: "After installation",
+	afterInstallConfigure: "Complete the author's configuration, then verify that the plugin is running",
+	afterInstallVerify: "You may need to restart DSH, then verify that the plugin is running",
+	projectAndRankingDetails: "Project and ranking details",
+	reviewAndInstall: "Review and install",
 	trustDetails: "Trust evidence",
-	installDetails: "Installation",
 	projectType: "Project type",
 	license: "License",
 	lastMaintained: "Last maintained",
+	language: "Primary language",
+	homepage: "Project homepage",
+	configurationRequirement: "Additional configuration",
+	configurationRequiredUnknown: "Required; consult the author's documentation for the exact steps",
+	configurationNotDeclared: "Not declared in the catalog; still check the author's documentation",
+	notSecurityReview: "This checks structure and source consistency; it is not a code security certification.",
 	notAvailable: "Not available",
 	catalogInstallSource: "Catalog install source",
-	preflightNote: "Install will resolve this to an immutable version or commit, then show integrity, lifecycle scripts, and risks.",
 	installing: "Installing",
-	confirmTitle: "Confirm install",
-	confirmBody: "The source below has been resolved to an immutable version or commit. Review scripts and risks before allowing changes to the current Profile or Skills directory.",
+	confirmTitle: "Review and install",
+	confirmBody: "This combines what the project does, the resolved install source, and its effects. Nothing is written until you confirm.",
+	installSummary: "Installation impact summary",
+	sourceMatched: "Version pinned; repository identity matched",
+	sourceIdentityUnavailable: "Version pinned; publisher identity needs manual review",
+	commitLocked: "Repository commit pinned",
+	willRunScriptsPrefix: "Will run",
+	buildScriptsUnit: "npm lifecycle script(s)",
+	noBuildScripts: "No npm lifecycle scripts detected",
+	restartAfterInstall: "Restart to verify",
+	noRestartRequired: "No restart required",
+	viewInstallTechnicalEvidence: "View version, integrity, and script details",
+	viewTechnicalEvidence: "View technical evidence",
 	confirmSpec: "Install spec",
 	requestedSource: "Catalog source",
 	resolvedSource: "Resolved install",
 	integrity: "Integrity",
 	riskApproval: "I reviewed the exact source, scripts, and risks above and allow this installation.",
 	confirmNeedConfig: "This plugin may require extra configuration.",
-	confirm: "Install",
+	confirm: "Start install",
 	cancel: "Cancel",
 	github: "GitHub",
 	more: "Load more",
 	stars: "Stars",
-	weekly: "7-day",
+	weekly: "7d",
 	daily: "Today",
 	hotScore: "Heat score",
 	basis_hot: "Ranked by daily and weekly growth, growth rate, activity, quality, and popularity",
 	basis_rising: "Ranked by Stars gained today",
 	basis_total: "Ranked by total GitHub Stars",
-	basis_category: "Category results retain the overall ranking order",
+	basis_category: "Category filters retain the overall ranking order",
 	basis_search: "Search results are ranked by name and content relevance",
 	basisShort_hot: "Composite heat",
 	basisShort_rising: "Today's growth",
 	basisShort_total: "Stars ranking",
-	basisShort_category: "Category ranking",
+	basisShort_category: "Category filter",
 	basisShort_search: "Relevance order",
 	restart: "Files were written and the profile composes. Restart DSH, then verify that the plugin is actually running.",
 	phase_queued: "Queued",
@@ -3213,7 +3934,7 @@ const en = {
 	phase_failed: "Failed",
 	phase_cancelled: "Cancelled",
 	installProgressLabel: "Installation progress",
-	installProgressEstimate: "Estimated",
+	installProgressEstimate: "Stage",
 	installStageCheck: "Check",
 	installStageDownload: "Download",
 	installStageApply: "Install",
@@ -3272,9 +3993,9 @@ const en = {
 	"risk_skill-content_detail": "SKILL.md, scripts, templates, and resources from this commit will be copied. The installer rejects symbolic links, but structural validation is not a security review.",
 	"risk_restart-required_summary": "Restart and runtime verification are still required after files are written",
 	"risk_restart-required_detail": "The post-install check only proves that the Profile composes; it does not prove that the plugin is running in the current DSH process.",
-	trust_indexed: "Indexed only",
-	trust_structured: "Structure recognized",
-	"trust_install-source": "Install source parsed",
+	trust_indexed: "Listed; structure unconfirmed",
+	trust_structured: "Matches the DSH plugin structure",
+	"trust_install-source": "Catalog has an install target",
 	"form_dsh-bundle": "DSH Bundle",
 	"form_dsh-skill": "DSH Skill",
 	"form_agent-skill": "Agent Skill",
@@ -3285,6 +4006,7 @@ const en = {
 	form_candidate: "Candidate",
 	activation_pending: "Runtime: waiting for installation",
 	"activation_not-applicable": "Runtime: not a Bundle loader item; verify Skill visibility in a later session",
+	"activation_configuration-required": "Status: installed; complete the author's configuration before verification",
 	"activation_configuration-valid": "Runtime: profile composes; current process not verified",
 	"activation_restart-required": "Runtime: restart required before verification",
 	activation_live: "Runtime: live",

@@ -33,6 +33,7 @@ function rankingEntry(index: number, allInAi = false): RankingEntry {
     owner: `owner-${index}`,
     description: `Plugin ${index}`,
     descriptionZh: `插件 ${index}`,
+    readmeSummary: `README summary ${index}`,
     stars: 50_000 - index,
     dailyStars: index % 7,
     weeklyStars: index % 23,
@@ -80,6 +81,7 @@ function rankingsDocument(count: number, allInAi = false): RankingsDocument {
       count: total.filter((entry) => entry.categories.some((category) => category.id === id)).length,
     })),
     rankings: { total, hot, rising },
+    directories: { skills: [] },
   };
 }
 
@@ -112,16 +114,14 @@ describe("v2 ranking publication", () => {
     );
   });
 
-  it("publishes six independently paginated categories with continuous category ranks", () => {
+  it("publishes six independently paginated plugin categories with continuous category ranks", () => {
     const rankings = rankingsDocument(205, true);
-    rankings.rankings.total[3].type = "skill";
-    rankings.rankings.total[104].type = "skill";
     const publication = buildRankingPublication(rankings);
     expect(publication.manifest.categories.map(({ id }) => id)).toEqual(CATEGORY_IDS);
 
     const ai = publication.manifest.categories.find(({ id }) => id === "ai");
-    expect(publication.manifest.datasets.total.skillCount).toBe(2);
-    expect(ai).toMatchObject({ count: 205, skillCount: 2, pageSize: 100, pageCount: 3 });
+    expect(publication.manifest.datasets.total.skillCount).toBe(0);
+    expect(ai).toMatchObject({ count: 205, skillCount: 0, pageSize: 100, pageCount: 3 });
     expect(ai?.pages.map(({ count }) => count)).toEqual([100, 100, 5]);
     const entries = ai!.pages.flatMap(
       ({ url }) => payloadForUrl(publication, url).rankings as Array<{
@@ -137,6 +137,24 @@ describe("v2 ranking publication", () => {
       Array.from({ length: 205 }, (_, index) => index + 1)
     );
     expect(entries.every((entry) => entry.categories.includes("ai"))).toBe(true);
+  });
+
+  it("publishes Skills in a separate directory file and never mixes them into plugin ranking pages", () => {
+    const rankings = rankingsDocument(3);
+    rankings.directories.skills = [
+      { ...rankingEntry(100), rank: 1, totalRank: 1, type: "skill" },
+      { ...rankingEntry(101), rank: 2, totalRank: 2, type: "skill" },
+    ];
+
+    const publication = buildRankingPublication(rankings);
+    const skills = payloadForUrl(publication, publication.manifest.datasets.skills.url);
+    const total = publication.manifest.datasets.total.pages.flatMap(
+      ({ url }) => payloadForUrl(publication, url).rankings as Array<{ type: string }>
+    );
+
+    expect(skills).toMatchObject({ dataset: "skills", total: 2 });
+    expect((skills.rankings as Array<{ type: string }>).every((entry) => entry.type === "skill")).toBe(true);
+    expect(total.every((entry) => entry.type !== "skill")).toBe(true);
   });
 
   it("hashes exact bytes and keeps snapshot metadata consistent", () => {
@@ -163,7 +181,7 @@ describe("v2 ranking publication", () => {
       });
     }
     expect(publication.manifest.snapshotId).toMatch(/^2026-08-31-[a-f0-9]{16}$/);
-    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.2");
+    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.4");
   });
 
   it("omits full-catalog-only fields from ranking pages and further trims search entries", () => {
@@ -178,12 +196,13 @@ describe("v2 ranking publication", () => {
       categories: ["ai"],
       license: "MIT",
       pushedAt: "2026-08-30T00:00:00.000Z",
+      readmeSummary: "README summary 0",
+      openIssues: 0,
+      language: "TypeScript",
+      homepage: "https://example.com/0",
     });
     for (const field of [
       "forks",
-      "openIssues",
-      "language",
-      "homepage",
       "sources",
       "createdAt",
       "updatedAt",
@@ -212,10 +231,14 @@ describe("v2 ranking publication", () => {
       "openIssues",
       "dailyStars",
       "weeklyStars",
+      "openIssues",
+      "language",
+      "homepage",
       "license",
       "topics",
       "install",
       "pushedAt",
+      "readmeSummary",
     ]) {
       expect(searchEntry).not.toHaveProperty(field);
     }
@@ -227,7 +250,7 @@ describe("v2 ranking publication", () => {
     expect(() => validateRankingPublication(publication)).toThrow(/hash or byte size mismatch/);
   });
 
-  it("rejects a Skill count that no longer matches paginated entries", () => {
+  it("rejects a Skill count that no longer matches plugin-only paginated entries", () => {
     const publication = buildRankingPublication(rankingsDocument(1));
     publication.manifest.datasets.total.skillCount = 1;
     expect(() => validateRankingPublication(publication)).toThrow(/Skill count/);

@@ -14,11 +14,11 @@ afterEach(() => {
   }
 });
 
-function plugin(fullName: string, stars: number): DshPlugin {
+function plugin(fullName: string, stars: number, type: DshPlugin["type"] = "cordis-plugin"): DshPlugin {
   const [owner, name] = fullName.split("/");
   return {
     id: fullName,
-    type: "skill",
+    type,
     name,
     owner,
     repo: name,
@@ -38,7 +38,10 @@ function plugin(fullName: string, stars: number): DshPlugin {
     createdAt: "2026-01-01T00:00:00Z",
     updatedAt: "2026-08-20T00:00:00Z",
     readmeSummary: "Test README summary",
-    install: { method: "skills-add", needsConfig: false },
+    install: {
+      method: type === "skill" ? "skills-add" : "pnpm-profile",
+      needsConfig: false,
+    },
     score: {
       total: 80,
       breakdown: { maintain: 80, practical: 80, popularity: 80, ease: 80, signal: 80 },
@@ -151,6 +154,42 @@ describe("SQLite history and rankings", () => {
         "tools",
       ]);
       expect(rankings.categories.find(({ id }) => id === "coding")?.count).toBe(1);
+    } finally {
+      database.close();
+    }
+  });
+
+  it("builds every ranking from plugins only and exposes Skills as a separate directory", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-plugin-pool-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      importMarketData(
+        database,
+        market([
+          plugin("acme/plugin-a", 50),
+          plugin("acme/high-star-skill", 50_000, "skill"),
+          plugin("acme/plugin-b", 100),
+        ]),
+        { snapshotDate: "2026-08-21" }
+      );
+
+      const rankings = buildRankings(
+        database,
+        "2026-08-21",
+        resolve("../config/ranking.json")
+      );
+
+      for (const entries of Object.values(rankings.rankings)) {
+        expect(entries.every((entry) => entry.type === "cordis-plugin")).toBe(true);
+      }
+      expect(rankings.rankings.total.map((entry) => entry.fullName)).toEqual([
+        "acme/plugin-b",
+        "acme/plugin-a",
+      ]);
+      expect(rankings.directories.skills.map((entry) => entry.fullName)).toEqual([
+        "acme/high-star-skill",
+      ]);
     } finally {
       database.close();
     }

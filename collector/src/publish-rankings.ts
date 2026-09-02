@@ -26,7 +26,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.2";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.4";
 
 export interface RankingPublicationOptions {
   pageSize?: number;
@@ -89,10 +89,14 @@ function toSummaryEntry(entry: RankingEntry, rank = entry.rank): RankingSummaryE
     ...(entry.descriptionZh && entry.descriptionZh !== entry.description
       ? { descriptionZh: entry.descriptionZh }
       : {}),
+    ...(entry.readmeSummary ? { readmeSummary: entry.readmeSummary } : {}),
     stars: entry.stars,
     dailyStars: entry.dailyStars,
     weeklyStars: entry.weeklyStars,
     hotScore: entry.hotScore,
+    openIssues: entry.openIssues,
+    language: entry.language,
+    homepage: entry.homepage,
     license: entry.license,
     topics: entry.topics,
     tags: entry.tags,
@@ -124,6 +128,7 @@ function allFileReferences(manifest: RankingManifestV2): RankingFileReference[] 
   return [
     manifest.datasets.hot,
     manifest.datasets.rising,
+    manifest.datasets.skills,
     manifest.datasets.search,
     ...manifest.datasets.total.pages,
     ...manifest.categories.flatMap(({ pages }) => pages),
@@ -179,6 +184,20 @@ export function buildRankingPublication(
     rankings: risingEntries,
   };
   const rising = addFile("rising.json", risingSnapshot, risingEntries.length);
+
+  const skillEntries = (rankings.directories?.skills ?? []).map((entry, index) =>
+    toSummaryEntry(entry, index + 1)
+  );
+  const skillsSnapshot: RankingListSnapshot = {
+    schemaVersion: 2,
+    snapshotId,
+    generatedAt: rankings.generatedAt,
+    snapshotDate: rankings.snapshotDate,
+    dataset: "skills",
+    total: skillEntries.length,
+    rankings: skillEntries,
+  };
+  const skills = addFile("skills.json", skillsSnapshot, skillEntries.length);
 
   const totalEntries = rankings.rankings.total.map((entry) => toSummaryEntry(entry));
   const totalPageCount = Math.ceil(totalEntries.length / pageSize);
@@ -259,6 +278,7 @@ export function buildRankingPublication(
     datasets: {
       hot,
       rising,
+      skills,
       search,
       total: {
         count: totalEntries.length,
@@ -396,6 +416,11 @@ export function validateRankingPublication(publication: RankingPublication): voi
 
   assertRankSequence("hot", entriesFor(manifest.datasets.hot), manifest.datasets.hot.count);
   assertRankSequence("rising", entriesFor(manifest.datasets.rising), manifest.datasets.rising.count);
+  const validatedSkills = entriesFor(manifest.datasets.skills);
+  assertRankSequence("skills", validatedSkills, manifest.datasets.skills.count);
+  if (validatedSkills.some((entry) => entry.type !== "skill")) {
+    throw new Error("Skills directory contains a non-Skill entry");
+  }
   assertRankSequence("search", entriesFor(manifest.datasets.search), manifest.datasets.search.count);
   const validatedTotalEntries = assertContinuousRanks(
     "total",
@@ -450,6 +475,10 @@ function publishCompatibilityFiles(
     ["rankings-rising.json", { ...rankings, rankings: rankings.rankings.rising }],
     ["rankings-daily.json", { ...rankings, rankings: rankings.rankings.rising }],
     ["rankings-hot.json", { ...rankings, rankings: rankings.rankings.hot }],
+    ["rankings-skills.json", {
+      ...rankings,
+      rankings: rankings.directories?.skills ?? [],
+    }],
     ["rankings-search.json", buildSearchIndex(rankings), true],
   ];
   for (const [filename, value, compact] of documents) {

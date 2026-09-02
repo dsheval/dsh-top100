@@ -90,6 +90,52 @@ async function waitForBatch(
 }
 
 describe("plugin lifecycle routes", () => {
+  it("keeps the Plugin directory available when the separate Skills source fails", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-route-catalog-scope-"));
+    temporaryProfiles.push(directory);
+    writeFileSync(join(directory, "package.json"), `${JSON.stringify({
+      dependencies: {},
+      dsh: { profile: { bundles: [] } },
+    }, null, 2)}\n`);
+    const catalogEntry = {
+      rank: 1, fullName: "acme/plugin", name: "plugin", owner: "acme",
+      description: "Plugin", descriptionZh: "插件", stars: 1, dailyStars: 0,
+      weeklyStars: 0, hotScore: 1, forks: 0, openIssues: 0, language: null,
+      homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
+      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add acme-plugin"] },
+      sources: [], url: "https://github.com/acme/plugin", pushedAt: "", createdAt: "", updatedAt: "",
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const value = String(url);
+      if (value.endsWith("/rankings-search.json")) {
+        return new Response(JSON.stringify({
+          schemaVersion: 2, generatedAt: "2026-09-02T00:00:00Z", snapshotDate: "2026-09-02",
+          rankings: [catalogEntry],
+        }), { status: 200 });
+      }
+      if (value.endsWith("/manifest.json")) return new Response("not found", { status: 404 });
+      return new Response("unavailable", { status: 503 });
+    }));
+    const harness = routeHarness();
+    mountRoutes(harness, {
+      dataUrl: "https://catalog-scope.example.invalid/data",
+      profile: "web",
+      profileDirectory: directory,
+    });
+
+    const response = await harness.request("/dsh-top100/rankings?view=total&catalogScope=plugins");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({
+      catalogScope: "plugins",
+      total: 1,
+      scopeCounts: { plugins: 1, skills: 0, ecosystem: 0 },
+    });
+    expect(response.body.items).toEqual([
+      expect.objectContaining({ fullName: "acme/plugin", installable: true }),
+    ]);
+  });
+
   it("carries the preflight's exact npm version through the install job", async () => {
     invalidateCatalog();
     clearInstallApprovals();
@@ -127,12 +173,19 @@ describe("plugin lifecycle routes", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const harness = routeHarness();
-    const runPlugin = vi.fn(async () => ok());
+    let finishInstall: (() => void) | undefined;
+    const runPlugin = vi.fn(() => new Promise<InstallResult>((resolve) => {
+      finishInstall = () => resolve(ok());
+    }));
     mountRoutes(harness, {
       dataUrl: "https://install-flow.example.invalid/data",
       profile: "web",
       profileDirectory: directory,
     }, { runPlugin, checkProfile: vi.fn(async () => ok()), cancelActive: () => false });
+
+    const detail = await harness.request("/dsh-top100/catalog-entry?fullName=acme%2Ffresh");
+    expect(detail.status).toBe(200);
+    expect(detail.body.item).toMatchObject({ fullName: "acme/fresh", name: "fresh" });
 
     const preflight = await harness.request("/dsh-top100/install-preflight", {
       method: "POST", body: { fullName: "acme/fresh" },
@@ -144,6 +197,15 @@ describe("plugin lifecycle routes", () => {
       body: { approvals: [{ fullName: "acme/fresh", approvalToken: preflight.body.approvalToken }] },
     });
     expect(accepted.status).toBe(202);
+    for (let attempt = 0; attempt < 20 && !finishInstall; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1));
+    }
+    const status = await harness.request("/dsh-top100/status");
+    expect(status.body.activeBatches).toEqual([
+      expect.objectContaining({ batchId: accepted.body.batchId, completed: 0, total: 1 }),
+    ]);
+    expect(finishInstall).toBeTypeOf("function");
+    finishInstall?.();
     const job = await waitForBatch(harness.request, String(accepted.body.batchId));
     expect(job).toMatchObject({ phase: "installed", activationState: "restart-required" });
     expect(runPlugin).toHaveBeenCalledWith("web", ["add", "fresh@1.2.3"], expect.any(Object));
