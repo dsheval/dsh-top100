@@ -11,7 +11,7 @@ const rawAssets = "https://raw.githubusercontent.com/dsheval/dsh-top100/main/web
 
 test("both READMEs introduce the same product and link to the installation guide", () => {
   for (const readme of [githubReadme, npmReadme]) {
-    assert.match(readme, /^# dsh-top100\b/);
+    assert.match(readme, /<h1 align="center">dsh-top100\b[^<]*<\/h1>/);
     assert.ok(readme.includes("https://www.dsheval.ai/?page=dsh#dsh"));
     assert.match(readme, /发现、安装和管理插件/);
     assert.match(readme, /Skills/);
@@ -52,7 +52,12 @@ test("GitHub and npm reference the same real screenshots using platform-safe pat
     }
   }
   for (const [, src] of npmReadme.matchAll(/<img\b[^>]*src="([^"]+)"/g)) {
-    assert.ok(src.startsWith(rawAssets), "npm screenshots must not depend on relative package files");
+    assert.ok(
+      src.startsWith(rawAssets)
+        || src === "https://raw.githubusercontent.com/dsheval/dsh-top100/main/docs/assets/dsh-top100-readme-cover.png"
+        || src.startsWith("https://img.shields.io/"),
+      "npm screenshots, cover and badges must use public absolute URLs",
+    );
   }
 });
 
