@@ -1,10 +1,38 @@
-# dsh-top100 · DSH 插件
+<p align="center">
+  <img src="https://raw.githubusercontent.com/dsheval/dsh-top100/main/docs/assets/dsh-top100-readme-cover.png" alt="dsh-top100 · Verified DeepSeek Harness plugin rankings" width="100%">
+</p>
 
-把插件榜单带进 DSH，发现、安装和管理插件。
+<h1 align="center">dsh-top100 · DSH 插件</h1>
+
+<p align="center">
+  <strong>把插件榜单带进 DSH，发现、安装和管理插件。</strong><br>
+  <sub>Discover and manage DeepSeek Harness plugins in DSH Web, with Skills in a separate directory.</sub>
+</p>
+
+<p align="center">
+  <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.0"><img alt="正式版本 v1.3.0" src="https://img.shields.io/badge/release-v1.3.0-2f6f68?style=flat-square"></a>
+  <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
+  <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/blob/main/CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
+  <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
+  <a href="https://www.dsheval.ai/#ranking"><img alt="收录规模以实时榜单为准" src="https://img.shields.io/badge/收录-实时更新-5865f2?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/blob/main/LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
+  <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
+  <a href="https://www.dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <strong>官方网站：</strong>
+  <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/dsheval/dsh-top100">GitHub 源码</a> · <a href="https://github.com/dsheval/dsh-top100/issues">问题反馈</a>
+</p>
 
 在 DeepSeek Harness Web 的设置页浏览中文榜单、搜索所需能力，并在核对来源、脚本与风险后确认安装。与官网共用榜单数据，无需自行运行采集器或数据库。
-
-[访问官网](https://www.dsheval.ai/) · [安装指南](https://www.dsheval.ai/?page=dsh#dsh) · [GitHub 源码](https://github.com/dsheval/dsh-top100) · [问题反馈](https://github.com/dsheval/dsh-top100/issues)
 
 ## 可以做什么
 
