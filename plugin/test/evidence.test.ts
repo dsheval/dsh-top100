@@ -37,7 +37,7 @@ describe("catalog evidence", () => {
     const plugin = entry({
       type: "cordis-plugin",
       description: "Cordis plugin that controls an MCP desktop client",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/example"] },
+      install: { method: "pnpm-profile", packageName: "@acme/example", commands: ["dsh plugin --profile web add @acme/example"] },
     });
 
     expect(classifyFormFactor(plugin)).toBe("dsh-bundle");

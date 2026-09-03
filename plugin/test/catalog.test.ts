@@ -63,14 +63,14 @@ const document: RankingsDocument = {
     hot: [entry("acme/hot-one", {
       rank: 1,
       type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/hot-one"] },
+      install: { method: "pnpm-profile", packageName: "@acme/hot-one", commands: ["dsh plugin --profile web add @acme/hot-one"] },
     })],
     rising: [entry("acme/rise-one", { rank: 1, tags: ["memory"] })],
     total: [
       entry("acme/hot-one", {
         rank: 2,
         type: "cordis-plugin",
-        install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/hot-one"] },
+        install: { method: "pnpm-profile", packageName: "@acme/hot-one", commands: ["dsh plugin --profile web add @acme/hot-one"] },
       }),
       entry("acme/rise-one", { rank: 3, tags: ["memory"] }),
       entry("other/search-me", { rank: 4, descriptionZh: "检索助手" }),
@@ -115,7 +115,10 @@ function v2Publication() {
     tags: item.tags,
     categories: item.categories ?? [],
     type: item.type,
-    ...(item.install?.commands?.[0] ? { installTarget: item.install.commands[0].split(" ").at(-1) } : {}),
+    ...(item.install?.commands?.[0] ? {
+      installTarget: item.install.commands[0].split(" ").at(-1),
+      installPackageName: item.install.packageName,
+    } : {}),
   }));
   const searchRaw = json({ ...base, dataset: "search", total: searchRankings.length, rankings: searchRankings });
   const totalRaw = json({
@@ -245,7 +248,7 @@ describe("catalog filter", () => {
         total: [
           entry("acme/installable", {
             type: "cordis-plugin",
-            install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/installable"] },
+            install: { method: "pnpm-profile", packageName: "@acme/installable", commands: ["dsh plugin --profile web add @acme/installable"] },
           }),
           entry("acme/skill", { type: "skill" }),
           entry("acme/no-source", { type: "cordis-plugin" }),
@@ -290,7 +293,7 @@ describe("catalog filter", () => {
           entry("acme/installable", {
             type: "cordis-plugin",
             categories: ["ai"],
-            install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/installable"] },
+            install: { method: "pnpm-profile", packageName: "@acme/installable", commands: ["dsh plugin --profile web add @acme/installable"] },
           }),
           entry("acme/ecosystem", { type: "cordis-plugin", categories: ["ai"] }),
         ],
@@ -557,7 +560,7 @@ describe("catalog transport", () => {
     await expect(findPublishedEntry("https://catalog.example/data", "acme/hot-one"))
       .resolves.toMatchObject({
         fullName: "acme/hot-one",
-        install: { commands: ["dsh plugin --profile web add @acme/hot-one"] },
+        install: { packageName: "@acme/hot-one", commands: ["dsh plugin --profile web add @acme/hot-one"] },
       });
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "https://catalog.example/data/manifest.json",

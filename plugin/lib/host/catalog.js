@@ -625,6 +625,7 @@ function normalizeSearchEntry(value, index) {
         : null;
     const install = entry.install ?? (parsedTarget ? {
         method: "manifest-v2",
+        packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
         target: parsedTarget.spec,
         commands: [`dsh plugin add ${parsedTarget.spec}`],
         commandSource: "manifest-v2",

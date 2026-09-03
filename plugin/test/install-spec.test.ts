@@ -73,18 +73,49 @@ describe("parseInstallSpec", () => {
 });
 
 describe("resolveInstallSpec", () => {
-  it("prefers a structured dsh plugin add command", () => {
+  it("selects the current repository rather than the prerequisite market", () => {
+    const plugin = entry({
+      fullName: "e2mcc/dsh-popout-sidebar",
+      type: "cordis-plugin",
+      install: { commands: [
+        "dsh plugin --profile web add dshmarket",
+        "dsh plugin --profile web add github:e2mcc/dsh-popout-sidebar",
+      ] },
+    });
+    expect(resolveInstallSpec(plugin)).toEqual({ kind: "github", spec: "github:e2mcc/dsh-popout-sidebar" });
+    expect(isInstalledEntry(plugin, { dshmarket: "1.40.0" })).toBe(false);
+  });
+
+  it("rejects foreign repositories and npm commands without matching package metadata", () => {
+    for (const command of ["dsh plugin add github:other/demo", "dsh plugin add dshmarket"]) {
+      expect(resolveInstallSpec(entry({ fullName: "acme/demo", type: "cordis-plugin", install: { commands: [command] } }))).toBeNull();
+    }
+    expect(resolveInstallSpec(entry({
+      fullName: "acme/demo", type: "cordis-plugin",
+      install: { packageName: "@acme/demo", commands: ["dsh plugin add dshmarket", "dsh plugin add @acme/demo@latest"] },
+    }))).toEqual({ kind: "npm", spec: "@acme/demo@latest" });
+  });
+
+  it("rejects a command with extra tokens rather than truncating it to a package", () => {
+    expect(resolveInstallSpec(entry({
+      fullName: "acme/demo", type: "cordis-plugin",
+      install: { packageName: "demo", commands: ["dsh plugin add demo && echo unsafe"] },
+    }))).toBeNull();
+  });
+
+  it("accepts a structured command matching the selected package", () => {
     const spec = resolveInstallSpec(
       entry({
         fullName: "acme/demo",
         type: "skill",
         install: {
           method: "skills-add",
-          commands: ["dsh plugin --profile web add dsh-better-sidebar"],
+          packageName: "@acme/demo",
+          commands: ["dsh plugin --profile web add @acme/demo"],
         },
       }),
     );
-    expect(spec).toEqual({ kind: "npm", spec: "dsh-better-sidebar" });
+    expect(spec).toEqual({ kind: "npm", spec: "@acme/demo" });
   });
 
   it("keeps cordis entries without an author-provided add command browse-only", () => {
@@ -97,7 +128,7 @@ describe("resolveInstallSpec", () => {
     expect(resolveInstallSpec(entry({
       fullName: "acme/dsh-demo",
       type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add @acme/dsh-demo@latest"] },
+      install: { method: "pnpm-profile", packageName: "@acme/dsh-demo", commands: ["dsh plugin --profile web add @acme/dsh-demo@latest"] },
     }))).toEqual({ kind: "npm", spec: "@acme/dsh-demo@latest" });
   });
 
@@ -129,7 +160,7 @@ describe("installed matching", () => {
     const plugin = entry({
       fullName: "acme/demo",
       type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add demo"] },
+      install: { method: "pnpm-profile", packageName: "demo", commands: ["dsh plugin --profile web add demo"] },
     });
     expect(isInstalledEntry(plugin, { "demo-helper": "1.0.0" })).toBe(false);
   });
