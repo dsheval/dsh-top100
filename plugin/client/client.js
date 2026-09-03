@@ -281,6 +281,17 @@ function presentInstallCapability(item) {
 }
 
 //#endregion
+//#region src/client/install-review-presentation.ts
+/** Scripts and ordinary restart guidance have their own always-visible compact rows. */
+function visibleInstallReviewRisks(risks, scriptCount) {
+	return risks.filter((risk) => {
+		if (risk.code === "lifecycle-scripts" && scriptCount > 0) return false;
+		if (risk.code === "restart-required" && risk.severity === "info") return false;
+		return true;
+	});
+}
+
+//#endregion
 //#region src/client/install-presentation.ts
 function progressAddedCount(line) {
 	if (!/\bProgress:/i.test(line)) return null;
@@ -681,9 +692,15 @@ const SORT_VIEWS = [
 	"rising",
 	"total"
 ];
-const AUXILIARY_CATALOG_SCOPES = ["skills"];
+const CATALOG_SCOPES = ["plugins", "skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
+const GITHUB_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+	viewBox: "0 0 24 24",
+	"aria-hidden": "true",
+	focusable: "false",
+	children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z" })
+});
 function RankTrustMark() {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("svg", {
 		viewBox: "0 0 48 48",
@@ -977,8 +994,6 @@ function RankingsPage({ t }) {
 	}
 	function selectCategory(nextCategory) {
 		setCategory(nextCategory);
-		setQuery("");
-		setDraft("");
 		setCategoryMenuOpen(false);
 	}
 	function selectRankingView(nextView) {
@@ -1193,7 +1208,18 @@ function RankingsPage({ t }) {
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "head-copy",
 					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: t("title") }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "market-title-row",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: t("title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+								className: "github-link",
+								href: "https://github.com/dsheval/dsh-top100",
+								"aria-label": "dsh-top100 GitHub",
+								title: "dsh-top100 GitHub",
+								target: "_blank",
+								rel: "noopener noreferrer",
+								children: GITHUB_ICON
+							})]
+						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 							className: "lede",
 							children: t("subtitle")
@@ -1269,29 +1295,21 @@ function RankingsPage({ t }) {
 				]
 			}),
 			section === "rankings" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "catalog-navigation",
+					role: "group",
 					"aria-label": t("catalogScope"),
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					children: CATALOG_SCOPES.map((scope) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 						type: "button",
-						className: "catalog-primary",
-						"aria-current": catalogScope === "plugins" ? "page" : void 0,
-						onClick: () => switchCatalogScope("plugins"),
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("catalogScope_plugins") }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: data.scopeCounts.plugins }) : null]
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: "catalog-explore",
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("exploreMore") }), AUXILIARY_CATALOG_SCOPES.map((scope) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-							type: "button",
-							"aria-pressed": catalogScope === scope,
-							title: t(`catalogScopeHint_${scope}`),
-							onClick: () => switchCatalogScope(scope),
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`catalogScope_${scope}`) }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
-								"(",
-								data.scopeCounts[scope],
-								")"
-							] }) : null]
-						}, scope))]
-					})]
+						className: "catalog-tab",
+						"aria-pressed": catalogScope === scope,
+						title: t(`catalogScopeHint_${scope}`),
+						onClick: () => switchCatalogScope(scope),
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`catalogScope_${scope}`) }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+							className: "catalog-count",
+							children: data.scopeCounts[scope].toLocaleString("en-US")
+						}) : null]
+					}, scope))
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "toolbar ranking-toolbar",
@@ -1303,7 +1321,7 @@ function RankingsPage({ t }) {
 							placeholder: t("searchPlaceholder"),
 							onChange: (event) => setDraft(event.target.value),
 							onKeyDown: (event) => {
-								if (event.key === "Enter") startSearch(draft);
+								if (event.key === "Enter" && !event.nativeEvent.isComposing) startSearch(draft);
 							}
 						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 							type: "button",
@@ -1389,7 +1407,7 @@ function RankingsPage({ t }) {
 						children: [
 							t("catalogMatches"),
 							" ",
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: data.total }),
+							data.total,
 							" ",
 							t("entries"),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
@@ -1402,7 +1420,7 @@ function RankingsPage({ t }) {
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: "result-count",
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: items.length }),
+							items.length,
 							" / ",
 							data.total,
 							" ",
@@ -1420,7 +1438,7 @@ function RankingsPage({ t }) {
 							"aria-pressed": view === id,
 							title: t(rankingBasisKey(id, "")),
 							onClick: () => selectRankingView(id),
-							children: id === "total" ? t("starsShort") : t(id)
+							children: t(id)
 						}, id))
 					}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 						className: "ranking-current-label stars-browse",
@@ -1591,141 +1609,142 @@ function RankingsPage({ t }) {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "dialog",
 						children: [
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-								id: "dsh-top100-confirm-title",
-								children: t("confirmTitle")
-							}),
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: "lede",
-								children: t("confirmBody")
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+								className: "confirm-header",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+									id: "dsh-top100-confirm-title",
+									children: confirming.length === 1 ? t("confirmProjectTitle").replace("{name}", presentRepositoryIdentity(confirming[0]).name) : t("confirmTitle")
+								}), confirming.length === 1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+									className: "confirm-target",
+									"aria-label": t("resolvedSource"),
+									children: preflightsByName.get(confirming[0].fullName)?.provenance.resolvedTarget ?? confirming[0].installSpec?.spec ?? "-"
+								}) : null]
 							}),
 							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-								className: "confirm-list",
-								children: confirming.map((item) => {
-									const preflight = preflightsByName.get(item.fullName);
-									const identity = presentRepositoryIdentity(item);
-									const scriptCount = preflight?.lifecycleScripts.length ?? 0;
-									const needsRestart = preflight?.risks.some((risk) => risk.code === "restart-required") ?? false;
-									const sourceSummaryKey = preflight?.provenance.source === "github" ? "commitLocked" : preflight?.provenance.repositoryIdentity === "unavailable" ? "sourceIdentityUnavailable" : "sourceMatched";
-									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-										className: "confirm-item",
-										children: [
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: "confirm-project",
-												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: identity.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-													identity.owner,
-													" · ",
-													t(`form_${item.evidence.formFactor}`)
-												] })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
-													href: item.url || `https://github.com/${item.fullName}`,
-													target: "_blank",
-													rel: "noreferrer",
-													children: [t("viewProject"), " ↗"]
-												})]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-												className: "confirm-description",
-												children: item.descriptionZh || item.description
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: "confirm-source",
-												children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("resolvedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? item.installSpec?.spec ?? "-" })]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-												className: "confirm-summary",
-												role: "list",
-												"aria-label": t("installSummary"),
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														role: "listitem",
-														"data-tone": preflight?.provenance.repositoryIdentity === "unavailable" ? "warning" : "safe",
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(sourceSummaryKey)]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														role: "listitem",
-														"data-tone": scriptCount > 0 ? "warning" : "safe",
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), scriptCount > 0 ? `${t("willRunScriptsPrefix")} ${scriptCount} ${t("buildScriptsUnit")}` : t("noBuildScripts")]
-													}),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-														role: "listitem",
-														"data-tone": needsRestart ? "warning" : "safe",
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(needsRestart ? "restartAfterInstall" : "noRestartRequired")]
-													})
-												]
-											}),
-											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
-												className: "confirm-evidence",
-												children: [
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("viewInstallTechnicalEvidence") }),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-														t("requestedSource"),
-														": ",
-														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type })
-													] }),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-														t("resolvedSource"),
-														": ",
-														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? "-" })
-													] }),
-													preflight?.provenance.integrity ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-														t("integrity"),
-														": ",
-														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.integrity })
-													] }) : null,
-													preflight?.lifecycleScripts.map((script) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-														className: "script-evidence",
-														children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: script.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: script.command })]
-													}, script.name)),
-													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
-														className: "risk-list",
-														children: preflight?.risks.map((risk) => {
-															const presented = presentInstallRisk(risk, t);
-															return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
-																"data-severity": risk.severity,
-																children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: presented.summary }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: presented.detail })]
-															}, risk.code);
+								className: "confirm-body",
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+									className: "confirm-list",
+									children: confirming.map((item) => {
+										const preflight = preflightsByName.get(item.fullName);
+										const identity = presentRepositoryIdentity(item);
+										const scriptCount = preflight?.lifecycleScripts.length ?? 0;
+										const needsRestart = preflight?.risks.some((risk) => risk.code === "restart-required") ?? false;
+										const visibleRisks = visibleInstallReviewRisks(preflight?.risks ?? [], scriptCount);
+										const sourceSummaryKey = preflight?.provenance.source === "github" ? "commitLocked" : preflight?.provenance.repositoryIdentity === "unavailable" ? "sourceIdentityUnavailable" : "sourceMatched";
+										return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: "confirm-item",
+											children: [
+												confirming.length > 1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+													className: "confirm-project",
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: identity.name }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+														className: "confirm-target",
+														"aria-label": t("resolvedSource"),
+														children: preflight?.provenance.resolvedTarget ?? item.installSpec?.spec ?? "-"
+													})]
+												}) : null,
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+													className: "confirm-effects",
+													"aria-label": t("installSummary"),
+													children: [
+														scriptCount > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+															className: "confirm-scripts",
+															"data-warning": scriptCount > 0,
+															children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("confirmScripts") }), preflight?.lifecycleScripts.map((script) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+																className: "script-evidence",
+																children: [
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: script.name }),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+																		"aria-hidden": "true",
+																		children: "→"
+																	}),
+																	/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: script.command })
+																]
+															}, script.name))]
+														}) : null,
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+															className: "risk-list",
+															children: visibleRisks.map((risk) => {
+																const presented = presentInstallRisk(risk, t);
+																return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+																	"data-severity": risk.severity,
+																	children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: presented.summary }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: presented.detail })]
+																}, risk.code);
+															})
+														}),
+														needsRestart ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+															className: "confirm-followup",
+															children: t("confirmRestart")
+														}) : null,
+														item.install?.needsConfig ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+															className: "confirm-followup",
+															children: t("confirmNeedConfig")
+														}) : null
+													]
+												}),
+												/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+													className: "confirm-evidence",
+													children: [
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("viewInstallTechnicalEvidence") }),
+														/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+															className: "confirm-source-status",
+															children: t(sourceSummaryKey)
+														}),
+														/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", { children: [
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("requestedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type }) })] }),
+															/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("resolvedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight?.provenance.resolvedTarget ?? "-" }) })] }),
+															preflight?.provenance.integrity ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("integrity") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.integrity }) })] }) : null
+														] }),
+														scriptCount === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("noBuildScripts") }) : null,
+														needsRestart ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("risk_restart-required_detail") }) : null,
+														/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+															className: "confirm-project-link",
+															href: item.url || `https://github.com/${item.fullName}`,
+															target: "_blank",
+															rel: "noreferrer",
+															children: [t("viewProject"), " ↗"]
 														})
-													})
-												]
-											})
-										]
-									}, item.fullName);
+													]
+												})
+											]
+										}, item.fullName);
+									})
 								})
 							}),
-							confirming.some((item) => item.install?.needsConfig) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: "lede",
-								children: t("confirmNeedConfig")
-							}) : null,
-							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-								className: "confirm-caveat",
-								children: t("notSecurityReview")
-							}),
-							preflights.some((value) => value.requiresExplicitApproval) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
-								className: "risk-approval",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
-									type: "checkbox",
-									checked: riskAccepted,
-									onChange: (event) => setRiskAccepted(event.target.checked)
-								}), t("riskApproval")]
-							}) : null,
-							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-								className: "toolbar",
-								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "primary",
-									disabled: !riskAccepted,
-									onClick: () => void install(confirming),
-									children: t("confirm")
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									autoFocus: true,
-									onClick: () => {
-										setConfirming(null);
-										setPreflights([]);
-										setRiskAccepted(false);
-									},
-									children: t("cancel")
-								})]
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", {
+								className: "confirm-footer",
+								children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+										className: "confirm-caveat",
+										children: t("confirmSecurityNote")
+									}),
+									preflights.some((value) => value.requiresExplicitApproval) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+										className: "risk-approval",
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+											type: "checkbox",
+											checked: riskAccepted,
+											onChange: (event) => setRiskAccepted(event.target.checked)
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("riskApproval") })]
+									}) : null,
+									/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: "confirm-actions",
+										children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											autoFocus: true,
+											onClick: () => {
+												setConfirming(null);
+												setPreflights([]);
+												setRiskAccepted(false);
+											},
+											children: t("cancel")
+										}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+											type: "button",
+											className: "primary",
+											disabled: !riskAccepted,
+											onClick: () => void install(confirming),
+											children: t("confirm")
+										})]
+									})
+								]
 							})
 						]
 					})
@@ -1794,6 +1813,11 @@ const css = `
   --t100-fill: var(--dsw-alias-bg-layer-2, color-mix(in srgb, currentColor 6%, transparent));
   --t100-accent: color-mix(in srgb, #3f8b82 78%, currentColor);
   --t100-accent-soft: color-mix(in srgb, var(--t100-accent) 16%, transparent);
+  /* Match the user's reference screenshot, without currentColor mixing. */
+  --t100-action: #67a298;
+  --t100-action-hover: #5f998f;
+  --t100-action-border: #67a298;
+  --t100-on-action: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1844,6 +1868,12 @@ const css = `
   min-width: 0;
   gap: 5px;
 }
+.dsh-top100 .market-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .dsh-top100 h2 {
   margin: 0;
   font-size: 19px;
@@ -1861,8 +1891,8 @@ const css = `
   display: flex;
   flex-wrap: wrap;
   gap: 5px 14px;
-  color: var(--t100-muted);
-  font-size: 11px;
+  color: var(--t100-body);
+  font-size: 12px;
   line-height: 18px;
 }
 .dsh-top100 .data-source {
@@ -1872,6 +1902,20 @@ const css = `
 }
 .dsh-top100 .data-source:hover { text-decoration: underline; }
 .dsh-top100 .cache-warning { color: #9a6700; }
+.dsh-top100 .github-link {
+  display: inline-flex;
+  flex: 0 0 36px;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: var(--t100-ink);
+  text-decoration: none;
+}
+.dsh-top100 .github-link svg { width: 20px; height: 20px; fill: currentColor; }
+.dsh-top100 .github-link:hover { background: var(--t100-fill); }
+.dsh-top100 .github-link:focus-visible { outline: 2px solid var(--t100-accent); outline-offset: 2px; }
 .dsh-top100 .toolbar {
   display: flex;
   gap: 8px;
@@ -1912,59 +1956,36 @@ const css = `
 .dsh-top100 .catalog-navigation {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
   min-height: 36px;
   padding: 2px 1px 7px;
   border-bottom: 1px solid var(--t100-line);
 }
-.dsh-top100 button.catalog-primary {
+.dsh-top100 button.catalog-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  padding: 5px 8px;
+  height: 38px;
+  padding: 0 12px;
   border-color: transparent;
-  color: var(--t100-muted);
-  font-weight: 700;
+  color: var(--t100-body);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
 }
-.dsh-top100 button.catalog-primary[aria-current="page"] {
+.dsh-top100 button.catalog-tab:hover { color: var(--t100-ink); }
+.dsh-top100 button.catalog-tab[aria-pressed="true"] {
   color: var(--t100-accent);
   background: var(--t100-accent-soft);
 }
-.dsh-top100 button.catalog-primary small {
-  min-width: 22px;
-  padding: 2px 6px;
-  border-radius: 99px;
-  background: color-mix(in srgb, currentColor 10%, transparent);
+.dsh-top100 .catalog-count {
   color: inherit;
-  font-size: 10px;
+  font-size: 13px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
-.dsh-top100 .catalog-explore {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-  min-width: 0;
-  color: var(--t100-muted);
-  font-size: 11px;
-}
-.dsh-top100 .catalog-explore > span { margin-right: 3px; }
-.dsh-top100 .catalog-explore button {
-  height: 28px;
-  padding: 0 5px;
-  border-color: transparent;
-  color: var(--t100-muted);
-  font-size: 11px;
-  white-space: nowrap;
-}
-.dsh-top100 .catalog-explore button:hover,
-.dsh-top100 .catalog-explore button[aria-pressed="true"] {
-  color: var(--t100-accent);
-  background: var(--t100-accent-soft);
-}
-.dsh-top100 .catalog-explore button small { font-size: 10px; }
 .dsh-top100 input[type="search"] {
   flex: 1 1 auto;
   min-width: 180px;
@@ -2083,11 +2104,20 @@ const css = `
   align-items: center;
   cursor: default;
 }
-.dsh-top100 .tab[aria-selected="true"],
-.dsh-top100 button.primary {
+.dsh-top100 .tab[aria-selected="true"] {
   background: var(--t100-accent);
   border-color: var(--t100-accent);
   color: #f7f3e7;
+}
+.dsh-top100 button.primary {
+  background: var(--t100-action);
+  border-color: var(--t100-action-border);
+  color: var(--t100-on-action);
+  font-size: 14px;
+  font-weight: 600;
+}
+.dsh-top100 button.primary:hover:not(:disabled) {
+  background: var(--t100-action-hover);
 }
 .dsh-top100 button:disabled {
   opacity: 0.5;
@@ -2269,13 +2299,13 @@ const css = `
   gap: 10px;
   min-height: 32px;
   padding: 0 1px;
-  color: var(--t100-muted);
-  font-size: 11px;
+  color: var(--t100-body);
+  font-size: 12px;
   line-height: 18px;
 }
 .dsh-top100 .search-result-count small {
-  color: var(--t100-muted);
-  font-size: 10px;
+  color: var(--t100-body);
+  font-size: 12px;
 }
 .dsh-top100 .search-result-tab[aria-selected="true"]::before {
   content: "↳";
@@ -2284,12 +2314,10 @@ const css = `
 }
 .dsh-top100 .result-count {
   flex: 0 0 auto;
+  font-size: 13px;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-.dsh-top100 .result-count strong {
-  color: var(--t100-ink);
-  font-size: 13px;
 }
 .dsh-top100 .filter-summary {
   flex: 0 0 auto;
@@ -2317,13 +2345,13 @@ const css = `
   background: var(--t100-fill);
 }
 .dsh-top100 .ranking-modes button {
-  height: 27px;
+  height: 30px;
   padding: 0 9px;
   border: 0;
   border-radius: 6px;
-  color: var(--t100-muted);
-  font-size: 10px;
-  font-weight: 650;
+  color: var(--t100-body);
+  font-size: 12px;
+  font-weight: 600;
 }
 .dsh-top100 .ranking-modes button:hover { color: var(--t100-ink); }
 .dsh-top100 .ranking-modes button[aria-pressed="true"] {
@@ -2504,16 +2532,17 @@ const css = `
   margin: 0;
   overflow: visible;
   color: var(--t100-body);
-  font-size: 12px;
-  line-height: 18px;
+  font-size: 13px;
+  line-height: 20px;
 }
 .dsh-top100 .facts {
   display: flex;
   flex-wrap: wrap;
   gap: 7px 10px;
   margin-top: 8px;
-  color: var(--t100-muted);
-  font-size: 11px;
+  color: var(--t100-body);
+  font-size: 12px;
+  line-height: 18px;
 }
 .dsh-top100 .facts > span {
   display: inline-flex;
@@ -2521,27 +2550,25 @@ const css = `
   min-height: 22px;
 }
 .dsh-top100 .capability-label {
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--t100-fill);
-  color: var(--t100-muted);
-  font-size: 10px;
-  font-weight: 650;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--t100-body);
+  font: inherit;
   white-space: nowrap;
 }
 .dsh-top100 .capability-label.capability-ready,
 .dsh-top100 .capability-label.capability-installed {
-  background: var(--t100-accent-soft);
   color: var(--t100-accent);
 }
 .dsh-top100 .capability-label.capability-manual {
-  background: color-mix(in srgb, #f0b429 12%, transparent);
   color: #8a5c00;
 }
 .dsh-top100 .ranking-metric strong {
   color: var(--t100-accent);
   font-variant-numeric: tabular-nums;
 }
+.dsh-top100 .ranking-metric { gap: 3px; }
 .dsh-top100 .star-fact {
   color: var(--t100-ink);
   font-variant-numeric: tabular-nums;
@@ -2599,17 +2626,18 @@ const css = `
 .dsh-top100 .actions > .project-link {
   box-sizing: border-box;
   display: inline-flex;
-  flex: 0 0 124px;
+  flex: 0 0 auto;
   height: 36px;
   min-height: 36px;
-  padding: 0 12px;
+  min-width: 64px;
+  padding: 0 16px;
   align-items: center;
   justify-content: center;
   gap: 5px;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
   white-space: nowrap;
 }
 .dsh-top100 .card-footer {
@@ -2630,13 +2658,12 @@ const css = `
   color: var(--t100-ink);
   background: var(--t100-fill);
   text-decoration: none;
-  transition: border-color 120ms ease, background 120ms ease, color 120ms ease, transform 120ms ease;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
 }
 .dsh-top100 .project-link:hover {
   border-color: var(--t100-accent);
   background: var(--t100-accent-soft);
   color: var(--t100-accent);
-  transform: translateY(-1px);
 }
 .dsh-top100 .project-link:focus-visible {
   outline: 2px solid var(--t100-accent);
@@ -3402,185 +3429,152 @@ const css = `
   background: color-mix(in srgb, #17211f 42%, transparent);
 }
 .dsh-top100 .dialog {
-  width: min(620px, calc(100vw - 32px));
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 32px));
   max-height: min(760px, calc(100vh - 32px));
-  overflow: auto;
-  padding: 16px;
+  overflow: hidden;
   border-radius: 12px;
-  background: Canvas;
-  color: CanvasText;
+  background: var(--t100-surface);
+  color: var(--t100-ink);
   display: grid;
-  gap: 10px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  box-shadow: 0 16px 56px #0003;
 }
-.dsh-top100 .dialog h3 {
-  font-size: 16px;
+.dsh-top100 .confirm-header { padding: 24px 24px 20px; }
+.dsh-top100 .confirm-header h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 600; overflow-wrap: anywhere; }
+.dsh-top100 .confirm-body {
+  min-height: 0;
+  overflow: auto;
+  padding: 0 24px 18px;
+  overscroll-behavior: contain;
 }
 .dsh-top100 .confirm-list {
   display: grid;
-  gap: 8px;
-  max-height: 460px;
-  overflow: auto;
-}
-.dsh-top100 .confirm-list > div {
-  display: grid;
-  gap: 7px;
+  gap: 24px;
 }
 .dsh-top100 .confirm-item {
-  padding: 11px;
-  border: 1px solid var(--t100-line);
-  border-radius: 9px;
-  background: var(--t100-surface);
+  min-width: 0;
+}
+.dsh-top100 .confirm-item + .confirm-item {
+  border-top: 1px solid var(--t100-line);
+  padding-top: 24px;
 }
 .dsh-top100 .confirm-project {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.dsh-top100 .confirm-project > div {
   display: grid;
-  min-width: 0;
-  gap: 2px;
+  margin-bottom: 18px;
 }
 .dsh-top100 .confirm-project strong {
-  overflow: hidden;
-  font-size: 15px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 24px;
 }
-.dsh-top100 .confirm-project span {
-  color: var(--t100-muted);
-  font-size: 10px;
-}
-.dsh-top100 .confirm-project > a {
-  flex: 0 0 auto;
-  color: var(--t100-accent);
-  font-size: 11px;
-  font-weight: 650;
+.dsh-top100 .confirm-project-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--t100-body);
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
   text-decoration: none;
 }
-.dsh-top100 .confirm-description {
-  margin: 0;
-  color: var(--t100-body);
-  font-size: 11px;
-  line-height: 1.55;
-}
-.dsh-top100 .confirm-source {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  padding: 8px 9px;
-  border-radius: 7px;
-  background: var(--t100-fill);
-}
-.dsh-top100 .confirm-source span {
-  color: var(--t100-muted);
-  font-size: 10px;
-  white-space: nowrap;
-}
-.dsh-top100 .confirm-source code {
-  overflow: hidden;
+.dsh-top100 .confirm-project-link:hover { color: var(--t100-ink); text-decoration: underline; }
+.dsh-top100 .confirm-project-link:focus-visible { outline: 2px solid var(--t100-accent); outline-offset: 3px; }
+.dsh-top100 .dialog code {
   color: var(--t100-ink);
-  font-size: 10px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font: 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
-.dsh-top100 .confirm-summary {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+.dsh-top100 code.confirm-target { display: block; margin-top: 6px; color: var(--t100-body); }
+.dsh-top100 .confirm-source-status {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--t100-body);
 }
-.dsh-top100 .confirm-summary > span {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  min-width: 0;
-  padding: 7px 8px;
-  border-radius: 7px;
-  background: var(--t100-fill);
-  color: var(--t100-muted);
-  font-size: 10px;
-  line-height: 1.35;
-}
-.dsh-top100 .confirm-summary i {
-  flex: 0 0 auto;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--t100-accent);
-}
-.dsh-top100 .confirm-summary > span[data-tone="warning"] {
-  color: #9a6700;
-  background: color-mix(in srgb, #f0b429 9%, transparent);
-}
-.dsh-top100 .confirm-summary > span[data-tone="warning"] i { background: #c98300; }
+.dsh-top100 .confirm-scripts p { margin: 0; font-size: 14px; line-height: 22px; }
+.dsh-top100 .confirm-scripts[data-warning="true"] { border-left: 2px solid var(--t100-accent); padding-left: 12px; }
+.dsh-top100 .confirm-scripts[data-warning="true"] > p { font-weight: 500; }
+.dsh-top100 .confirm-followup { margin: 14px 0 0; font-size: 14px; line-height: 22px; color: var(--t100-body); }
 .dsh-top100 .confirm-evidence {
-  padding: 7px 9px;
-  border-radius: 7px;
-  background: var(--t100-fill);
-  color: var(--t100-muted);
-  font-size: 11px;
+  margin-top: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--t100-body);
+  font-size: 12px;
+  line-height: 20px;
 }
 .dsh-top100 .confirm-evidence summary {
-  color: var(--t100-accent);
-  font-weight: 650;
+  padding: 0;
+  color: var(--t100-ink);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
 }
-.dsh-top100 .confirm-evidence[open] {
-  display: grid;
-  gap: 8px;
+.dsh-top100 .confirm-evidence dl { margin: 12px 0 0; padding: 12px; border-radius: 6px; background: color-mix(in srgb, var(--t100-ink) 4%, var(--t100-surface)); }
+.dsh-top100 .confirm-evidence dl > div { display: grid; grid-template-columns: 86px minmax(0, 1fr); gap: 10px; }
+.dsh-top100 .confirm-evidence dl > div + div { margin-top: 10px; }
+.dsh-top100 .confirm-evidence dd { min-width: 0; margin: 0; }
+.dsh-top100 .confirm-footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--t100-line);
+  background: var(--t100-surface);
 }
 .dsh-top100 .confirm-caveat {
   margin: 0;
-  padding: 8px 10px;
-  border-left: 3px solid #c98300;
-  background: color-mix(in srgb, #f0b429 8%, transparent);
-  color: #7a5200;
-  font-size: 11px;
-  line-height: 1.5;
+  color: var(--t100-body);
+  font-size: 12px;
+  line-height: 18px;
 }
 .dsh-top100 .script-evidence {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: auto 14px minmax(0, 1fr);
   gap: 8px;
   align-items: start;
-  padding: 7px 9px;
-  border-radius: 7px;
-  background: color-mix(in srgb, #f0b429 11%, transparent);
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--t100-ink) 4%, var(--t100-surface));
 }
 .dsh-top100 .script-evidence span {
-  color: #9a6700;
-  font: 650 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--t100-body);
+  font: 400 13px/20px ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
 }
 .dsh-top100 .risk-list {
   display: grid;
-  gap: 6px;
-  margin: 2px 0 0;
+  gap: 12px;
+  margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
+.dsh-top100 .risk-list:empty { display: none; }
 .dsh-top100 .risk-list li {
   display: grid;
-  gap: 2px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--t100-accent);
-  background: var(--t100-fill);
-  font-size: 11px;
-  line-height: 1.45;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 20px;
 }
-.dsh-top100 .risk-list li[data-severity="warning"] { border-left-color: #c98300; }
-.dsh-top100 .risk-list span { color: var(--t100-muted); white-space: pre-wrap; }
+.dsh-top100 .risk-list strong { font-weight: 600; }
+.dsh-top100 .risk-list li[data-severity="warning"] { border-left: 3px solid #b77912; padding-left: 12px; }
+.dsh-top100 .risk-list span { color: var(--t100-body); white-space: pre-wrap; overflow-wrap: anywhere; }
 .dsh-top100 .risk-approval {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: flex-start;
-  padding: 9px 10px;
-  border: 1px solid color-mix(in srgb, #c98300 38%, var(--t100-line));
-  border-radius: 8px;
-  background: color-mix(in srgb, #f0b429 8%, transparent);
-  font-size: 12px;
-  line-height: 1.45;
+  margin: 12px 0 0;
+  font-size: 14px;
+  line-height: 22px;
+  cursor: pointer;
 }
+.dsh-top100 .risk-approval input { flex: 0 0 16px; width: 16px; height: 16px; margin: 3px 0 0; accent-color: var(--t100-accent); }
+.dsh-top100 .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.dsh-top100 .confirm-actions button { min-width: 88px; height: 40px; padding: 0 16px; font-size: 14px; font-weight: 500; }
+.dsh-top100 .confirm-actions button.primary { font-weight: 600; }
+.dsh-top100 .confirm-actions button.primary:disabled { color: var(--t100-body); background: var(--t100-fill); border-color: var(--t100-line); opacity: 1; cursor: not-allowed; }
 .dsh-top100 button:focus-visible,
 .dsh-top100 input:focus-visible,
 .dsh-top100 select:focus-visible,
@@ -3600,18 +3594,14 @@ const css = `
   .dsh-top100 .toolbar { flex-wrap: wrap; }
   .dsh-top100 .search-cluster { flex-basis: 100%; }
   .dsh-top100 .search-cluster > button.primary { flex: 0 0 auto; }
-  .dsh-top100 .catalog-navigation { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .dsh-top100 .catalog-explore { flex-wrap: wrap; justify-content: flex-start; }
+  .dsh-top100 .catalog-navigation { gap: 4px; }
   .dsh-top100 .market-filter-row { width: 100%; flex-wrap: wrap; }
   .dsh-top100 .market-category-menu { flex: 1 1 150px; }
   .dsh-top100 .market-category-popover { width: min(330px, calc(100vw - 36px)); }
   .dsh-top100 .ranking-context { flex-wrap: wrap; }
-  .dsh-top100 .confirm-summary { grid-template-columns: 1fr; }
   .dsh-top100 .card-footer { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
   .dsh-top100 .managed-list .row-actions { grid-column: 1 / -1; }
   .dsh-top100 .actions { flex-wrap: wrap; }
-  .dsh-top100 .actions > button,
-  .dsh-top100 .actions > .project-link { flex-basis: calc(50% - 4px); }
   .dsh-top100 .detail-drawer { width: 100%; padding: 15px; }
   .dsh-top100 .detail-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dsh-top100 .detail-actions { margin: auto -15px -15px; padding: 11px 15px 15px; }
@@ -3643,7 +3633,7 @@ const css = `
 //#region src/client/locales.ts
 const zh = {
 	nav: "插件排行",
-	title: "DSH-Top100",
+	title: "dsh-top100",
 	subtitle: "发现、核对并安装 DSH 插件",
 	rankings: "插件市场",
 	installedPage: "已安装",
@@ -3664,11 +3654,11 @@ const zh = {
 	catalogScopeHint_skills: "独立 Skills 技能库，不参与 Plugin 排名",
 	catalogScopeHint_ecosystem: "经确认与 DSH 相关的应用和外围项目，不参与排名",
 	exploreMore: "探索更多",
-	installAvailability: "安装能力",
-	installAvailability_installable: "可安装",
+	installAvailability: "安装来源",
+	installAvailability_installable: "有安装源",
 	installAvailability_all: "全部插件",
-	installAvailability_unavailable: "暂无安装源",
-	installableOnly: "仅看可安装",
+	installAvailability_unavailable: "未识别安装源",
+	installableOnly: "仅看有安装源",
 	sortBy: "排序",
 	starsSort: "GitHub Stars",
 	starsShort: "Stars",
@@ -3676,7 +3666,7 @@ const zh = {
 	allCategories: "全部分类",
 	categoryRanking: "分类筛选结果",
 	hot: "综合热度",
-	rising: "新锐",
+	rising: "新锐榜",
 	total: "总榜",
 	category: "分类筛选",
 	categoryFilter: "插件分类",
@@ -3761,20 +3751,20 @@ const zh = {
 	manageComplete: "操作完成。",
 	confirmRemoveSkill: "确定卸载这个 Skill？",
 	confirmRemovePlugin: "确定卸载这个插件？",
-	browseOnly: "仅浏览",
-	browseOnlyHint: "未找到作者明确提供且可验证的 dsh plugin add 安装源，请前往 GitHub 查看说明。",
-	capabilityReady: "可预检安装",
-	capabilityReadyReason: "目录提供安装目标；点击后核对精确来源与脚本",
+	browseOnly: "未识别安装源",
+	browseOnlyHint: "暂未识别到匹配当前项目的安装源，不代表无法安装；请前往 GitHub 查看说明。",
+	capabilityReady: "已识别安装源",
+	capabilityReadyReason: "点击后核对精确来源与脚本；识别到安装源不保证安装成功或通过安全审核",
 	capabilityManual: "安装后需配置",
 	capabilityManualReason: "目录提供安装目标，但作者标注安装后还需配置",
 	capabilityBrowse: "生态项目",
-	capabilityUnavailable: "暂无安装源",
-	capabilityNoSourceReason: "目录暂未提供可预检的安装目标",
+	capabilityUnavailable: "未识别安装源",
+	capabilityNoSourceReason: "暂未识别到匹配的安装源，不代表无法安装；请查看项目说明",
 	capabilityUnverifiedReason: "尚未确认符合 DSH 插件结构",
 	capabilityInstalled: "已安装",
 	capabilityInstalledReason: "当前 Profile 已包含这个项目",
 	viewDetails: "查看详情",
-	reviewInstall: "查看并安装",
+	reviewInstall: "安装",
 	viewProject: "查看项目",
 	closeDetails: "关闭详情",
 	readmeSummary: "README 摘要",
@@ -3805,9 +3795,13 @@ const zh = {
 	notAvailable: "暂无",
 	catalogInstallSource: "目录安装源",
 	installing: "安装中",
-	confirmTitle: "查看并安装",
-	confirmBody: "这里汇总项目用途、实际安装源和安装影响；只有你最后确认后，才会写入当前 Profile 或 Skills 目录。",
-	installSummary: "安装影响摘要",
+	confirmTitle: "确认安装",
+	confirmProjectTitle: "安装 {name}？",
+	confirmScripts: "安装时将执行脚本：",
+	confirmRestart: "安装后需重启 DSH，并检查插件是否正常运行。",
+	confirmSecurityNote: "来源校验不等于安全审核。",
+	confirmBody: "确认后，将写入当前 DSH 配置或 Skills 目录。",
+	installSummary: "安装影响",
 	sourceMatched: "版本已固定，仓库身份匹配",
 	sourceIdentityUnavailable: "版本已固定，发布者身份待人工确认",
 	commitLocked: "仓库 commit 已固定",
@@ -3816,13 +3810,13 @@ const zh = {
 	noBuildScripts: "未发现 npm 生命周期脚本",
 	restartAfterInstall: "安装后需重启验证",
 	noRestartRequired: "无需重启",
-	viewInstallTechnicalEvidence: "查看版本、完整性与脚本原文",
+	viewInstallTechnicalEvidence: "来源与校验详情",
 	viewTechnicalEvidence: "查看技术证据",
 	confirmSpec: "安装源",
 	requestedSource: "目录声明",
 	resolvedSource: "实际安装",
 	integrity: "内容完整性",
-	riskApproval: "我已核对上面的精确来源、脚本和风险，并允许执行这次安装。",
+	riskApproval: "我已核对安装来源、脚本与风险，同意安装。",
 	confirmNeedConfig: "这个插件可能还需要额外配置。",
 	confirm: "开始安装",
 	cancel: "取消",
@@ -3954,7 +3948,7 @@ const zh = {
 };
 const en = {
 	nav: "Rankings",
-	title: "DSH-Top100",
+	title: "dsh-top100",
 	subtitle: "Discover, review, and install DSH plugins",
 	rankings: "Marketplace",
 	installedPage: "Installed",
@@ -3975,11 +3969,11 @@ const en = {
 	catalogScopeHint_skills: "A separate Skills library that does not participate in Plugin rankings",
 	catalogScopeHint_ecosystem: "Confirmed DSH apps and related projects that do not participate in rankings",
 	exploreMore: "Explore more",
-	installAvailability: "Install",
-	installAvailability_installable: "Available",
+	installAvailability: "Install source",
+	installAvailability_installable: "Source identified",
 	installAvailability_all: "All plugins",
-	installAvailability_unavailable: "No source",
-	installableOnly: "Installable only",
+	installAvailability_unavailable: "No install source identified",
+	installableOnly: "With install source only",
 	sortBy: "Sort",
 	starsSort: "GitHub Stars",
 	starsShort: "Stars",
@@ -4072,20 +4066,20 @@ const en = {
 	manageComplete: "Operation complete.",
 	confirmRemoveSkill: "Uninstall this Skill?",
 	confirmRemovePlugin: "Uninstall this plugin?",
-	browseOnly: "Browse only",
-	browseOnlyHint: "No author-provided, verifiable dsh plugin add target was found. Open GitHub for installation details.",
-	capabilityReady: "Ready for preflight",
-	capabilityReadyReason: "The catalog has an install target; exact source and scripts are checked after click",
+	browseOnly: "No install source identified",
+	browseOnlyHint: "No matching install source has been identified; this does not mean installation is impossible. Check GitHub for instructions.",
+	capabilityReady: "Install source identified",
+	capabilityReadyReason: "Review exact source and scripts after click; source recognition does not guarantee installation or security",
 	capabilityManual: "Configure after install",
 	capabilityManualReason: "The catalog has an install target, and the author marks additional configuration as required",
 	capabilityBrowse: "Ecosystem project",
-	capabilityUnavailable: "No install source",
-	capabilityNoSourceReason: "The catalog does not provide an install target that can be preflighted",
+	capabilityUnavailable: "No install source identified",
+	capabilityNoSourceReason: "No matching source has been identified yet; check the project instructions for other installation methods",
 	capabilityUnverifiedReason: "DSH plugin structure has not been confirmed",
 	capabilityInstalled: "Installed",
 	capabilityInstalledReason: "This item is already in the current profile",
 	viewDetails: "View details",
-	reviewInstall: "Review and install",
+	reviewInstall: "Install",
 	viewProject: "View project",
 	closeDetails: "Close details",
 	readmeSummary: "README summary",
@@ -4116,9 +4110,13 @@ const en = {
 	notAvailable: "Not available",
 	catalogInstallSource: "Catalog install source",
 	installing: "Installing",
-	confirmTitle: "Review and install",
-	confirmBody: "This combines what the project does, the resolved install source, and its effects. Nothing is written until you confirm.",
-	installSummary: "Installation impact summary",
+	confirmTitle: "Confirm installation",
+	confirmProjectTitle: "Install {name}?",
+	confirmScripts: "Installation will run these scripts:",
+	confirmRestart: "Restart DSH after installation and check that the plugin is running.",
+	confirmSecurityNote: "Source verification is not a security review.",
+	confirmBody: "Once confirmed, this writes to your current DSH profile or Skills directory.",
+	installSummary: "Installation effects",
 	sourceMatched: "Version pinned; repository identity matched",
 	sourceIdentityUnavailable: "Version pinned; publisher identity needs manual review",
 	commitLocked: "Repository commit pinned",
@@ -4127,13 +4125,13 @@ const en = {
 	noBuildScripts: "No npm lifecycle scripts detected",
 	restartAfterInstall: "Restart to verify",
 	noRestartRequired: "No restart required",
-	viewInstallTechnicalEvidence: "View version, integrity, and script details",
+	viewInstallTechnicalEvidence: "Source and verification details",
 	viewTechnicalEvidence: "View technical evidence",
 	confirmSpec: "Install spec",
 	requestedSource: "Catalog source",
 	resolvedSource: "Resolved install",
 	integrity: "Integrity",
-	riskApproval: "I reviewed the exact source, scripts, and risks above and allow this installation.",
+	riskApproval: "I reviewed the install source, scripts, and risks and agree to install.",
 	confirmNeedConfig: "This plugin may require extra configuration.",
 	confirm: "Start install",
 	cancel: "Cancel",

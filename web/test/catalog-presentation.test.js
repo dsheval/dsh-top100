@@ -3,9 +3,20 @@ import test from "node:test";
 
 import {
   catalogPresentation,
+  catalogInstallCapability,
   installCommand,
   resolveInstallTarget,
 } from "../public/catalog-presentation.js";
+
+test("does not equate an install source with zero configuration or safety", () => {
+  const entry = { fullName: "acme/demo", installTarget: "github:acme/demo" };
+  assert.equal(catalogInstallCapability(entry).label, "已识别安装源");
+  assert.equal(catalogInstallCapability({ ...entry, needsConfig: true }).label, "安装后需配置");
+  assert.equal(catalogInstallCapability({ ...entry, install: { needsConfig: true } }).label, "安装后需配置");
+  const unavailable = catalogInstallCapability({ fullName: "acme/demo", needsConfig: true });
+  assert.equal(unavailable.label, "未识别安装源");
+  assert.match(unavailable.reason, /不代表无法安装/);
+});
 
 test("accepts an allow-listed npm target from a DSH add command", () => {
   const entry = {

@@ -1,52 +1,67 @@
-<p align="center">
-  <img src="./docs/assets/dsh-top100-readme-cover.png" alt="dsh-Top100 · Verified DeepSeek Harness plugin rankings" width="100%">
-</p>
+# dsh-top100
 
-<h1 align="center">dsh-Top100</h1>
+发现值得安装的 DeepSeek Harness 插件。
 
-<p align="center">
-  <strong>发现、验证并追踪真正值得关注的 DeepSeek Harness 插件。</strong><br>
-  <sub>Verified DSH plugins ranked by GitHub signals, with Skills in a separate discovery directory.</sub>
-</p>
+在官网浏览榜单，也可以把榜单带进 DSH，发现、安装和管理插件。综合热度、新锐榜和 Stars 总榜提供不同的比较视角；Skills 保持独立目录。
 
-<p align="center">
-  <a href="https://www.dsheval.ai"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="./CHANGELOG.md"><img alt="正式版本 v1.2.1" src="https://img.shields.io/badge/release-v1.2.1-2f6f68?style=flat-square"></a>
-  <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
-  <a href="https://www.dsheval.ai/?page=dsh#dsh"><img alt="安装 dsh-Top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
-  <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
-  <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
-  <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
-  <a href="https://www.dsheval.ai/#ranking"><img alt="收录规模以实时榜单为准" src="https://img.shields.io/badge/收录-实时更新-5865f2?style=flat-square"></a>
-  <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
-  <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
-  <a href="https://www.dsheval.ai"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
-</p>
+[访问官网](https://www.dsheval.ai/) · [安装指南](https://www.dsheval.ai/?page=dsh#dsh) · [npm 插件](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin) · [提交插件](https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo) · [参与贡献](./CONTRIBUTING.md)
 
-<p align="center">
-  <strong>官方网站：</strong>
-  <a href="https://www.dsheval.ai"><strong>https://www.dsheval.ai</strong></a>
-</p>
+[![npm](https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?label=npm&color=2f6f68)](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin)
+[![CI](https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&label=CI)](https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml)
+[![MIT License](https://img.shields.io/badge/license-MIT-555)](./LICENSE)
 
-> **dsh-Top100** is an open, verifiable discovery index for the DeepSeek Harness ecosystem. Verified DSH Plugins participate in daily GitHub-based rankings; Skills are published in a separate directory and do not affect Plugin positions or score normalization.
+## 可以做什么
 
-## DSH 插件
+- **发现插件**：查看中文简介、增长趋势和综合热度，按功能分类、关键词与安装来源筛选。
+- **在 DSH 中安装和管理**：对已识别的安装源进行预检，核对来源、脚本与风险后确认安装；在设置页查看已安装项和诊断信息。
+- **浏览 Skills**：使用独立技能库，不混入插件排名。
+- **在对话中获取推荐**：自带 `recommend-dsh-plugins` Skill，通过 `dsh_top100_search` 查询榜单，为具体需求推荐插件。
 
-dsh-Top100 提供可独立安装的 DSH 插件，让用户直接在 DSH 设置页按综合热度、新锐或 Stars 浏览 Plugin，再独立选择功能分类和安装能力。Skills 使用单独的技能库，不参与 Plugin 排名。安装包自带 `recommend-dsh-plugins` Skill：当用户在 DSH 对话中询问该装哪个插件、请求插件推荐或描述想增加的能力时，模型会加载该 Skill，通过 `dsh_top100_search` 查询实时市场并给出有数据依据的推荐。
+## 界面预览
 
-当前稳定版本为 [`@dsheval/dsh-top100-plugin@1.2.1`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.2.1)，发布后标记为 npm `latest`。
+以下为 2026-09-03 本地开发版截图；界面与榜单数据会随版本和每日更新变化。
 
-点击下面的安装指南会打开 DSHeval 官网，并显示普通用户所需的安装、启动命令；源码运行方式和问题排查收在页面下方。这个入口不会自动下载文件，也不会自动修改电脑。
+### 官网 · 浏览与筛选榜单
 
-<p align="center">
-  <a href="https://www.dsheval.ai/?page=dsh#dsh"><strong>打开官网安装指南（不会自动下载） →</strong></a>
-</p>
+<a href="./web/public/assets/dsh-website-preview.jpg">
+  <img src="./web/public/assets/dsh-website-preview.jpg" alt="dsh-top100 官网：综合热度榜、分类筛选、搜索和插件列表" width="960">
+</a>
 
-用户需自行复制并运行页面中的命令。插件不包含 Collector、数据库或网页后端，榜单数据由公司服务器统一生成并通过 `www.dsheval.ai` 发布，因此插件与官方网站始终使用同一份排行和分类数据。
+### DSH 插件 · 把榜单带进设置页
+
+<a href="./web/public/assets/dsh-plugin-market.png">
+  <img src="./web/public/assets/dsh-plugin-market.png" alt="dsh-top100 插件：DSH 设置中的插件市场、已安装和诊断入口" width="640">
+</a>
+
+<details>
+<summary>查看安装确认界面</summary>
+
+点击「安装」后，先核对精确安装源、将执行的脚本及风险，再确认本次操作。来源校验不等于安全审核。
+
+<a href="./web/public/assets/dsh-install-confirm.png">
+  <img src="./web/public/assets/dsh-install-confirm.png" alt="插件安装确认：精确版本、生命周期脚本、重启提醒和风险确认" width="480">
+</a>
+
+</details>
+
+## 安装到 DSH
+
+需要 **Node.js 22.13+** 和 **DSH Web 0.1.0-rc.6+**。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin
+npx @deepseek-ai/dsh web
+```
+
+打开 DSH Web，进入 **设置 → 插件排行**。安装和启动必须使用同一种命令前缀；全局 CLI、源码运行及问题排查见 [安装指南](https://www.dsheval.ai/?page=dsh#dsh)。
+
+这里只安装榜单插件，不会自动安装榜单中的其他项目。安装其他插件前，仍需核对来源、脚本与风险；安装后按提示重启 DSH 并检查运行状态。
+
+插件与官网使用 DSHeval 发布的同一套榜单数据，无需自行运行 Collector 或数据库。插件功能与安装边界详见 [插件 README](./plugin/README.md)，版本变更见 [CHANGELOG](./CHANGELOG.md)。
 
 ## 01 · 产品与榜单
 
-dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。Plugin 排名单位是 GitHub 仓库；同一仓库即使包含多个插件子包也只占一个名次。Skills 进入独立目录。
+dsh-top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。Plugin 排名单位是 GitHub 仓库；同一仓库即使包含多个插件子包也只占一个名次。Skills 进入独立目录。
 
 | 榜单 | 信号 | 用途 |
 | --- | --- | --- |
@@ -55,7 +70,7 @@ dsh-Top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索
 | **Stars 总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证 Plugin |
 | **Skills 技能库** | 独立目录，默认按 Stars 稳定浏览 | 发现可复用的 Agent Skills；不产生 Plugin 名次 |
 
-Agent 增强、外观、编程、知识获取、工具和安全是目录筛选条件，不是第四张榜。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类；分类可以叠加在综合热度、新锐或 Stars 排序之上。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
+Agent 增强、外观、编程、知识、工具和安全是目录筛选条件，不是第四张榜。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类；分类可以叠加在综合热度、新锐或 Stars 排序之上。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
 
 新锐榜中的负增长按 `0` 处理。新部署在生成第二份每日快照后即可得到有效日增排名。
 
@@ -86,7 +101,7 @@ Topic 和关键词只负责召回，不直接证明兼容性。只有通过 DSH/
 
 ## 04 · Top 100 如何计算
 
-Top 100 使用 100 分加权模型。榜单按内部综合分排序，但前端继续展示真实 GitHub Stars，便于理解和比较。
+Top 100 使用 100 分加权模型。榜单按综合热度分排序，同时保留真实 GitHub Stars 和增长数据供比较；Stars 总榜则按 GitHub Stars 总数排序。
 
 | 指标 | 权重 | 计算依据 |
 | --- | ---: | --- |
@@ -135,9 +150,9 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 
 ## 面向生态索引与榜单
 
-其他 Awesome 列表、插件市场、研究项目或排行榜可以将 dsh-Top100 识别为：
+其他 Awesome 列表、插件市场、研究项目或排行榜可以将 dsh-top100 识别为：
 
-- **名称**：dsh-Top100
+- **名称**：dsh-top100
 - **类型**：DeepSeek Harness plugin directory and ranking index
 - **覆盖对象**：DSH plugins、DSH Skills、Cordis integrations、agent tools
 - **更新频率**：每日增量、每周完整发现

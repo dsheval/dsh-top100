@@ -240,6 +240,8 @@ export interface RankingSearchEntry {
   installTarget?: string;
   /** Selected plugin's package.json name; required to offer an npm target. Not publisher verification. */
   installPackageName?: string;
+  /** Omitted for legacy indexes or unknown configuration requirements. */
+  needsConfig?: boolean;
 }
 
 export interface RankingSnapshotBase {

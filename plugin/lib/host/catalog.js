@@ -6,8 +6,8 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
-import { catalogCategories, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
-import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
+import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
+import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
 import { catalogEvidence } from "../shared/evidence.js";
 export const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 const CACHE_MS = 30 * 60 * 1000;
@@ -140,12 +140,17 @@ function verifySnapshot(raw, reference) {
     }
 }
 function manifestCategories(manifest) {
-    return manifest.categories.map(({ id, label, description, count }) => ({ id, label, description, count }));
+    return manifest.categories.map(({ id, label, description, count }) => ({
+        id,
+        label: categoryDisplayLabel(id, label),
+        description,
+        count,
+    }));
 }
 function manifestPluginCategories(manifest) {
     return manifest.categories.map(({ id, label, description, count, skillCount = 0 }) => ({
         id,
-        label,
+        label: categoryDisplayLabel(id, label),
         description,
         count: Math.max(0, count - skillCount),
     }));
@@ -249,6 +254,7 @@ export async function loadCatalogMetadata(dataUrl, force = false) {
 }
 export function filterCatalog(document, options) {
     const hasQuery = tokenizeSearchQuery(options.query).length > 0;
+    const scoreEntry = createSearchScorer(options.query);
     const source = hasQuery || options.view === "total"
         ? document.rankings.total
         : document.rankings[options.view] ?? [];
@@ -262,7 +268,7 @@ export function filterCatalog(document, options) {
         const installable = resolveInstallSpec(entry) !== null;
         return options.installAvailability === "installable" ? installable : !installable;
     })
-        .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
+        .map((entry) => ({ entry, score: scoreEntry(entry) }))
         .filter((item) => item.score !== null);
     const excludedSkillCount = options.excludeSkills
         ? scored.filter(({ entry }) => entry.type?.toLowerCase() === "skill").length
@@ -627,6 +633,7 @@ function normalizeSearchEntry(value, index) {
         method: "manifest-v2",
         packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
         target: parsedTarget.spec,
+        ...(typeof entry.needsConfig === "boolean" ? { needsConfig: entry.needsConfig } : {}),
         commands: [`dsh plugin add ${parsedTarget.spec}`],
         commandSource: "manifest-v2",
     } : undefined);

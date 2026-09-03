@@ -497,6 +497,16 @@ describe("catalog transport", () => {
     });
   });
 
+  it("retains configuration requirements without inventing them for legacy indexes", () => {
+    const search = parseRankingSearchDocument(JSON.stringify({
+      schemaVersion: 2,
+      rankings: [true, false, undefined, "true"].map((needsConfig, index) => ({
+        rank: index + 1, fullName: "acme/demo", installTarget: "github:acme/demo", needsConfig,
+      })),
+    }));
+    expect(search.rankings.total.map((item) => item.install?.needsConfig)).toEqual([true, false, undefined, undefined]);
+  });
+
   it("validates manifest v2 and refuses cross-origin snapshot references", async () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
     temporaryCaches.push(cacheDirectory);
@@ -604,14 +614,17 @@ describe("catalog transport", () => {
     ]);
   });
 
-  it("reads Plugin, Skills, and Plugin category counts from manifest metadata only", async () => {
+  it.each([
+    { id: "tools", label: "工具", displayLabel: "工具" },
+    { id: "knowledge", label: "知识获取", displayLabel: "知识" },
+  ] as const)("reads category counts and current labels from manifest metadata only ($id)", async ({ id, label, displayLabel }) => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-catalog-test-"));
     temporaryCaches.push(cacheDirectory);
     process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
     const publication = v2Publication();
     publication.manifest.categories = [{
-      id: "tools",
-      label: "工具",
+      id,
+      label,
       description: "效率工具",
       count: 3,
       skillCount: 2,
@@ -626,7 +639,7 @@ describe("catalog transport", () => {
 
     await expect(loadCatalogMetadata("https://catalog.example/data")).resolves.toEqual({
       scopeCounts: { plugins: 1, skills: 1, ecosystem: 0 },
-      pluginCategories: [{ id: "tools", label: "工具", description: "效率工具", count: 1 }],
+      pluginCategories: [{ id, label: displayLabel, description: "效率工具", count: 1 }],
     });
     expect(fetchMock.mock.calls.map((call) => call[0])).toEqual([
       "https://catalog.example/data/manifest.json",

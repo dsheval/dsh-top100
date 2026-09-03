@@ -61,7 +61,7 @@ README 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（�
 GitHub topics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}
 ${known}
 要求：
-1. descriptionZh：一句话中文简介（不超过 60 字），必须写出该仓库独有的核心功能和用户收益；禁止使用“扩展能力”“请查看 README”“功能与安装方式”等空泛套话，口语化自然，不要翻译腔
+1. descriptionZh：一句完整中文简介（不超过 60 字），写出该插件独有的用途；资料明确时说明使用条件。只描述 README 或描述中有依据的能力，不把示例、依赖或 topics 推断成产品功能，不宣称免配置、跨平台或安全已验证。资料不足时返回空字符串。禁止导航、表格、半截句子及“扩展能力”“请查看 README”等套话；保留英文名称中的空格
 2. tagsZh：3-5 个中文功能标签，用于分类筛选${known ? "，**优先复用上面已存在的标签**（用词一致），只有新功能类型才创建新标签" : ""}
 只输出 JSON，不要任何其他文字：
 {"descriptionZh": "...", "tagsZh": ["...", "..."]}`;
@@ -78,7 +78,7 @@ export function extractJson(raw: string): ZhResult | null {
     const end = cleaned.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
     const parsed = JSON.parse(cleaned.slice(start, end + 1));
-    const descriptionZh = String(parsed.descriptionZh ?? "").replace(/\s+/g, "").trim();
+    const descriptionZh = String(parsed.descriptionZh ?? "").replace(/\s+/g, " ").trim();
     const tagsZh = Array.isArray(parsed.tagsZh)
       ? parsed.tagsZh.map((t: unknown) => String(t).trim()).filter(Boolean).slice(0, 6)
       : [];
@@ -260,7 +260,10 @@ export function isGenericDescriptionZh(value: string | null | undefined): boolea
   if (!value) return false;
   return value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
-    /中文简介正在生成中/.test(value) ||
+    /中文简介正在生成中|请(?:查看|参考).*(?:README|项目文档|项目说明).*功能/i.test(value) ||
+    /\|.*\||\|\s*:?-{2,}|```|<\/?(?:h[1-6]|div|p|img)\b/i.test(value) ||
+    /^(?:[^：]{1,80}[:：]\s*)?纯\s*(?:Node(?:\.js)?|Python|JavaScript|TypeScript)\s*实现[，,\s]*(?:无网络依赖)?[。.!！]?$/i.test(value) ||
+    ([...value].length >= 60 && !/[。！？.!?]$/.test(value)) ||
     FALLBACK_SUMMARIES.some(([, summary]) => value.includes(summary.slice(0, 16))) ||
     value.endsWith(INSUFFICIENT_SOURCE_SUMMARY) ||
     /：(提供桌面端使用体验|提供搜索、研究或知识检索能力|提供编程开发辅助|增强 Agent 的上下文|提供自动化与效率工具|提供权限、安全检查或隔离能力|改善界面外观与交互体验)/.test(value);
@@ -274,30 +277,20 @@ export function fallbackDescriptionZh(
   const input = typeof source === "string"
     ? { name: legacyName, description: source, readmeSummary: null, topics: [] as string[] }
     : source;
-  const cleaned = sanitizeUntrustedText(input.description, 180)
-    .replace(/[`#<>]/g, "")
-    .trim();
-  if ((cleaned.match(/[\u4e00-\u9fff]/g) ?? []).length >= 6) {
-    return [...cleaned].slice(0, 60).join("");
+  for (const source of [input.description, input.readmeSummary ?? ""]) {
+    // Split before whitespace normalization; headings/tables are not descriptions.
+    const text = source.replace(/```[\s\S]*?```/g, " ").replace(/^\s*#{1,6}\s+.*$/gm, "");
+    const sentences = text.match(/[^。！？!?；;\n]+[。！？!?；;]?/g) ?? [];
+    for (const raw of sentences) {
+      const sentence = sanitizeUntrustedText(raw, 4000).replace(/[*`]/g, "").trim();
+      const hanCount = (sentence.match(/[\u4e00-\u9fff]/g) ?? []).length;
+      if (hanCount < 6 || [...sentence].length > 60 || isGenericDescriptionZh(sentence)) continue;
+      if (/欢迎|快速跳转|组件入口|安装步骤|安装方法|徽章|^English|^中文\s*\|/i.test(sentence)) continue;
+      return sentence;
+    }
   }
-  const readme = sanitizeUntrustedText(input.readmeSummary ?? "", 500).replace(/[`#<>]/g, " ");
-  const chineseSentences = readme
-    .split(/[。！？!?；;]+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => {
-      const count = (sentence.match(/[\u4e00-\u9fff]/g) ?? []).length;
-      return count >= 8 && count <= 60;
-    })
-    .sort((a, b) => {
-      const score = (sentence: string) =>
-        (/(支持|提供|用于|帮助|实现|自动|管理|搜索|桌面|编排|插件)/.test(sentence) ? 3 : 0) -
-        (/(安装|欢迎|徽章|README|项目地址)/i.test(sentence) ? 2 : 0);
-      return score(b) - score(a);
-    });
-  if (chineseSentences[0]) return [...chineseSentences[0]].slice(0, 60).join("");
-
-  const signals = `${input.name} ${cleaned} ${readme} ${input.topics.join(" ")}`.toLocaleLowerCase();
-  const matched = FALLBACK_SUMMARIES.find(([pattern]) => pattern.test(signals));
-  const summary = matched?.[1] ?? INSUFFICIENT_SOURCE_SUMMARY;
-  return [...`${input.name}：${summary}`].slice(0, 60).join("");
+  // Keyword-based templates overclaimed capabilities (e.g. browser => knowledge
+  // retrieval). Keep missing evidence explicit and retryable instead.
+  const name = [...input.name].slice(0, 20).join("");
+  return `${name}：${INSUFFICIENT_SOURCE_SUMMARY}`;
 }

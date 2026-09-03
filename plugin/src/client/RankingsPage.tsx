@@ -15,6 +15,7 @@ import type { Translate } from "./locales.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
 import { installStage, isInstallBatchComplete } from "./install-batch-presentation.js";
 import { presentInstallCapability } from "./install-capability.js";
+import { visibleInstallReviewRisks } from "./install-review-presentation.js";
 import {
   installStatus,
   presentInstallError,
@@ -30,10 +31,15 @@ interface RankingsPageProps {
 }
 
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
-const AUXILIARY_CATALOG_SCOPES: CatalogScope[] = ["skills"];
+const CATALOG_SCOPES: CatalogScope[] = ["plugins", "skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai";
 type PageSection = "rankings" | "installed" | "diagnostics";
+const GITHUB_ICON = (
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z" />
+  </svg>
+);
 function RankTrustMark() {
   return (
     <svg viewBox="0 0 48 48" aria-hidden="true">
@@ -314,8 +320,6 @@ export function RankingsPage({ t }: RankingsPageProps) {
 
   function selectCategory(nextCategory: PluginCategoryId | null): void {
     setCategory(nextCategory);
-    setQuery("");
-    setDraft("");
     setCategoryMenuOpen(false);
   }
 
@@ -520,7 +524,10 @@ export function RankingsPage({ t }: RankingsPageProps) {
       <header className="market-head">
         <div className="rank-mark"><RankTrustMark /></div>
         <div className="head-copy">
-          <h2>{t("title")}</h2>
+          <div className="market-title-row">
+            <h2>{t("title")}</h2>
+            <a className="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="dsh-top100 GitHub" title="dsh-top100 GitHub" target="_blank" rel="noopener noreferrer">{GITHUB_ICON}</a>
+          </div>
           <p className="lede">{t("subtitle")}</p>
           {data ? (
             <div className="meta">
@@ -548,31 +555,20 @@ export function RankingsPage({ t }: RankingsPageProps) {
 
       {section === "rankings" ? <>
 
-      <div className="catalog-navigation" aria-label={t("catalogScope")}>
-        <button
-          type="button"
-          className="catalog-primary"
-          aria-current={catalogScope === "plugins" ? "page" : undefined}
-          onClick={() => switchCatalogScope("plugins")}
-        >
-          <span>{t("catalogScope_plugins")}</span>
-          {data?.scopeCounts ? <small>{data.scopeCounts.plugins}</small> : null}
-        </button>
-        <div className="catalog-explore">
-          <span>{t("exploreMore")}</span>
-          {AUXILIARY_CATALOG_SCOPES.map((scope) => (
+      <div className="catalog-navigation" role="group" aria-label={t("catalogScope")}>
+        {CATALOG_SCOPES.map((scope) => (
           <button
             type="button"
+            className="catalog-tab"
             key={scope}
             aria-pressed={catalogScope === scope}
             title={t(`catalogScopeHint_${scope}`)}
             onClick={() => switchCatalogScope(scope)}
           >
             <span>{t(`catalogScope_${scope}`)}</span>
-            {data?.scopeCounts ? <small>({data.scopeCounts[scope]})</small> : null}
+            {data?.scopeCounts ? <span className="catalog-count">{data.scopeCounts[scope].toLocaleString("en-US")}</span> : null}
           </button>
-          ))}
-        </div>
+        ))}
       </div>
 
       <div className="toolbar ranking-toolbar">
@@ -583,7 +579,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
             placeholder={t("searchPlaceholder")}
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") startSearch(draft);
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) startSearch(draft);
             }}
           />
           <button type="button" className="primary" onClick={() => startSearch(draft)}>
@@ -667,12 +663,12 @@ export function RankingsPage({ t }: RankingsPageProps) {
         <div className="ranking-context" aria-live="polite">
           {query ? (
             <span className="result-count search-result-count">
-              {t("catalogMatches")} <strong>{data.total}</strong> {t("entries")}
+              {t("catalogMatches")} {data.total} {t("entries")}
               <small> · {t("showingResults")} {items.length}</small>
             </span>
           ) : (
             <span className="result-count">
-              <strong>{items.length}</strong> / {data.total} {t(catalogScope === "plugins" ? "pluginEntries" : "skillEntries")}
+              {items.length} / {data.total} {t(catalogScope === "plugins" ? "pluginEntries" : "skillEntries")}
             </span>
           )}
           {query ? (
@@ -689,7 +685,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                   title={t(rankingBasisKey(id, ""))}
                   onClick={() => selectRankingView(id)}
                 >
-                  {id === "total" ? t("starsShort") : t(id)}
+                  {t(id)}
                 </button>
               ))}
             </div>
@@ -820,65 +816,43 @@ export function RankingsPage({ t }: RankingsPageProps) {
           }}
         >
           <div className="dialog">
-            <h3 id="dsh-top100-confirm-title">{t("confirmTitle")}</h3>
-            <p className="lede">{t("confirmBody")}</p>
+            <header className="confirm-header">
+              <h3 id="dsh-top100-confirm-title">{confirming.length === 1
+                ? t("confirmProjectTitle").replace("{name}", presentRepositoryIdentity(confirming[0]).name)
+                : t("confirmTitle")}</h3>
+              {confirming.length === 1 ? <code className="confirm-target" aria-label={t("resolvedSource")}>
+                {preflightsByName.get(confirming[0].fullName)?.provenance.resolvedTarget ?? confirming[0].installSpec?.spec ?? "-"}
+              </code> : null}
+            </header>
+            <div className="confirm-body">
             <div className="confirm-list">
               {confirming.map((item) => {
                 const preflight = preflightsByName.get(item.fullName);
                 const identity = presentRepositoryIdentity(item);
                 const scriptCount = preflight?.lifecycleScripts.length ?? 0;
                 const needsRestart = preflight?.risks.some((risk) => risk.code === "restart-required") ?? false;
+                const visibleRisks = visibleInstallReviewRisks(preflight?.risks ?? [], scriptCount);
                 const sourceSummaryKey = preflight?.provenance.source === "github"
                   ? "commitLocked"
                   : preflight?.provenance.repositoryIdentity === "unavailable"
                     ? "sourceIdentityUnavailable"
                     : "sourceMatched";
                 return <div className="confirm-item" key={item.fullName}>
-                  <div className="confirm-project">
-                    <div>
-                      <strong>{identity.name}</strong>
-                      <span>{identity.owner} · {t(`form_${item.evidence.formFactor}`)}</span>
-                    </div>
-                    <a href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">
-                      {t("viewProject")} ↗
-                    </a>
-                  </div>
-                  <p className="confirm-description">{item.descriptionZh || item.description}</p>
-                  <div className="confirm-source">
-                    <span>{t("resolvedSource")}</span>
-                    <code>{preflight?.provenance.resolvedTarget ?? item.installSpec?.spec ?? "-"}</code>
-                  </div>
-                  <div className="confirm-summary" role="list" aria-label={t("installSummary")}>
-                    <span role="listitem" data-tone={preflight?.provenance.repositoryIdentity === "unavailable" ? "warning" : "safe"}>
-                      <i />{t(sourceSummaryKey)}
-                    </span>
-                    <span role="listitem" data-tone={scriptCount > 0 ? "warning" : "safe"}>
-                      <i />{scriptCount > 0
-                        ? `${t("willRunScriptsPrefix")} ${scriptCount} ${t("buildScriptsUnit")}`
-                        : t("noBuildScripts")}
-                    </span>
-                    <span role="listitem" data-tone={needsRestart ? "warning" : "safe"}>
-                      <i />{t(needsRestart ? "restartAfterInstall" : "noRestartRequired")}
-                    </span>
-                  </div>
-                  <details className="confirm-evidence">
-                    <summary>{t("viewInstallTechnicalEvidence")}</summary>
-                    <div>
-                      {t("requestedSource")}: <code>{preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type}</code>
-                    </div>
-                    <div>
-                      {t("resolvedSource")}: <code>{preflight?.provenance.resolvedTarget ?? "-"}</code>
-                    </div>
-                    {preflight?.provenance.integrity ? (
-                      <div>{t("integrity")}: <code>{preflight.provenance.integrity}</code></div>
-                    ) : null}
-                    {preflight?.lifecycleScripts.map((script) => (
-                      <div className="script-evidence" key={script.name}>
-                        <span>{script.name}</span><code>{script.command}</code>
-                      </div>
-                    ))}
+                  {confirming.length > 1 ? <div className="confirm-project">
+                    <strong>{identity.name}</strong>
+                    <code className="confirm-target" aria-label={t("resolvedSource")}>{preflight?.provenance.resolvedTarget ?? item.installSpec?.spec ?? "-"}</code>
+                  </div> : null}
+                  <section className="confirm-effects" aria-label={t("installSummary")}>
+                    {scriptCount > 0 ? <div className="confirm-scripts" data-warning={scriptCount > 0}>
+                      <p>{t("confirmScripts")}</p>
+                      {preflight?.lifecycleScripts.map((script) => (
+                        <div className="script-evidence" key={script.name}>
+                          <span>{script.name}</span><span aria-hidden="true">→</span><code>{script.command}</code>
+                        </div>
+                      ))}
+                    </div> : null}
                     <ul className="risk-list">
-                      {preflight?.risks.map((risk) => {
+                      {visibleRisks.map((risk) => {
                         const presented = presentInstallRisk(risk, t);
                         return (
                           <li key={risk.code} data-severity={risk.severity}>
@@ -887,28 +861,44 @@ export function RankingsPage({ t }: RankingsPageProps) {
                         );
                       })}
                     </ul>
+                    {needsRestart ? <p className="confirm-followup">{t("confirmRestart")}</p> : null}
+                    {item.install?.needsConfig ? <p className="confirm-followup">{t("confirmNeedConfig")}</p> : null}
+                  </section>
+                  <details className="confirm-evidence">
+                    <summary>{t("viewInstallTechnicalEvidence")}</summary>
+                    <p className="confirm-source-status">{t(sourceSummaryKey)}</p>
+                    <dl>
+                      <div><dt>{t("requestedSource")}</dt><dd><code>{preflight?.provenance.requestedTarget ?? item.installSpec?.spec ?? item.type}</code></dd></div>
+                      <div><dt>{t("resolvedSource")}</dt><dd><code>{preflight?.provenance.resolvedTarget ?? "-"}</code></dd></div>
+                    {preflight?.provenance.integrity ? (
+                      <div><dt>{t("integrity")}</dt><dd><code>{preflight.provenance.integrity}</code></dd></div>
+                    ) : null}
+                    </dl>
+                    {scriptCount === 0 ? <p>{t("noBuildScripts")}</p> : null}
+                    {needsRestart ? <p>{t("risk_restart-required_detail")}</p> : null}
+                    <a className="confirm-project-link" href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">{t("viewProject")} ↗</a>
                   </details>
                 </div>;
               })}
             </div>
-            {confirming.some((item) => item.install?.needsConfig) ? (
-              <p className="lede">{t("confirmNeedConfig")}</p>
-            ) : null}
-            <p className="confirm-caveat">{t("notSecurityReview")}</p>
+            </div>
+            <footer className="confirm-footer">
+            <p className="confirm-caveat">{t("confirmSecurityNote")}</p>
             {preflights.some((value) => value.requiresExplicitApproval) ? (
               <label className="risk-approval">
                 <input type="checkbox" checked={riskAccepted} onChange={(event) => setRiskAccepted(event.target.checked)} />
-                {t("riskApproval")}
+                <span>{t("riskApproval")}</span>
               </label>
             ) : null}
-            <div className="toolbar">
-              <button type="button" className="primary" disabled={!riskAccepted} onClick={() => void install(confirming)}>
-                {t("confirm")}
-              </button>
+            <div className="confirm-actions">
               <button type="button" autoFocus onClick={() => { setConfirming(null); setPreflights([]); setRiskAccepted(false); }}>
                 {t("cancel")}
               </button>
+              <button type="button" className="primary" disabled={!riskAccepted} onClick={() => void install(confirming)}>
+                {t("confirm")}
+              </button>
             </div>
+            </footer>
           </div>
         </div>
       ) : null}

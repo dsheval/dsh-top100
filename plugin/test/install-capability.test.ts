@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { presentInstallCapability } from "../src/client/install-capability.js";
 import type { CatalogItem } from "../src/shared/types.js";
+import { zh, en } from "../src/client/locales.js";
 
 function item(patch: Partial<CatalogItem> = {}): CatalogItem {
   return {
@@ -44,6 +45,18 @@ function item(patch: Partial<CatalogItem> = {}): CatalogItem {
 }
 
 describe("install capability presentation", () => {
+  it("describes unidentified sources without implying installation is impossible", () => {
+    expect(zh.installableOnly).toBe("仅看有安装源");
+    expect(zh.capabilityUnavailable).toBe("未识别安装源");
+    expect(zh.installAvailability_unavailable).toBe(zh.capabilityUnavailable);
+    expect(zh.browseOnly).toBe(zh.capabilityUnavailable);
+    expect(zh.capabilityNoSourceReason).toContain("不代表无法安装");
+    expect(zh.browseOnlyHint).toContain("不代表无法安装");
+    expect(en.installableOnly).toBe("With install source only");
+    expect(en.capabilityUnavailable).toBe("No install source identified");
+    expect(en.installAvailability_unavailable).toBe(en.capabilityUnavailable);
+    expect(en.browseOnly).toBe(en.capabilityUnavailable);
+  });
   it("separates one-click install from post-install configuration", () => {
     expect(presentInstallCapability(item()).kind).toBe("ready");
     expect(presentInstallCapability(item({ install: { needsConfig: true } })).kind).toBe("manual");

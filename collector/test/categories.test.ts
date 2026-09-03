@@ -11,7 +11,7 @@ describe("controlled repository categories", () => {
       ["ai", "Agent 增强"],
       ["appearance", "外观"],
       ["coding", "编程"],
-      ["knowledge", "知识获取"],
+      ["knowledge", "知识"],
       ["tools", "工具"],
       ["security", "安全"],
     ]);
