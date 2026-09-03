@@ -31,7 +31,7 @@ import {
   isGenericDescriptionZh,
   translateWithDeepSeek,
 } from "./llm.js";
-import { parseInstallCommands } from "./install-parse.js";
+import { INSTALL_PARSER_VERSION, parseInstallCommands } from "./install-parse.js";
 import { normalizeTags } from "./tag-normalize.js";
 import { summarizeReadme } from "./summary.js";
 import { collectPacks } from "./packs.js";
@@ -39,6 +39,7 @@ import { collectPacks } from "./packs.js";
 /** 检测结果缓存（增量核心：repo 未变化时复用，跳过重复检测网络调用） */
 interface DetectCache {
   schemaVersion: 2;
+  installParserVersion?: number;
   pushedAt: string;
   detection: Detection;
   isCordis: boolean;
@@ -257,7 +258,7 @@ async function main() {
       let readmeContent: string | null;
       let subdir: string | null = null;
 
-      if (cachedDetect?.schemaVersion === 2 && cachedDetect.pushedAt === repo.pushed_at) {
+      if (cachedDetect?.schemaVersion === 2 && cachedDetect.installParserVersion === INSTALL_PARSER_VERSION && cachedDetect.pushedAt === repo.pushed_at) {
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
         detection = cachedDetect.detection;
         isCordis = cachedDetect.isCordis;
@@ -332,6 +333,7 @@ async function main() {
         // 写入检测缓存（含派生产物）
         cacheSet<DetectCache>("detect", candidate.fullName, {
           schemaVersion: 2,
+          installParserVersion: INSTALL_PARSER_VERSION,
           pushedAt: repo.pushed_at,
           detection,
           isCordis,

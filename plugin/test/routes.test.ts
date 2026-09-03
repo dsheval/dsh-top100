@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebServerService } from "../src/host/contracts.js";
 import { mountRoutes } from "../src/host/routes.js";
 import { invalidateCatalog } from "../src/host/catalog.js";
@@ -16,11 +16,19 @@ import type { PluginCommandRuntime } from "../src/install/dsh-cli.js";
 type Handler = (request: IncomingMessage, response: ServerResponse) => void | Promise<void>;
 const temporaryProfiles: string[] = [];
 
+beforeEach(() => {
+  // Disk snapshots must not bypass mocked fetches on repeated test runs.
+  const cacheDirectory = mkdtempSync(join(tmpdir(), "dsh-top100-route-cache-"));
+  temporaryProfiles.push(cacheDirectory);
+  vi.stubEnv("DSH_TOP100_CACHE_DIR", cacheDirectory);
+});
+
 afterEach(() => {
   invalidateCatalog();
   clearInstallApprovals();
   clearInstallVerificationCache();
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
   for (const directory of temporaryProfiles.splice(0)) rmSync(directory, { recursive: true, force: true });
 });
 

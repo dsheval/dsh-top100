@@ -25,7 +25,7 @@ export const CATEGORY_DEFINITIONS = Object.freeze([
   },
   {
     id: "knowledge",
-    label: "知识获取",
+    label: "知识",
     description: "联网搜索、浏览器检索、RAG、知识库、文档问答与研究。",
     icon: '<path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z"/>',
   },

@@ -5,29 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-Top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
+      content="dsh-top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
     />
     <meta name="theme-color" content="#d9e7e2" />
     <link rel="canonical" href="https://www.dsheval.ai/" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:site_name" content="dsh-Top100" />
-    <meta property="og:title" content="dsh-Top100 · 发现值得安装的 DSH 插件" />
+    <meta property="og:site_name" content="dsh-top100" />
+    <meta property="og:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
     <meta property="og:description" content="可信的 DSH 插件发现与排行市场。按热度、增长、项目质量和安装证据持续更新。" />
     <meta property="og:url" content="https://www.dsheval.ai/" />
     <meta property="og:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="dsh-Top100 · 发现值得安装的 DSH 插件" />
+    <meta name="twitter:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
     <meta name="twitter:description" content="可信的 DSH 插件发现与排行市场。" />
     <meta name="twitter:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
-        "name": "dsh-Top100",
+        "name": "dsh-top100",
         "url": "https://www.dsheval.ai/",
         "description": "可信的 DSH 插件发现与排行市场",
         "isPartOf": {
@@ -37,16 +37,16 @@
         },
         "about": {
           "@type": "SoftwareApplication",
-          "name": "dsh-Top100",
+          "name": "dsh-top100",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Cross-platform",
-          "softwareVersion": "1.2.1",
-          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.2.1",
+          "softwareVersion": "1.3.0",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.0",
           "license": "https://opensource.org/license/mit"
         }
       }
     </script>
-    <title>dsh-Top100 · 发现值得安装的 DSH 插件</title>
+    <title>dsh-top100 · 发现值得安装的 DSH 插件</title>
     <style>
       :root {
         color-scheme: light;
@@ -511,17 +511,21 @@
 
       .skill-filter {
         display: inline-flex;
-        min-height: 36px;
+        min-height: 44px;
         margin-right: 9px;
         padding: 0 13px;
         border: 1px solid var(--line);
         color: var(--ink);
         background: var(--card);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 800;
+        font: 700 14px/1.4 var(--sans);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
+        white-space: nowrap;
+        flex-shrink: 0;
         cursor: pointer;
         align-items: center;
+        justify-content: center;
+        gap: 6px;
         text-decoration: none;
       }
 
@@ -649,6 +653,7 @@
 
       .search-status-row {
         display: flex;
+        flex-wrap: wrap;
         min-height: 40px;
         padding: 7px 10px 7px 14px;
         align-items: center;
@@ -657,13 +662,65 @@
         border: 1px solid var(--line);
         border-top: 0;
         background: color-mix(in srgb, var(--card) 72%, var(--section));
+        color: var(--muted);
+        font: 500 13px/20px var(--sans);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
       }
 
       .search-result {
         margin: 0;
-        color: var(--muted);
-        font: 700 10px/1.45 var(--mono);
-        letter-spacing: 0.025em;
+        color: inherit;
+        font: inherit;
+      }
+
+      .install-filter {
+        display: inline-flex;
+        min-height: 44px;
+        padding: 0 12px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: var(--card);
+        font: 600 14px/20px var(--sans);
+        letter-spacing: normal;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .install-filter-icon {
+        display: block;
+        flex: 0 0 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--accent);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .install-filter .filter-check { display: none; }
+      .install-filter[aria-pressed="true"] .filter-symbol { display: none; }
+      .install-filter[aria-pressed="true"] .filter-check { display: block; }
+
+      .install-filter:hover {
+        border-color: var(--accent);
+        background: var(--section-strong);
+      }
+
+      .install-filter[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .install-filter:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
       }
 
       .search-sort {
@@ -863,6 +920,19 @@
         outline-offset: -3px;
       }
 
+      .plugin-list .featured-plugin[hidden],
+      .plugin-list.is-top100-list .featured-plugin[hidden] { display: none; }
+      .featured-guide { display: inline-flex; align-items: center; min-height: 24px; font: 12px var(--sans); color: var(--accent); letter-spacing: normal; }
+      .featured-guide:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+      .rank-exempt {
+        grid-column: -2 / -1;
+        grid-row: 1;
+        justify-self: end;
+        padding: 0 11px;
+        color: var(--muted);
+        font: 15px var(--mono);
+      }
+
       .plugin-list {
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -998,6 +1068,11 @@
         outline-offset: 3px;
       }
 
+      .plugin-list .plugin .quick-install[hidden],
+      .plugin-list .plugin .install-action[hidden] {
+        display: none;
+      }
+
       .github-logo {
         display: block;
         width: 13px;
@@ -1037,7 +1112,7 @@
 
       .list-head {
         display: grid;
-        min-height: 40px;
+        min-height: 44px;
         padding: 0 18px;
         grid-template-columns: 62px minmax(220px, 0.78fr) minmax(250px, 1.18fr) minmax(160px, 0.48fr) 132px;
         align-items: center;
@@ -1045,11 +1120,8 @@
         border: 1px solid var(--line);
         border-bottom: 0;
         background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
-        font-family: var(--mono);
-        font-size: 11px;
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
+        font: 700 13px/1.4 var(--sans);
+        letter-spacing: normal;
       }
 
       .list-head span:last-child {
@@ -1507,89 +1579,6 @@
         font-size: 15px;
       }
 
-      .dsh-data-note {
-        display: grid;
-        margin-top: 30px;
-        padding: 16px 0 16px 18px;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 30px;
-        border-left: 2px solid color-mix(in srgb, var(--accent) 72%, var(--line));
-      }
-
-      #dsh-view .doc-section:last-child {
-        padding-bottom: 24px;
-        border-bottom: 0;
-      }
-
-      .dsh-data-note p {
-        margin: 0;
-      }
-
-      .dsh-data-note-label {
-        margin-bottom: 7px !important;
-        color: var(--accent);
-        font-family: var(--mono);
-        font-size: 10px;
-        font-weight: 850;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-      }
-
-      .dsh-data-note-copy > p:last-child {
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      .dsh-data-note-copy strong {
-        margin-right: 5px;
-        color: var(--ink);
-      }
-
-      .dsh-data-note-meta {
-        display: flex;
-        align-items: center;
-        justify-content: flex-end;
-        gap: 18px;
-        color: var(--muted);
-        font-family: var(--mono);
-        font-size: 10px;
-        font-weight: 750;
-        letter-spacing: 0.04em;
-        white-space: nowrap;
-      }
-
-      .dsh-data-note-meta span + span,
-      .dsh-data-note-meta a {
-        position: relative;
-        padding-left: 18px;
-      }
-
-      .dsh-data-note-meta span + span::before,
-      .dsh-data-note-meta a::before {
-        position: absolute;
-        top: 50%;
-        left: 0;
-        width: 3px;
-        height: 3px;
-        border-radius: 50%;
-        background: var(--accent);
-        content: "";
-        transform: translateY(-50%);
-      }
-
-      .dsh-data-note-meta a {
-        color: var(--accent);
-        font-weight: 850;
-        text-decoration: none;
-      }
-
-      .dsh-data-note-meta a:hover,
-      .dsh-data-note-meta a:focus-visible {
-        text-decoration: underline;
-        text-underline-offset: 4px;
-      }
-
       .inline-docs .rule-list,
       .inline-docs .roadmap-list {
         display: grid;
@@ -1687,137 +1676,180 @@
         white-space: nowrap;
       }
 
+      /* The guide is a focused task page, not a second homepage. */
+      body:has(#dsh-view:not([hidden])) .hero {
+        display: none;
+      }
+
+      body:has(#dsh-view:not([hidden])) .ranking {
+        background: var(--paper);
+        scroll-margin-top: 64px;
+      }
+
+      body:has(#dsh-view:not([hidden])) .ranking-inner {
+        padding-top: 40px;
+      }
+
+      #dsh-view {
+        max-width: 800px;
+        margin-inline: auto;
+        --muted: #364b43;
+        --line: #84968e;
+        --code-surface: #203c33;
+        --code-ink: #f7f9f8;
+      }
+
       #dsh-view .inline-docs-header {
-        margin-bottom: 34px;
-        padding-bottom: 26px;
+        margin-bottom: 16px;
+        padding-bottom: 0;
+        border: 0;
       }
 
       #dsh-view .inline-docs-title {
-        font-size: clamp(36px, 4.2vw, 56px);
+        font-size: clamp(32px, 4.2vw, 44px);
+        line-height: 1.15;
       }
 
-      #dsh-view .inline-docs-title-zh {
-        margin-top: 10px;
+      #dsh-view .inline-docs-intro {
+        margin-top: 12px;
+        font-size: 15px;
+      }
+
+      #dsh-view .dsh-requirements {
+        margin: 0;
         color: var(--muted);
-        font-size: clamp(18px, 2vw, 24px);
+        font-size: 13px;
+        line-height: 1.7;
       }
 
-      #dsh-view .doc-section:not(:first-child) h2 {
-        font-size: clamp(32px, 3.3vw, 46px);
+      #dsh-view .dsh-requirements strong {
+        font-weight: 600;
       }
 
-      .dsh-prerequisite {
-        display: flex;
-        margin: 24px 0;
-        padding: 15px 18px;
-        align-items: flex-start;
-        gap: 14px;
-        border-left: 4px solid var(--accent);
-        color: var(--ink);
-        background: var(--accent-soft);
-        font-size: 14px;
+      #dsh-view .dsh-prerequisites {
+        margin-bottom: 28px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid var(--line);
       }
 
-      .dsh-prerequisite strong {
-        flex: 0 0 auto;
-        color: var(--ink);
+      #dsh-view .doc-section {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+
+      #dsh-view .doc-section + .doc-section {
+        margin-top: 36px;
+        padding-top: 28px;
+        border-top: 1px solid var(--line);
+      }
+
+      #dsh-view .doc-section h2 {
+        margin: 0 0 8px;
+        font: 600 20px/1.4 var(--sans);
+        letter-spacing: 0;
+      }
+
+      #dsh-view .doc-section > h2 {
+        margin-bottom: 8px;
+        font-size: 20px;
+        font-weight: 600;
       }
 
       .dsh-install-steps {
         display: grid;
         margin: 0;
         padding: 0;
-        gap: 16px;
+        gap: 28px;
         list-style: none;
       }
 
       .dsh-install-step {
         display: grid;
-        overflow: hidden;
-        grid-template-columns: 72px minmax(0, 1fr);
-        border: 1px solid var(--line);
-        background: var(--card);
-        box-shadow: 0 12px 28px rgba(23, 33, 31, 0.07);
+        grid-template-columns: 28px minmax(0, 1fr);
+        gap: 12px;
       }
 
       .dsh-step-number {
-        display: flex;
-        width: 34px;
-        height: 34px;
-        align-self: start;
-        justify-self: center;
-        align-items: center;
-        justify-content: center;
-        margin-top: 22px;
+        display: grid;
+        width: 28px;
+        height: 28px;
+        place-items: center;
         border: 1px solid var(--accent);
         border-radius: 50%;
+        font: 600 13px/1 var(--sans);
         color: var(--accent-contrast);
         background: var(--accent);
-        font-family: var(--mono);
-        font-size: 15px;
-        font-weight: 900;
       }
 
       .dsh-step-content {
         min-width: 0;
-        padding: 22px 24px 24px;
       }
 
-      .inline-docs .dsh-step-content h3 {
-        margin: 0 0 6px;
-        font-size: 25px;
-      }
-
-      .inline-docs .dsh-step-content > p {
-        margin: 0 0 15px;
+      #dsh-view .dsh-step-content > p {
+        margin: 0 0 12px;
         color: var(--muted);
         font-size: 15px;
+        line-height: 1.6;
       }
 
       .dsh-command-row {
         display: grid;
         min-width: 0;
-        padding: 0;
         grid-template-columns: minmax(0, 1fr) auto;
         align-items: stretch;
-        gap: 0;
-        border: 1px solid var(--line);
+        border: 1px solid var(--code-surface);
         background: var(--code-surface);
       }
 
-      .dsh-detail-body .dsh-command-row + .dsh-command-row {
-        margin-top: 10px;
+      .dsh-command-group {
+        border: 1px solid var(--code-surface);
+        background: var(--code-surface);
+      }
+
+      .dsh-command-group .dsh-command-row {
+        border: 0;
+      }
+
+      .dsh-command-group .dsh-command-row + .dsh-command-row {
+        border-top: 1px solid color-mix(in srgb, var(--code-ink) 20%, transparent);
       }
 
       .inline-docs code.dsh-install-command {
         display: flex;
         min-width: 0;
-        min-height: 52px;
-        padding: 14px 16px;
+        min-height: 46px;
+        padding: 12px;
         align-items: center;
         border: 0;
         color: var(--code-ink);
         background: transparent;
-        font-size: clamp(13px, 1.25vw, 16px);
-        font-weight: 750;
-        line-height: 1.55;
+        font: 500 14px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
         overflow-wrap: anywhere;
         white-space: pre-wrap;
-        word-break: break-word;
       }
 
       .dsh-copy-button {
-        min-width: 112px;
-        min-height: 52px;
-        padding: 0 18px;
+        min-width: 80px;
+        min-height: 46px;
+        padding: 0 16px;
         border: 0;
         border-left: 1px solid var(--line);
         color: var(--accent);
         background: var(--card);
-        font-family: var(--sans);
-        font-size: 14px;
-        font-weight: 850;
+        font: 600 14px/1.4 var(--sans);
         cursor: pointer;
+      }
+
+      #dsh-view .dsh-copy-button {
+        border-color: var(--line);
+        color: var(--accent-contrast);
+        background: var(--accent);
+      }
+
+      #dsh-view .dsh-copy-button:hover,
+      #dsh-view .dsh-copy-button:focus-visible {
+        background: var(--ink);
       }
 
       .dsh-copy-button:hover,
@@ -1827,49 +1859,105 @@
       }
 
       .dsh-copy-button:focus-visible {
-        outline: 3px solid color-mix(in srgb, var(--accent) 44%, transparent);
+        outline: 3px solid var(--accent);
         outline-offset: 3px;
       }
 
       .dsh-open-target {
         display: inline-flex;
-        min-height: 52px;
-        padding: 0 20px;
         align-items: center;
-        gap: 13px;
-        border: 1px solid var(--line);
+        gap: 12px;
         color: var(--ink);
-        background: var(--code-surface);
-        font-size: 17px;
+        font-size: 16px;
+        line-height: 1.5;
       }
 
       .dsh-open-target strong {
-        color: var(--accent);
+        color: var(--ink);
+        font-weight: 600;
       }
 
-      .dsh-help-heading {
-        margin: 42px 0 16px;
+      #dsh-view .dsh-step-content > .dsh-success {
+        margin: 8px 0 0;
+        color: var(--muted);
       }
 
-      .inline-docs .dsh-help-heading h3 {
+      #dsh-view .dsh-scope-note {
         margin: 6px 0 0;
-        font-size: 28px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+      }
+
+      #dsh-view .dsh-section-intro {
+        margin: 0 0 20px;
+        color: var(--muted);
+        font: 400 15px/1.6 var(--sans);
+      }
+
+      #dsh-view .dsh-preview-item {
+        min-width: 0;
+        margin: 0;
+      }
+
+      #dsh-view .dsh-market-preview {
+        max-width: 640px;
+      }
+
+      #dsh-view .dsh-confirm-preview {
+        max-width: 480px;
+      }
+
+      #dsh-view .dsh-install-example {
+        margin-top: 24px;
+        border-top: 1px solid var(--line);
+        border-bottom: 0;
+      }
+
+      #dsh-view .dsh-preview-link {
+        display: block;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: #ffffff;
+        cursor: zoom-in;
+      }
+
+      #dsh-view .dsh-preview-link:hover {
+        border-color: var(--accent);
+      }
+
+      #dsh-view .dsh-preview-link:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 4px;
+      }
+
+      #dsh-view .dsh-preview-link img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border-radius: 3%;
+      }
+
+      #dsh-view .dsh-preview-item figcaption {
+        margin-top: 10px;
+        color: var(--muted);
+        font: 400 12px/1.6 var(--sans);
       }
 
       .dsh-detail {
-        margin-top: 10px;
-        border: 1px solid var(--line);
-        background: var(--card);
+        border-bottom: 1px solid var(--line);
       }
 
       .dsh-detail summary {
         display: flex;
-        min-height: 58px;
-        padding: 14px 18px;
+        min-height: 56px;
+        padding: 14px 0;
         align-items: center;
         justify-content: space-between;
         gap: 18px;
-        font-weight: 850;
+        font: 600 16px/1.5 var(--sans);
+        color: var(--ink);
         cursor: pointer;
         list-style: none;
       }
@@ -1883,12 +1971,8 @@
         flex: 0 0 auto;
         color: var(--accent);
         font-family: var(--mono);
-        font-size: 24px;
+        font-size: 20px;
         line-height: 1;
-      }
-
-      .dsh-detail[open] summary {
-        border-bottom: 1px solid var(--line);
       }
 
       .dsh-detail[open] summary::after {
@@ -1896,71 +1980,61 @@
       }
 
       .dsh-detail summary:focus-visible {
-        outline: 3px solid var(--hero-accent);
-        outline-offset: -4px;
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
       }
 
       .dsh-detail-body {
-        padding: 18px;
+        margin: 2px 0 22px;
+        padding: 0;
       }
 
-      .inline-docs .dsh-detail-body > p {
+      #dsh-view .dsh-detail-body p {
         margin: 0 0 14px;
         color: var(--muted);
         font-size: 14px;
+        line-height: 1.7;
       }
 
-      .inline-docs .dsh-detail-body > p:last-child {
+      #dsh-view .dsh-detail-body strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      #dsh-view .dsh-detail-body code:not(.dsh-install-command) {
+        color: var(--ink);
+        background: var(--accent-soft);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      #dsh-view .dsh-detail-body > p:last-child {
         margin-bottom: 0;
       }
 
-      .dsh-warning-detail {
-        border-color: var(--line);
-        background: var(--card);
-        box-shadow: none;
-      }
-
-      .dsh-release-note,
-      .dsh-secondary-note {
-        color: var(--muted);
-        font-size: 14px;
-      }
-
-      .dsh-release-note {
-        margin-top: 18px !important;
-      }
-
-      .dsh-brief-grid {
-        display: grid;
-        margin: 28px 0 18px;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        border-top: 1px solid var(--line);
-        border-left: 1px solid var(--line);
-      }
-
-      .dsh-brief-grid article {
-        padding: 24px;
-        border-right: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
-        background: var(--card);
-      }
-
-      .dsh-brief-grid article > span {
-        color: var(--accent);
-        font-family: var(--mono);
-        font-size: 11px;
-        font-weight: 900;
-      }
-
-      .inline-docs .dsh-brief-grid h3 {
-        margin: 14px 0 8px;
-        font-size: 25px;
-      }
-
-      .inline-docs .dsh-brief-grid p {
+      #dsh-view .dsh-help-list {
         margin: 0;
+        padding-left: 20px;
         color: var(--muted);
-        font-size: 15px;
+        font: 400 14px/1.7 var(--sans);
+      }
+
+      #dsh-view .dsh-help-list li + li {
+        margin-top: 8px;
+      }
+
+      .dsh-method {
+        margin-top: 24px;
+      }
+
+      .dsh-method + .dsh-method {
+        margin-top: 32px;
+      }
+
+      #dsh-view .dsh-method h3 {
+        margin: 0 0 8px;
+        color: var(--ink);
+        font: 600 15px/1.5 var(--sans);
+        letter-spacing: 0;
       }
 
       .docs-loading {
@@ -2072,13 +2146,8 @@
         }
 
         .inline-docs .card-grid,
-        .inline-docs .card-grid.four,
-        .dsh-brief-grid {
+        .inline-docs .card-grid.four {
           grid-template-columns: 1fr;
-        }
-
-        .dsh-copy-button {
-          min-height: 52px;
         }
 
         .inline-docs .doc-card {
@@ -2100,19 +2169,6 @@
       }
 
       @media (max-width: 860px) {
-        .dsh-data-note {
-          grid-template-columns: 1fr;
-          align-items: start;
-          gap: 16px;
-        }
-
-        .dsh-data-note-meta {
-          justify-content: flex-start;
-          flex-wrap: wrap;
-          gap: 10px 16px;
-          white-space: normal;
-        }
-
         .plugin-list {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -2215,7 +2271,7 @@
         }
 
         .skill-filter {
-          display: block;
+          display: flex;
           width: calc(100% - 18px);
           margin: 9px;
         }
@@ -2313,87 +2369,26 @@
           font-size: 42px;
         }
 
-        #dsh-view .doc-section:last-child {
-          margin-bottom: 0;
-          padding-bottom: 24px;
-          border-bottom: 0;
-        }
-
-        #dsh-view .inline-docs-header {
-          margin-bottom: 24px;
-          padding-bottom: 20px;
-        }
-
-        #dsh-view .inline-docs-title {
-          font-size: clamp(34px, 10vw, 46px);
-        }
-
-        #dsh-view .inline-docs-title-zh {
-          margin-top: 8px;
-          font-size: 18px;
-        }
-
-        #dsh-view .doc-section h2,
-        #dsh-view .doc-section:not(:first-child) h2 {
-          font-size: clamp(31px, 9vw, 40px);
-        }
-
-        .dsh-prerequisite {
-          display: block;
-          margin: 18px 0;
-          padding: 14px;
-        }
-
-        .dsh-prerequisite strong {
-          display: block;
-          margin-bottom: 4px;
-        }
-
         .dsh-install-step {
-          grid-template-columns: 52px minmax(0, 1fr);
+          grid-template-columns: 24px minmax(0, 1fr);
+          gap: 10px;
         }
 
         .dsh-step-number {
-          width: 28px;
-          height: 28px;
-          margin-top: 18px;
-          font-size: 13px;
-        }
-
-        .dsh-step-content {
-          padding: 18px 14px;
-        }
-
-        .inline-docs .dsh-step-content h3 {
-          font-size: 22px;
+          width: 24px;
+          height: 24px;
+          margin-top: 2px;
         }
 
         .dsh-command-row {
-          padding: 6px;
           grid-template-columns: 1fr;
-        }
-
-        .inline-docs code.dsh-install-command {
-          min-height: 46px;
-          padding: 10px;
-          font-size: 12.5px;
         }
 
         .dsh-copy-button {
           width: 100%;
           min-width: 0;
-          min-height: 48px;
           border-top: 1px solid var(--line);
           border-left: 0;
-        }
-
-        .dsh-detail summary {
-          min-height: 56px;
-          padding: 13px 14px;
-        }
-
-        .dsh-detail-body {
-          padding: 14px;
         }
 
         .footer {
@@ -2724,14 +2719,16 @@
       .trust-pill,
       .type-pill {
         display: inline-flex;
-        min-height: 22px;
-        padding: 0 7px;
+        min-height: 24px;
+        padding: 2px 7px;
         align-items: center;
+        justify-content: center;
+        text-align: center;
         border: 1px solid var(--line);
         color: var(--muted);
         background: color-mix(in srgb, var(--card) 88%, transparent);
-        font: 750 9px/1 var(--mono);
-        letter-spacing: 0.035em;
+        font: 600 11px/1.4 var(--sans);
+        letter-spacing: normal;
         white-space: nowrap;
       }
 
@@ -2755,6 +2752,20 @@
         color: var(--muted);
         font: 650 10px/1.4 var(--mono);
       }
+
+      .meta-growth {
+        font: 600 13px/1.5 var(--sans);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
+      }
+
+      .meta-growth:not([hidden]) {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 3px 12px;
+      }
+
+      .growth-period { white-space: nowrap; }
 
       .plugin-actions {
         display: flex;
@@ -2976,7 +2987,7 @@
   <body>
     <div class="nav-shell">
       <nav class="nav" aria-label="主导航">
-        <a class="wordmark" href="#top" aria-label="dsh-Top100 首页">
+        <a class="wordmark" href="./#top" aria-label="dsh-top100 首页">
           <img
             class="wordmark-logo"
             src="./assets/dsh-wordmark-logo.png"
@@ -2984,7 +2995,7 @@
             width="30"
             height="30"
           />
-          <span>dsh-Top100</span>
+          <span>dsh-top100</span>
         </a>
         <div class="nav-links">
           <a href="#ranking" data-content-switch="ranking">插件榜单</a>
@@ -3041,11 +3052,11 @@
             <aside class="install-console" aria-labelledby="install-console-title">
               <div class="install-console-head">
                 <span class="status-dot" aria-hidden="true"></span>
-                <p id="install-console-title">dsh-Top100 / release channel</p>
+                <p id="install-console-title">dsh-top100 / release channel</p>
                 <span class="release-badge">latest</span>
               </div>
               <dl class="release-grid">
-                <div><dt>npm</dt><dd>v1.2.1</dd></div>
+                <div><dt>npm</dt><dd>v1.3.0</dd></div>
                 <div><dt>DSH Web</dt><dd>0.1.0-rc.6+</dd></div>
                 <div><dt>source</dt><dd>verified catalog</dd></div>
               </dl>
@@ -3100,7 +3111,7 @@
                 aria-selected="false"
                 data-view="rising"
               >
-                新锐
+                新锐榜
               </button>
               <button
                 class="view-tab"
@@ -3155,10 +3166,17 @@
               </div>
               <div class="search-status-row">
                 <p class="search-result" id="ranking-search-result">等待插件数据</p>
+                <button class="install-filter" id="installable-only" type="button" aria-pressed="false" title="仅显示有可解析安装来源的项目；仍须核对配置、来源和权限，不代表已安装验证">
+                  <svg class="install-filter-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path class="filter-symbol" d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"></path>
+                    <path class="filter-check" d="m5 12 4 4L19 6"></path>
+                  </svg>
+                  <span>仅看有安装源</span>
+                </button>
                 <div class="search-sort" id="ranking-search-sort" role="group" aria-label="搜索结果排序" hidden>
                   <span>排序</span>
-                  <button type="button" data-search-sort="rank" aria-pressed="true">榜单顺序</button>
-                  <button type="button" data-search-sort="relevance" aria-pressed="false">相关度</button>
+                  <button type="button" data-search-sort="relevance" aria-pressed="true">相关度</button>
+                  <button type="button" data-search-sort="rank" aria-pressed="false">Stars 总榜顺序</button>
                 </div>
               </div>
             </div>
@@ -3177,6 +3195,19 @@
             role="tabpanel"
             aria-labelledby="tab-top100"
           >
+            <aside class="plugin featured-plugin" id="featured-plugin" aria-label="本站出品，不参与排名" hidden>
+              <span class="rank">#000</span>
+              <div class="plugin-title">
+                <h3 class="plugin-name"><span class="plugin-name-text">dsh-top100</span></h3>
+                <span class="trust-pill">本站出品 · 不参与排名</span>
+                <a class="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
+                  <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
+                </a>
+                <a class="featured-guide" href="?page=dsh#dsh" data-content-switch="dsh">安装指南 ↗</a>
+              </div>
+              <p class="plugin-description">把插件榜单带进 DSH，发现、安装和管理插件。</p>
+              <span class="rank-exempt" aria-label="不参与评分">—</span>
+            </aside>
             <p class="status">正在加载 Top 100…</p>
           </div>
           <p class="sr-only" id="ranking-status" aria-live="polite"></p>
@@ -3195,8 +3226,8 @@
 
           <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
             <header class="inline-docs-header">
-              <h2 class="inline-docs-title" id="inline-dsh-title">安装 dsh-Top100</h2>
-              <p class="inline-docs-title-zh">复制两条命令，三步完成。</p>
+              <h1 class="inline-docs-title" id="inline-dsh-title">安装 dsh-top100</h1>
+              <p class="inline-docs-intro">在 DSH 中浏览榜单、搜索和安装插件。</p>
             </header>
             <div id="inline-dsh-host">
               <p class="docs-loading">正在加载接入说明…</p>
@@ -3217,7 +3248,7 @@
     </main>
 
     <footer class="footer">
-      <span>dsh-Top100 · DSH plugin leaderboard</span>
+      <span>dsh-top100 · DSH plugin leaderboard</span>
       <span>Verified sources · AI Chinese summaries · GitHub stars</span>
     </footer>
 
@@ -3261,10 +3292,11 @@
     <script type="module">
       import {
         normalizeSearchText,
-        scoreSearchEntry,
         tokenizeSearchQuery,
       } from "./search-engine.js";
-      import { catalogPresentation, installCommand } from "./catalog-presentation.js";
+      import { catalogPresentation, catalogInstallCapability, installCommand } from "./catalog-presentation.js";
+      import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
+      import { showFeaturedPlugin } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
       import { track, trackPageView } from "./analytics.js";
 
@@ -3282,6 +3314,7 @@
       });
 
       const list = document.querySelector("#plugin-list");
+      const featuredPlugin = document.querySelector("#featured-plugin");
       const template = document.querySelector("#plugin-template");
       const tabs = [...document.querySelectorAll(".view-tab")];
       const allCount = document.querySelector("#all-count");
@@ -3316,6 +3349,8 @@
       const searchClear = document.querySelector("#ranking-search-clear");
       const searchSort = document.querySelector("#ranking-search-sort");
       const searchSortButtons = [...document.querySelectorAll("[data-search-sort]")];
+      const installableToggle = document.querySelector("#installable-only");
+      let installableOnly = false;
       const categoryButtons = [...document.querySelectorAll(".category-option")];
       const categoryDescriptionStage = document.querySelector(".category-description-stage");
       const categoryDescription = document.querySelector("#category-hover-description");
@@ -3329,13 +3364,13 @@
         CATEGORY_DEFINITIONS.map(({ id, description }) => [id, description])
       );
       const searchLabels = {
-        top100: "搜索 Top 100",
-        rising: "搜索新锐榜",
-        all: "搜索总榜",
+        top100: "搜索全部 DSH 插件",
+        rising: "搜索全部 DSH 插件",
+        all: "搜索全部 DSH 插件",
       };
       const searchPlaceholders = {
-        top100: "搜索 Top 100：名称、功能或中文关键词",
-        rising: "搜索新锐榜：名称、功能或中文关键词",
+        top100: "搜索全部插件：名称、功能或中文关键词",
+        rising: "搜索全部插件：名称、功能或中文关键词",
         all: "搜索全部插件：名称、功能或中文关键词",
       };
       const categoryKeywords = {
@@ -3401,7 +3436,7 @@
       const dataLoadPromises = new Map();
       let viewSwitchGeneration = 0;
       let generatedAt = null;
-      let activeSearchSort = "rank";
+      let activeSearchSort = "relevance";
       let copyFeedbackTimer = null;
       const initialParams = new URLSearchParams(window.location.search);
       const requestedView = initialParams.get("view");
@@ -3887,11 +3922,11 @@
 
       async function ensureViewData(view) {
         if (initialDataPromise) await initialDataPromise;
-        if (view === "top100") return;
-        if (view === "all" && tokenizeSearchQuery(viewState[view].query).length > 0) {
+        if (requiresSearchIndex(view, viewState[view].query, installableOnly)) {
           await loadSearchEntries();
           return;
         }
+        if (view === "top100") return;
         if (view === "rising" && risingEntries.length === 0) {
           const payload = await fetchJson(
             manifest ? manifest.datasets.rising.url : LEGACY_URLS.rising
@@ -4078,6 +4113,7 @@
         { emitEvent = true, updateUrl = true, historyMode = "replace" } = {}
       ) {
         const switchGeneration = ++viewSwitchGeneration;
+        featuredPlugin.hidden = true;
         const previousView = currentView;
         currentView = ["top100", "rising", "all"].includes(view)
           ? view
@@ -4134,21 +4170,21 @@
             view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
           });
         }
-        const hasDeferredSearch = tokenizeSearchQuery(viewState[currentView].query).length > 0
-          && currentView === "all"
+        const indexed = requiresSearchIndex(currentView, viewState[currentView].query, installableOnly);
+        const hasDeferredSearch = indexed
           && !searchEntries;
         const needsData = (
           hasDeferredSearch
           ||
-          (currentView === "rising" && risingEntries.length === 0)
-          || (currentView === "all" && !hasDeferredSearch && (
+          (!indexed && currentView === "rising" && risingEntries.length === 0)
+          || (currentView === "all" && !indexed && (
             activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0
           ))
         );
         if (needsData) {
           const status = document.createElement("p");
           status.className = "status";
-          status.textContent = `正在加载${currentView === "rising" ? "新锐榜" : "总榜"}${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}…`;
+          status.textContent = indexed ? "正在加载全库搜索与安装筛选…" : `正在加载${currentView === "rising" ? "新锐榜" : "总榜"}${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}…`;
           list.replaceChildren(status);
         }
         try {
@@ -4172,6 +4208,11 @@
           const status = document.createElement("p");
           status.className = "status error";
           status.textContent = "这一榜单暂时无法读取，请稍后重试。";
+          const retry = document.createElement("button");
+          retry.type = "button";
+          retry.textContent = "重试加载";
+          retry.addEventListener("click", () => void setView(currentView, { updateUrl: false }));
+          status.append(" ", retry);
           list.replaceChildren(status);
           console.error(error);
         }
@@ -4179,43 +4220,42 @@
 
       function renderRanking() {
         const state = viewState[currentView];
+        featuredPlugin.hidden = !showFeaturedPlugin({
+          view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
+          query: searchInput.value || state.query,
+          category: activeCategory,
+          installAvailability: installableOnly ? "installable" : "all",
+        });
         const searchActive = tokenizeSearchQuery(state.query).length > 0;
-        loadMore.disabled = !searchActive && (
+        const indexed = requiresSearchIndex(currentView, state.query, installableOnly);
+        list.classList.toggle("is-top100-list", currentView !== "all" && !searchActive);
+        listHead.hidden = currentView === "all" || searchActive;
+        if (searchActive) rankingMetaTitle.textContent = `全部 DSH 插件 · 搜索结果${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}`;
+        loadMore.disabled = !indexed && (
           currentView === "all" && (
             activeCategory
               ? [...categoryPageLoadPromises.keys()].some((key) => key.startsWith(`${activeCategory}:`))
               : Boolean(totalPageLoadPromise)
           )
         );
-        const scoped = currentView === "top100"
+        const scoped = indexed
+          ? searchEntries ?? []
+          : currentView === "top100"
           ? hotEntries
           : currentView === "rising"
             ? risingEntries
-            : (searchActive && searchEntries
-                ? searchEntries
-                : activeCategory ? categoryEntries : rankedEntries);
+            : (activeCategory ? categoryEntries : rankedEntries);
         const categoryScoped = activeCategory
           ? scoped.filter((entry) => entryMatchesCategory(entry, activeCategory))
           : scoped;
-        const scoredMatches = categoryScoped
-          .map((entry) => ({
-            entry,
-            score: scoreSearchEntry(entry.plugin, state.query),
-          }))
-          .filter((item) => item.score !== null);
-        if (searchActive) {
-          scoredMatches.sort(
-            activeSearchSort === "relevance"
-              ? (left, right) => right.score - left.score || left.entry.rank - right.entry.rank
-              : (left, right) => left.entry.rank - right.entry.rank
-          );
-        }
-        const matched = scoredMatches.map(({ entry }) => entry);
-        const shown = currentView === "all"
+        const matched = filterDiscoveryEntries(categoryScoped, {
+          query: state.query, installableOnly, sort: activeSearchSort,
+        });
+        const shown = currentView === "all" || searchActive
           ? matched.slice(0, state.visible)
           : matched;
         const fragment = document.createDocumentFragment();
-        rankHead.textContent = activeCategory
+        rankHead.textContent = activeCategory || searchActive
           ? "总榜排名"
           : "排名";
         searchClear.hidden = !searchActive;
@@ -4257,6 +4297,7 @@
           const starText = formatStars(plugin.stars);
           const repositoryUrl = `https://github.com/${plugin.fullName}`;
           const presentation = catalogPresentation(plugin);
+          const capability = catalogInstallCapability(plugin);
           const command = installCommand(plugin);
 
           rank.textContent = `#${String(displayRank).padStart(3, "0")}`;
@@ -4271,9 +4312,9 @@
           copyLink.dataset.rank = String(displayRank);
           copyLink.setAttribute("aria-label", `复制 ${name} 的 GitHub 仓库地址`);
           copyLink.title = "复制 GitHub 仓库地址";
-          trustPill.textContent = presentation.trustLabel;
+          trustPill.textContent = capability.label;
           trustPill.dataset.level = presentation.trustLevel;
-          trustPill.title = "信任证据不代表代码已经过安全审核";
+          trustPill.title = `${presentation.trustLabel}；${capability.reason}；不代表代码已经过安全审核`;
           typePill.textContent = presentation.formFactor;
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
           const hasLicense = Object.prototype.hasOwnProperty.call(plugin, "license");
@@ -4286,9 +4327,15 @@
           updated.hidden = !updatedAt;
           updated.textContent = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
           growth.hidden = !hasGrowth;
-          growth.textContent = hasGrowth
-            ? `日增 +${formatStars(plugin.dailyStars)} · 周增 +${formatStars(plugin.weeklyStars)}`
-            : "";
+          growth.replaceChildren();
+          if (hasGrowth) {
+            for (const [label, value] of [["日增", plugin.dailyStars], ["周增", plugin.weeklyStars]]) {
+              const period = document.createElement("span");
+              period.className = "growth-period";
+              period.textContent = `${label} +${formatStars(value)}`;
+              growth.appendChild(period);
+            }
+          }
           cardGithubLink.href = repositoryUrl;
           cardGithubLink.dataset.plugin = plugin.fullName;
           cardGithubLink.dataset.rank = String(displayRank);
@@ -4306,7 +4353,7 @@
             quickInstall.title = "复制 DSH 安装命令";
             quickInstall.setAttribute("aria-label", `复制 ${name} 的 DSH 安装命令`);
           }
-          if (currentView === "top100") {
+          if (!searchActive && currentView === "top100") {
             const heatText = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(plugin.hotScore || 0);
             stars.classList.add("is-heat");
             stars.textContent = heatText;
@@ -4314,7 +4361,7 @@
               "aria-label",
               `综合热度 ${heatText}，当前 ${starText} GitHub Stars`
             );
-          } else if (currentView === "rising") {
+          } else if (!searchActive && currentView === "rising") {
             const rateText = formatStars(plugin.dailyStars);
             stars.textContent = `↑ ${rateText}`;
             stars.setAttribute(
@@ -4331,7 +4378,9 @@
         if (shown.length === 0) {
           const status = document.createElement("p");
           status.className = "status";
-          status.textContent = activeCategory
+          status.textContent = installableOnly
+            ? "当前条件下没有可解析安装来源的插件，可取消“仅看有安装源”或更换关键词。"
+            : activeCategory
             ? `${categoryLabels[activeCategory]}分类暂时没有匹配的插件。`
             : searchActive
               ? `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`
@@ -4339,11 +4388,18 @@
           fragment.appendChild(status);
         }
 
+        // Same visual list; this editorial DOM row never enters the ranked data.
+        fragment.prepend(featuredPlugin);
         list.replaceChildren(fragment);
         for (const pluginElement of list.querySelectorAll(".plugin")) {
           observeReveal(pluginElement);
         }
-        if (activeCategory) {
+        if (indexed) {
+          searchResult.textContent = `${searchActive ? "全库搜索" : "Stars 总榜"}${activeCategory ? ` · ${categoryLabels[activeCategory]}` : ""}${installableOnly ? " · 仅看有安装源" : ""} · ${formatStars(matched.length)} 个${searchActive ? ` · ${activeSearchSort === "relevance" ? "按相关度" : "按 Stars 总榜顺序"} · 显示总榜排名` : ""}`;
+          rankingStatus.textContent = `找到 ${matched.length} 个插件，已显示 ${shown.length} 个`;
+          loadMore.hidden = shown.length >= matched.length;
+          loadMore.textContent = `继续加载（剩余 ${formatStars(Math.max(0, matched.length - shown.length))}）`;
+        } else if (activeCategory) {
           const category = activeCategoryManifest();
           const categoryTotal = category?.count ?? categoryScoped.length;
           const filteredCategoryTotal = searchActive
@@ -4456,7 +4512,12 @@
           nextState.query = value;
           nextState.visible = nextQuery ? PAGE_SIZE : nextState.unfilteredVisible;
         }
-        if (previousQuery === nextQuery) return;
+        if (previousQuery === nextQuery) {
+          // Whitespace/punctuation changes still affect the editorial placement.
+          if (hotEntries.length && (!requiresSearchIndex(view, value, installableOnly) || searchEntries)) renderRanking();
+          return;
+        }
+        if (nextQuery) activeSearchSort = "relevance";
         for (const key of Object.keys(searchGenerations)) searchGenerations[key] += 1;
         const searchGeneration = searchGenerations[view];
         const isCurrentSearchRequest = () =>
@@ -4469,7 +4530,7 @@
             ...(activeCategory ? { category: activeCategory } : {}),
           });
         }
-        if (view === "all") {
+        if (nextQuery || view === "all" || view === "rising") {
           const needsUnfilteredData = !nextQuery && (
             activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0
           );
@@ -4482,8 +4543,7 @@
             list.replaceChildren(status);
           }
           try {
-            if (nextQuery) await loadSearchEntries();
-            else await ensureViewData(view);
+            await ensureViewData(view);
           } catch (error) {
             if (!isCurrentSearchRequest()) return;
             searchResult.textContent = nextQuery
@@ -4495,6 +4555,11 @@
               status.textContent = nextQuery
                 ? "全站搜索索引暂时无法读取，请稍后重试。"
                 : "这一榜单暂时无法读取，请稍后重试。";
+              const retry = document.createElement("button");
+              retry.type = "button";
+              retry.textContent = "重试加载";
+              retry.addEventListener("click", () => void setView(currentView, { updateUrl: false }));
+              status.append(" ", retry);
               list.replaceChildren(status);
               rankingStatus.textContent = nextQuery
                 ? "全站搜索索引加载失败"
@@ -4504,10 +4569,13 @@
             return;
           }
         }
-        if (isCurrentSearchRequest() && currentView === view) renderRanking();
+        if (isCurrentSearchRequest() && currentView === view) {
+          await setView(view, { emitEvent: false, updateUrl: false });
+        }
       }
 
       function scheduleSearch(value, immediate = false) {
+        if (value.trim()) featuredPlugin.hidden = true;
         window.clearTimeout(searchTimer);
         if (immediate) {
           void applySearchQuery(currentView, value);
@@ -4538,6 +4606,17 @@
           renderRanking();
         });
       }
+
+      installableToggle.addEventListener("click", () => {
+        installableOnly = !installableOnly;
+        installableToggle.setAttribute("aria-pressed", String(installableOnly));
+        for (const [view, state] of Object.entries(viewState)) {
+          state.visible = PAGE_SIZE;
+          state.unfilteredVisible = PAGE_SIZE;
+          searchGenerations[view] += 1;
+        }
+        void setView(currentView, { emitEvent: false, updateUrl: false });
+      });
 
       try {
         initialDataPromise = loadManifestAndHot();
@@ -4574,9 +4653,11 @@
             activeCategory = button.dataset.category || null;
             categoryEntries = [];
             categoryPageLoaded = 0;
-            viewState.all.visible = PAGE_SIZE;
-            viewState.all.unfilteredVisible = PAGE_SIZE;
-            searchGenerations.all += 1;
+            for (const [view, state] of Object.entries(viewState)) {
+              state.visible = PAGE_SIZE;
+              state.unfilteredVisible = PAGE_SIZE;
+              searchGenerations[view] += 1;
+            }
             track("category_selected", {
               view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
               category: activeCategory ?? "all",
@@ -4585,7 +4666,7 @@
           });
         }
         loadMore.addEventListener("click", async () => {
-          if (currentView !== "all") return;
+          if (currentView !== "all" && !tokenizeSearchQuery(viewState[currentView].query).length) return;
           const requestedRankingView = currentView;
           const requestedCategory = activeCategory;
           const requestedSearchGeneration = searchGenerations[requestedRankingView];
@@ -4603,7 +4684,7 @@
           loadMore.disabled = true;
           loadMore.textContent = "正在加载…";
           try {
-            if (!searchActive && manifest) {
+            if (!requiresSearchIndex(requestedRankingView, state.query, installableOnly) && manifest) {
               if (requestedCategory) await loadNextCategoryPage();
               else await loadNextTotalPage();
               const categoryStillMatches = activeCategory === requestedCategory;

@@ -2,62 +2,10 @@
  * Mirrors the DSH plugin's allow-listed install target rules without executing catalog commands.
  */
 
-const NPM_NAME = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
-const NPM_SELECTOR = "[a-z0-9][a-z0-9._+-]*";
-const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME})(?:@${NPM_SELECTOR})?$`, "i");
-const GITHUB_REPOSITORY = "[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}";
-const GITHUB_SPEC_RE = new RegExp(
-  `^github:${GITHUB_REPOSITORY}(?:#[A-Za-z0-9._~+/:=-]+)?$`,
-  "i"
-);
-const FULL_NAME_RE = new RegExp(`^${GITHUB_REPOSITORY}$`);
-const UNSAFE_TOKEN_RE = /[\s|&;<>()$`\\'"!*?]/;
-const DSH_ADD_RE = /\bdsh\s+plugin\b(?:\s+--profile\s+\S+)?\s+add\s+(.+)$/i;
-
-function parseInstallTarget(value) {
-  const token = String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
-  if (!token || token.startsWith("-") || UNSAFE_TOKEN_RE.test(token)) return null;
-  if (token.startsWith("link:") || token.startsWith("file:") || token.startsWith("http")) return null;
-  if (GITHUB_SPEC_RE.test(token) || NPM_SPEC_RE.test(token)) return token;
-  return null;
-}
-
-function targetMatchesRepository(target, fullName) {
-  if (!target.toLowerCase().startsWith("github:")) return false;
-  const repository = target.slice("github:".length).split("#", 1)[0];
-  return repository.toLowerCase() === String(fullName ?? "").toLowerCase();
-}
+import { resolveCatalogInstallTarget } from "./install-source.js";
 
 export function resolveInstallTarget(entry) {
-  const fullName = String(entry?.fullName ?? "");
-  if (!FULL_NAME_RE.test(fullName)) return null;
-  const candidates = [];
-  const indexedTarget = parseInstallTarget(entry?.installTarget);
-  if (indexedTarget) candidates.push(indexedTarget);
-
-  for (const command of entry?.install?.commands ?? []) {
-    const match = String(command).match(DSH_ADD_RE);
-    if (!match) continue;
-    const remainder = match[1].trim();
-    if (!remainder || remainder.split(/\s+/).length !== 1) continue;
-    const target = parseInstallTarget(remainder);
-    if (target) candidates.push(target);
-  }
-
-  // README commands can install prerequisites or other marketplaces. Prefer an
-  // explicit source for this repository, regardless of its position in the README.
-  const githubTarget = candidates.find((target) => targetMatchesRepository(target, fullName));
-  if (githubTarget) return githubTarget;
-  const packageName = entry?.install?.packageName ?? entry?.installPackageName;
-  if (typeof packageName === "string") {
-    const npmTarget = candidates.find((target) =>
-      target.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase());
-    if (npmTarget) return npmTarget;
-  }
-  if (String(entry?.type ?? "").toLowerCase() === "skill") {
-    return `github:${fullName}`;
-  }
-  return null;
+  return resolveCatalogInstallTarget(entry ?? {});
 }
 
 export function installCommand(entry) {
@@ -65,6 +13,16 @@ export function installCommand(entry) {
   return target
     ? `npx @deepseek-ai/dsh plugin --profile web add ${target}`
     : null;
+}
+
+export function catalogInstallCapability(entry) {
+  if (!resolveInstallTarget(entry)) {
+    return { label: "未识别安装源", reason: "暂未识别到与当前项目匹配的安装源，不代表无法安装；请查看 GitHub 说明" };
+  }
+  if ((entry?.install?.needsConfig ?? entry?.needsConfig) === true) {
+    return { label: "安装后需配置", reason: "项目声明需要额外配置，请先阅读安装说明" };
+  }
+  return { label: "已识别安装源", reason: "可解析安装来源；不保证安装成功，配置要求仍需查看项目说明" };
 }
 
 export function catalogPresentation(entry) {

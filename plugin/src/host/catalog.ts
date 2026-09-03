@@ -7,8 +7,8 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
-import { catalogCategories, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
-import { matchesSearchQuery, scoreSearchEntry, tokenizeSearchQuery } from "../shared/search.js";
+import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
+import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
 import { catalogEvidence } from "../shared/evidence.js";
 import type {
   CatalogCacheStatus,
@@ -228,13 +228,18 @@ function verifySnapshot(raw: string, reference: RankingFileReferenceV2): void {
 }
 
 function manifestCategories(manifest: RankingManifestV2): PluginCategoryDefinition[] {
-  return manifest.categories.map(({ id, label, description, count }) => ({ id, label, description, count }));
+  return manifest.categories.map(({ id, label, description, count }) => ({
+    id,
+    label: categoryDisplayLabel(id, label),
+    description,
+    count,
+  }));
 }
 
 function manifestPluginCategories(manifest: RankingManifestV2): PluginCategoryDefinition[] {
   return manifest.categories.map(({ id, label, description, count, skillCount = 0 }) => ({
     id,
-    label,
+    label: categoryDisplayLabel(id, label),
     description,
     count: Math.max(0, count - skillCount),
   }));
@@ -361,6 +366,7 @@ export function filterCatalog(
   },
 ): { total: number; excludedSkillCount: number; items: CatalogItem[] } {
   const hasQuery = tokenizeSearchQuery(options.query).length > 0;
+  const scoreEntry = createSearchScorer(options.query);
   const source = hasQuery || options.view === "total"
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
@@ -373,7 +379,7 @@ export function filterCatalog(
       const installable = resolveInstallSpec(entry) !== null;
       return options.installAvailability === "installable" ? installable : !installable;
     })
-    .map((entry) => ({ entry, score: scoreSearchEntry(entry, options.query) }))
+    .map((entry) => ({ entry, score: scoreEntry(entry) }))
     .filter((item): item is { entry: RankingEntry; score: number } => item.score !== null);
   const excludedSkillCount = options.excludeSkills
     ? scored.filter(({ entry }) => entry.type?.toLowerCase() === "skill").length
@@ -729,7 +735,7 @@ export function parseSkillDirectoryDocument(raw: string): RankingsDocument {
 
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
-  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown };
+  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown; needsConfig?: unknown };
   if (typeof entry.fullName !== "string") return null;
   const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
   const parsedTarget = typeof entry.installTarget === "string"
@@ -739,6 +745,7 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     method: "manifest-v2",
     packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
     target: parsedTarget.spec,
+    ...(typeof entry.needsConfig === "boolean" ? { needsConfig: entry.needsConfig } : {}),
     commands: [`dsh plugin add ${parsedTarget.spec}`],
     commandSource: "manifest-v2",
   } : undefined);

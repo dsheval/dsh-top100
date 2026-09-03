@@ -111,7 +111,7 @@ describe("DSH plugin recommendations", () => {
       fullName: "acme/vision-reader",
       rank: 8,
       description: "识别图片并提取 OCR 文本",
-      categories: ["知识获取"],
+      categories: ["知识"],
       installed: true,
       installable: true,
       formFactor: "dsh-bundle",

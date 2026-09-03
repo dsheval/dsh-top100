@@ -55,7 +55,7 @@ describe("compact search index", () => {
       tags: ["tools"],
       categories: [{ id: "tools", confidence: 0.9, evidence: "tool", source: "manual" as const }],
       type: "cordis-plugin",
-      install: { method: "pnpm-profile", packageName: "demo", commands: ["dsh plugin add demo"] },
+      install: { method: "pnpm-profile", packageName: "demo", commands: ["dsh plugin add demo"], needsConfig: true },
       sources: ["github"],
       url: "https://github.com/acme/demo",
       pushedAt: "2026-08-31T00:00:00Z",
@@ -89,6 +89,7 @@ describe("compact search index", () => {
     const snapshot = toSnapshotSearchEntry(document.rankings.total[0]);
     expect(snapshot.installTarget).toBe("demo");
     expect(snapshot.installPackageName).toBe("demo");
+    expect(snapshot.needsConfig).toBe(true);
     expect(snapshot).not.toHaveProperty("install");
   });
 

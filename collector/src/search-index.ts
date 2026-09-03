@@ -3,59 +3,12 @@
 import type { RankingSearchEntry } from "@dsh-top100/schema";
 import type { RankingsDocument } from "./rankings.js";
 
-const NPM_NAME = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
-const NPM_SELECTOR = "[a-z0-9][a-z0-9._+-]*";
-const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME})(?:@${NPM_SELECTOR})?$`, "i");
-const GITHUB_REPOSITORY = "[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/[A-Za-z0-9._-]{1,100}";
-const GITHUB_SPEC_RE = new RegExp(
-  `^github:${GITHUB_REPOSITORY}(?:#[A-Za-z0-9._~+/:=-]+)?$`,
-  "i"
-);
-const FULL_NAME_RE = new RegExp(`^${GITHUB_REPOSITORY}$`);
-const UNSAFE_TOKEN_RE = /[\s|&;<>()$`\\'"!*?]/;
-const DSH_ADD_RE = /\bdsh\s+plugin\b(?:\s+--profile\s+\S+)?\s+add\s+(.+)$/i;
-
-function parseInstallTarget(value: unknown): string | null {
-  const token = String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
-  if (!token || token.startsWith("-") || UNSAFE_TOKEN_RE.test(token)) return null;
-  if (token.startsWith("link:") || token.startsWith("file:") || token.startsWith("http")) {
-    return null;
-  }
-  return GITHUB_SPEC_RE.test(token) || NPM_SPEC_RE.test(token) ? token : null;
-}
-
-function targetMatchesRepository(target: string, fullName: string): boolean {
-  if (!target.toLowerCase().startsWith("github:")) return false;
-  const repository = target.slice("github:".length).split("#", 1)[0];
-  return repository.toLowerCase() === fullName.toLowerCase();
-}
+import { NPM_SPEC_RE, resolveCatalogInstallTarget } from "../../plugin/src/shared/install-source.js";
 
 export function resolveSearchInstallTarget(
   entry: RankingsDocument["rankings"]["total"][number]
 ): string | null {
-  if (!FULL_NAME_RE.test(entry.fullName)) return null;
-  const candidates: string[] = [];
-  for (const command of entry.install.commands ?? []) {
-    const match = command.match(DSH_ADD_RE);
-    if (!match) continue;
-    const remainder = match[1].trim();
-    if (remainder.split(/\s+/).length !== 1) continue;
-    const target = parseInstallTarget(remainder);
-    if (target) candidates.push(target);
-  }
-
-  const githubTarget = candidates.find((target) => targetMatchesRepository(target, entry.fullName));
-  if (githubTarget) return githubTarget;
-  const packageName = entry.install.packageName;
-  if (typeof packageName === "string") {
-    const npmTarget = candidates.find((target) =>
-      target.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase());
-    if (npmTarget) return npmTarget;
-  }
-  if (entry.type.toLowerCase() === "skill") {
-    return `github:${entry.fullName}`;
-  }
-  return null;
+  return resolveCatalogInstallTarget(entry);
 }
 
 export interface LegacyRankingSearchEntry extends RankingSearchEntry {
@@ -118,6 +71,7 @@ export function toSnapshotSearchEntry(
     type: entry.type,
     ...(installTarget ? {
       installTarget,
+      ...(typeof entry.install.needsConfig === "boolean" ? { needsConfig: entry.install.needsConfig } : {}),
       // Compact consumers must retain the selected package identity. A legacy
       // installTarget alone only proves syntax, not which project it installs.
       ...(NPM_SPEC_RE.test(installTarget) ? { installPackageName: entry.install.packageName } : {}),

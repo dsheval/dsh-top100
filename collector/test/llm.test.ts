@@ -37,7 +37,7 @@ describe("Chinese summary validation", () => {
   it("uses Chinese source text or a conservative fallback", () => {
     expect(fallbackDescriptionZh("用于管理插件的中文工具")).toBe("用于管理插件的中文工具");
     expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toContain("demo-plugin");
-    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toContain("桌面端");
+    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toContain("资料不足");
   });
 
   it("builds a repository-specific fallback from README and leaves it retryable", () => {
@@ -47,7 +47,7 @@ describe("Chinese summary validation", () => {
       readmeSummary: "Enterprise multi-agent orchestration with hierarchical swarms and coordinated workflows.",
       topics: ["multi-agent", "orchestration"],
     });
-    expect(fallback).toContain("多个 AI Agent");
+    expect(fallback).toContain("资料不足");
     expect(fallback).not.toContain("请查看项目 README");
     expect(isGenericDescriptionZh(fallback)).toBe(true);
   });
@@ -60,7 +60,36 @@ describe("Chinese summary validation", () => {
         readmeSummary: "欢迎使用。这个插件支持跨设备同步会话，并自动整理历史记录。安装方法如下。",
         topics: [],
       })
-    ).toBe("这个插件支持跨设备同步会话，并自动整理历史记录");
+    ).toBe("这个插件支持跨设备同步会话，并自动整理历史记录。");
+  });
+
+  it("rejects implementation-only and navigation fragments as summaries", () => {
+    for (const summary of [
+      "纯 Node 实现，无网络依赖",
+      "中文 | English 组件入口 | 组件 | 说明 | |---|---|",
+      "中文简介：请参考项目文档了解具体功能",
+    ]) {
+      expect(isGenericDescriptionZh(summary)).toBe(true);
+      expect(extractJson(JSON.stringify({ descriptionZh: summary, tagsZh: [] }))).toBeNull();
+    }
+  });
+
+  it("does not infer search or security capabilities from incidental keywords", () => {
+    const summary = fallbackDescriptionZh({ name: "BrowserSkill", description: "Let AI agents use your logged-in browser.", readmeSummary: null, topics: ["browser", "security"] });
+    expect(summary).not.toMatch(/知识检索|安全检查|无需/);
+    expect(isGenericDescriptionZh(summary)).toBe(true);
+  });
+
+  it("uses complete source sentences without deleting English word boundaries", () => {
+    const description = "为 DeepSeek Harness 提供浏览器自动化。" + "说明".repeat(50);
+    expect(fallbackDescriptionZh(description)).toBe("为 DeepSeek Harness 提供浏览器自动化。");
+    expect(extractJson(JSON.stringify({ descriptionZh: "让 DeepSeek Harness 调用 Browser Skill 操作网页。" }))?.descriptionZh)
+      .toContain("DeepSeek Harness");
+  });
+
+  it("discards markdown tables and uses the next factual sentence", () => {
+    expect(fallbackDescriptionZh({ name: "demo", description: "中文 | English | 组件 | 说明 | |---|---|", readmeSummary: "# 使用说明\n这个插件支持跨设备同步会话。\n安装步骤如下。", topics: [] }))
+      .toBe("这个插件支持跨设备同步会话。");
   });
 
   it("retries empty or invalid successful responses instead of failing immediately", async () => {

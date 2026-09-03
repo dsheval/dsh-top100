@@ -1,25 +1,76 @@
-# dsh-Top100 DSH 插件
+# dsh-top100 · DSH 插件
 
-把线上 dsh-Top100 榜单嵌进 DeepSeek Harness Web 的设置页：按综合热度、新锐或 Stars 浏览插件，以分类和安装能力独立筛选，并对作者明确提供且验证通过的安装源进行单项确认安装。Skills 使用独立技能库，不参与 Plugin 排名。设置页同时提供已安装 Plugin 与 Skill 的状态、更新、启停和卸载入口，以及只读的 profile、加载冲突、peer 依赖、榜单数据源和用户补丁诊断。插件还自带 `recommend-dsh-plugins` Skill；用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，模型会加载该 Skill，并通过 `dsh_top100_search` 查询实时榜单后给出推荐。
+把插件榜单带进 DSH，发现、安装和管理插件。
 
-**[一键下载并查看接入 DSH 指南](https://www.dsheval.ai/?page=dsh#dsh)**
+在 DeepSeek Harness Web 的设置页浏览中文榜单、搜索所需能力，并在核对来源、脚本与风险后确认安装。与官网共用榜单数据，无需自行运行采集器或数据库。
 
-当前发布版本：[`@dsheval/dsh-top100-plugin@1.2.1`](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.2.1)，发布后使用 npm `latest` dist-tag。
+[访问官网](https://www.dsheval.ai/) · [安装指南](https://www.dsheval.ai/?page=dsh#dsh) · [GitHub 源码](https://github.com/dsheval/dsh-top100) · [问题反馈](https://github.com/dsheval/dsh-top100/issues)
 
-需要 **dsh web 0.1.0-rc.6+**。本机开发按官方手册的 bundle 安装方式挂载。
+## 可以做什么
 
-## 安装 dsh-Top100
+- **插件市场**：综合热度 Top 100、新锐榜与 Stars 总榜；支持中文搜索、功能分类和安装来源筛选。
+- **Skills 技能库**：独立浏览与搜索，不参与插件排名。
+- **已安装**：查看当前配置中的插件与本地 Skill，按操作边界进行更新、启停和卸载。
+- **诊断**：只读检查加载冲突、peer 依赖、榜单数据源与用户补丁。
+- **对话推荐**：自带 `recommend-dsh-plugins` Skill，通过 `dsh_top100_search` 查询榜单后给出推荐。
 
-安装插件和启动 DSH 必须使用相同的命令前缀。
+## 快速开始
 
-### npm/npx 普通用户（默认）
-
-请在 DSH 源码仓库外运行：
+需要 **Node.js 22.13+** 和 **DSH Web 0.1.0-rc.6+**。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
 npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin
 npx @deepseek-ai/dsh web
 ```
+
+打开 DSH Web，进入 **设置 → 插件排行**。安装和启动必须使用同一种命令前缀。
+
+这里只安装榜单插件，不会自动安装榜单中的其他项目。安装其他插件前，仍需核对来源、脚本与风险；来源校验不等于安全审核。安装后按提示重启 DSH 并检查运行状态。
+
+## 界面预览
+
+以下为 2026-09-03 本地开发版截图；界面与榜单数据会随版本和每日更新变化。
+
+### 在 DSH 中浏览和管理插件
+
+<a href="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-plugin-market.png">
+  <img src="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-plugin-market.png" alt="dsh-top100 插件：DSH 设置中的插件市场、已安装和诊断入口" width="640">
+</a>
+
+### 也可以先在官网发现插件
+
+<a href="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-website-preview.jpg">
+  <img src="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-website-preview.jpg" alt="dsh-top100 官网：综合热度榜、分类筛选、搜索和插件列表" width="960">
+</a>
+
+<details>
+<summary>查看安装确认界面</summary>
+
+点击「安装」后，先展示精确安装源、将执行的脚本及风险；只有你确认后才会安装。
+
+<a href="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-install-confirm.png">
+  <img src="https://raw.githubusercontent.com/dsheval/dsh-top100/main/web/public/assets/dsh-install-confirm.png" alt="插件安装确认：精确版本、生命周期脚本、重启提醒和风险确认" width="480">
+</a>
+
+</details>
+
+## 在对话中获取推荐
+
+安装插件后，可以在 DSH 对话中直接询问：
+
+```text
+推荐几个适合做浏览器自动化的 DSH 插件
+我需要长期记忆能力，应该安装哪个插件？
+```
+
+模型会通过随包提供的 Skill 和搜索工具查询对应目录的全库数据。推荐功能不会复制或覆盖用户自己的 `~/.dsh/skills` 文件；卸载插件后也会一起移除。
+
+## 其他安装方式与帮助
+
+<details>
+<summary>使用全局 dsh 或 DSH 源码</summary>
+
+请选择与你启动 DSH 相同的方式，不要混用命令前缀。
 
 ### 从 DSH 源码运行
 
@@ -40,37 +91,26 @@ dsh plugin --profile web add @dsheval/dsh-top100-plugin
 dsh web
 ```
 
-安装后打开 **设置 → 插件排行**。
+</details>
 
-部分 npm 环境可能在首次解析 DSH 依赖时长时间无输出并持续占用 CPU。该问题发生在 DSH npm 发布包的依赖解析阶段，并非 dsh-Top100 插件安装失败。如果 `npx @deepseek-ai/dsh --version` 也无法完成，请停止命令并改用源码方式。不要单独添加 `--legacy-peer-deps`，否则可能漏装 DSH 运行时依赖。参见 [DSH 上游讨论](https://github.com/deepseek-ai/deepseek-harness/discussions/3786)。
+<details>
+<summary>npx 长时间没有输出</summary>
 
-### 本地插件开发
+部分 npm 环境可能在首次解析 DSH 依赖时长时间无输出并持续占用 CPU。该问题发生在 DSH npm 发布包的依赖解析阶段，并非 dsh-top100 插件安装失败。如果 `npx @deepseek-ai/dsh --version` 也无法完成，请停止命令并改用源码方式。不要单独添加 `--legacy-peer-deps`，否则可能漏装 DSH 运行时依赖。参见 [DSH 上游讨论](https://github.com/deepseek-ai/deepseek-harness/discussions/3786)。
 
-本地开发继续使用官方 `link:` 方式：
+</details>
 
-```sh
-npm run build -w @dsheval/dsh-top100-plugin
-dsh plugin --profile web add link:D:/dsh-top100/plugin
-```
-
-页面包含：
-
-- **插件市场**：综合热度 Top 100、新锐和 Stars 总榜；Agent 增强 / 外观 / 编程 / 知识获取 / 工具 / 安全是独立筛选条件，安装能力也单独筛选。Skills 使用独立技能库，不参与 Plugin 排名；搜索始终使用对应目录的全库范围，详情会按需读取权威分页补齐 README 摘要与项目元数据。
-- **已安装**：管理当前 profile 的社区 Bundle 和本地 Skill；官方包、排行插件自身及 `link:` / `file:` 源会按安全边界限制操作。
-- **诊断**：只读扫描当前 profile 的加载顺序、重复行、peer 依赖、核心包多版本、榜单可达性和用户补丁层。
-
-在 DSH 对话中可以直接询问：
-
-```text
-推荐几个适合做浏览器自动化的 DSH 插件
-我需要长期记忆能力，应该安装哪个插件？
-```
-
-推荐 Skill 和搜索工具随插件注册，不会复制或覆盖用户自己的 `~/.dsh/skills` 文件；卸载插件后也会一起移除。
+更多操作说明见 [官网安装指南](https://www.dsheval.ai/?page=dsh#dsh)。
 
 ## 数据源
 
-Host 端读取 DSHeval 的同一份榜单快照。Top 100 和新锐首屏优先读取较小的分片：
+Host 端读取 DSHeval 的同一份榜单快照，优先从 manifest 定位对应的不可变分片：
+
+```text
+https://www.dsheval.ai/data/manifest.json
+```
+
+同时保留兼容数据接口：
 
 ```text
 https://www.dsheval.ai/data/rankings-hot.json
@@ -81,9 +121,9 @@ https://www.dsheval.ai/data/rankings.json
 
 总榜、分类、全库搜索和 Agent 推荐读取紧凑检索索引；详情和安装预检会按需读取权威总榜分页，补齐 README 摘要、项目元数据与安装证据。成功响应会缓存在 `$DSH_HOME/cache/dsh-top100/`；缓存过期后先返回上一次有效榜单，再在后台刷新，因此短时网络波动不会阻塞已缓存页面。相同数据请求会自动合并，避免并发重复下载。
 
-分类筛选与网页版共用该文件中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent 增强、外观、编程、知识获取、工具和安全；线上名称、说明和数量更新后，插件会随目录数据同步。Plugin 榜单与 Skills 技能库使用不同数据集。
+分类筛选与网页版共用数据中的 `categories` 和每个条目的 `categories` 字段。目前受控分类为 Agent 增强、外观、编程、知识、工具和安全；线上名称、说明和数量更新后，插件会随目录数据同步。Plugin 榜单与 Skills 技能库使用不同数据集。
 
-插件市场展示的排名、Stars、涨幅、中文简介、标签和分类全部来自 DSHEval 服务器发布的这份文件，浏览器端不会另外请求 GitHub 生成或补写榜单数据。GitHub 仅用于用户主动打开项目，以及确认安装后验证安装源并交给 DSH 安装。
+插件市场展示的排名、Stars、涨幅、中文简介、标签和分类全部来自 DSHeval 服务器发布的快照，浏览器端不会另外请求 GitHub 生成或补写榜单数据。GitHub 用于用户主动打开项目，以及由 Host 预检安装源、获取精确版本内容；实际安装仍需用户确认。
 
 可用环境变量或插件配置覆盖：
 
@@ -102,7 +142,7 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 ## 安装边界
 
 - 浏览器不直连榜单域名，由 Host 拉取。
-- 设置页确认安装只对作者明确提供、且验证通过的 `dsh plugin add` 目标开放；其他条目保持只读浏览。
+- 设置页只为已识别安装源的条目提供安装入口；目标通过预检、用户确认后才会安装。「未识别安装源」的条目保留项目链接，不代表项目无法安装。
 - 多条命令优先选择当前仓库的 GitHub 来源；npm 目标必须匹配 Collector 识别的插件包名，缺少依据时只保留项目链接。旧搜索索引需要重新发布并刷新缓存后才能恢复有依据的 npm 安装入口。
 - 不执行 README 里的安装命令。
 - 用户确认前，npm selector 会解析成精确版本，GitHub 来源会解析成 40 位 commit；确认页展示目录声明、实际安装目标、完整性信息、生命周期脚本和风险。
@@ -114,15 +154,25 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 - 安装前后都会执行 DSH profile 配置检查；新插件导致检查失败时尝试自动移除该插件。配置检查通过只表示 Profile 可组合，界面会继续显示“需重启/运行时未知”，不会宣称插件已经运行。
 - 安装接口只接受同源 POST。
 - 启停只写当前 profile 的用户 `cordis.patch.yml`，不修改第三方插件文件。
-- 更新和卸载复用同一 profile 串行队列；受保护包不能从页面修改。
+- 更新和卸载复用同一 profile 串行队列；官方包、排行插件自身及 `link:` / `file:` 源按保护规则限制操作。
+
+这些检查只核对结构与来源一致性，不构成代码安全审核，也不保证第三方插件的运行结果。
 
 ## 开发
+
+在本仓库根目录验证和构建：
 
 ```sh
 npm run typecheck -w @dsheval/dsh-top100-plugin
 npm run test -w @dsheval/dsh-top100-plugin
 npm run build -w @dsheval/dsh-top100-plugin
 dsh web --dump-config
+```
+
+本地挂载使用 `link:`。把示例路径替换为本机 `plugin` 目录的实际绝对路径，命令前缀与你启动 DSH 的方式保持一致：
+
+```sh
+dsh plugin --profile web add link:/path/to/dsh-top100/plugin
 ```
 
 源码按职责拆分：`src/host` 负责 DSH 接入、HTTP API、推荐 Skill 和模型搜索工具，`src/install` 负责受控安装，`src/client` 负责设置页界面，`src/shared` 只放两端共享的数据契约。Skill 原文位于 `skills/recommend-dsh-plugins/SKILL.md`，发布包会保留该目录。

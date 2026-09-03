@@ -23,6 +23,11 @@ const STOP_WORDS = new Set([
 const segmenter = "Segmenter" in Intl
     ? new Intl.Segmenter("zh-CN", { granularity: "word" })
     : null;
+// Preserve domain terms such as 浏览器; Intl.Segmenter may split it into 浏览 + 器,
+// which would bypass the Chinese/English synonym group entirely.
+const chineseTerms = [...new Set(SYNONYM_GROUPS.flat().filter((word) => /\p{Script=Han}/u.test(word)))];
+const chineseTermPattern = new RegExp(`(${chineseTerms.sort((a, b) => b.length - a.length).join("|")})`, "u");
+const chineseTermSet = new Set(chineseTerms);
 export function normalizeSearchText(value) {
     return String(value ?? "")
         .normalize("NFKC")
@@ -36,8 +41,8 @@ export function tokenizeSearchQuery(value) {
     if (!normalized)
         return [];
     const tokens = [];
-    for (const part of normalized.split(" ")) {
-        if (!segmenter || !/\p{Script=Han}/u.test(part)) {
+    for (const part of normalized.split(" ").flatMap((word) => word.split(chineseTermPattern)).filter(Boolean)) {
+        if (chineseTermSet.has(part) || !segmenter || !/\p{Script=Han}/u.test(part)) {
             tokens.push(part);
             continue;
         }
@@ -92,13 +97,31 @@ function isOneEditAway(left, right) {
 function alternativesFor(token) {
     return SYNONYM_GROUPS.find((group) => group.includes(token)) ?? [token];
 }
-function scoreField(value, token, weight) {
+const preparedEntries = new WeakMap();
+const FIELD_WEIGHTS = [120, 95, 70, 68, 58, 42, 25, 18];
+function prepareFields(entry) {
+    const raw = [entry.name, entry.fullName, entry.owner ?? entry.fullName?.split("/")[0],
+        (entry.tags ?? []).join(" "), (entry.topics ?? []).join(" "),
+        entry.descriptionZh, entry.description, entry.type];
+    const cached = preparedEntries.get(entry);
+    if (cached && raw.every((value, index) => value === cached.raw[index]))
+        return cached.fields;
+    const fields = raw.map((rawValue, index) => {
+        const value = normalizeSearchText(rawValue);
+        const words = value.split(" ");
+        return { value, words, wordSet: new Set(words), weight: FIELD_WEIGHTS[index] };
+    });
+    // Weak keys release old snapshots; checking source fields also handles enrichment
+    // and in-place tag changes without stale search matches.
+    preparedEntries.set(entry, { raw, fields });
+    return fields;
+}
+function scoreField({ value, words, wordSet, weight }, token) {
     if (!value)
         return 0;
     if (value === token)
         return weight * 1.8;
-    const words = value.split(" ");
-    if (words.includes(token))
+    if (wordSet.has(token))
         return weight;
     if (words.some((word) => word.startsWith(token)))
         return weight * 0.82;
@@ -111,55 +134,52 @@ function scoreField(value, token, weight) {
     }
     return 0;
 }
-export function scoreSearchEntry(entry, query) {
+/** Compile the query once per list, then reuse normalized entry fields across searches. */
+export function createSearchScorer(query) {
     const tokens = tokenizeSearchQuery(query);
     if (tokens.length === 0)
-        return 0;
-    const fields = [
-        [normalizeSearchText(entry.name), 120],
-        [normalizeSearchText(entry.fullName), 95],
-        [normalizeSearchText(entry.owner), 70],
-        [normalizeSearchText((entry.tags ?? []).join(" ")), 68],
-        [normalizeSearchText((entry.topics ?? []).join(" ")), 58],
-        [normalizeSearchText(entry.descriptionZh), 42],
-        [normalizeSearchText(entry.description), 25],
-        [normalizeSearchText(entry.type), 18],
-    ];
-    let score = 0;
-    let matchedTokens = 0;
-    for (const token of tokens) {
-        let best = 0;
-        const alternatives = alternativesFor(token);
-        for (const alternative of alternatives) {
-            const expansionPenalty = alternative === token ? 1 : 0.86;
-            for (const [field, weight] of fields) {
-                best = Math.max(best, scoreField(field, alternative, weight) * expansionPenalty);
+        return () => 0;
+    const expanded = tokens.map((token) => ({ token, alternatives: alternativesFor(token) }));
+    const phrase = normalizeSearchText(query);
+    const requiredMatches = tokens.length <= 2 ? tokens.length : Math.ceil(tokens.length * 0.7);
+    return (entry) => {
+        const fields = prepareFields(entry);
+        let score = 0;
+        let matchedTokens = 0;
+        for (const { token, alternatives } of expanded) {
+            let best = 0;
+            for (const alternative of alternatives) {
+                const expansionPenalty = alternative === token ? 1 : 0.86;
+                for (const field of fields) {
+                    best = Math.max(best, scoreField(field, alternative) * expansionPenalty);
+                }
+            }
+            if (best > 0) {
+                matchedTokens++;
+                score += best;
             }
         }
-        if (best > 0) {
-            matchedTokens++;
-            score += best;
-        }
-    }
-    const requiredMatches = tokens.length <= 2 ? tokens.length : Math.ceil(tokens.length * 0.7);
-    if (matchedTokens < requiredMatches)
-        return null;
-    const coverage = matchedTokens / tokens.length;
-    score *= coverage * coverage;
-    const phrase = normalizeSearchText(query);
-    const normalizedName = normalizeSearchText(entry.name);
-    const normalizedFullName = normalizeSearchText(entry.fullName);
-    if (normalizedName === phrase)
-        score += 240;
-    else if (normalizedName.startsWith(phrase))
-        score += 150;
-    if (normalizedFullName === phrase)
-        score += 180;
-    else if (normalizedFullName.includes(phrase))
-        score += 90;
-    if (normalizeSearchText(entry.descriptionZh).includes(phrase))
-        score += 35;
-    return score;
+        if (matchedTokens < requiredMatches)
+            return null;
+        const coverage = matchedTokens / tokens.length;
+        score *= coverage * coverage;
+        const normalizedName = fields[0].value;
+        const normalizedFullName = fields[1].value;
+        if (normalizedName === phrase)
+            score += 240;
+        else if (normalizedName.startsWith(phrase))
+            score += 150;
+        if (normalizedFullName === phrase)
+            score += 180;
+        else if (normalizedFullName.includes(phrase))
+            score += 90;
+        if (fields[5].value.includes(phrase))
+            score += 35;
+        return score;
+    };
+}
+export function scoreSearchEntry(entry, query) {
+    return createSearchScorer(query)(entry);
 }
 export function matchesSearchQuery(entry, query) {
     return scoreSearchEntry(entry, query) !== null;
