@@ -26,7 +26,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.4";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.5";
 
 export interface RankingPublicationOptions {
   pageSize?: number;

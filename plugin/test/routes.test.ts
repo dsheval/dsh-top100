@@ -103,7 +103,7 @@ describe("plugin lifecycle routes", () => {
       description: "Plugin", descriptionZh: "插件", stars: 1, dailyStars: 0,
       weeklyStars: 0, hotScore: 1, forks: 0, openIssues: 0, language: null,
       homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add acme-plugin"] },
+      install: { method: "pnpm-profile", packageName: "acme-plugin", commands: ["dsh plugin --profile web add acme-plugin"] },
       sources: [], url: "https://github.com/acme/plugin", pushedAt: "", createdAt: "", updatedAt: "",
     };
     vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
@@ -152,7 +152,7 @@ describe("plugin lifecycle routes", () => {
       description: "Hot Plugin", descriptionZh: "热门插件", stars: 10, dailyStars: 1,
       weeklyStars: 2, hotScore: 90, forks: 0, openIssues: 0, language: null,
       homepage: null, license: null, topics: [], tags: [], categories: ["tools"], type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add acme-hot"] },
+      install: { method: "pnpm-profile", packageName: "acme-hot", commands: ["dsh plugin --profile web add acme-hot"] },
       sources: [], url: "https://github.com/acme/hot", pushedAt: "", createdAt: "", updatedAt: "",
     };
     const hotRaw = JSON.stringify({
@@ -233,7 +233,7 @@ describe("plugin lifecycle routes", () => {
       description: "Fresh plugin", descriptionZh: "新插件", stars: 1, dailyStars: 0,
       weeklyStars: 0, hotScore: 0, forks: 0, openIssues: 0, language: null,
       homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add fresh@latest"] },
+      install: { method: "pnpm-profile", packageName: "fresh", commands: ["dsh plugin --profile web add fresh@latest"] },
       sources: [], url: "https://github.com/acme/fresh", pushedAt: "", createdAt: "", updatedAt: "",
     };
     const fetchMock = vi.fn(async (url: string | URL | Request) => {
@@ -320,7 +320,7 @@ describe("plugin lifecycle routes", () => {
       description: "Risky plugin", descriptionZh: "需要构建的插件", stars: 1, dailyStars: 0,
       weeklyStars: 0, hotScore: 0, forks: 0, openIssues: 0, language: null,
       homepage: null, license: null, topics: [], tags: [], categories: [], type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin --profile web add risky@latest"] },
+      install: { method: "pnpm-profile", packageName: "risky", commands: ["dsh plugin --profile web add risky@latest"] },
       sources: [], url: "https://github.com/acme/risky", pushedAt: "", createdAt: "", updatedAt: "",
     };
     vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {

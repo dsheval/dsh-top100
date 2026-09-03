@@ -236,8 +236,10 @@ export interface RankingSearchEntry {
   tags: string[];
   categories: PluginCategoryId[];
   type: string;
-  /** A single allow-listed npm or GitHub target; never a shell command. */
+  /** Repository-matched GitHub target or npm command matching the selected package name. */
   installTarget?: string;
+  /** Selected plugin's package.json name; required to offer an npm target. Not publisher verification. */
+  installPackageName?: string;
 }
 
 export interface RankingSnapshotBase {

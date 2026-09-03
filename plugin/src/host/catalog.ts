@@ -729,7 +729,7 @@ export function parseSkillDirectoryDocument(raw: string): RankingsDocument {
 
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
-  const entry = value as Partial<RankingEntry> & { installTarget?: unknown };
+  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown };
   if (typeof entry.fullName !== "string") return null;
   const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
   const parsedTarget = typeof entry.installTarget === "string"
@@ -737,6 +737,7 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     : null;
   const install = entry.install ?? (parsedTarget ? {
     method: "manifest-v2",
+    packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
     target: parsedTarget.spec,
     commands: [`dsh plugin add ${parsedTarget.spec}`],
     commandSource: "manifest-v2",

@@ -44,25 +44,31 @@ export function npmPackageSpec(spec: string): { name: string; selector: string |
   return { name: match[1], selector: match[2] ?? null };
 }
 
-function specFromCommands(commands: string[] | undefined): InstallSpec | null {
-  for (const command of commands ?? []) {
+function specFromCommands(entry: RankingEntry): InstallSpec | null {
+  const candidates: InstallSpec[] = [];
+  for (const command of entry.install?.commands ?? []) {
     const dsh = command.match(DSH_ADD_RE);
     if (dsh) {
-      const target = dsh[1]
-        .trim()
-        .split(/\s+/)
-        .find((token) => !token.startsWith("-"));
-      const spec = target ? parseInstallSpec(target) : null;
-      if (spec) return spec;
+      const target = dsh[1].trim();
+      if (target.split(/\s+/).length !== 1) continue;
+      const spec = parseInstallSpec(target);
+      if (spec) candidates.push(spec);
     }
   }
-  return null;
+  const github = candidates.find((candidate) => candidate.kind === "github"
+    && candidate.spec.slice("github:".length).split("#", 1)[0].toLowerCase() === entry.fullName.toLowerCase());
+  if (github) return github;
+  const packageName = entry.install?.packageName;
+  return typeof packageName === "string"
+    ? candidates.find((candidate) => candidate.kind === "npm"
+      && npmPackageSpec(candidate.spec)?.name.toLowerCase() === packageName.trim().toLowerCase()) ?? null
+    : null;
 }
 
 export function resolveInstallSpec(entry: RankingEntry): InstallSpec | null {
-  const fromCommands = specFromCommands(entry.install?.commands);
-  if (fromCommands) return fromCommands;
   if (!FULL_NAME_RE.test(entry.fullName)) return null;
+  const fromCommands = specFromCommands(entry);
+  if (fromCommands) return fromCommands;
   if (entry.type?.toLowerCase() === "skill") {
     return { kind: "github", spec: `github:${entry.fullName}` };
   }

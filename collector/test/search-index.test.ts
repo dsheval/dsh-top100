@@ -7,6 +7,32 @@ import {
 import type { RankingsDocument } from "../src/rankings.js";
 
 describe("compact search index", () => {
+  it("publishes the project's own source instead of a prerequisite marketplace", () => {
+    const entry = {
+      fullName: "e2mcc/dsh-popout-sidebar",
+      type: "cordis-plugin",
+      install: { commands: [
+        "dsh plugin --profile web add dshmarket",
+        "dsh plugin --profile web add github:e2mcc/dsh-popout-sidebar",
+      ] },
+    } as RankingsDocument["rankings"]["total"][number];
+    expect(resolveSearchInstallTarget(entry)).toBe("github:e2mcc/dsh-popout-sidebar");
+    expect(resolveSearchInstallTarget({ ...entry, install: { commands: [entry.install.commands![0]] } })).toBeNull();
+  });
+
+  it("matches npm candidates against the selected package instead of README order", () => {
+    const entry = {
+      fullName: "acme/demo",
+      type: "cordis-plugin",
+      install: { packageName: "@acme/demo", commands: [
+        "dsh plugin add dshmarket",
+        "dsh plugin add @acme/demo@1.2.3",
+      ] },
+    } as RankingsDocument["rankings"]["total"][number];
+    expect(resolveSearchInstallTarget(entry)).toBe("@acme/demo@1.2.3");
+    expect(resolveSearchInstallTarget({ ...entry, install: { commands: entry.install.commands } })).toBeNull();
+  });
+
   it("keeps search and install fields while omitting full-catalog-only fields", () => {
     const entry = {
       rank: 1,
@@ -29,7 +55,7 @@ describe("compact search index", () => {
       tags: ["tools"],
       categories: [{ id: "tools", confidence: 0.9, evidence: "tool", source: "manual" as const }],
       type: "cordis-plugin",
-      install: { method: "pnpm-profile", commands: ["dsh plugin add demo"] },
+      install: { method: "pnpm-profile", packageName: "demo", commands: ["dsh plugin add demo"] },
       sources: ["github"],
       url: "https://github.com/acme/demo",
       pushedAt: "2026-08-31T00:00:00Z",
@@ -62,6 +88,7 @@ describe("compact search index", () => {
 
     const snapshot = toSnapshotSearchEntry(document.rankings.total[0]);
     expect(snapshot.installTarget).toBe("demo");
+    expect(snapshot.installPackageName).toBe("demo");
     expect(snapshot).not.toHaveProperty("install");
   });
 
@@ -69,7 +96,7 @@ describe("compact search index", () => {
     const base = {
       fullName: "acme/demo",
       type: "cordis-plugin" as const,
-      install: { method: "pnpm-profile", commands: [] as string[] },
+      install: { method: "pnpm-profile", packageName: "@acme/demo", commands: [] as string[] },
     } as RankingsDocument["rankings"]["total"][number];
 
     expect(resolveSearchInstallTarget({

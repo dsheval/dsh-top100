@@ -27,7 +27,7 @@ function entry(extra: Partial<RankingEntry> = {}): RankingEntry {
     topics: [],
     tags: [],
     type: "cordis-plugin",
-    install: { commands: ["dsh plugin add demo@latest"] },
+    install: { packageName: "demo", commands: ["dsh plugin add demo@latest"] },
     sources: [],
     url: "https://github.com/acme/demo",
     pushedAt: "",
@@ -44,6 +44,38 @@ afterEach(() => {
 });
 
 describe("install preflight approval", () => {
+  it("preflights the sidebar repository without resolving its prerequisite marketplace", async () => {
+    const fullName = "e2mcc/dsh-popout-sidebar";
+    const sha = "c".repeat(40);
+    const fetchMock = vi.fn(async (url: string) => {
+      const root = `https://api.github.com/repos/${fullName}`;
+      if (!url.startsWith(root)) throw new Error(`Unexpected source: ${url}`);
+      const payload = url === root ? { default_branch: "main" }
+        : url.includes("/commits/") ? { sha }
+          : { content: Buffer.from(JSON.stringify({
+            name: "dsh-popout-sidebar",
+            version: "1.0.0",
+            dsh: { bundle: { patch: "./cordis.patch.yml" } },
+          })).toString("base64") };
+      return new Response(JSON.stringify(payload), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const approval = await createInstallPreflight(entry({
+      fullName,
+      install: { commands: [
+        "dsh plugin --profile web add dshmarket",
+        `dsh plugin --profile web add github:${fullName}`,
+      ] },
+    }), "web");
+    expect(approval.preflight.provenance).toMatchObject({
+      requestedTarget: `github:${fullName}`,
+      resolvedTarget: `github:${fullName}#${sha}`,
+      repositoryIdentity: "matched",
+    });
+    expect(fetchMock).toHaveBeenCalled();
+    expect(fetchMock.mock.calls.every(([url]) => url.startsWith(`https://api.github.com/repos/${fullName}`))).toBe(true);
+  });
+
   it("binds user approval to an exact npm version and its lifecycle scripts", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
       name: "demo",
@@ -103,7 +135,7 @@ describe("install preflight approval", () => {
       dsh: { bundle: { patch: "./cordis.patch.yml" } },
     }), { status: 200 })));
     const approval = await createInstallPreflight(entry({
-      install: { needsConfig: true, commands: ["dsh plugin add demo@latest"] },
+      install: { needsConfig: true, packageName: "demo", commands: ["dsh plugin add demo@latest"] },
     }), "web");
     expect(approval.preflight.activationExpectation).toBe("configuration-required");
   });

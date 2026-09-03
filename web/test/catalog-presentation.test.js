@@ -11,7 +11,7 @@ test("accepts an allow-listed npm target from a DSH add command", () => {
   const entry = {
     fullName: "acme/demo",
     type: "cordis-plugin",
-    install: { commands: ["dsh plugin --profile web add @acme/demo@1.2.3"] },
+    install: { packageName: "@acme/demo", commands: ["dsh plugin --profile web add @acme/demo@1.2.3"] },
   };
   assert.equal(resolveInstallTarget(entry), "@acme/demo@1.2.3");
   assert.equal(
@@ -26,6 +26,7 @@ test("uses a sanitized install target from the compact search index", () => {
     fullName: "acme/demo",
     type: "cordis-plugin",
     installTarget: "@acme/demo@1.2.3",
+    installPackageName: "@acme/demo",
   };
   assert.equal(resolveInstallTarget(entry), "@acme/demo@1.2.3");
   assert.equal(
@@ -68,4 +69,33 @@ test("does not offer install for an indexed-only ecosystem project", () => {
     trustLabel: "已进入索引",
     installable: false,
   });
+});
+
+test("chooses the project's GitHub target over a prerequisite market, including stale indexes", () => {
+  const entry = {
+    fullName: "e2mcc/dsh-popout-sidebar",
+    type: "cordis-plugin",
+    installTarget: "dshmarket",
+    install: { commands: [
+      "dsh plugin --profile web add dshmarket",
+      "dsh plugin --profile web add github:e2mcc/dsh-popout-sidebar",
+    ] },
+  };
+  assert.equal(installCommand(entry),
+    "npx @deepseek-ai/dsh plugin --profile web add github:e2mcc/dsh-popout-sidebar");
+  assert.equal(resolveInstallTarget({ ...entry, install: undefined }), null);
+});
+
+test("only selects npm commands matching the detected package name", () => {
+  const entry = {
+    fullName: "acme/demo",
+    type: "cordis-plugin",
+    install: { packageName: "@acme/demo", commands: [
+      "dsh plugin add dshmarket",
+      "dsh plugin add @acme/demo@latest",
+    ] },
+  };
+  assert.equal(resolveInstallTarget(entry), "@acme/demo@latest");
+  assert.equal(resolveInstallTarget({ ...entry, install: { commands: entry.install.commands } }), null);
+  assert.equal(resolveInstallTarget({ ...entry, install: { ...entry.install, commands: ["dsh plugin add dshmarket"] } }), null);
 });

@@ -4,11 +4,14 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildRankingPublication } from "../../collector/src/publish-rankings.js";
 import type { RankingEntry, RankingsDocument } from "../../collector/src/rankings.js";
+import { installCommand } from "../../web/public/catalog-presentation.js";
+import { resolveInstallSpec } from "../src/install/install-spec.js";
 import {
   findPublishedEntry,
   invalidateCatalog,
   loadSearchRankings,
   loadSkillRankings,
+  parseRankingSearchDocument,
 } from "../src/host/catalog.js";
 
 const temporaryCaches: string[] = [];
@@ -52,6 +55,7 @@ function publishedDocument(): RankingsDocument {
     install: {
       method: "pnpm-profile",
       needsConfig: false,
+      packageName: "@acme/catalog",
       commands: ["dsh plugin --profile web add @acme/catalog"],
     },
     sources: ["github"],
@@ -84,6 +88,40 @@ function publishedDocument(): RankingsDocument {
 }
 
 describe("collector to plugin manifest contract", () => {
+  it.each([
+    { fullName: "e2mcc/dsh-popout-sidebar", packageName: undefined, target: "github:e2mcc/dsh-popout-sidebar" },
+    { fullName: "acme/catalog", packageName: "@acme/catalog", target: "@acme/catalog@latest" },
+  ])("keeps $target bound to its project across publication, website and plugin", ({ fullName, packageName, target }) => {
+    const document = publishedDocument();
+    const item = document.rankings.total[0];
+    item.fullName = fullName;
+    item.install = {
+      packageName,
+      commands: ["dsh plugin add dshmarket", `dsh plugin add ${target}`],
+    };
+    const publication = buildRankingPublication(document);
+    const raw = publication.files.find((file) => file.relativePath === "search.json")!.content;
+    const published = JSON.parse(raw).rankings[0];
+    const consumed = parseRankingSearchDocument(raw).rankings.total[0];
+    expect(published.installTarget).toBe(target);
+    expect(installCommand(published)).toBe(`npx @deepseek-ai/dsh plugin --profile web add ${target}`);
+    expect(resolveInstallSpec(consumed)?.spec).toBe(target);
+  });
+
+  it("keeps stale or mismatched compact npm targets browse-only in both consumers", () => {
+    for (const installPackageName of [undefined, "@acme/catalog"]) {
+      const stale = {
+        ...publishedDocument().rankings.total[0],
+        install: undefined,
+        installTarget: "dshmarket",
+        installPackageName,
+      };
+      const consumed = parseRankingSearchDocument(JSON.stringify({ rankings: [stale] })).rankings.total[0];
+      expect(installCommand(stale)).toBeNull();
+      expect(resolveInstallSpec(consumed)).toBeNull();
+    }
+  });
+
   it("loads the real v2 search snapshot and resolves installation from one total page", async () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-publication-contract-"));
     temporaryCaches.push(cacheDirectory);
@@ -111,12 +149,12 @@ describe("collector to plugin manifest contract", () => {
     const search = await loadSearchRankings("https://catalog.example/data");
     expect(search.rankings.total[0]).toMatchObject({
       fullName: "acme/catalog",
-      install: { commands: ["dsh plugin add @acme/catalog"] },
+      install: { packageName: "@acme/catalog", commands: ["dsh plugin add @acme/catalog"] },
     });
     await expect(findPublishedEntry("https://catalog.example/data", "acme/catalog"))
       .resolves.toMatchObject({
         fullName: "acme/catalog",
-        install: { commands: ["dsh plugin --profile web add @acme/catalog"] },
+        install: { packageName: "@acme/catalog", commands: ["dsh plugin --profile web add @acme/catalog"] },
       });
     await expect(loadSkillRankings("https://catalog.example/data"))
       .resolves.toMatchObject({ rankings: { total: [{ fullName: "acme/skill", type: "skill" }] } });
