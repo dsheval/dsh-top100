@@ -49,7 +49,9 @@ describe("Chinese summary validation", () => {
     });
     expect(fallback).toContain("资料不足");
     expect(fallback).not.toContain("请查看项目 README");
+    expect(fallback).not.toContain("DSH 插件");
     expect(isGenericDescriptionZh(fallback)).toBe(true);
+    expect(isGenericDescriptionZh("ruflo：已收录的 DSH 插件，现有项目资料不足以生成可靠的功能简介。")).toBe(true);
   });
 
   it("prefers a useful Chinese sentence from README when the repository description is English", () => {

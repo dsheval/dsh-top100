@@ -10,7 +10,9 @@
     "plugin"
   ],
   "scripts": {
-    "check": "npm run search:build && npm run typecheck && npm test",
+    "check": "npm run version:check && npm run search:build && npm run typecheck && npm test",
+    "version:sync": "node scripts/sync-install-version.mjs",
+    "version:check": "node scripts/sync-install-version.mjs --check",
     "collect": "npm run collect -w @dsh-top100/collector",
     "db:sync": "npm run db:sync -w @dsh-top100/collector",
     "update:once": "npm run collect && npm run db:sync",

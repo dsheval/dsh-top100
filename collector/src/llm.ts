@@ -254,7 +254,7 @@ const FALLBACK_SUMMARIES: Array<[RegExp, string]> = [
 ];
 
 const INSUFFICIENT_SOURCE_SUMMARY =
-  "已收录的 DSH 插件，现有项目资料不足以生成可靠的功能简介。";
+  "现有项目资料不足以生成可靠的功能简介。";
 
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;

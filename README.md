@@ -69,9 +69,31 @@
 需要 **Node.js 22.13+** 和 **DSH Web 0.1.0-rc.6+**。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin
+npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.0
 npx @deepseek-ai/dsh web
 ```
+
+<details>
+<summary>新版本被 24 小时等待期拦截怎么办？</summary>
+
+如果提示 `ERR_PNPM_NO_MATURE_MATCHING_VERSION` 或 `minimumReleaseAge`，说明当前环境要求等待新版本发布满一定时间。需要立即安装时，在当前 Web Profile 的 `pnpm-workspace.yaml` 中合并以下条目，保留其他配置和已有例外：
+
+```yaml
+minimumReleaseAgeExclude:
+  - '@dsheval/dsh-top100-plugin@1.3.0'
+```
+
+默认文件位于用户主目录下的 `.dsh/profiles/web/pnpm-workspace.yaml`；设置了 `DSH_HOME` 时使用该目录下的 `profiles/web/pnpm-workspace.yaml`。首次安装命令会准备 Profile；尚未创建 Profile 时，可先运行 `npx @deepseek-ai/dsh plugin --profile web list`。若 Profile 已存在但缺少 `pnpm-workspace.yaml`，请在该 Profile 目录中创建此文件，再加入上述配置。全局或源码用户需沿用各自的命令前缀。
+
+保存后，用同一种方式重新安装：
+
+```sh
+npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.0
+```
+
+该例外只放行这个版本，其他依赖仍遵守原等待期；如果报错指向其他包，应单独核对该包。后续升级须使用新版安装指引，不要沿用旧版本例外。
+
+</details>
 
 打开 DSH Web，进入 **设置 → 插件排行**。安装和启动必须使用同一种命令前缀；全局 CLI、源码运行及问题排查见 [安装指南](https://www.dsheval.ai/?page=dsh#dsh)。
 
