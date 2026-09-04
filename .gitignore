@@ -22,3 +22,5 @@ data/tag-alias.json
 .DS_Store
 .idea/
 .vscode/
+
+data/description-jobs.json

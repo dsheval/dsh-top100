@@ -1,0 +1,196 @@
+/* Shared row geometry for plugin and Skills leaderboards. */
+:is(.list-head, .skill-list-head) {
+  display: grid;
+  min-height: 44px;
+  padding: 0 18px;
+  grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
+  font: 700 13px/1.4 var(--sans);
+  letter-spacing: normal;
+}
+
+:is(.list-head, .skill-list-head) span:last-child {
+  text-align: right;
+}
+
+:is(.list-head, .skill-list-head)[hidden] {
+  display: none;
+}
+
+.plugin-list.is-top100-list {
+  display: block;
+  border: 0;
+}
+
+:is(.plugin-list.is-top100-list .plugin, .skill-card) {
+  min-height: 104px;
+  padding: 13px 18px;
+  grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
+  grid-template-rows: auto;
+  align-content: center;
+  align-items: center;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  background: var(--card);
+}
+
+:is(.plugin-list.is-top100-list .plugin:nth-child(even), .skill-card:nth-child(even)) {
+  background: color-mix(in srgb, var(--accent-soft) 22%, var(--card));
+}
+
+:is(.plugin-list.is-top100-list .plugin:last-child, .skill-card:last-child) {
+  border-bottom: 1px solid var(--line);
+}
+
+:is(.plugin-list.is-top100-list .plugin:hover, .skill-card:hover),
+:is(.plugin-list.is-top100-list .plugin:focus-within, .skill-card:focus-within) {
+  z-index: 3;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--accent-soft) 46%, var(--card));
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+:is(.plugin-list.is-top100-list .rank, .skill-number),
+:is(.plugin-list.is-top100-list .plugin-title, .skill-identity),
+:is(.plugin-list.is-top100-list .plugin-description, .skill-details),
+:is(.plugin-list.is-top100-list .stars, .skill-card .stars) {
+  grid-row: 1;
+  margin: 0;
+}
+
+:is(.plugin-list.is-top100-list .rank, .skill-number) {
+  grid-column: 1;
+  padding: 0;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+:is(.plugin-list.is-top100-list .plugin-title, .skill-identity) {
+  grid-column: 2;
+  flex-wrap: wrap;
+  gap: 6px 7px;
+}
+
+:is(.plugin-list.is-top100-list .plugin-name, .skill-card h3) {
+  flex: 1 0 100%;
+  font-size: clamp(20px, 1.8vw, 27px);
+}
+
+:is(.plugin-list.is-top100-list .plugin-description, .skill-details) {
+  grid-column: 3;
+  -webkit-line-clamp: 2;
+}
+
+:is(.plugin-list.is-top100-list .plugin-meta, .skill-meta) {
+  grid-column: 4;
+  grid-row: 1;
+  margin: 0;
+  align-self: center;
+}
+
+:is(.plugin-list.is-top100-list .stars, .skill-card .stars) {
+  grid-column: 5;
+  align-self: center;
+}
+
+
+.skill-identity { align-items: flex-start; }
+.skill-card h3 { width: 100%; }
+.skill-details { max-width: none; }
+.skill-kind { display: inline-flex; min-height: 24px; padding: 2px 7px; align-items: center; justify-content: center; border: 1px solid var(--line); color: var(--muted); background: color-mix(in srgb, var(--card) 88%, transparent); font: 600 11px/1.4 var(--sans); white-space: nowrap; }
+.skill-meta { display: flex; align-items: center; gap: 12px; color: var(--muted); font: 600 13px/1.5 var(--sans); font-variant-numeric: tabular-nums; }
+.skill-meta[hidden] { display: none; }
+.skill-meta .meta-updated, .skill-meta .growth-period { white-space: nowrap; }
+.skill-meta .meta-growth:not([hidden]) { display: inline-flex; gap: 12px; }
+
+@media (max-width: 960px) {
+  :is(.list-head, .skill-list-head), :is(.plugin-list.is-top100-list .plugin, .skill-card) { grid-template-columns: 54px minmax(190px, .78fr) minmax(220px, 1fr) 118px; gap: 16px; }
+  :is(.list-head, .skill-list-head) .signal-head { display: none; }
+  :is(.plugin-list.is-top100-list .plugin-meta, .skill-meta) { grid-column: 2 / -1; grid-row: 2; }
+  :is(.plugin-list.is-top100-list .stars, .skill-card .stars) { grid-column: 4; }
+}
+@media (max-width: 720px) {
+  :is(.list-head, .skill-list-head) { display: none; }
+  :is(.plugin-list.is-top100-list .plugin, .skill-card) { min-height: 104px; padding: 14px; grid-template-columns: 46px minmax(0, 1fr) auto; grid-template-rows: auto auto; align-items: start; gap: 8px 12px; }
+  :is(.plugin-list.is-top100-list .rank, .skill-number) { grid-column: 1; grid-row: 1 / 3; padding-top: 5px; }
+  :is(.plugin-list.is-top100-list .plugin-title, .skill-identity) { grid-column: 2; grid-row: 1; padding-top: 2px; }
+  :is(.plugin-list.is-top100-list .plugin-name, .skill-card h3) { font-size: 22px; }
+  :is(.plugin-list.is-top100-list .stars, .skill-card .stars) { grid-column: 3; grid-row: 1; align-self: center; }
+  :is(.plugin-list.is-top100-list .plugin-description, .skill-details) { grid-column: 2 / 4; grid-row: 2; }
+  :is(.plugin-list.is-top100-list .plugin-meta, .skill-meta) { grid-column: 2 / 4; grid-row: 3; }
+  .skill-meta .growth-period[data-period="weeklyStars"] { display: none; }
+}
+
+.skill-kind[data-level="install-source"] { border-color: color-mix(in srgb, var(--accent) 62%, var(--line)); color: var(--accent); background: var(--accent-soft); }
+
+/* Both pages use one typographic definition for corresponding row content. */
+:is(.plugin-list.is-top100-list .plugin-name, .skill-card h3) { color: var(--ink); font-family: var(--serif); font-weight: 500; line-height: 1.14; letter-spacing: -.035em; }
+:is(.plugin-list.is-top100-list .plugin-description, .skill-card .description) { max-width: none; color: var(--muted); font: 400 14px/1.58 var(--sans); }
+:is(.plugin-list.is-top100-list .rank, .skill-number) { font-family: var(--mono); font-weight: 800; line-height: normal; letter-spacing: .06em; }
+:is(.plugin .stars, .skill-card .stars) { color: var(--accent-contrast); font: 800 15px/1.4 var(--mono); letter-spacing: -.02em; }
+.featured-guide { display: inline-flex; align-items: center; min-height: 24px; font: 12px var(--sans); color: var(--accent); letter-spacing: normal; }
+.rank-exempt { grid-column: -2 / -1; grid-row: 1; justify-self: end; padding: 0 11px; color: var(--muted); font: 15px var(--mono); }
+.featured-skill { background: var(--card); }
+
+/* Clip the text itself, not a stretched grid item (Safari can leak an extra line). */
+.plugin-description.has-description-preview,
+.skill-card .description.has-description-preview {
+  display: block;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+  align-self: start;
+  --description-lines: 3;
+}
+.plugin-list.is-top100-list .plugin-description.has-description-preview,
+.skill-card .description.has-description-preview { --description-lines: 2; }
+.has-description-preview .description-text {
+  display: -webkit-box;
+  min-width: 0;
+  max-height: calc(var(--description-lines) * 1.58em);
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--description-lines);
+}
+.has-description-preview.is-expanded .description-text {
+  display: block;
+  max-height: none;
+  -webkit-line-clamp: unset;
+}
+.has-description-preview .description-toggle {
+  display: block;
+  margin: 6px 0 0;
+  padding: 2px 0;
+  border: 0;
+  color: var(--accent);
+  background: transparent;
+  font: 600 12px/1.5 var(--sans);
+  cursor: pointer;
+}
+.has-description-preview .description-toggle[hidden] { display: none; }
+.description-toggle:hover { text-decoration: underline; text-underline-offset: 3px; }
+.description-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Center the complete preview, including its toggle, within each table row. */
+@media (min-width: 721px) {
+  .plugin-list.is-top100-list .plugin-description.has-description-preview,
+  .skill-card .skill-details {
+    align-self: center;
+  }
+}
+@media (min-width: 721px) and (max-width: 960px) {
+  .plugin-list.is-top100-list .plugin:not(.featured-plugin) .plugin-description,
+  .skill-card:not(.featured-skill) .skill-details {
+    grid-row: 1 / 3;
+  }
+  :is(.plugin-list.is-top100-list .plugin-meta, .skill-meta) {
+    justify-self: start;
+  }
+}

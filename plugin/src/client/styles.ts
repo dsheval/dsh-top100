@@ -730,6 +730,42 @@ export const css = `
   font-size: 13px;
   line-height: 20px;
 }
+.dsh-top100 .description-preview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dsh-top100 .description-preview .description-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-height: 40px;
+  overflow: hidden;
+}
+.dsh-top100 .description-preview.is-expanded .description-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: none;
+  overflow: visible;
+}
+.dsh-top100 button.description-toggle {
+  display: inline-block;
+  min-height: 0;
+  height: auto;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--t100-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dsh-top100 button.description-toggle:hover {
+  background: transparent;
+  text-decoration: underline;
+}
 .dsh-top100 .facts {
   display: flex;
   flex-wrap: wrap;

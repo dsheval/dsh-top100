@@ -40,13 +40,14 @@
           "name": "dsh-top100",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Cross-platform",
-          "softwareVersion": "1.3.0",
-          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.0",
+          "softwareVersion": "1.3.1",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.1",
           "license": "https://opensource.org/license/mit"
         }
       }
     </script>
     <title>dsh-top100 · 发现值得安装的 DSH 插件</title>
+    <link rel="stylesheet" href="./install-console.css" />
     <style>
       :root {
         color-scheme: light;
@@ -1114,9 +1115,9 @@
         display: grid;
         min-height: 44px;
         padding: 0 18px;
-        grid-template-columns: 62px minmax(220px, 0.78fr) minmax(250px, 1.18fr) minmax(160px, 0.48fr) 132px;
+        grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
         align-items: center;
-        gap: 22px;
+        gap: 16px;
         border: 1px solid var(--line);
         border-bottom: 0;
         background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
@@ -1140,11 +1141,11 @@
       .plugin-list.is-top100-list .plugin {
         min-height: 104px;
         padding: 13px 18px;
-        grid-template-columns: 62px minmax(220px, 0.78fr) minmax(250px, 1.18fr) minmax(160px, 0.48fr) 132px;
+        grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
         grid-template-rows: auto;
         align-content: center;
         align-items: center;
-        gap: 22px;
+        gap: 16px;
         border: 1px solid var(--line);
         border-bottom: 0;
         background: var(--card);
@@ -2120,9 +2121,13 @@
         }
 
         .list-head .signal-head,
-        .plugin-list.is-top100-list .plugin-meta,
         .plugin-list.is-top100-list .type-pill {
           display: none;
+        }
+
+        .plugin-list.is-top100-list .plugin-meta {
+          grid-column: 2 / -1;
+          grid-row: 2;
         }
 
         .plugin-list.is-top100-list .stars {
@@ -2180,7 +2185,6 @@
         }
 
         .list-head .signal-head,
-        .plugin-list.is-top100-list .plugin-meta,
         .plugin-list.is-top100-list .type-pill {
           display: none;
         }
@@ -2348,6 +2352,11 @@
         .plugin-list.is-top100-list .plugin-description {
           grid-column: 2 / 4;
           grid-row: 2;
+        }
+
+        .plugin-list.is-top100-list .plugin-meta {
+          grid-column: 2 / 4;
+          grid-row: 3;
         }
 
         .plugin {
@@ -2558,141 +2567,6 @@
         isolation: isolate;
       }
 
-      .install-console {
-        position: relative;
-        z-index: 1;
-        align-self: center;
-        min-width: 0;
-        padding: clamp(22px, 3vw, 34px);
-        border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
-        background:
-          linear-gradient(color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
-          linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent) 1px, transparent 1px),
-          color-mix(in srgb, var(--card) 96%, transparent);
-        background-size: 28px 28px;
-        box-shadow: 18px 18px 0 color-mix(in srgb, var(--accent) 14%, transparent);
-      }
-
-      .install-console::before {
-        position: absolute;
-        width: 72px;
-        height: 1px;
-        top: -1px;
-        left: 24px;
-        background: var(--hero-accent);
-        content: "";
-      }
-
-      .install-console-head {
-        display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        align-items: center;
-        gap: 10px;
-        color: var(--hero-muted);
-        font: 600 13px/1.4 var(--sans);
-        letter-spacing: 0;
-        text-transform: none;
-      }
-
-      .install-console-head p {
-        margin: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #72d6a5;
-        box-shadow: 0 0 0 4px rgba(114, 214, 165, 0.12);
-      }
-
-      .release-badge {
-        padding: 4px 7px;
-        border: 1px solid color-mix(in srgb, var(--accent) 52%, var(--line));
-        color: var(--accent);
-      }
-
-      .release-grid {
-        display: grid;
-        margin: 26px 0 22px;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        border-top: 1px solid var(--line);
-        border-bottom: 1px solid var(--line);
-      }
-
-      .release-grid div {
-        min-width: 0;
-        padding: 17px 12px 16px;
-        border-right: 1px solid var(--line);
-      }
-
-      .release-grid div:first-child {
-        padding-left: 0;
-      }
-
-      .release-grid div:last-child {
-        padding-right: 0;
-        border-right: 0;
-      }
-
-      .release-grid dt {
-        color: var(--hero-muted);
-        font: 500 12px/1.4 var(--sans);
-        letter-spacing: 0;
-        text-transform: none;
-      }
-
-      .release-grid dd {
-        margin: 7px 0 0;
-        color: var(--hero-ink);
-        font: 600 15px/1.4 var(--sans);
-        font-variant-numeric: tabular-nums;
-        overflow-wrap: anywhere;
-      }
-
-      .hero-command-row {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        align-items: stretch;
-        border: 1px solid var(--line);
-        background: var(--code-surface);
-      }
-
-      .hero-command-row code {
-        min-width: 0;
-        padding: 13px 14px;
-        color: var(--code-ink);
-        font: 400 12px/1.65 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-        overflow-wrap: anywhere;
-        white-space: normal;
-      }
-
-      .hero-command-row button {
-        min-width: 64px;
-        border: 0;
-        border-left: 1px solid var(--accent);
-        color: var(--accent-contrast);
-        background: var(--accent);
-        cursor: pointer;
-        font: 600 14px/1.4 var(--sans);
-      }
-
-      .hero-command-row button:hover,
-      .hero-command-row button:focus-visible {
-        color: var(--accent);
-        background: var(--card);
-      }
-
-      .install-console-note {
-        margin: 13px 0 0;
-        color: var(--hero-muted);
-        font-size: 12px;
-        line-height: 1.55;
-      }
-
       .section-kicker {
         margin: 0 0 8px;
         color: var(--hero-accent);
@@ -2795,10 +2669,12 @@
         grid-column: 1 / -1;
         grid-row: 4;
         margin-top: 14px;
-        flex-wrap: wrap;
-        gap: 6px 13px;
+        gap: 12px;
+        align-items: center;
         color: var(--muted);
-        font: 650 10px/1.4 var(--mono);
+        font: 600 13px/1.5 var(--sans);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
       }
 
       .meta-growth {
@@ -2809,11 +2685,15 @@
 
       .meta-growth:not([hidden]) {
         display: inline-flex;
-        flex-wrap: wrap;
-        gap: 3px 12px;
+        gap: 12px;
       }
 
+      .meta-updated { white-space: nowrap; color: inherit; font-weight: 600; }
       .growth-period { white-space: nowrap; }
+
+      @media (max-width: 720px) {
+        .growth-period:last-child { display: none; }
+      }
 
       .plugin-actions {
         display: flex;
@@ -2835,6 +2715,12 @@
         cursor: pointer;
         font: 750 10px/1 var(--mono);
         text-decoration: none;
+      }
+
+      .plugin-list[aria-labelledby="tab-all"] .plugin-action {
+        font: 600 13px/1.5 var(--sans);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: normal;
       }
 
       .plugin-action:hover,
@@ -2866,10 +2752,8 @@
         display: none;
       }
 
-      .plugin-list.is-top100-list .plugin-actions,
-      .plugin-list.is-top100-list .copy-link,
-      .plugin-list.is-top100-list .meta-license,
-      .plugin-list.is-top100-list .meta-updated {
+      .plugin-actions[hidden],
+      .plugin-list.is-top100-list .plugin-actions {
         display: none;
       }
 
@@ -2910,9 +2794,7 @@
           font-size: 12px;
         }
 
-        .nav-links a:nth-child(2),
-        .nav-links a:nth-child(4),
-        .nav-links a:nth-child(5) {
+        .nav-links a:nth-child(n + 3) {
           display: none;
         }
 
@@ -2937,32 +2819,6 @@
         .hero-search-control button {
           grid-column: 1 / -1;
           width: 100%;
-        }
-
-        .release-grid {
-          grid-template-columns: 1fr;
-        }
-
-        .release-grid div,
-        .release-grid div:first-child,
-        .release-grid div:last-child {
-          padding: 12px 0;
-          border-right: 0;
-          border-bottom: 1px solid var(--line);
-        }
-
-        .release-grid div:last-child {
-          border-bottom: 0;
-        }
-
-        .hero-command-row {
-          grid-template-columns: 1fr;
-        }
-
-        .hero-command-row button {
-          min-height: 44px;
-          border-top: 1px solid var(--line);
-          border-left: 0;
         }
 
         .search-status-row {
@@ -3031,6 +2887,9 @@
       }
     </style>
     <link rel="stylesheet" href="./category-system.css" />
+    <link rel="stylesheet" href="./ranking-method.css" />
+    <link rel="stylesheet" href="./ranking-rows.css" />
+    <link rel="stylesheet" href="./site-controls.css" />
   </head>
   <body>
     <div class="nav-shell">
@@ -3038,7 +2897,7 @@
         <a class="wordmark" href="./#top" aria-label="dsh-top100 首页">
           <img
             class="wordmark-logo"
-            src="./assets/dsh-wordmark-logo.png"
+            src="./favicon.svg"
             alt=""
             width="30"
             height="30"
@@ -3047,7 +2906,7 @@
         </a>
         <div class="nav-links">
           <a href="#ranking" data-content-switch="ranking">插件榜单</a>
-          <a href="./skills.html">Skills 技能库</a>
+          <a href="./skills.html#ranking">Skills 榜单</a>
           <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
           <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
           <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -3104,15 +2963,15 @@
                 <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>插件版本</dt><dd>v1.3.0</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.1</dd></div>
                 <div><dt>DSH Web 要求</dt><dd>0.1.0-rc.6+</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.0</code>
+                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.1</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.0"
+                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.1"
                   data-analytics="install-command"
                 >复制</button>
               </div>
@@ -3176,9 +3035,9 @@
             <a
               class="skill-filter"
               id="skills-directory-link"
-              href="./skills.html"
+              href="./skills.html#ranking"
             >
-              Skills 技能库 <span id="skills-count"></span>
+              Skills 榜单 <span id="skills-count"></span>
             </a>
           </div>
 
@@ -3236,7 +3095,7 @@
             <span id="rank-head">排名</span>
             <span>插件</span>
             <span>中文简介</span>
-            <span class="signal-head">趋势 / 证据</span>
+            <span class="signal-head">更新与增长</span>
             <span id="metric-head">GitHub Stars</span>
           </div>
           <div
@@ -3266,8 +3125,8 @@
 
           <section class="content-view inline-docs" id="docs-view" aria-labelledby="inline-docs-title" hidden>
             <header class="inline-docs-header">
-              <h2 class="inline-docs-title" id="inline-docs-title">How rankings and plugins work.</h2>
-              <p class="inline-docs-title-zh">榜单、分类与 DSH 插件。</p>
+              <h1 class="inline-docs-title" id="inline-docs-title">排名方法</h1>
+              <p class="inline-docs-intro">了解榜单怎么排序、项目如何收录，以及数据如何更新。</p>
             </header>
             <div id="inline-docs-host">
               <p class="docs-loading">正在加载文档…</p>
@@ -3314,24 +3173,16 @@
           <a class="github-link" target="_blank" rel="noopener noreferrer">
             <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
           </a>
-          <button class="github-link copy-link" type="button">
-            <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true">
-              <rect x="5.5" y="5.5" width="8" height="8" rx="1.5"></rect>
-              <path d="M3.5 10.5h-1a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v1"></path>
-            </svg>
-          </button>
           <button class="github-link quick-install" type="button" hidden aria-label="复制安装命令">
             <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8M4.8 6.7 8 9.9l3.2-3.2M2 12.5h12"></path></svg>
           </button>
         </div>
         <p class="plugin-description"></p>
         <div class="plugin-meta" aria-label="项目元数据">
-          <span class="meta-license"></span>
           <span class="meta-updated"></span>
           <span class="meta-growth"></span>
         </div>
         <div class="plugin-actions">
-          <a class="plugin-action card-github-link" target="_blank" rel="noopener noreferrer">查看 GitHub</a>
           <button class="plugin-action install-action" type="button" hidden>复制安装命令</button>
         </div>
         <span class="stars" aria-label="GitHub Stars"></span>
@@ -3346,6 +3197,9 @@
       } from "./search-engine.js";
       import { catalogPresentation, catalogInstallCapability, installCommand } from "./catalog-presentation.js";
       import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
+      import { enhanceDescriptions } from "./description-preview.js";
+      import { descriptionFor, loadReviewedDescriptions } from "./description-presentation.js";
+      const reviewedDescriptions = await loadReviewedDescriptions();
       import { showFeaturedPlugin } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
       import { track, trackPageView } from "./analytics.js";
@@ -3637,6 +3491,10 @@
           if (isActive) control.setAttribute("aria-current", "page");
           else control.removeAttribute("aria-current");
         }
+        for (const link of document.querySelectorAll(".nav-links [data-content-switch]")) {
+          if (link.dataset.contentSwitch === currentContentView) link.setAttribute("aria-current", "page");
+          else link.removeAttribute("aria-current");
+        }
         const contentPromise = currentContentView !== "ranking"
           ? loadInlineContent(currentContentView)
           : Promise.resolve();
@@ -3914,7 +3772,7 @@
           )
           .map((plugin, index) => {
             const name = plugin.name || plugin.fullName.split("/").pop() || plugin.fullName;
-            const descriptionZh = cleanChineseSummary(plugin.descriptionZh || plugin.description);
+            const descriptionZh = descriptionFor(plugin, reviewedDescriptions, manifest ?? {});
             const categoryValues = (plugin.categories ?? []).map((item) =>
               typeof item === "string" ? item : item?.id
             ).filter(Boolean);
@@ -4338,16 +4196,13 @@
           const rank = item.querySelector(".rank");
           const nameText = item.querySelector(".plugin-name-text");
           const githubLink = item.querySelector(".github-link");
-          const copyLink = item.querySelector(".copy-link");
           const quickInstall = item.querySelector(".quick-install");
           const description = item.querySelector(".plugin-description");
           const stars = item.querySelector(".stars");
           const trustPill = item.querySelector(".trust-pill");
           const typePill = item.querySelector(".type-pill");
-          const license = item.querySelector(".meta-license");
           const updated = item.querySelector(".meta-updated");
           const growth = item.querySelector(".meta-growth");
-          const cardGithubLink = item.querySelector(".card-github-link");
           const installAction = item.querySelector(".install-action");
           const starText = formatStars(plugin.stars);
           const repositoryUrl = `https://github.com/${plugin.fullName}`;
@@ -4362,25 +4217,19 @@
           githubLink.dataset.plugin = plugin.fullName;
           githubLink.dataset.rank = String(displayRank);
           githubLink.setAttribute("aria-label", `在 GitHub 打开 ${name}`);
-          copyLink.dataset.copyUrl = repositoryUrl;
-          copyLink.dataset.plugin = plugin.fullName;
-          copyLink.dataset.rank = String(displayRank);
-          copyLink.setAttribute("aria-label", `复制 ${name} 的 GitHub 仓库地址`);
-          copyLink.title = "复制 GitHub 仓库地址";
           trustPill.textContent = capability.label;
           trustPill.dataset.level = presentation.trustLevel;
           trustPill.title = `${presentation.trustLabel}；${capability.reason}；不代表代码已经过安全审核`;
           typePill.textContent = presentation.formFactor;
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
-          const hasLicense = Object.prototype.hasOwnProperty.call(plugin, "license");
           const updatedAt = plugin.pushedAt || plugin.updatedAt;
           const hasGrowth =
             Object.prototype.hasOwnProperty.call(plugin, "dailyStars") ||
             Object.prototype.hasOwnProperty.call(plugin, "weeklyStars");
-          license.hidden = !hasLicense;
-          license.textContent = hasLicense ? `License · ${plugin.license || "未声明"}` : "";
           updated.hidden = !updatedAt;
           updated.textContent = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
+          updated.title = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
+          updated.setAttribute("aria-label", updated.title);
           growth.hidden = !hasGrowth;
           growth.replaceChildren();
           if (hasGrowth) {
@@ -4388,13 +4237,12 @@
               const period = document.createElement("span");
               period.className = "growth-period";
               period.textContent = `${label} +${formatStars(value)}`;
+              period.title = `${label} +${formatStars(value)}`;
+              period.setAttribute("aria-label", period.title);
               growth.appendChild(period);
             }
           }
-          cardGithubLink.href = repositoryUrl;
-          cardGithubLink.dataset.plugin = plugin.fullName;
-          cardGithubLink.dataset.rank = String(displayRank);
-          cardGithubLink.setAttribute("aria-label", `在 GitHub 查看 ${name}`);
+          item.querySelector(".plugin-actions").hidden = !command;
           if (command) {
             installAction.hidden = false;
             installAction.dataset.copyCommand = command;
@@ -4409,7 +4257,7 @@
             quickInstall.setAttribute("aria-label", `复制 ${name} 的 DSH 安装命令`);
           }
           if (!searchActive && currentView === "top100") {
-            const heatText = new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 1 }).format(plugin.hotScore || 0);
+            const heatText = new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(plugin.hotScore || 0);
             stars.classList.add("is-heat");
             stars.textContent = heatText;
             stars.setAttribute(
@@ -4446,6 +4294,7 @@
         // Same visual list; this editorial DOM row never enters the ranked data.
         fragment.prepend(featuredPlugin);
         list.replaceChildren(fragment);
+        enhanceDescriptions(list);
         for (const pluginElement of list.querySelectorAll(".plugin")) {
           observeReveal(pluginElement);
         }
@@ -4514,43 +4363,8 @@
         }, 2400);
       }
 
-      async function copyDownloadUrl(button) {
-        const value = button.dataset.copyUrl;
-        if (!value) return;
-        let copied = false;
-        try {
-          if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
-          await navigator.clipboard.writeText(value);
-          copied = true;
-        } catch {
-          const input = document.createElement("textarea");
-          input.value = value;
-          input.style.position = "fixed";
-          input.style.opacity = "0";
-          document.body.appendChild(input);
-          input.select();
-          copied = document.execCommand("copy");
-          input.remove();
-        }
-        if (!copied) {
-          showFeedback("复制失败，请手动复制 GitHub 仓库地址。");
-          return;
-        }
-        showFeedback(`已复制 GitHub 仓库地址：${value}`);
-        track("plugin_link_copy", {
-          view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
-          plugin: button.dataset.plugin,
-          rank: Number(button.dataset.rank),
-        });
-      }
-
-      list.addEventListener("click", (event) => {
-        const button = event.target.closest(".copy-link");
-        if (button) void copyDownloadUrl(button);
-      });
-
       document.addEventListener("click", (event) => {
-        const link = event.target.closest("a.github-link, a.card-github-link");
+        const link = event.target.closest("a.github-link");
         if (!link?.dataset.plugin) return;
         track("plugin_github_click", {
           view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,

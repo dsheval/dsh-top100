@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
 import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
+import { withReviewedDescription } from "../shared/descriptions.js";
 import { catalogEvidence } from "../shared/evidence.js";
 export const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 const CACHE_MS = 30 * 60 * 1000;
@@ -165,7 +166,7 @@ export function isInstallAvailability(value) {
     return value === "all" || value === "installable" || value === "unavailable";
 }
 export function matchesQuery(entry, query) {
-    return matchesSearchQuery(entry, query);
+    return matchesSearchQuery(withReviewedDescription(entry), query);
 }
 function annotate(entry, installed) {
     const installSpec = resolveInstallSpec(entry);
@@ -259,6 +260,7 @@ export function filterCatalog(document, options) {
         ? document.rankings.total
         : document.rankings[options.view] ?? [];
     const scored = source
+        .map((entry) => withReviewedDescription(entry, document))
         .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
         .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
         .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
@@ -720,6 +722,7 @@ function snapshotDocument(raw, manifest, dataset) {
     const { rankings } = parseSnapshotPayload(raw, manifest, dataset);
     return {
         schemaVersion: 2,
+        snapshotId: manifest.snapshotId,
         generatedAt: manifest.generatedAt,
         snapshotDate: manifest.snapshotDate,
         definitions: manifest.definitions,

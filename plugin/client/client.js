@@ -3,6 +3,63 @@ var module = { exports: {} }; var exports = module.exports;
 let react = require("react");
 let react_jsx_runtime = require("react/jsx-runtime");
 
+//#region src/client/DescriptionPreview.tsx
+/** Measure actual wrapping: short summaries need no extra control. */
+function DescriptionPreview({ text, t }) {
+	const id = (0, react.useId)();
+	const element = (0, react.useRef)(null);
+	const [expandedText, setExpandedText] = (0, react.useState)(null);
+	const [overflows, setOverflows] = (0, react.useState)(false);
+	const expanded = expandedText === text;
+	(0, react.useEffect)(() => {
+		const target = element.current;
+		if (!target) return;
+		const measure = () => {
+			const lineHeight = Number.parseFloat(getComputedStyle(target).lineHeight);
+			setOverflows(target.scrollHeight > lineHeight * 2 + 1);
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(target);
+		return () => observer.disconnect();
+	}, [text]);
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: `desc description-preview${expanded ? " is-expanded" : ""}`,
+		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+			ref: element,
+			id,
+			className: "description-text",
+			children: text
+		}), overflows || expanded ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+			type: "button",
+			className: "description-toggle",
+			"aria-expanded": expanded,
+			"aria-controls": id,
+			onClick: () => setExpandedText(expanded ? null : text),
+			children: t(expanded ? "collapseDescription" : "expandDescription")
+		}) : null]
+	});
+}
+
+//#endregion
+//#region src/shared/description-rules.ts
+/** Shared display rules; raw repository text is always rendered via textContent. */
+function cleanDescription(value) {
+	return String(value ?? "").replace(/```[\s\S]*?```/g, " ").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/&nbsp;|&#160;/gi, " ").replace(/&amp;/gi, "&").replace(/[`*_~>#]/g, " ").replace(/\s+/g, " ").trim();
+}
+function isPlaceholder(value) {
+	return !value || /资料不足|暂无.*简介|简介正在生成|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
+}
+function descriptionFor(entry, reviewed = {}, context = {}) {
+	const review = reviewed[String(entry.fullName || "").toLowerCase()];
+	if (review && review.sourceDescription === (entry.description || "") && (review.sourceReadme === (entry.readmeSummary || "") || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) return review.descriptionZh;
+	const chinese = cleanDescription(entry.descriptionZh);
+	if (!isPlaceholder(chinese) && /[\u4e00-\u9fff]/.test(chinese)) return chinese;
+	const original = cleanDescription(entry.description);
+	return isPlaceholder(original) ? "暂无简介" : original;
+}
+
+//#endregion
 //#region src/client/DiagnosticsPage.tsx
 function FindingList({ items }) {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -461,7 +518,7 @@ function ManagedPage({ t, initialQuery = "" }) {
 		}
 	}
 	const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
-	function descriptionFor(item) {
+	function descriptionFor$1(item) {
 		const supplied = item.descriptionZh.trim();
 		if (supplied) return supplied;
 		return item.kind === "skill" ? `${t("installedSkillFallback")}：${item.name}。${t("noChineseDescription")}。` : `${t("installedPluginFallback")}：${item.name}。${t("noChineseDescription")}。`;
@@ -570,7 +627,7 @@ function ManagedPage({ t, initialQuery = "" }) {
 								}) : item.name }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: "desc",
-									children: descriptionFor(item)
+									children: descriptionFor$1(item)
 								}),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 									className: "facts",
@@ -1519,9 +1576,9 @@ function RankingsPage({ t }) {
 											children: "↗"
 										})]
 									}) })]
-								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-									className: "desc",
-									children: item.descriptionZh || item.description
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DescriptionPreview, {
+									text: descriptionFor(item),
+									t
 								})]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 								className: "card-footer",
@@ -2534,6 +2591,42 @@ const css = `
   color: var(--t100-body);
   font-size: 13px;
   line-height: 20px;
+}
+.dsh-top100 .description-preview {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dsh-top100 .description-preview .description-text {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-height: 40px;
+  overflow: hidden;
+}
+.dsh-top100 .description-preview.is-expanded .description-text {
+  display: block;
+  -webkit-line-clamp: unset;
+  max-height: none;
+  overflow: visible;
+}
+.dsh-top100 button.description-toggle {
+  display: inline-block;
+  min-height: 0;
+  height: auto;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--t100-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.dsh-top100 button.description-toggle:hover {
+  background: transparent;
+  text-decoration: underline;
 }
 .dsh-top100 .facts {
   display: flex;
@@ -3632,6 +3725,8 @@ const css = `
 //#endregion
 //#region src/client/locales.ts
 const zh = {
+	expandDescription: "展开简介",
+	collapseDescription: "收起简介",
 	nav: "插件排行",
 	title: "dsh-top100",
 	subtitle: "发现、核对并安装 DSH 插件",
@@ -3947,6 +4042,8 @@ const zh = {
 	diagOrphans: "孤立停用项"
 };
 const en = {
+	expandDescription: "Show description",
+	collapseDescription: "Hide description",
 	nav: "Rankings",
 	title: "dsh-top100",
 	subtitle: "Discover, review, and install DSH plugins",

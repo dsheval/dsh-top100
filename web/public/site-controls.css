@@ -1,0 +1,145 @@
+/* Shared navigation mark, hero actions and installation filter. */
+      .hero-actions {
+        display: flex;
+        margin-top: 30px;
+        align-items: stretch;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .hero-link,
+      .hero-placeholder {
+        display: inline-flex;
+        min-height: 46px;
+        padding: 0 18px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--hero-accent);
+        font-family: var(--mono);
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        transition: color 140ms ease, background 140ms ease, transform 100ms ease;
+      }
+
+      .hero-link {
+        color: var(--accent-contrast);
+        background: var(--hero-accent);
+        text-decoration: none;
+      }
+
+      .hero-placeholder {
+        color: var(--hero-accent);
+        background: transparent;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      .hero-link:hover,
+      .hero-link:focus-visible {
+        color: var(--hero-accent);
+        background: var(--card);
+      }
+
+      .hero-placeholder:hover,
+      .hero-placeholder:focus-visible {
+        color: var(--accent-contrast);
+        background: var(--hero-accent);
+      }
+
+      .hero-content-switch.is-active,
+      .hero-content-switch.is-active:hover,
+      .hero-content-switch.is-active:focus-visible {
+        color: var(--accent-contrast);
+        background: var(--hero-accent);
+      }
+
+      .hero-placeholder.hero-content-switch.is-active,
+      .hero-placeholder.hero-content-switch.is-active:hover,
+      .hero-placeholder.hero-content-switch.is-active:focus-visible {
+        color: var(--hero-accent);
+        background: var(--card);
+      }
+
+      .hero-placeholder:focus-visible {
+        outline: 2px solid var(--hero-ink);
+        outline-offset: 3px;
+      }
+
+      .hero-placeholder:active {
+        transform: translateY(2px);
+      }
+
+
+      .install-filter {
+        display: inline-flex;
+        min-height: 44px;
+        padding: 0 12px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        border: 1px solid var(--line);
+        color: var(--ink);
+        background: var(--card);
+        font: 600 14px/20px var(--sans);
+        letter-spacing: normal;
+        white-space: nowrap;
+        cursor: pointer;
+      }
+
+      .install-filter-icon {
+        display: block;
+        flex: 0 0 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--accent);
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .install-filter .filter-check { display: none; }
+      .install-filter[aria-pressed="true"] .filter-symbol { display: none; }
+      .install-filter[aria-pressed="true"] .filter-check { display: block; }
+
+      .install-filter:hover {
+        border-color: var(--accent);
+        background: var(--section-strong);
+      }
+
+      .install-filter[aria-pressed="true"] {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .install-filter:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+      }
+
+
+.hero-actions { margin-top: 24px; }
+.hero-actions :is(.hero-link, .hero-placeholder) { line-height: 1.5; }
+.wordmark img { border: 0; border-radius: 0; background: transparent; object-fit: contain; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-actions a { transition: none; }
+}
+
+/* Site-wide typography, including the responsive variants. */
+.hero .eyebrow { color: var(--hero-accent); font: 700 17px var(--mono); letter-spacing: .045em; }
+:is(.hero-description, .hero-summary .hero-copy) { color: var(--muted); font: 400 clamp(17px, 1.55vw, 21px)/1.5 var(--sans); }
+.footer { display: flex; min-height: 96px; padding: 24px max(24px, calc((100vw - var(--content)) / 2)); align-items: center; justify-content: space-between; gap: 30px; border-top: 1px solid #6f837c; background: #2b443d; color: var(--paper); font: 700 12px/1.6 var(--mono); letter-spacing: .05em; text-transform: uppercase; }
+.footer span:last-child { color: #c9d6d1; }
+@media (max-width: 720px) {
+  .hero .eyebrow { font-size: 13px; }
+  .footer { display: block; }
+  .footer span { display: block; }
+  .footer span:last-child { margin-top: 8px; }
+}
+
+.nav-links a[aria-current="page"] { color: var(--hero-accent); }
+.nav-links a[aria-current="page"]::after { opacity: 1; transform: scaleX(1); }

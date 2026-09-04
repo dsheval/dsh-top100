@@ -86,8 +86,8 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh plugin/);
   assert.match(html, /data-track-ranking-view="hot"/);
   assert.match(html, /track\("search_used"/);
-  assert.match(html, /closest\("a\.github-link, a\.card-github-link"\)/);
-  assert.doesNotMatch(html, /closest\("\.github-link, \.card-github-link"\)/);
+  assert.match(html, /closest\("a\.github-link"\)/);
+  assert.doesNotMatch(html, /closest\("\.github-link"\)/);
   assert.doesNotMatch(html, /track\([^\n]+state\.query/);
   assert.match(html, /rel="canonical" href="https:\/\/www\.dsheval\.ai\/"/);
   assert.match(html, /type="application\/ld\+json"/);
@@ -117,7 +117,7 @@ test("softens the footer and keeps Skills outside plugin totals", () => {
   assert.match(html, /\.footer\s*\{[\s\S]*?min-height:\s*96px/);
   assert.match(html, /\.footer\s*\{[\s\S]*?background:\s*#2b443d/);
   assert.match(html, /\.footer span:last-child\s*\{[\s\S]*?color:\s*#c9d6d1/);
-  assert.match(html, /href="\.\/skills\.html">Skills 技能库/);
+  assert.match(html, /href="\.\/skills\.html#ranking">Skills 榜单/);
   assert.match(html, /manifest\.datasets\.skills\?\.count/);
   assert.doesNotMatch(html, /隐藏 Skill 仓库|hideSkills|manifestSkillCount/);
   assert.match(skills, /manifest\?\.datasets\?\.skills\?\.url/);
@@ -156,8 +156,8 @@ test("aligns installation controls and badges while keeping utility text readabl
   assert.match(skillsLink, /justify-content: center/);
   assert.match(listHead, /font: 700 13px\/1\.4 var\(--sans\)/);
   assert.match(html, /\.meta-growth\s*\{[^}]*font: 600 13px\/1\.5 var\(--sans\)/);
-  assert.match(html, /\.meta-growth:not\(\[hidden\]\)[^}]*flex-wrap: wrap/);
-  assert.match(html, /\.growth-period \{ white-space: nowrap; \}/);
+  assert.match(html, /\.meta-growth:not\(\[hidden\]\)[^}]*display: inline-flex/);
+  assert.match(html, /\.growth-period \{ white-space: nowrap;/);
   assert.match(html, /period\.className = "growth-period"/);
   assert.match(html, /id="tab-rising"[^>]*>\s*新锐榜\s*<\/button>/);
 });

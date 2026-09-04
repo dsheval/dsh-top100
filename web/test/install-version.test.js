@@ -6,12 +6,12 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const root = new URL("../../", import.meta.url);
-const files = ["README.md", "plugin/README.md", "web/public/index.html", "web/public/dsh.html"];
+const files = ["README.md", "plugin/README.md", "web/public/index.html", "web/public/dsh.html", "web/public/skills.html"];
 
 test("a release bump fails the check until all install surfaces are synchronized", async () => {
   const directory = await mkdtemp(join(tmpdir(), "dsh-version-sync-"));
   try {
-    for (const file of [...files, "scripts/sync-install-version.mjs", "plugin/package.json"]) {
+    for (const file of [...files, "web/public/assets/dsh-top100-og.svg", "scripts/sync-install-version.mjs", "plugin/package.json"]) {
       const target = join(directory, file);
       await mkdir(join(target, ".."), { recursive: true });
       await cp(new URL(file, root), target);
@@ -37,6 +37,7 @@ test("a release bump fails the check until all install surfaces are synchronized
     const readme = await readFile(join(directory, "README.md"), "utf8");
     assert.ok(readme.includes("release-v9.8.7-2f6f68?style=flat-square"), "badge color is not a prerelease suffix");
     assert.ok(readme.includes("@dsheval/dsh-top100-plugin@1.1.0"), "historical compatibility version is preserved");
+    assert.match(await readFile(join(directory, "web/public/assets/dsh-top100-og.svg"), "utf8"), />v9\.8\.7</);
     const before = await Promise.all(files.map((file) => readFile(join(directory, file), "utf8")));
     assert.equal(run().status, 0);
     assert.deepEqual(await Promise.all(files.map((file) => readFile(join(directory, file), "utf8"))), before);

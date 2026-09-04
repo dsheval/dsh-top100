@@ -1,0 +1,329 @@
+/* Shared reading layout, with view-specific content styles. */
+body:has(#docs-view:not([hidden])) .hero {
+  display: none;
+}
+
+body:has(#docs-view:not([hidden])) .ranking {
+  background: var(--paper);
+  scroll-margin-top: 62px;
+}
+
+body:has(#docs-view:not([hidden])) .ranking-inner,
+body:has(#dsh-view:not([hidden])) .ranking-inner {
+  max-width: 1120px;
+  padding-top: 44px;
+}
+
+#docs-view {
+  font: 400 15px/1.8 var(--sans);
+}
+
+#docs-view .inline-docs-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+}
+
+#docs-view .inline-docs-title {
+  font: 650 clamp(30px, 3.5vw, 40px)/1.3 var(--sans);
+  letter-spacing: normal;
+}
+
+#docs-view .inline-docs-intro {
+  margin: 12px 0 0;
+  font: 400 15px/1.8 var(--sans);
+}
+
+#docs-view .docs-layout {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+
+#docs-view .toc {
+  position: sticky;
+  top: 86px;
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 0;
+  overflow: visible;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  backdrop-filter: none;
+}
+
+#docs-view .toc a {
+  min-height: 44px;
+  padding: 10px 12px;
+  justify-content: flex-start;
+  border: 0;
+  font: 600 13px/1.5 var(--sans);
+  white-space: nowrap;
+}
+
+#docs-view .toc a::before {
+  font: 600 11px/1.5 var(--sans);
+}
+
+#docs-view .toc a:hover,
+#docs-view .toc a:focus-visible {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+#docs-view .toc a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+#docs-view .doc-section {
+  padding: 0 0 36px;
+  scroll-margin-top: 86px;
+}
+
+#docs-view .doc-section + .doc-section {
+  padding-top: 36px;
+}
+
+#docs-view .doc-section:last-child {
+  border-bottom: 0;
+}
+
+#docs-view .doc-section .section-kicker {
+  margin: 0 0 8px;
+  color: var(--accent);
+  font: 600 12px/1.5 var(--sans);
+  letter-spacing: normal;
+}
+
+#docs-view .doc-section h2 {
+  margin: 0 0 14px;
+  font: 600 24px/1.45 var(--sans);
+  letter-spacing: normal;
+}
+
+#docs-view .doc-section h3 {
+  margin: 26px 0 10px;
+  font: 600 17px/1.5 var(--sans);
+}
+
+#docs-view .doc-section p {
+  margin-bottom: 14px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+#docs-view .card-grid.four {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 22px;
+}
+
+#docs-view .doc-card {
+  min-height: 0;
+  padding: 18px 20px;
+}
+
+#docs-view .card-label {
+  display: none;
+}
+
+#docs-view .doc-card h3 {
+  margin: 0 0 8px;
+}
+
+#docs-view .doc-card p {
+  margin: 0;
+  font-size: 14px;
+}
+
+#docs-view .pipeline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 0;
+  color: var(--accent);
+  font: 600 13px/1.6 var(--sans);
+}
+
+#docs-view .pipeline span:not(:last-child)::after {
+  content: "→";
+  margin-left: 8px;
+  color: var(--muted);
+}
+
+#docs-view .rule-list {
+  gap: 0;
+  margin: 20px 0 0;
+}
+
+#docs-view .rule-list li {
+  padding: 14px 0 14px 34px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+}
+
+#docs-view .rule-list li::before {
+  top: 16px;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  color: var(--accent);
+  background: transparent;
+  font-family: var(--sans);
+}
+
+#docs-view .table-wrap {
+  margin: 20px 0;
+}
+
+#docs-view table {
+  font: 400 14px/1.7 var(--sans);
+}
+
+#docs-view th,
+#docs-view td {
+  padding: 12px 14px;
+}
+
+#docs-view th {
+  background: var(--section);
+  font: 600 13px/1.6 var(--sans);
+  letter-spacing: normal;
+}
+
+#docs-view td:first-child {
+  min-width: 110px;
+}
+
+#docs-view .weight {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+#docs-view .formula {
+  margin: 20px 0;
+  padding: 16px 18px;
+  border-left: 3px solid var(--accent);
+  background: var(--section);
+  font: 500 13px/1.8 var(--sans);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* The install guide uses the same reading style, retaining its three-step flow. */
+body:has(#dsh-view:not([hidden])) .ranking-inner {
+  padding-top: 44px;
+}
+
+#dsh-view {
+  max-width: none;
+  margin-inline: 0;
+  --muted: #4f5e59;
+  --line: rgba(19, 32, 28, 0.26);
+  --code-surface: #e5ebe8;
+  --code-ink: #13201c;
+  font: 400 15px/1.8 var(--sans);
+}
+
+#dsh-view .inline-docs-header {
+  margin-bottom: 32px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+#dsh-view .inline-docs-title {
+  font: 650 clamp(30px, 3.5vw, 40px)/1.3 var(--sans);
+  letter-spacing: normal;
+}
+
+#dsh-view .inline-docs-intro {
+  margin-top: 12px;
+  font: 400 15px/1.8 var(--sans);
+}
+
+#dsh-view .dsh-prerequisites {
+  margin-bottom: 30px;
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+#dsh-view .dsh-install-steps { gap: 30px; }
+
+#dsh-view .dsh-step-number {
+  border: 0;
+  border-radius: 0;
+  color: var(--accent);
+  background: transparent;
+  font: 600 14px/1.5 var(--sans);
+}
+
+#dsh-view .doc-section + .doc-section {
+  margin-top: 36px;
+  padding-top: 36px;
+}
+
+#dsh-view .doc-section > h2 {
+  font: 600 24px/1.45 var(--sans);
+}
+
+#dsh-view .dsh-command-row,
+#dsh-view .dsh-command-group {
+  border-color: var(--line);
+}
+
+#dsh-view .dsh-command-group .dsh-command-row + .dsh-command-row {
+  border-top-color: var(--line);
+}
+
+#dsh-view .dsh-copy-button {
+  color: var(--accent);
+  background: var(--card);
+}
+
+#dsh-view .dsh-copy-button:hover,
+#dsh-view .dsh-copy-button:focus-visible {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+
+#dsh-view .dsh-detail summary {
+  font: 600 16px/1.6 var(--sans);
+}
+
+@media (max-width: 1100px) {
+  #docs-view .docs-layout { display: block; }
+  #docs-view .toc {
+    top: 62px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-bottom: 28px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+  #docs-view .toc a { justify-content: center; padding-inline: 8px; }
+  #docs-view .doc-section { scroll-margin-top: 130px; }
+}
+
+@media (max-width: 640px) {
+  body:has(#docs-view:not([hidden])) .ranking-inner { padding-top: 28px; }
+  body:has(#dsh-view:not([hidden])) .ranking-inner { padding-top: 28px; }
+  #dsh-view .doc-section > h2 { font-size: 21px; }
+  #dsh-view .dsh-copy-button { min-width: 64px; padding-inline: 12px; }
+  #docs-view .inline-docs-header { margin-bottom: 22px; padding-bottom: 22px; }
+  #docs-view .toc { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #docs-view .doc-section { scroll-margin-top: 78px; }
+  #docs-view .doc-section h2 { font-size: 21px; }
+  #docs-view .card-grid.four { grid-template-columns: 1fr; }
+  #docs-view th, #docs-view td { padding: 10px 12px; }
+  #docs-view .table-wrap::before {
+    content: "左右滑动查看完整表格";
+    display: block;
+    padding: 8px 12px;
+    color: var(--muted);
+    font: 400 12px/1.5 var(--sans);
+  }
+  #docs-view table { min-width: 480px; }
+}

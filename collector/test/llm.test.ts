@@ -36,8 +36,8 @@ describe("Chinese summary validation", () => {
 
   it("uses Chinese source text or a conservative fallback", () => {
     expect(fallbackDescriptionZh("用于管理插件的中文工具")).toBe("用于管理插件的中文工具");
-    expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toContain("demo-plugin");
-    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toContain("资料不足");
+    expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toBe("An English-only plugin");
+    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toBe("Desktop client");
   });
 
   it("builds a repository-specific fallback from README and leaves it retryable", () => {
@@ -47,7 +47,7 @@ describe("Chinese summary validation", () => {
       readmeSummary: "Enterprise multi-agent orchestration with hierarchical swarms and coordinated workflows.",
       topics: ["multi-agent", "orchestration"],
     });
-    expect(fallback).toContain("资料不足");
+    expect(fallback).toBe("暂无简介");
     expect(fallback).not.toContain("请查看项目 README");
     expect(fallback).not.toContain("DSH 插件");
     expect(isGenericDescriptionZh(fallback)).toBe(true);
@@ -79,7 +79,7 @@ describe("Chinese summary validation", () => {
   it("does not infer search or security capabilities from incidental keywords", () => {
     const summary = fallbackDescriptionZh({ name: "BrowserSkill", description: "Let AI agents use your logged-in browser.", readmeSummary: null, topics: ["browser", "security"] });
     expect(summary).not.toMatch(/知识检索|安全检查|无需/);
-    expect(isGenericDescriptionZh(summary)).toBe(true);
+    expect(summary).toBe("Let AI agents use your logged-in browser.");
   });
 
   it("uses complete source sentences without deleting English word boundaries", () => {
