@@ -2589,9 +2589,9 @@
         align-items: center;
         gap: 10px;
         color: var(--hero-muted);
-        font: 700 11px/1.4 var(--mono);
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
+        font: 600 13px/1.4 var(--sans);
+        letter-spacing: 0;
+        text-transform: none;
       }
 
       .install-console-head p {
@@ -2640,15 +2640,16 @@
 
       .release-grid dt {
         color: var(--hero-muted);
-        font: 700 10px/1.3 var(--mono);
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
+        font: 500 12px/1.4 var(--sans);
+        letter-spacing: 0;
+        text-transform: none;
       }
 
       .release-grid dd {
         margin: 7px 0 0;
         color: var(--hero-ink);
-        font: 800 clamp(12px, 1vw, 14px)/1.25 var(--mono);
+        font: 600 15px/1.4 var(--sans);
+        font-variant-numeric: tabular-nums;
         overflow-wrap: anywhere;
       }
 
@@ -2664,7 +2665,7 @@
         min-width: 0;
         padding: 13px 14px;
         color: var(--code-ink);
-        font: 600 11px/1.5 var(--mono);
+        font: 400 12px/1.65 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
         overflow-wrap: anywhere;
         white-space: normal;
       }
@@ -2676,7 +2677,7 @@
         color: var(--accent-contrast);
         background: var(--accent);
         cursor: pointer;
-        font: 800 11px/1 var(--mono);
+        font: 600 14px/1.4 var(--sans);
       }
 
       .hero-command-row button:hover,
@@ -2714,6 +2715,53 @@
         color: var(--muted);
         font-size: 14px;
         line-height: 1.7;
+      }
+
+      .search-input-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        padding: 5px;
+        border: 1px solid var(--line);
+        background: var(--card);
+      }
+
+      .search-input-row .search-input {
+        min-height: 44px;
+        border-color: transparent;
+      }
+
+      .search-input-row .search-input:focus {
+        border-color: var(--accent);
+      }
+
+      #leaderboard-view .search-status-row {
+        min-height: 0;
+        padding: 12px 0 0;
+        border: 0;
+        background: transparent;
+      }
+
+      #leaderboard-view .search-status-row.is-quiet {
+        display: none;
+      }
+
+      @media (max-width: 640px) {
+        .search-input-row {
+          gap: 4px;
+          padding: 4px;
+        }
+
+        .search-input-row .search-input {
+          padding-right: 52px;
+        }
+
+        .search-input-row .install-filter {
+          padding-inline: 8px;
+          gap: 5px;
+          font-size: 12px;
+        }
       }
 
       .trust-pill,
@@ -3052,23 +3100,23 @@
             <aside class="install-console" aria-labelledby="install-console-title">
               <div class="install-console-head">
                 <span class="status-dot" aria-hidden="true"></span>
-                <p id="install-console-title">dsh-top100 / release channel</p>
-                <span class="release-badge">latest</span>
+                <p id="install-console-title">dsh-top100 / 安装信息</p>
+                <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>npm</dt><dd>v1.3.0</dd></div>
-                <div><dt>DSH Web</dt><dd>0.1.0-rc.6+</dd></div>
-                <div><dt>source</dt><dd>verified catalog</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.0</dd></div>
+                <div><dt>DSH Web 要求</dt><dd>0.1.0-rc.6+</dd></div>
+                <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin</code>
+                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.0</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin"
+                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.0"
                   data-analytics="install-command"
                 >复制</button>
               </div>
-              <p class="install-console-note">命令只安装排行插件；具体项目仍需逐项核对来源与权限。</p>
+              <p class="install-console-note">命令固定安装当前版排行插件。使用方法请查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
             </aside>
           </div>
         </div>
@@ -3146,26 +3194,25 @@
             </div>
 
             <div class="search-panel" role="search">
-              <div class="search-field">
-                <label class="sr-only" id="ranking-search-label" for="ranking-search">搜索插件</label>
-                <span class="search-control">
-                  <input
-                    class="search-input"
-                    id="ranking-search"
-                    type="search"
-                    autocomplete="off"
-                    maxlength="80"
-                    spellcheck="false"
-                    placeholder="搜索插件：名称、功能或中文关键词"
-                    aria-describedby="ranking-search-result"
-                  />
-                  <button class="search-clear" id="ranking-search-clear" type="button" hidden>
-                    清除
-                  </button>
-                </span>
-              </div>
-              <div class="search-status-row">
-                <p class="search-result" id="ranking-search-result">等待插件数据</p>
+              <div class="search-input-row">
+                <div class="search-field">
+                  <label class="sr-only" id="ranking-search-label" for="ranking-search">搜索插件</label>
+                  <span class="search-control">
+                    <input
+                      class="search-input"
+                      id="ranking-search"
+                      type="search"
+                      autocomplete="off"
+                      maxlength="80"
+                      spellcheck="false"
+                      placeholder="搜索插件：名称、功能或中文关键词"
+                      aria-describedby="ranking-search-result"
+                    />
+                    <button class="search-clear" id="ranking-search-clear" type="button" hidden>
+                      清除
+                    </button>
+                  </span>
+                </div>
                 <button class="install-filter" id="installable-only" type="button" aria-pressed="false" title="仅显示有可解析安装来源的项目；仍须核对配置、来源和权限，不代表已安装验证">
                   <svg class="install-filter-icon" viewBox="0 0 24 24" aria-hidden="true">
                     <path class="filter-symbol" d="M4 5h16l-6 7v6l-4 2v-8L4 5Z"></path>
@@ -3173,6 +3220,9 @@
                   </svg>
                   <span>仅看有安装源</span>
                 </button>
+              </div>
+              <div class="search-status-row">
+                <p class="search-result" id="ranking-search-result">等待插件数据</p>
                 <div class="search-sort" id="ranking-search-sort" role="group" aria-label="搜索结果排序" hidden>
                   <span>排序</span>
                   <button type="button" data-search-sort="relevance" aria-pressed="true">相关度</button>
@@ -4260,6 +4310,11 @@
           : "排名";
         searchClear.hidden = !searchActive;
         searchSort.hidden = !searchActive;
+        searchResult.closest(".search-status-row").classList.toggle(
+          "is-quiet",
+          !searchActive && !activeCategory && !installableOnly
+            && currentView !== "all" && matched.length > 0
+        );
         for (const button of searchSortButtons) {
           button.setAttribute(
             "aria-pressed",

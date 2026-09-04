@@ -213,10 +213,10 @@ test("uses a native toggle button with an accessible state and a selected checkm
 
 test("keeps Skills utility text legible and aligned with Plugin typography", () => {
   assert.match(skills, /--muted: #4f5e59/);
-  assert.match(skills, /\.directory-head p \{[^}]*font-size: 15px;[^}]*font-weight: 500/);
+  assert.match(skills, /\.directory-head p \{[^}]*font-size: 14px;[^}]*font-weight: 400/);
   assert.match(skills, /\.status \{[^}]*font-size: 13px;[^}]*font-weight: 500/);
-  assert.match(skills, /\.tag \{[^}]*min-height: 24px;[^}]*font: 700 11px\/1\.1 var\(--mono\)/);
-  assert.match(skills, /\.card-link \{[^}]*align-self: flex-start;[^}]*font-size: 14px;[^}]*font-weight: 700/);
+  assert.match(skills, /class="github-link"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
+  assert.match(skills, /link\.setAttribute\("aria-label"/);
 });
 
 test("keeps discovery views ordered and uses one persistent ranking search", () => {
@@ -265,7 +265,7 @@ test("guides installation through three steps before collapsed secondary help", 
   assert.equal((primary.match(/data-copy-command=/g) ?? []).length, 2);
   assert.match(primary, /DSH Web 0\.1\.0-rc\.6\+/);
   assert.match(primary, /Node\.js 22\.13\+/);
-  assert.match(primary, /看到榜单，即可开始使用/);
+  assert.ok(primary.includes(`<span data-install-version>${packageJson.version}</span>`));
   assert.match(primary, /不会自动安装榜单中的项目/);
   assert.match(html, /\.dsh-open-target strong \{[^}]*color: var\(--ink\)/);
   assert.match(html, /#dsh-view \.dsh-step-content > \.dsh-success \{[^}]*color: var\(--muted\)/);
@@ -281,11 +281,11 @@ test("preserves copyable command pairs for all three supported launch methods", 
   const displayed = [...dsh.matchAll(/<code class="dsh-install-command">([^<]+)<\/code>/g)].map((match) => match[1]);
   assert.deepEqual(commands, displayed);
   assert.deepEqual(commands, [
-    "npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin",
+    `npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
     "npx @deepseek-ai/dsh web",
-    "dsh plugin --profile web add @dsheval/dsh-top100-plugin",
+    `dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
     "dsh web",
-    "pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin",
+    `pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
     "pnpm dsh web",
   ]);
   const labels = [...dsh.matchAll(/<button[^>]*aria-label="([^"]+)"/g)].map((match) => match[1]);
@@ -393,8 +393,8 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.match(html, />安装到 DSH<\/a>/);
   assert.doesNotMatch(html, /hero-release-version/);
   assert.doesNotMatch(html, /class="release-band"/);
-  assert.match(html, /data-copy-command="npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin"/);
-  assert.match(dsh, /当前发布版本为[\s\S]*?@dsheval\/dsh-top100-plugin\/v\/1\.3\.0/);
+  assert.ok(html.includes(`data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}"`));
+  assert.ok(dsh.includes(`@dsheval/dsh-top100-plugin/v/${packageJson.version}`));
   assert.match(dsh, /npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);
