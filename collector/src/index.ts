@@ -33,12 +33,13 @@ import {
 } from "./llm.js";
 import { INSTALL_PARSER_VERSION, parseInstallCommands } from "./install-parse.js";
 import { normalizeTags } from "./tag-normalize.js";
+import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
 import { summarizeReadme } from "./summary.js";
 import { collectPacks } from "./packs.js";
 
 /** 检测结果缓存（增量核心：repo 未变化时复用，跳过重复检测网络调用） */
 interface DetectCache {
-  schemaVersion: 2;
+  schemaVersion: 3;
   installParserVersion?: number;
   pushedAt: string;
   detection: Detection;
@@ -258,7 +259,7 @@ async function main() {
       let readmeContent: string | null;
       let subdir: string | null = null;
 
-      if (cachedDetect?.schemaVersion === 2 && cachedDetect.installParserVersion === INSTALL_PARSER_VERSION && cachedDetect.pushedAt === repo.pushed_at) {
+      if (cachedDetect?.schemaVersion === 3 && cachedDetect.installParserVersion === INSTALL_PARSER_VERSION && cachedDetect.pushedAt === repo.pushed_at) {
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
         detection = cachedDetect.detection;
         isCordis = cachedDetect.isCordis;
@@ -322,17 +323,15 @@ async function main() {
         }
 
         needsConfig = detectNeedsConfig(readmeContent);
-        readmeSummary = readmeContent
-          ? summarizeReadme(readmeContent)
-          : skillMd
-            ? summarizeReadme(skillMd)
-            : null;
+        readmeSummary = skillMd
+          ? `SKILL.md: ${summarizeReadme(skillMd, 700)}${readmeContent ? ` README: ${summarizeReadme(readmeContent, 420)}` : ""}`
+          : readmeContent ? summarizeReadme(readmeContent) : null;
         installParsed = parseInstallCommands(readmeContent);
         hasSkillMd = detection.skillFiles.length > 0;
 
         // 写入检测缓存（含派生产物）
         cacheSet<DetectCache>("detect", candidate.fullName, {
-          schemaVersion: 2,
+          schemaVersion: 3,
           installParserVersion: INSTALL_PARSER_VERSION,
           pushedAt: repo.pushed_at,
           detection,
@@ -549,123 +548,73 @@ async function main() {
     const cached = zhCache.get(d.plugin.id);
     if (cached && isGenericDescriptionZh(cached.descriptionZh)) zhCache.delete(d.plugin.id);
   }
-  let translated = 0;
-  let skipped = 0;
-  let retranslated = 0;
+  const jobsPath = join(DATA_DIR, "description-jobs.json");
+  let previousJobs: Record<string, DescriptionJob> = {};
+  try { previousJobs = JSON.parse(readFileSync(jobsPath, "utf-8")).jobs ?? {}; } catch { /* first run */ }
+  type Reviewed = { descriptionZh: string; sourceDescription: string; sourceReadme: string };
+  let reviewed: Record<string, Reviewed> = {};
+  try { reviewed = JSON.parse(readFileSync(join(__dirname, "../../plugin/src/shared/reviewed-descriptions.json"), "utf-8")); } catch { /* optional editorial seed */ }
+  const priority = new Set<string>();
+  // Prioritize the first 100 entries from both the plugin Stars and Skills lists.
+  for (const type of ["cordis-plugin", "skill"]) {
+    for (const d of detected.filter(d => d.plugin.type === type).sort((a, b) => b.plugin.stars - a.plugin.stars).slice(0, 100)) priority.add(d.plugin.id.toLowerCase());
+  }
+  // Include the last published hot/rising lists; use the same published rankings as the UI.
+  try {
+    const publicDir = process.env.PUBLIC_DATA_DIR ?? join(__dirname, "../../runtime/public-data");
+    const published = JSON.parse(readFileSync(join(publicDir, "rankings.json"), "utf-8"));
+    for (const list of [published.rankings?.hot, published.rankings?.rising]) {
+      for (const entry of (list ?? []).slice(0, 100)) priority.add(String(entry.fullName).toLowerCase());
+    }
+  } catch { /* first publication has no growth history */ }
+  for (const d of detected) {
+    const p = d.plugin;
+    const review = reviewed[p.fullName.toLowerCase()];
+    const cached = zhCache.get(p.id);
+    const previousJob = previousJobs[p.id];
+    const changed = previousJob && previousJob.sourceHash !== descriptionSourceHash(p);
+    if (review && review.sourceDescription === p.description && review.sourceReadme === (p.readmeSummary || "")) {
+      p.descriptionZh = review.descriptionZh;
+    } else if (cached && hasChineseDescription(cached.descriptionZh) && !changed && !shouldRetranslate(p.readmeSummary, cached.summaryKey)) {
+      p.descriptionZh = cached.descriptionZh;
+      for (const tag of cached.tagsZh) if (!p.tags.includes(tag)) p.tags.push(tag);
+    } else if (changed || !hasChineseDescription(p.descriptionZh)) {
+      p.descriptionZh = null;
+    }
+  }
+  const now = Date.now();
+  const { jobs, ready } = planDescriptionJobs(detected.map(d => d.plugin), previousJobs, priority, now);
   const apiKey = process.env.DEEPSEEK_API_KEY;
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
   const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
   const summaryBatchSize = Number(process.env.DEEPSEEK_SUMMARY_BATCH_SIZE ?? "300");
   const summaryConcurrency = Number(process.env.DEEPSEEK_SUMMARY_CONCURRENCY ?? "3");
-  if (!Number.isInteger(summaryBatchSize) || summaryBatchSize < 0 || summaryBatchSize > 3000) {
-    throw new Error("DEEPSEEK_SUMMARY_BATCH_SIZE must be an integer from 0 to 3000");
-  }
-  if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) {
-    throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
-  }
-
-  if (apiKey) {
-    // 已知标签清单（约束新翻译优先复用，抑制同义异名）：从已收录插件聚合细分中文标签 top 40
-    const knownTags = [
-      ...new Set(
-        detected
-          .filter((d) => d.plugin.descriptionZh) // 已翻译的（含复用）
-          .flatMap((d) => d.plugin.tags.filter((t) => /[\u4e00-\u9fff]/.test(t)))
-      ),
-    ].slice(0, 40);
-
-    const allPending = detected.filter((d) => {
-      if (d.plugin.descriptionZh) return false; // 本次已有
-      const cached = zhCache.get(d.plugin.id);
-      if (cached?.descriptionZh) {
-        // 第三步「变化量触发」：README 摘要与上次翻译时相比实质大改 → 重翻（让简介不过时）
-        if (shouldRetranslate(d.plugin.readmeSummary, cached.summaryKey)) {
-          retranslated++;
-          return true;
-        }
-        // 未大改 → 复用历史翻译（含波动回归的插件——A 缓存跨天，不再被当新仓库重翻）
-        d.plugin.descriptionZh = cached.descriptionZh;
-        for (const t of cached.tagsZh) {
-          if (!d.plugin.tags.includes(t)) d.plugin.tags.push(t);
-        }
-        skipped++;
-        return false;
-      }
-      return true;
-    });
-    // 榜单最先展示高 Stars 项目；API 预算有限时优先保证用户可见条目的简介质量。
-    allPending.sort((a, b) => b.repo.stargazers_count - a.repo.stargazers_count);
-    const pending = allPending.slice(0, summaryBatchSize);
-    console.log(
-      `  pending translate: ${pending.length}/${allPending.length}（其中大改重翻 ${retranslated}），reused: ${skipped}`
-    );
-
-    await runPool(
-      pending,
-      async (d) => {
-        const result = await translateWithDeepSeek(
-          {
-            name: d.plugin.name,
-            description: d.plugin.description,
-            readmeSummary: d.plugin.readmeSummary,
-            topics: d.plugin.topics,
-            knownTags,
-          },
-          { apiKey, baseURL, model }
-        );
-        if (result) {
-          d.plugin.descriptionZh = result.descriptionZh;
-          for (const t of result.tagsZh) {
-            if (!d.plugin.tags.includes(t)) d.plugin.tags.push(t);
-          }
-          translated++;
-          console.log(`    ✓ ${d.plugin.id} -> ${result.descriptionZh.slice(0, 40)}`);
-        }
-      },
-      summaryConcurrency
-    );
-    console.log(
-      `  translated: ${translated}, failed: ${pending.length - translated}, deferred: ${allPending.length - pending.length}`
-    );
-    let fallbackCount = 0;
-    for (const d of detected) {
-      if (!d.plugin.descriptionZh) {
-        d.plugin.descriptionZh = fallbackDescriptionZh({
-          name: d.plugin.name,
-          description: d.plugin.description,
-          readmeSummary: d.plugin.readmeSummary,
-          topics: d.plugin.topics,
-        });
-        fallbackCount++;
-      }
+  if (!Number.isInteger(summaryBatchSize) || summaryBatchSize < 0 || summaryBatchSize > 3000) throw new Error("DEEPSEEK_SUMMARY_BATCH_SIZE must be an integer from 0 to 3000");
+  if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
+  const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);
+  const byId = new Map(detected.map(d => [d.plugin.id, d.plugin]));
+  const pending = apiKey ? ready.slice(0, summaryBatchSize) : [];
+  await runPool(pending, async (source) => {
+    const p = byId.get(source.id)!;
+    const result = await translateWithDeepSeek({ name: p.name, type: p.type, description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags }, { apiKey: apiKey!, baseURL, model });
+    recordDescriptionAttempt(jobs[p.id], Boolean(result), Date.now());
+    if (result) {
+      p.descriptionZh = result.descriptionZh;
+      for (const tag of result.tagsZh) if (!p.tags.includes(tag)) p.tags.push(tag);
     }
-    console.log(`  deterministic fallback: ${fallbackCount}`);
-    // A：把本次全部中文简介写回持久化缓存（新翻译 + 复用 + 播种）+ 摘要指纹，跨天累积
-    for (const d of detected) {
-      if (d.plugin.descriptionZh && !isGenericDescriptionZh(d.plugin.descriptionZh)) {
-        const prev = zhCache.get(d.plugin.id);
-        zhCache.set(d.plugin.id, {
-          descriptionZh: d.plugin.descriptionZh,
-          tagsZh: d.plugin.tags.filter((t) => /[\u4e00-\u9fff]/.test(t)),
-          summaryKey: d.plugin.readmeSummary ?? prev?.summaryKey,
-        });
-      } else {
-        // 失败兜底只用于本次发布，不进入持久缓存，下一轮仍会优先重试。
-        zhCache.delete(d.plugin.id);
-      }
-    }
-    saveZhCache(zhCache);
-  } else {
-    for (const d of detected) {
-      d.plugin.descriptionZh ??= fallbackDescriptionZh({
-        name: d.plugin.name,
-        description: d.plugin.description,
-        readmeSummary: d.plugin.readmeSummary,
-        topics: d.plugin.topics,
-      });
-    }
-    console.log("  未配置 DEEPSEEK_API_KEY，复用已有简介并为缺失项生成保守中文简介");
+  }, summaryConcurrency);
+  for (const { plugin: p } of detected) {
+    if (!hasChineseDescription(p.descriptionZh)) p.descriptionZh = fallbackDescriptionZh(p);
+    if (hasChineseDescription(p.descriptionZh)) {
+      jobs[p.id].status = "complete";
+      delete jobs[p.id].nextAttemptAt;
+      zhCache.set(p.id, { descriptionZh: p.descriptionZh!, tagsZh: p.tags.filter(t => /[\u4e00-\u9fff]/.test(t)), summaryKey: p.readmeSummary ?? undefined });
+    } else zhCache.delete(p.id);
   }
+  saveZhCache(zhCache);
+  mkdirSync(DATA_DIR, { recursive: true });
+  writeFileSync(jobsPath, JSON.stringify({ updatedAt: new Date().toISOString(), jobs }));
+  console.log(`  summaries: ${pending.length} attempted, ${ready.length - pending.length} deferred; retry state saved`);
 
   console.log("[3.6/5] 标签归一化（合并同义词 + 移除宽泛标签）...");
   if (apiKey) {

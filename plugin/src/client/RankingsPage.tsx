@@ -12,6 +12,8 @@ import type {
   RankingView,
 } from "../shared/types.js";
 import type { Translate } from "./locales.js";
+import { DescriptionPreview } from "./DescriptionPreview.js";
+import { descriptionFor } from "../shared/description-rules.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
 import { installStage, isInstallBatchComplete } from "./install-batch-presentation.js";
 import { presentInstallCapability } from "./install-capability.js";
@@ -753,7 +755,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                     </a>
                   </h3>
                 </div>
-                <p className="desc">{item.descriptionZh || item.description}</p>
+                <DescriptionPreview text={descriptionFor(item)} t={t} />
               </div>
               <div className="card-footer">
                 <div className="facts">

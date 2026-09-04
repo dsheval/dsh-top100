@@ -9,6 +9,7 @@ import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
 import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
+import { withReviewedDescription } from "../shared/descriptions.js";
 import { catalogEvidence } from "../shared/evidence.js";
 import type {
   CatalogCacheStatus,
@@ -258,7 +259,7 @@ export function isInstallAvailability(value: string | null): value is InstallAva
 }
 
 export function matchesQuery(entry: RankingEntry, query: string): boolean {
-  return matchesSearchQuery(entry, query);
+  return matchesSearchQuery(withReviewedDescription(entry), query);
 }
 
 function annotate(entry: RankingEntry, installed: Record<string, string>): CatalogItem {
@@ -371,6 +372,7 @@ export function filterCatalog(
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
   const scored = source
+    .map((entry) => withReviewedDescription(entry, document))
     .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
     .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
     .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
@@ -836,6 +838,7 @@ function snapshotDocument(
   const { rankings } = parseSnapshotPayload(raw, manifest, dataset);
   return {
     schemaVersion: 2,
+    snapshotId: manifest.snapshotId,
     generatedAt: manifest.generatedAt,
     snapshotDate: manifest.snapshotDate,
     definitions: manifest.definitions,

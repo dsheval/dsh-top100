@@ -23,8 +23,8 @@
   <text x="152" y="101" fill="#17211f" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="800" letter-spacing="-.5">dsh-top100</text>
   <text x="78" y="171" fill="#2f6f68" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="800" letter-spacing="1.4">VERIFIED DSH PLUGIN CATALOG · DAILY UPDATE</text>
 
-  <text x="78" y="269" fill="#17211f" font-family="Iowan Old Style, Baskerville, Georgia, 'Songti SC', serif" font-size="62" font-weight="700">发现值得安装的</text>
-  <text x="78" y="342" fill="#17211f" font-family="Iowan Old Style, Baskerville, Georgia, 'Songti SC', serif" font-size="70" font-weight="700">DSH 插件。</text>
+  <text x="78" y="269" fill="#17211f" font-family="'Songti SC', 'Iowan Old Style', Georgia, serif" font-size="62" font-weight="700">发现值得安装的</text>
+  <text x="78" y="342" fill="#17211f" font-family="'Songti SC', 'Iowan Old Style', Georgia, serif" font-size="70" font-weight="700">DSH 插件。</text>
   <text x="78" y="403" fill="#53625e" font-family="Inter, -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif" font-size="23">用热度、增长、活跃度和安装证据，找到合适的插件。</text>
 
   <g transform="translate(78 466)">
@@ -44,7 +44,7 @@
 
     <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace">
       <text x="778" y="193" fill="#66716d" font-size="12" font-weight="800" letter-spacing="1">NPM</text>
-      <text x="778" y="222" fill="#17211f" font-size="21" font-weight="800">v1.3.0</text>
+      <text x="778" y="222" fill="#17211f" font-size="21" font-weight="800">v1.3.1</text>
       <line x1="778" y1="247" x2="1100" y2="247" stroke="#b8c9c5"/>
 
       <text x="778" y="280" fill="#66716d" font-size="12" font-weight="800" letter-spacing="1">DSH WEB</text>

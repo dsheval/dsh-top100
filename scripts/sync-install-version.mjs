@@ -5,7 +5,7 @@ const { version } = JSON.parse(await readFile(new URL("plugin/package.json", roo
 const semver = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
 if (!new RegExp(`^${semver}$`).test(version)) throw new Error("Invalid plugin version");
 const check = process.argv.includes("--check");
-const files = ["README.md", "plugin/README.md", "web/public/index.html", "web/public/dsh.html"];
+const files = ["README.md", "plugin/README.md", "web/public/index.html", "web/public/dsh.html", "web/public/skills.html", "web/public/assets/dsh-top100-og.svg"];
 const stale = [];
 
 for (const file of files) {

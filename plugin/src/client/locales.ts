@@ -1,4 +1,6 @@
 export const zh: Record<string, string> = {
+  expandDescription: "展开简介",
+  collapseDescription: "收起简介",
   nav: "插件排行",
   title: "dsh-top100",
   subtitle: "发现、核对并安装 DSH 插件",
@@ -315,6 +317,8 @@ export const zh: Record<string, string> = {
 };
 
 export const en: Record<string, string> = {
+  expandDescription: "Show description",
+  collapseDescription: "Hide description",
   nav: "Rankings",
   title: "dsh-top100",
   subtitle: "Discover, review, and install DSH plugins",

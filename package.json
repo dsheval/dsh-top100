@@ -1,6 +1,6 @@
 {
   "name": "dsh-top100",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "type": "module",
   "description": "Verified DeepSeek Harness plugin rankings with daily GitHub updates",
@@ -29,7 +29,8 @@
     "docker:down": "docker compose down",
     "plugin:build": "npm run build -w @dsheval/dsh-top100-plugin",
     "plugin:check": "npm run typecheck -w @dsheval/dsh-top100-plugin && npm run test -w @dsheval/dsh-top100-plugin",
-    "search:build": "esbuild plugin/src/shared/search.ts --bundle --platform=browser --format=esm --outfile=web/public/search-engine.js && esbuild plugin/src/shared/featured.ts --bundle --platform=browser --format=esm --outfile=web/public/featured-plugin.js && esbuild plugin/src/shared/install-source.ts --bundle --platform=browser --format=esm --outfile=web/public/install-source.js"
+    "search:build": "esbuild plugin/src/shared/search.ts --bundle --platform=browser --format=esm --outfile=web/public/search-engine.js && esbuild plugin/src/shared/featured.ts --bundle --platform=browser --format=esm --outfile=web/public/featured-plugin.js && esbuild plugin/src/shared/install-source.ts --bundle --platform=browser --format=esm --outfile=web/public/install-source.js && npm run descriptions:build",
+    "descriptions:build": "node scripts/sync-descriptions.mjs"
   },
   "engines": {
     "node": ">=22.13"

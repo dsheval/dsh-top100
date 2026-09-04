@@ -1,6 +1,6 @@
 {
   "name": "@dsheval/dsh-top100-plugin",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "dsh-top100 rankings inside DeepSeek Harness Settings",
   "type": "module",
   "main": "lib/index.js",

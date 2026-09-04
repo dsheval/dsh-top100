@@ -12,6 +12,7 @@ export interface ZhResult {
 
 export interface LlmRepositoryInput {
   name: string;
+  type?: string;
   description: string;
   readmeSummary: string | null;
   topics: string[];
@@ -53,15 +54,15 @@ function buildPrompt(input: LlmRepositoryInput): string {
   const known = input.knownTags?.length
     ? `已存在的细分标签（优先从中选用，只有确实无法表达时才创建新标签）：\n${input.knownTags.slice(0, 40).join("、")}\n`
     : "";
-  return `你是 DeepSeek Harness 插件市场的编辑。为下面这个 DSH 插件生成中文简介和中文功能标签。
+  return `你是项目目录的中文编辑。为下面这个${input.type === "skill" ? "Agent Skill 项目" : "DSH 插件项目"}生成中文简介和中文功能标签。
 
 插件名：${input.name}
 英文描述：${sanitizeUntrustedText(input.description || "", 200) || "（无）"}
-README 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（无）"}
+README 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 1200) || "（无）"}
 GitHub topics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}
 ${known}
 要求：
-1. descriptionZh：一句完整中文简介（不超过 60 字），写出该插件独有的用途；资料明确时说明使用条件。只描述 README 或描述中有依据的能力，不把示例、依赖或 topics 推断成产品功能，不宣称免配置、跨平台或安全已验证。资料不足时返回空字符串。禁止导航、表格、半截句子及“扩展能力”“请查看 README”等套话；保留英文名称中的空格
+1. descriptionZh：一句完整中文简介（建议 30–60 字，不超过 60 字），写出该插件独有的用途；资料明确时说明使用条件。只描述 README 或描述中有依据的能力，不把示例、依赖或 topics 推断成产品功能，不宣称免配置、跨平台或安全已验证。资料不足时返回空字符串。禁止导航、表格、半截句子及“扩展能力”“请查看 README”等套话；保留英文名称中的空格
 2. tagsZh：3-5 个中文功能标签，用于分类筛选${known ? "，**优先复用上面已存在的标签**（用词一致），只有新功能类型才创建新标签" : ""}
 只输出 JSON，不要任何其他文字：
 {"descriptionZh": "...", "tagsZh": ["...", "..."]}`;
@@ -258,7 +259,7 @@ const INSUFFICIENT_SOURCE_SUMMARY =
 
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;
-  return value === LEGACY_GENERIC_DESCRIPTION ||
+  return /暂无.*简介|求\s*Star|留颗\s*Star|顺手.*Star|---\s*name:/i.test(value) || value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
     /中文简介正在生成中|请(?:查看|参考).*(?:README|项目文档|项目说明).*功能/i.test(value) ||
     /\|.*\||\|\s*:?-{2,}|```|<\/?(?:h[1-6]|div|p|img)\b/i.test(value) ||
@@ -291,6 +292,7 @@ export function fallbackDescriptionZh(
   }
   // Keyword-based templates overclaimed capabilities (e.g. browser => knowledge
   // retrieval). Keep missing evidence explicit and retryable instead.
-  const name = [...input.name].slice(0, 20).join("");
-  return `${name}：${INSUFFICIENT_SOURCE_SUMMARY}`;
+  const original = sanitizeUntrustedText(input.description, 1000);
+  const unusable = /资料不足|暂无.*简介|简介正在生成|求\s*Star|留颗\s*Star|顺手.*Star|\|.*\||^(?:English|中文|简体中文)\s*[·|]/i.test(original);
+  return original && !unusable && original !== LEGACY_GENERIC_DESCRIPTION ? original : "暂无简介";
 }

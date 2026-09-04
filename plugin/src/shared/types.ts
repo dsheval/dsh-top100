@@ -67,6 +67,7 @@ export interface RankingEntry {
 }
 
 export interface RankingsDocument {
+  snapshotId?: string;
   schemaVersion: number;
   generatedAt: string;
   snapshotDate: string;

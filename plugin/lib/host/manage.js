@@ -2,6 +2,7 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { withReviewedDescription } from "../shared/descriptions.js";
 import { findEntry } from "./catalog.js";
 import { NPM_SPEC_RE } from "../install/install-spec.js";
 import { isProtectedPackage, packageIsDisabled, removeRowBlocks, rowIdsForPackage, userPatchPath } from "./patch-toggle.js";
@@ -132,7 +133,8 @@ export async function listManagedPlugins(profile, document, explicitDir) {
     const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
         const manifest = readInstalledManifest(profile, name, explicitDir);
         const fullName = githubFullName(spec, manifest?.repository);
-        const catalog = matchCatalogEntry(document, name, spec, fullName);
+        const matched = matchCatalogEntry(document, name, spec, fullName);
+        const catalog = matched ? withReviewedDescription(matched, document ?? {}) : undefined;
         const version = readInstalledVersion(profile, name, explicitDir);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
         const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);

@@ -10,6 +10,7 @@ RUN npm ci
 COPY collector collector
 COPY schema schema
 COPY plugin/src/shared/install-source.ts plugin/src/shared/install-source.ts
+COPY plugin/src/shared/reviewed-descriptions.json plugin/src/shared/reviewed-descriptions.json
 COPY config config
 
 ENV NODE_ENV=production
