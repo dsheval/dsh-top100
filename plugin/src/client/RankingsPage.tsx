@@ -35,7 +35,7 @@ interface RankingsPageProps {
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
 const CATALOG_SCOPES: CatalogScope[] = ["plugins", "skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
-const DSHEVAL_SITE = "https://www.dsheval.ai";
+const DSHEVAL_SITE = "https://dsheval.ai/top100/";
 type PageSection = "rankings" | "installed" | "diagnostics";
 const GITHUB_ICON = (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -537,7 +537,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                 {t("updated")} {data.snapshotDate}
               </span>
               <span>
-                {t("source")} <a className="data-source" href={DSHEVAL_SITE} target="_blank" rel="noreferrer" title={data.dataUrl}>DSHEval</a>
+                {t("source")} <a className="data-source" href={DSHEVAL_SITE} target="_blank" rel="noreferrer" title={data.dataUrl}>DSH-Eval Top100</a>
               </span>
               <span>{data.total} {t("entries")}</span>
               <span title={data.cache.fetchedAt ? new Date(data.cache.fetchedAt).toLocaleString() : undefined}>

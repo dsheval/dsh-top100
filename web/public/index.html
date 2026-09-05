@@ -5,35 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
+      content="dsh-top100 是 DSH-Eval 旗下的插件与 Skills 发现栏目，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
     />
     <meta name="theme-color" content="#d9e7e2" />
-    <link rel="canonical" href="https://www.dsheval.ai/" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://dsheval.ai/top100/" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:site_name" content="dsh-top100" />
+    <meta property="og:site_name" content="DSH-Eval" />
     <meta property="og:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
-    <meta property="og:description" content="可信的 DSH 插件发现与排行市场。按热度、增长、项目质量和安装证据持续更新。" />
-    <meta property="og:url" content="https://www.dsheval.ai/" />
-    <meta property="og:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <meta property="og:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。按热度、增长、项目质量和安装证据持续更新。" />
+    <meta property="og:url" content="https://dsheval.ai/top100/" />
+    <meta property="og:image" content="https://dsheval.ai/top100/assets/dsh-top100-og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
-    <meta name="twitter:description" content="可信的 DSH 插件发现与排行市场。" />
-    <meta name="twitter:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <meta name="twitter:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。" />
+    <meta name="twitter:image" content="https://dsheval.ai/top100/assets/dsh-top100-og.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": "dsh-top100",
-        "url": "https://www.dsheval.ai/",
-        "description": "可信的 DSH 插件发现与排行市场",
+        "url": "https://dsheval.ai/top100/",
+        "description": "DSH-Eval 旗下的插件与 Skills 发现栏目",
         "isPartOf": {
           "@type": "WebSite",
-          "name": "DSHeval",
-          "url": "https://www.dsheval.ai/"
+          "name": "DSH-Eval",
+          "url": "https://dsheval.ai/"
         },
         "about": {
           "@type": "SoftwareApplication",
@@ -101,46 +101,8 @@
         color: inherit;
       }
 
-      .nav-shell {
-        position: sticky;
-        z-index: 20;
-        top: 0;
-        border-bottom: 1px solid rgba(23, 33, 31, 0.12);
-        background: color-mix(in srgb, var(--paper) 94%, transparent);
-        backdrop-filter: blur(12px);
-      }
 
-      .nav {
-        display: flex;
-        width: min(calc(100% - 48px), var(--content));
-        min-height: 62px;
-        margin: 0 auto;
-        align-items: center;
-        justify-content: space-between;
-        gap: 32px;
-      }
 
-      .wordmark {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        text-decoration: none;
-      }
-
-      .wordmark-logo {
-        display: block;
-        width: 30px;
-        height: 30px;
-        flex: 0 0 30px;
-        border: 1px solid rgba(23, 33, 31, 0.14);
-        border-radius: 50%;
-        background: var(--card);
-        object-fit: cover;
-        object-position: center;
-      }
 
       .nav-label {
         margin: 0;
@@ -1420,7 +1382,7 @@
       .inline-docs .toc {
         position: sticky;
         z-index: 9;
-        top: 62px;
+        top: var(--site-header-height);
         display: grid;
         margin: 0 0 68px;
         padding: 0;
@@ -1475,7 +1437,7 @@
 
       .inline-docs .doc-section {
         padding: 0 0 72px;
-        scroll-margin-top: 90px;
+        scroll-margin-top: calc(var(--site-header-height) + 28px);
         border-bottom: 1px solid var(--line);
       }
 
@@ -1684,7 +1646,7 @@
 
       body:has(#dsh-view:not([hidden])) .ranking {
         background: var(--paper);
-        scroll-margin-top: 64px;
+        scroll-margin-top: var(--site-header-height);
       }
 
       body:has(#dsh-view:not([hidden])) .ranking-inner {
@@ -2078,33 +2040,12 @@
         outline-offset: 3px;
       }
 
-      .footer {
-        display: flex;
-        min-height: 96px;
-        padding: 24px max(24px, calc((100vw - var(--content)) / 2));
-        align-items: center;
-        justify-content: space-between;
-        gap: 30px;
-        border-top: 1px solid #6f837c;
-        background: #2b443d;
-        color: var(--paper);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.6;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-
-      .footer span:last-child {
-        color: #c9d6d1;
-      }
 
       @media (min-width: 721px) {
         .list-head:not([hidden]) {
           position: sticky;
           z-index: 8;
-          top: 62px;
+          top: var(--site-header-height);
           box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
         }
       }
@@ -2400,14 +2341,7 @@
           border-left: 0;
         }
 
-        .footer {
-          display: block;
-        }
 
-        .footer span:last-child {
-          display: block;
-          margin-top: 10px;
-        }
       }
 
       /* Homepage market redesign: one data-led signature, restrained elsewhere. */
@@ -2781,10 +2715,6 @@
       }
 
       @media (max-width: 720px) {
-        .nav {
-          width: min(calc(100% - 28px), var(--content));
-          gap: 14px;
-        }
 
         .nav-links {
           gap: 13px;
@@ -2889,40 +2819,40 @@
     <link rel="stylesheet" href="./category-system.css" />
     <link rel="stylesheet" href="./ranking-method.css" />
     <link rel="stylesheet" href="./ranking-rows.css" />
-    <link rel="stylesheet" href="./site-controls.css" />
+    <link rel="stylesheet" href="./site-controls.css?v=20260905-nav2" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260905-nav2" />
   </head>
   <body>
-    <div class="nav-shell">
-      <nav class="nav" aria-label="主导航">
-        <a class="wordmark" href="./#top" aria-label="dsh-top100 首页">
-          <img
-            class="wordmark-logo"
-            src="./favicon.svg"
-            alt=""
-            width="30"
-            height="30"
-          />
-          <span>dsh-top100</span>
-        </a>
+    <header class="dsh-site-header">
+      <div class="dsh-site-container dsh-header-inner">
+        <a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a>
+        <nav class="dsh-desktop-nav" aria-label="DSH-Eval 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        <details class="dsh-mobile-menu">
+          <summary>菜单<span class="dsh-menu-icon" aria-hidden="true"></span></summary>
+          <nav aria-label="DSH-Eval 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        </details>
+      </div>
+    </header>
+
+    <main id="top">
+      <nav class="top100-section-nav" aria-label="Top100 栏目导航">
+        <a class="top100-section-title" href="./"><img src="./assets/dsh-top100-mark.svg" width="28" height="28" alt="" /><span>dsh-top100</span></a>
         <div class="nav-links">
           <a href="#ranking" data-content-switch="ranking">插件榜单</a>
           <a href="./skills.html#ranking">Skills 榜单</a>
           <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
           <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </nav>
-    </div>
-
-    <main id="top">
       <section class="hero">
         <div class="hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow">Verified DSH plugin market · Daily snapshot</p>
+            <p class="eyebrow">DSH-Eval · Plugin discovery · Daily snapshot</p>
             <h1><span>发现值得安装的</span><span>DSH 插件。</span></h1>
             <p class="hero-description">
               用增长、活跃度、项目质量和安装证据筛选插件，
-              从具体需求出发，而不只是追逐 Stars。
+              从具体需求出发，而不只是追逐 Stars。收录不代表已通过能力评测。
             </p>
             <form class="hero-search" id="hero-search-form" role="search">
               <label class="sr-only" for="hero-search">搜索全部 DSH 插件</label>
@@ -2989,6 +2919,7 @@
               <p class="section-kicker">Discover · Compare · Install</p>
               <h2>用证据比较，<br />不只看 Stars。</h2>
               <p class="ranking-explainer">Top 100 是增长、活跃度、数据质量与总体关注度的综合热度榜；总榜才按 GitHub Stars 排序。</p>
+              <p class="ranking-source-note">数据来自公开项目信息与 GitHub 指标。优先展示整理后的中文简介，缺少时保留项目原文。</p>
             </div>
             <div class="ranking-meta" aria-live="polite">
               <p id="ranking-meta-title">DEEPSEEK HARNESS PLUGINS · TOP 100</p>
@@ -3094,7 +3025,7 @@
           <div class="list-head" id="list-head" aria-hidden="true">
             <span id="rank-head">排名</span>
             <span>插件</span>
-            <span>中文简介</span>
+            <span>项目简介</span>
             <span class="signal-head">更新与增长</span>
             <span id="metric-head">GitHub Stars</span>
           </div>
@@ -3156,9 +3087,16 @@
       </section>
     </main>
 
-    <footer class="footer">
-      <span>dsh-top100 · DSH plugin leaderboard</span>
-      <span>Verified sources · AI Chinese summaries · GitHub stars</span>
+    <footer class="dsh-site-footer">
+      <div class="dsh-site-container dsh-footer-inner">
+        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a><p>公开评测，发现值得关注的项目。</p></div>
+        <nav class="dsh-footer-links" aria-label="页脚导航">
+          <a href="https://github.com/dsheval/dsh-eval" target="_blank" rel="noopener noreferrer">评测源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="/faq">常见问题</a>
+        </nav>
+        <span class="dsh-copyright">© 2026 DSH-Eval</span>
+      </div>
     </footer>
 
     <template id="plugin-template">
@@ -3208,13 +3146,13 @@
         describedBy: "category-hover-description",
       });
 
-      const MANIFEST_URL = "./data/manifest.json";
+      const MANIFEST_URL = "/data/manifest.json";
       const LEGACY_URLS = Object.freeze({
-        hot: "./data/rankings-hot.json",
-        rising: "./data/rankings-rising.json",
-        total: "./data/rankings-total.json",
-        skills: "./data/rankings-skills.json",
-        search: "./data/rankings-search.json",
+        hot: "/data/rankings-hot.json",
+        rising: "/data/rankings-rising.json",
+        total: "/data/rankings-total.json",
+        skills: "/data/rankings-skills.json",
+        search: "/data/rankings-search.json",
       });
 
       const list = document.querySelector("#plugin-list");
@@ -3716,10 +3654,15 @@
             `${categoryLabels[category] ?? "全部分类"}，${formatStars(count)} 个插件`
           );
         }
+        if (!categoryDescription.hidden) {
+          const describedButton = categoryButtons.find((button) => button.dataset.category === categoryDescription.dataset.category);
+          if (describedButton) showCategoryDescription(describedButton);
+        }
       }
 
       function showCategoryDescription(button) {
         const category = button.dataset.category;
+        categoryDescription.dataset.category = category;
         const count = button.querySelector("[data-category-count]").textContent;
         categoryDescriptionTitle.textContent = `${categoryLabels[category] ?? "全部分类"} · ${count} 个插件`;
         categoryDescriptionBody.textContent = categoryDescriptions[category];

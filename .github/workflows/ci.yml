@@ -2,7 +2,12 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -22,7 +27,10 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --no-audit --no-fund
+
+      - name: Audit all dependencies
+        run: npm run audit:security
 
       - name: Typecheck and test
         run: npm run check
@@ -36,5 +44,27 @@ jobs:
       - name: Validate Docker configuration
         run: docker compose config --quiet
 
-      - name: Build production images
-        run: docker compose build web scheduler
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/web.Dockerfile
+          load: true
+          push: false
+          tags: dsh-top100-web:ci
+          cache-from: type=gha,scope=dsh-top100-web
+          cache-to: type=gha,scope=dsh-top100-web,mode=max
+
+      - name: Build scheduler image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/collector.Dockerfile
+          load: true
+          push: false
+          tags: dsh-top100-scheduler:ci
+          cache-from: type=gha,scope=dsh-top100-scheduler
+          cache-to: type=gha,scope=dsh-top100-scheduler,mode=max

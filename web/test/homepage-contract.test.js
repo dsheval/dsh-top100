@@ -46,13 +46,13 @@ test("places editorial 000 inside the table using shared row styles, without a s
 });
 
 test("boots from lightweight hot data and never falls back to the full catalog", () => {
-  assert.match(html, /const MANIFEST_URL = "\.\/data\/manifest\.json"/);
-  assert.match(html, /hot: "\.\/data\/rankings-hot\.json"/);
-  assert.match(html, /total: "\.\/data\/rankings-total\.json"/);
+  assert.match(html, /const MANIFEST_URL = "\/data\/manifest\.json"/);
+  assert.match(html, /hot: "\/data\/rankings-hot\.json"/);
+  assert.match(html, /total: "\/data\/rankings-total\.json"/);
   assert.match(html, /await fetchJson\(MANIFEST_URL, \{ manifestRequest: true \}\)/);
   assert.match(html, /await fetchJson\(manifest\.datasets\.hot\.url\)/);
   assert.match(html, /falling back to the lightweight legacy hot list/);
-  assert.doesNotMatch(html, /["']\.\/data\/rankings\.json["']/);
+  assert.doesNotMatch(html, /["']\/data\/rankings\.json["']/);
 });
 
 test("loads deferred datasets through their manifest URLs", () => {
@@ -89,7 +89,7 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(html, /closest\("a\.github-link"\)/);
   assert.doesNotMatch(html, /closest\("\.github-link"\)/);
   assert.doesNotMatch(html, /track\([^\n]+state\.query/);
-  assert.match(html, /rel="canonical" href="https:\/\/www\.dsheval\.ai\/"/);
+  assert.match(html, /rel="canonical" href="https:\/\/dsheval\.ai\/top100\/"/);
   assert.match(html, /type="application\/ld\+json"/);
   assert.doesNotMatch(html, /github\.githubassets\.com\/favicons/);
 });
@@ -113,16 +113,16 @@ test("uses the approved neutral sage palette", () => {
   assert.doesNotMatch(html, /#a95a5a|#fbf4f3/i);
 });
 
-test("softens the footer and keeps Skills outside plugin totals", () => {
-  assert.match(html, /\.footer\s*\{[\s\S]*?min-height:\s*96px/);
-  assert.match(html, /\.footer\s*\{[\s\S]*?background:\s*#2b443d/);
-  assert.match(html, /\.footer span:last-child\s*\{[\s\S]*?color:\s*#c9d6d1/);
+test("uses the shared footer and keeps Skills outside plugin totals", () => {
+  assert.match(html, /<footer class="dsh-site-footer">/);
+  assert.match(html, /公开评测，发现值得关注的项目。/);
+  assert.match(html, /class="ranking-source-note"/);
   assert.match(html, /href="\.\/skills\.html#ranking">Skills 榜单/);
   assert.match(html, /manifest\.datasets\.skills\?\.count/);
   assert.doesNotMatch(html, /隐藏 Skill 仓库|hideSkills|manifestSkillCount/);
   assert.match(skills, /manifest\?\.datasets\?\.skills\?\.url/);
   assert.match(html, /plugin\.type\?\.toLowerCase\(\) === "cordis-plugin"/);
-  assert.match(skills, /const LEGACY_FULL_URL = "\.\/data\/rankings\.json"/);
+  assert.match(skills, /const LEGACY_FULL_URL = "\/data\/rankings\.json"/);
   assert.match(skills, /legacy\?\.rankings\?\.total \?\? legacy\?\.rankings \?\? \[\]/);
   assert.match(skills, /entry\?\.type === "skill"/);
   assert.match(skills, /不参与插件 Top 100/);
@@ -243,13 +243,13 @@ test("serves local assets with same-origin production ranking data", () => {
 
 test("keeps the install guide focused and uses the canonical brand name", () => {
   assert.match(html, /<title>dsh-top100 ·/);
-  assert.match(html, /<span>dsh-top100<\/span>/);
+  assert.match(html, /class="top100-section-title" href="\.\/">[\s\S]*?<span>dsh-top100<\/span>[\s\S]*?<\/a>/);
   for (const page of [html, dsh, skills]) assert.doesNotMatch(page, /dsh-Top100|DSH-Top100/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.hero \{\s*display: none/);
-  assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.ranking \{[^}]*scroll-margin-top: 64px/);
+  assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.ranking \{[^}]*scroll-margin-top: var\(--site-header-height\)/);
   assert.match(html, /#dsh-view \{\s*max-width: 800px/);
   assert.match(html, /<h1 class="inline-docs-title" id="inline-dsh-title">安装 dsh-top100<\/h1>/);
-  assert.match(html, /class="wordmark" href="\.\/#top"/);
+  assert.match(html, /class="dsh-brand-link" href="\/" aria-label="DSH-Eval 首页"/);
   assert.doesNotMatch(dsh, /dsh-brief-grid|section-kicker|dsh-data-note|3 步完成安装/);
   assert.match(dsh, /网站与插件使用同一份榜单数据/);
   assert.match(dsh, /每日更新/);

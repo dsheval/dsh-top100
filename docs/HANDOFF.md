@@ -62,7 +62,7 @@ origin  https://github.com/dsheval/dsh-top100.git
 - 首页使用白色与中性鼠尾草绿分层，深绿承担交互状态。
 - Hero 区包含全库搜索、插件榜单与安装入口；右侧恢复发布信息卡片，展示 npm 版本、DSH Web 兼容版本、来源与复制命令。星环暂时移除，后续再单独决定是否以及如何融入。
 - `安装指南` 切换到单列操作页：版本前提 → 安装插件 → 启动 DSH Web → 设置中的「插件排行」。只在该视图隐藏首页 Hero，点击品牌标志返回首页。
-- `DSHeval` 按钮直接打开 `https://www.dsheval.ai/dsheval`。
+- DSH-Eval 主导航指向主站 `/`、`/results`、`/methodology`、`/faq`；Top100 栏目位于 `/top100/`。
 - `GitHub` 直达 `https://github.com/dsheval/dsh-top100`。
 - 榜单滚动进入视口时按从上到下的顺序显示动画。
 
@@ -73,7 +73,7 @@ origin  https://github.com/dsheval/dsh-top100.git
 - Docs 内有“返回榜单”按钮，浏览器前进、后退和刷新可以恢复当前视图。
 - `web/public/docs.html` 是文档内容源；`index.html` 读取其中的 `.docs-layout` 并嵌入首页，因此不要复制出第二套文档正文。
 - 独立访问 `/docs.html` 仍可作为直接文档地址和同页加载失败时的内容源。
-- `web/public/dsh.html` 和 `web/public/dsheval.html` 是同页加载的内容片段；前者为接入说明，后者用于承接后续 DSHeval 页面材料。
+- `web/public/dsh.html` 和 `web/public/dsheval.html` 是同页加载的内容片段；前者为接入说明，后者说明 DSH-Eval 与 Top100 的关系并链接正式评测主站。
 - DSH 插件随包提供 `recommend-dsh-plugins` Skill，并注册 `dsh_top100_search` 只读模型工具；对话中的插件推荐直接查询同一份实时榜单和共享智能搜索逻辑。
 - DSH 插件设置页增加「插件市场 / 已安装 / 诊断」三层导航；分类仍统一使用 Agent增强、外观、编程、知识、工具、安全，管理操作通过同源 Host API 和 profile 串行队列执行。
 
@@ -115,7 +115,7 @@ origin  https://github.com/dsheval/dsh-top100.git
 web/public/index.html       首页、榜单、多内容页切换、全部样式和前端逻辑
 web/public/docs.html        最新 Docs 正文内容源及独立文档页面
 web/public/dsh.html         接入 DSH 页面正文
-web/public/dsheval.html     DSHeval 页面占位正文
+web/public/dsheval.html     DSH-Eval 主站介绍与入口
 web/public/data/            镜像构建时的静态数据目录
 runtime/public-data/        Docker Web 容器实际只读挂载的公开榜单 JSON
 docker/nginx.conf           静态站点与 /data 路由
@@ -205,7 +205,7 @@ DSH_DISCOVERY_MODE=incremental
 npm run serve
 ```
 
-默认地址为 `http://127.0.0.1:4173/`。可使用 `WEB_PORT` 修改端口，或用
+默认地址为 `http://127.0.0.1:4173/top100/`。可使用 `WEB_PORT` 修改端口，或用
 `DSH_DATA_ORIGIN` 指定另一套兼容的公开数据服务。完全不需要榜单数据的静态检查
 仍可运行 `npm run serve:static`。
 
@@ -291,3 +291,7 @@ docker compose down
 - 不要 SSH 到 `47.238.229.20`，除非用户在服务器专用任务中明确授权。
 - 不要自动推送 GitHub；只有用户明确要求时才提交和推送。
 - 不要把 `.env`、SQLite、`runtime/`、备份文件或 API Key 加入 Git。
+
+## 全站页头与页脚统一（本地待发布）
+
+DSH-Eval 与 Top100 共用 DSH / EVAL 字标、单层固定页头、移动端菜单和浅色页脚。品牌标志返回全站 `/`；正文中的 Top100 栏目标题返回榜单，栏目标签随内容滚动。两仓库 `site-chrome.css` 保持逐字节一致，修改时同步。页脚固定提供评测源码、Top100 源码和常见问题，数据来源说明放在榜单附近。

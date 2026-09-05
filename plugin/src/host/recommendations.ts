@@ -18,7 +18,7 @@ import { readInstalled } from "./profile.js";
 
 export const RECOMMENDATION_SKILL_NAME = "recommend-dsh-plugins";
 export const RECOMMENDATION_TOOL_NAME = "dsh_top100_search";
-export const DSHEVAL_CATALOG_URL = "https://www.dsheval.ai/#ranking";
+export const DSHEVAL_CATALOG_URL = "https://dsheval.ai/top100/#ranking";
 const PROVIDER_NAME = "dsh-top100";
 const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 10;

@@ -48,7 +48,7 @@ function cleanDescription(value) {
 	return String(value ?? "").replace(/```[\s\S]*?```/g, " ").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/&nbsp;|&#160;/gi, " ").replace(/&amp;/gi, "&").replace(/[`*_~>#]/g, " ").replace(/\s+/g, " ").trim();
 }
 function isPlaceholder(value) {
-	return !value || /资料不足|暂无.*简介|简介正在生成|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
+	return !value || /^(?:版本更新提示[：:]|本次版本变化较大|较早的.+宿主请使用|[-\s🚨【]*国内用户核心前置)/u.test(value) || /资料不足|暂无.*简介|简介正在生成|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
 }
 function descriptionFor(entry, reviewed = {}, context = {}) {
 	const review = reviewed[String(entry.fullName || "").toLowerCase()];
@@ -751,7 +751,7 @@ const SORT_VIEWS = [
 ];
 const CATALOG_SCOPES = ["plugins", "skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
-const DSHEVAL_SITE = "https://www.dsheval.ai";
+const DSHEVAL_SITE = "https://dsheval.ai/top100/";
 const GITHUB_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
 	viewBox: "0 0 24 24",
 	"aria-hidden": "true",
@@ -1298,7 +1298,7 @@ function RankingsPage({ t }) {
 										target: "_blank",
 										rel: "noreferrer",
 										title: data.dataUrl,
-										children: "DSHEval"
+										children: "DSH-Eval Top100"
 									})
 								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
