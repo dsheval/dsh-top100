@@ -6,6 +6,8 @@ test('placeholder Chinese falls back to source without fabricating a summary', (
   assert.equal(descriptionFor({descriptionZh:'demo：现有项目资料不足以生成可靠的功能简介。',description:'Browser automation for agents.'}), 'Browser automation for agents.');
   assert.equal(descriptionFor({descriptionZh:'顺手留颗 Star，作者能高兴一整天',description:''}), '暂无简介');
   assert.equal(descriptionFor({descriptionZh:'为开发者整理研究资料。',description:'Research helper.'}), '为开发者整理研究资料。');
+  assert.equal(descriptionFor({descriptionZh:'版本更新提示：本次版本变化较大，老用户请更新至最新版本。',description:'Generate images from prompts.'}), 'Generate images from prompts.');
+  assert.equal(descriptionFor({descriptionZh:'',description:'--- 🚨 【国内用户核心前置：必须开启系统代理 / TUN 模式！'}), '暂无简介');
 });
 test('reviewed summaries are source-bound and safe to display', () => {
   const reviews=JSON.parse(readFileSync(new URL('../public/reviewed-descriptions.json',import.meta.url),'utf8'));

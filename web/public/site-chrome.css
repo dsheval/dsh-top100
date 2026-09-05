@@ -1,0 +1,366 @@
+/* Shared verbatim with dsh-top100/web/public/site-chrome.css.
+   Both independently deployed sites use the same shell without a runtime dependency. */
+:root {
+  --site-header-height: 64px;
+  --site-display-font: 'Iowan Old Style', Baskerville, 'Times New Roman', 'Songti SC', serif;
+  --site-label-font: 'SFMono-Regular', 'Roboto Mono', Consolas, monospace;
+  --site-home-title-size: clamp(54px, 6vw, 88px);
+  --site-ui-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+.dsh-site-header, .dsh-site-footer {
+  --dsh-paper: #f7f9f8;
+  --dsh-ink: #13201c;
+  --dsh-muted: #4f5e59;
+  --dsh-accent: #126657;
+  --dsh-deep: #174942;
+  --dsh-line: rgba(19, 32, 28, .12);
+  font-family: var(--site-ui-font);
+  color: var(--dsh-ink);
+  background: var(--dsh-paper);
+  letter-spacing: normal;
+  text-transform: none;
+}
+.dsh-site-header *, .dsh-site-footer * { box-sizing: border-box; }
+.dsh-site-container { width: min(1380px, calc(100% - 48px)); margin-inline: auto; }
+.dsh-site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--site-header-height);
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--dsh-line);
+}
+.dsh-header-inner { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 32px; height: 63px; }
+.dsh-site-header a, .dsh-site-footer a { color: inherit; text-decoration: none; font-family: inherit; }
+.dsh-brand-link { display: inline-flex; flex: none; align-items: center; min-height: 44px; }
+.dsh-brand { display: inline-flex; align-items: baseline; gap: 7px; white-space: nowrap; font-size: 22px; line-height: 1; letter-spacing: -.04em; }
+.dsh-brand strong, .dsh-brand b { font-size: inherit; font-weight: 800; }
+.dsh-brand > span { color: var(--dsh-accent); font-weight: 650; }
+.dsh-brand b { color: var(--dsh-deep); }
+.dsh-desktop-nav { display: flex; align-items: stretch; align-self: stretch; gap: 32px; }
+.dsh-desktop-nav a { display: inline-flex; align-items: center; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--dsh-muted); white-space: nowrap; }
+.dsh-desktop-nav a:hover, .dsh-footer-links a:hover { color: var(--dsh-accent); }
+.dsh-desktop-nav a[aria-current='page'] { color: var(--dsh-ink); box-shadow: inset 0 -2px var(--dsh-accent); }
+.dsh-site-header a:focus-visible, .dsh-site-header summary:focus-visible, .dsh-site-footer a:focus-visible { outline: 2px solid var(--dsh-accent); outline-offset: 4px; }
+.dsh-mobile-menu { display: none; }
+.dsh-mobile-menu summary { display: flex; min-height: 44px; align-items: center; gap: 12px; list-style: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+.dsh-mobile-menu summary::-webkit-details-marker { display: none; }
+.dsh-menu-icon { position: relative; width: 18px; height: 10px; border-block: 1.5px solid currentColor; }
+.dsh-mobile-menu[open] .dsh-menu-icon { height: 0; border-bottom: 0; transform: rotate(45deg); }
+.dsh-mobile-menu[open] .dsh-menu-icon::after { content: ''; position: absolute; width: 18px; border-top: 1.5px solid currentColor; top: -1.5px; transform: rotate(90deg); }
+.dsh-mobile-menu nav { position: absolute; top: 63px; left: -20px; right: -20px; padding: 8px 20px 16px; border-bottom: 1px solid var(--dsh-line); background: var(--dsh-paper); box-shadow: 0 16px 24px rgba(19,32,28,.06); }
+.dsh-mobile-menu nav a { display: flex; min-height: 48px; align-items: center; padding-inline: 12px; font-size: 15px; font-weight: 600; }
+.dsh-mobile-menu a[aria-current='page'] { color: var(--dsh-accent); background: #e5ebe8; box-shadow: inset 2px 0 var(--dsh-accent); }
+.dsh-site-footer { border-top: 1px solid var(--dsh-line); }
+.dsh-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px 32px; min-height: 96px; padding-block: 20px; }
+.dsh-footer-intro { display: flex; align-items: center; gap: 24px; }
+.dsh-site-footer .dsh-brand { font-size: 18px; }
+.dsh-footer-intro p { margin: 0; color: var(--dsh-muted); font-size: 14px; font-weight: 400; line-height: 1.7; }
+.dsh-footer-links { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 24px; margin-left: auto; }
+.dsh-footer-links a { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--dsh-muted); font-size: 14px; font-weight: 400; line-height: 20px; white-space: nowrap; }
+.dsh-copyright { color: var(--dsh-muted); font-size: 14px; line-height: 20px; font-weight: 400; white-space: nowrap; }
+.dsh-visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 1100px) {
+  .dsh-footer-inner { display: grid; grid-template-columns: 1fr auto; gap: 8px 24px; }
+  .dsh-footer-intro { grid-column: 1 / -1; }
+  .dsh-footer-links { margin-left: 0; }
+}
+@media (max-width: 760px) {
+  .dsh-site-container { width: calc(100% - 40px); }
+  .dsh-desktop-nav { display: none; }
+  .dsh-mobile-menu { display: block; }
+  .dsh-brand { font-size: 21px; }
+}
+@media (max-width: 600px) {
+  .dsh-footer-inner { grid-template-columns: minmax(0, 1fr); padding-block: 24px; gap: 12px; }
+  .dsh-footer-intro { display: block; }
+  .dsh-footer-intro p { margin-top: 4px; }
+  .dsh-footer-links { gap: 4px 20px; }
+}
+
+/* The two homepages share display typography; other page titles are unchanged. */
+:is(.homepage-hero-copy, .hero-copy, .hero-summary) > h1.dsh-home-title {
+  font-family: var(--site-display-font);
+  font-size: var(--site-home-title-size);
+  font-weight: 700;
+  font-style: normal;
+  line-height: 1.03;
+  letter-spacing: -.03em;
+}
+@media (max-width: 720px) {
+  :root { --site-home-title-size: clamp(36px, 11.5vw, 62px); }
+}
+
+/* Homepage spacing; all English heading labels share the roles below. */
+:is(.homepage-hero-copy, .hero-copy) > p.dsh-home-eyebrow {
+  margin: 0 0 24px;
+}
+.dsh-home-eyebrow > span, .inner-page-hero-eyebrow > span { white-space: nowrap; }
+
+/* Explicit English labels cover page, section and card headings on both sites.
+   lang also gives assistive technology the correct pronunciation context. */
+:is(main#main-content, main#top, main) [data-site-label][lang="en"] {
+  color: #126657;
+  font-family: var(--site-label-font);
+  font-size: 12px;
+  font-weight: 600;
+  font-style: normal;
+  line-height: 1.5;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+:is(main#main-content, main#top, main) [data-site-label="page"][lang="en"] {
+  font-size: 14px;
+}
+@media (max-width: 720px) {
+  :is(main#main-content, main#top, main) [data-site-label="page"][lang="en"] {
+    font-size: 12px;
+  }
+}
+
+/* Homepage layout; typography comes from the shared reading roles below. */
+:is(.homepage-hero-copy, .hero-copy) > p.dsh-home-description {
+  max-width: 650px;
+  margin: 28px 0 0;
+}
+
+/* Reading roles are shared by every page and by dynamically loaded guides.
+   Keep prose separate from display titles, interface labels and numeric data.
+   The main scope takes precedence over legacy page-specific typography. */
+:root {
+  --site-copy-color: #4f5e59;
+  --site-copy-lead-size: clamp(17px, 1.45vw, 20px);
+  --site-copy-body-size: 16px;
+  --site-copy-note-size: 14px;
+}
+:is(main#main-content, main#top, main) [data-site-copy] {
+  color: var(--site-copy-color);
+  font-family: var(--site-ui-font);
+  font-size: var(--site-copy-body-size);
+  font-weight: 400;
+  font-style: normal;
+  line-height: 1.75;
+  letter-spacing: normal;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+:is(main#main-content, main#top, main) [data-site-copy="lead"] {
+  font-size: var(--site-copy-lead-size);
+  line-height: 1.65;
+}
+:is(main#main-content, main#top, main) [data-site-copy="note"] {
+  font-size: var(--site-copy-note-size);
+  line-height: 1.6;
+}
+.dossier-highlight, .result-report-finding, .memory-protocol-note {
+  --site-copy-color: #126657;
+}
+
+/* Shared controls: actions, inputs and badges use the interface face.
+   Editorial labels and benchmark numbers retain their separate type roles. */
+:root {
+  --site-control-height: 44px;
+  --site-control-accent: #126657;
+  --site-control-hover: #174942;
+  --site-control-soft: #e0ede8;
+  --site-control-line: rgba(19, 32, 28, .24);
+}
+:is(main#main-content, main#top, main) :is(
+  button, input, select, .homepage-hero-actions a, .hero-actions a,
+  .plugin-action, .skill-filter, .dossier-link, .method-results-link,
+  .verification-protocol-link, .report-resource-bar a, .report-extra-resources a,
+  .report-next-links a, .research-method-links a, .method-capabilities a
+) {
+  font-family: var(--site-ui-font);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+:is(main#main-content, main#top, main) :is(
+  .homepage-hero-actions a, .hero-actions a, .hero-search-control button,
+  .hero-command-row button, .dsh-copy-button, .load-more, .plugin-action,
+  .skill-filter, .install-filter, .view-tab, .category-option,
+  .memory-metric-switch button, .evaluation-carousel-labels button, .search-sort button
+) {
+  box-sizing: border-box;
+  min-height: var(--site-control-height);
+  border-radius: 0;
+}
+:is(main#main-content, main#top, main) :is(.homepage-hero-actions a, .hero-actions a, .load-more) {
+  padding: 10px 18px;
+  border: 1px solid var(--site-control-accent);
+  box-shadow: none;
+  gap: 8px;
+  text-decoration: none;
+}
+:is(main#main-content, main#top, main) :is(
+  .homepage-primary-link, .hero-link, .hero-search-control button,
+  .hero-command-row button, .dsh-copy-button, .plugin-action.install-action
+) {
+  color: #fff;
+  background: var(--site-control-accent);
+  border-color: var(--site-control-accent);
+}
+:is(main#main-content, main#top, main) :is(
+  .homepage-primary-link, .hero-link, .hero-search-control button,
+  .hero-command-row button, .dsh-copy-button, .plugin-action.install-action
+):hover {
+  color: #fff;
+  background: var(--site-control-hover);
+  border-color: var(--site-control-hover);
+}
+:is(main#main-content, main#top, main) :is(.homepage-secondary-link, .hero-placeholder, .load-more) {
+  color: var(--site-control-accent);
+  background: transparent;
+  transform: none;
+}
+:is(main#main-content, main#top, main) :is(.homepage-secondary-link, .hero-placeholder, .load-more):hover {
+  color: var(--site-control-accent);
+  background: var(--site-control-soft);
+}
+:is(main#main-content, main#top, main) :is(.view-tab, .category-option, .memory-metric-switch button, .search-sort button) {
+  padding-inline: 12px;
+  color: #4f5e59;
+  background: transparent;
+}
+:is(main#main-content, main#top, main) :is(.view-tab, .category-option, .memory-metric-switch button, .search-sort button):hover {
+  color: var(--site-control-accent);
+  background: var(--site-control-soft);
+}
+:is(main#main-content, main#top, main) :is(.view-tab[aria-selected="true"], .memory-metric-switch button[aria-pressed="true"], .search-sort button[aria-pressed="true"]) {
+  color: #fff;
+  background: var(--site-control-accent);
+  box-shadow: none;
+}
+:is(main#main-content, main#top, main) :is(.category-option, .install-filter)[aria-pressed="true"] {
+  color: var(--site-control-accent);
+  background: var(--site-control-soft);
+  box-shadow: inset 0 -2px var(--site-control-accent);
+}
+:is(main#main-content, main#top, main) .evaluation-carousel-pagination button {
+  width: var(--site-control-height);
+  height: var(--site-control-height);
+  border: 1px solid var(--site-control-line);
+  font-size: 20px;
+}
+:is(main#main-content, main#top, main) :is(input[type="search"], select) {
+  min-height: var(--site-control-height);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  border-radius: 0;
+}
+:is(main#main-content, main#top, main) input::placeholder {
+  color: #687772;
+  font-weight: 400;
+  opacity: 1;
+}
+:is(main#main-content, main#top, main) :is(.hero-search-control, .search-input, .controls, .install-filter, .view-tabs, .category-options, .memory-metric-switch) {
+  border-color: var(--site-control-line);
+  border-radius: 0;
+}
+:is(main#main-content, main#top, main) .hero-search-control { box-shadow: none; }
+:is(main#main-content, main#top, main) :is(.search-clear, .description-toggle) {
+  min-height: 32px;
+  font-size: 12px;
+}
+:is(main#main-content, main#top, main) :is(.release-badge, .trust-pill, .type-pill, .skill-kind, .result-report-status, .verification-current-marker, .research-task-status, .dossier-head > span:last-child) {
+  box-sizing: border-box;
+  font-family: var(--site-ui-font);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+:is(main#main-content, main#top, main) :is(.release-badge, .trust-pill, .type-pill, .skill-kind, .result-report-status, .verification-current-marker) {
+  min-height: 24px;
+  padding: 2px 7px;
+  border: 1px solid var(--site-control-line);
+  border-radius: 0;
+}
+:is(main#main-content, main#top, main) :is(.release-badge, .result-report-status, .verification-current-marker, .trust-pill[data-level="install-source"]) {
+  color: var(--site-control-accent);
+  background: var(--site-control-soft);
+  border-color: rgba(18, 102, 87, .3);
+}
+:is(main#main-content, main#top, main) :is(a, button, input, select, summary, .dsh-copy-button, .plugin-action):focus-visible {
+  outline: 2px solid var(--site-control-accent);
+  outline-offset: 3px;
+}
+/* Inset focus remains visible inside clipped search and filter containers. */
+:is(main#main-content, main#top, main) :is(input, .category-option, .view-tab):focus-visible {
+  outline-offset: -3px;
+}
+/* Search fields keep their neutral boundary when focused. */
+:is(main#main-content, main#top, main) input[type="search"]:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--site-control-line);
+}
+:is(main#main-content, main#top, main) :is(button, .plugin-action):disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+@media (pointer: coarse) {
+  :is(main#main-content, main#top, main) :is(.search-clear, .description-toggle, .github-link) {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Compact category labels leave room for their icon and count. */
+:is(main#main-content, main#top, main) button.category-option { font-size: 13px; }
+
+/* Keep labels intact in compact report and category controls. */
+:is(main#main-content, main#top, main) .memory-metric-switch button {
+  padding-inline: 8px;
+  white-space: nowrap;
+}
+@media (min-width: 641px) and (max-width: 1100px) {
+  :is(main#main-content, main#top, main) button.category-option { padding-inline: 8px; }
+}
+
+/* Content title roles are independent of heading depth and shared by both sites. */
+:root {
+  --site-page-title-size: clamp(48px, 5vw, 64px);
+  --site-section-title-size: 32px;
+  --site-group-title-size: 22px;
+}
+:is(main#main-content, main#top, main) [data-site-title] {
+  font-family: var(--site-ui-font);
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+:is(main#main-content, main#top, main) [data-site-title="page"] {
+  font-family: var(--site-display-font);
+  font-size: var(--site-page-title-size);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -.03em;
+}
+:is(main#main-content, main#top, main) [data-site-title="section"] {
+  font-size: var(--site-section-title-size);
+  font-weight: 650;
+  line-height: 1.3;
+}
+:is(main#main-content, main#top, main) [data-site-title="group"] {
+  font-size: var(--site-group-title-size);
+  line-height: 1.4;
+}
+:is(main#main-content, main#top, main) [data-site-title="minor"] {
+  font-size: 18px;
+  line-height: 1.5;
+}
+.verification-disclosure-title { margin: 0; }
+@media (max-width: 720px) {
+  :root {
+    --site-page-title-size: clamp(28px, 8.6vw, 40px);
+    --site-section-title-size: 26px;
+    --site-group-title-size: 20px;
+  }
+}

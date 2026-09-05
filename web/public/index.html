@@ -5,35 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-top100 是可信的 DSH 插件发现与排行市场，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
+      content="dsh-top100 是 DSH-Eval 旗下的插件与 Skills 发现栏目，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
     />
     <meta name="theme-color" content="#d9e7e2" />
-    <link rel="canonical" href="https://www.dsheval.ai/" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://dsheval.ai/top100/" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:site_name" content="dsh-top100" />
-    <meta property="og:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
-    <meta property="og:description" content="可信的 DSH 插件发现与排行市场。按热度、增长、项目质量和安装证据持续更新。" />
-    <meta property="og:url" content="https://www.dsheval.ai/" />
-    <meta property="og:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <meta property="og:site_name" content="DSH-Eval" />
+    <meta property="og:title" content="插件榜单 · Top100 · DSH-Eval" />
+    <meta property="og:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。按热度、增长、项目质量和安装证据持续更新。" />
+    <meta property="og:url" content="https://dsheval.ai/top100/" />
+    <meta property="og:image" content="https://dsheval.ai/top100/assets/dsh-top100-og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="dsh-top100 · 发现值得安装的 DSH 插件" />
-    <meta name="twitter:description" content="可信的 DSH 插件发现与排行市场。" />
-    <meta name="twitter:image" content="https://www.dsheval.ai/assets/dsh-top100-og.png" />
+    <meta name="twitter:title" content="插件榜单 · Top100 · DSH-Eval" />
+    <meta name="twitter:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。" />
+    <meta name="twitter:image" content="https://dsheval.ai/top100/assets/dsh-top100-og.png" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": "dsh-top100",
-        "url": "https://www.dsheval.ai/",
-        "description": "可信的 DSH 插件发现与排行市场",
+        "url": "https://dsheval.ai/top100/",
+        "description": "DSH-Eval 旗下的插件与 Skills 发现栏目",
         "isPartOf": {
           "@type": "WebSite",
-          "name": "DSHeval",
-          "url": "https://www.dsheval.ai/"
+          "name": "DSH-Eval",
+          "url": "https://dsheval.ai/"
         },
         "about": {
           "@type": "SoftwareApplication",
@@ -46,7 +46,7 @@
         }
       }
     </script>
-    <title>dsh-top100 · 发现值得安装的 DSH 插件</title>
+    <title>插件榜单 · Top100 · DSH-Eval</title>
     <link rel="stylesheet" href="./install-console.css" />
     <style>
       :root {
@@ -101,46 +101,8 @@
         color: inherit;
       }
 
-      .nav-shell {
-        position: sticky;
-        z-index: 20;
-        top: 0;
-        border-bottom: 1px solid rgba(23, 33, 31, 0.12);
-        background: color-mix(in srgb, var(--paper) 94%, transparent);
-        backdrop-filter: blur(12px);
-      }
 
-      .nav {
-        display: flex;
-        width: min(calc(100% - 48px), var(--content));
-        min-height: 62px;
-        margin: 0 auto;
-        align-items: center;
-        justify-content: space-between;
-        gap: 32px;
-      }
 
-      .wordmark {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 18px;
-        font-weight: 800;
-        letter-spacing: -0.03em;
-        text-decoration: none;
-      }
-
-      .wordmark-logo {
-        display: block;
-        width: 30px;
-        height: 30px;
-        flex: 0 0 30px;
-        border: 1px solid rgba(23, 33, 31, 0.14);
-        border-radius: 50%;
-        background: var(--card);
-        object-fit: cover;
-        object-position: center;
-      }
 
       .nav-label {
         margin: 0;
@@ -1420,7 +1382,7 @@
       .inline-docs .toc {
         position: sticky;
         z-index: 9;
-        top: 62px;
+        top: var(--site-header-height);
         display: grid;
         margin: 0 0 68px;
         padding: 0;
@@ -1475,7 +1437,7 @@
 
       .inline-docs .doc-section {
         padding: 0 0 72px;
-        scroll-margin-top: 90px;
+        scroll-margin-top: calc(var(--site-header-height) + 28px);
         border-bottom: 1px solid var(--line);
       }
 
@@ -1682,9 +1644,13 @@
         display: none;
       }
 
+      body:has(#dsheval-view:not([hidden])) .hero {
+        display: none;
+      }
+
       body:has(#dsh-view:not([hidden])) .ranking {
         background: var(--paper);
-        scroll-margin-top: 64px;
+        scroll-margin-top: var(--site-header-height);
       }
 
       body:has(#dsh-view:not([hidden])) .ranking-inner {
@@ -2078,33 +2044,12 @@
         outline-offset: 3px;
       }
 
-      .footer {
-        display: flex;
-        min-height: 96px;
-        padding: 24px max(24px, calc((100vw - var(--content)) / 2));
-        align-items: center;
-        justify-content: space-between;
-        gap: 30px;
-        border-top: 1px solid #6f837c;
-        background: #2b443d;
-        color: var(--paper);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.6;
-        letter-spacing: 0.05em;
-        text-transform: uppercase;
-      }
-
-      .footer span:last-child {
-        color: #c9d6d1;
-      }
 
       @media (min-width: 721px) {
         .list-head:not([hidden]) {
           position: sticky;
           z-index: 8;
-          top: 62px;
+          top: var(--site-header-height);
           box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
         }
       }
@@ -2400,14 +2345,7 @@
           border-left: 0;
         }
 
-        .footer {
-          display: block;
-        }
 
-        .footer span:last-child {
-          display: block;
-          margin-top: 10px;
-        }
       }
 
       /* Homepage market redesign: one data-led signature, restrained elsewhere. */
@@ -2781,10 +2719,6 @@
       }
 
       @media (max-width: 720px) {
-        .nav {
-          width: min(calc(100% - 28px), var(--content));
-          gap: 14px;
-        }
 
         .nav-links {
           gap: 13px;
@@ -2885,44 +2819,89 @@
           display: none;
         }
       }
+      /* Preserve Top100's original hierarchy inside the shared site chrome. */
+      #top #ranking .view-tab {
+        min-height: 54px;
+        padding: 0 20px;
+        font-family: var(--mono);
+        font-size: 15px;
+        font-weight: 800;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+      }
+      #top #ranking .view-tab[aria-selected="false"] { color: var(--ink); }
+      #top #ranking .skill-filter { font: 700 14px/1.4 var(--sans); }
+      #top #ranking .category-option {
+        min-height: 50px;
+        padding-inline: 12px;
+        font: 800 13px/20px var(--sans);
+      }
+      #top #ranking .category-option[aria-pressed="true"] {
+        color: var(--ink);
+        background: var(--section-strong);
+        box-shadow: inset 0 -3px 0 var(--accent);
+      }
+      #top #ranking .install-filter { font: 600 14px/20px var(--sans); }
+      #top #ranking .search-input {
+        font: 500 14px/1.4 var(--sans);
+        letter-spacing: 0.01em;
+        border-color: transparent;
+      }
+      #top #ranking .search-input::placeholder { font-weight: 500; }
+      #top #ranking .search-input:focus {
+        border-color: transparent;
+        outline: none;
+        box-shadow: none;
+      }
+      @media (min-width: 641px) and (max-width: 1100px) {
+        #top #ranking .category-option { padding-inline: 10px; }
+      }
+      @media (max-width: 720px) {
+        #top #ranking .view-tab { padding-inline: 8px; font-size: 12px; }
+      }
+      @media (max-width: 640px) {
+        #top #ranking .category-option { min-height: 48px; padding-inline: 11px; font-size: 12px; }
+        #top #ranking .install-filter { font-size: 12px; }
+        #top #ranking .search-input { font-size: 16px; }
+      }
     </style>
     <link rel="stylesheet" href="./category-system.css" />
     <link rel="stylesheet" href="./ranking-method.css" />
     <link rel="stylesheet" href="./ranking-rows.css" />
-    <link rel="stylesheet" href="./site-controls.css" />
+    <link rel="stylesheet" href="./site-controls.css?v=20260905-nav2" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260905-type8c" />
   </head>
   <body>
-    <div class="nav-shell">
-      <nav class="nav" aria-label="主导航">
-        <a class="wordmark" href="./#top" aria-label="dsh-top100 首页">
-          <img
-            class="wordmark-logo"
-            src="./favicon.svg"
-            alt=""
-            width="30"
-            height="30"
-          />
-          <span>dsh-top100</span>
-        </a>
+    <header class="dsh-site-header">
+      <div class="dsh-site-container dsh-header-inner">
+        <a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a>
+        <nav class="dsh-desktop-nav" aria-label="DSH-Eval 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        <details class="dsh-mobile-menu">
+          <summary>菜单<span class="dsh-menu-icon" aria-hidden="true"></span></summary>
+          <nav aria-label="DSH-Eval 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        </details>
+      </div>
+    </header>
+
+    <main id="top">
+      <nav class="top100-section-nav" aria-label="Top100 栏目导航">
+        <a class="top100-section-title" href="./"><img src="./assets/dsh-top100-mark.svg" width="28" height="28" alt="" /><span>dsh-top100</span></a>
         <div class="nav-links">
           <a href="#ranking" data-content-switch="ranking">插件榜单</a>
           <a href="./skills.html#ranking">Skills 榜单</a>
           <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
           <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </nav>
-    </div>
-
-    <main id="top">
       <section class="hero">
         <div class="hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow">Verified DSH plugin market · Daily snapshot</p>
-            <h1><span>发现值得安装的</span><span>DSH 插件。</span></h1>
-            <p class="hero-description">
+            <p class="eyebrow dsh-home-eyebrow" data-site-label="page" lang="en">DSH-Eval · <span>Plugin discovery</span> · <span>Daily snapshot</span></p>
+            <h1 class="dsh-home-title"><span>发现值得安装的</span><span>DSH 插件</span></h1>
+            <p class="hero-description dsh-home-description" data-site-copy="lead">
               用增长、活跃度、项目质量和安装证据筛选插件，
-              从具体需求出发，而不只是追逐 Stars。
+              从具体需求出发，而不只是追逐 Stars。收录不代表已通过能力评测。
             </p>
             <form class="hero-search" id="hero-search-form" role="search">
               <label class="sr-only" for="hero-search">搜索全部 DSH 插件</label>
@@ -2975,7 +2954,7 @@
                   data-analytics="install-command"
                 >复制</button>
               </div>
-              <p class="install-console-note">命令固定安装当前版排行插件。使用方法请查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
+              <p class="install-console-note" data-site-copy="note">命令固定安装当前版排行插件。使用方法请查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
             </aside>
           </div>
         </div>
@@ -2986,9 +2965,9 @@
           <div class="content-view" id="leaderboard-view">
           <header class="section-header">
             <div>
-              <p class="section-kicker">Discover · Compare · Install</p>
-              <h2>用证据比较，<br />不只看 Stars。</h2>
-              <p class="ranking-explainer">Top 100 是增长、活跃度、数据质量与总体关注度的综合热度榜；总榜才按 GitHub Stars 排序。</p>
+              <p class="section-kicker" data-site-label="section" lang="en">Discover · Compare · Install</p>
+              <h2>用证据比较，<br />不只看 Stars</h2>
+              <p class="ranking-explainer" data-site-copy="body">Top 100 是增长、活跃度、数据质量与总体关注度的综合热度榜；总榜才按 GitHub Stars 排序。</p>
             </div>
             <div class="ranking-meta" aria-live="polite">
               <p id="ranking-meta-title">DEEPSEEK HARNESS PLUGINS · TOP 100</p>
@@ -3081,7 +3060,7 @@
                 </button>
               </div>
               <div class="search-status-row">
-                <p class="search-result" id="ranking-search-result">等待插件数据</p>
+                <p class="search-result" id="ranking-search-result" data-site-copy="note">等待插件数据</p>
                 <div class="search-sort" id="ranking-search-sort" role="group" aria-label="搜索结果排序" hidden>
                   <span>排序</span>
                   <button type="button" data-search-sort="relevance" aria-pressed="true">相关度</button>
@@ -3094,7 +3073,7 @@
           <div class="list-head" id="list-head" aria-hidden="true">
             <span id="rank-head">排名</span>
             <span>插件</span>
-            <span>中文简介</span>
+            <span>项目简介</span>
             <span class="signal-head">更新与增长</span>
             <span id="metric-head">GitHub Stars</span>
           </div>
@@ -3112,12 +3091,12 @@
                 <a class="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
                   <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
                 </a>
-                <a class="featured-guide" href="?page=dsh#dsh" data-content-switch="dsh">安装指南 ↗</a>
+                <a class="featured-guide" href="?page=dsh#dsh" data-content-switch="dsh">安装指南 <span aria-hidden="true">→</span></a>
               </div>
-              <p class="plugin-description">把插件榜单带进 DSH，发现、安装和管理插件。</p>
+              <p class="plugin-description" data-site-copy="note">把插件榜单带进 DSH，发现、安装和管理插件。</p>
               <span class="rank-exempt" aria-label="不参与评分">—</span>
             </aside>
-            <p class="status">正在加载 Top 100…</p>
+            <p class="status" data-site-copy="note">正在加载 Top 100…</p>
           </div>
           <p class="sr-only" id="ranking-status" aria-live="polite"></p>
           <button class="load-more" id="load-more" type="button" hidden>继续加载</button>
@@ -3126,39 +3105,46 @@
           <section class="content-view inline-docs" id="docs-view" aria-labelledby="inline-docs-title" hidden>
             <header class="inline-docs-header">
               <h1 class="inline-docs-title" id="inline-docs-title">排名方法</h1>
-              <p class="inline-docs-intro">了解榜单怎么排序、项目如何收录，以及数据如何更新。</p>
+              <p class="inline-docs-intro" data-site-copy="lead">了解榜单怎么排序、项目如何收录，以及数据如何更新。</p>
             </header>
             <div id="inline-docs-host">
-              <p class="docs-loading">正在加载文档…</p>
+              <p class="docs-loading" data-site-copy="note">正在加载文档…</p>
             </div>
           </section>
 
           <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
             <header class="inline-docs-header">
-              <h1 class="inline-docs-title" id="inline-dsh-title">安装 dsh-top100</h1>
-              <p class="inline-docs-intro">在 DSH 中浏览榜单、搜索和安装插件。</p>
+              <h1 class="inline-docs-title" id="inline-dsh-title">安装指南</h1>
+              <p class="inline-docs-intro" data-site-copy="lead">安装 dsh-top100，在 DSH 中浏览榜单、搜索和安装插件。</p>
             </header>
             <div id="inline-dsh-host">
-              <p class="docs-loading">正在加载接入说明…</p>
+              <p class="docs-loading" data-site-copy="note">正在加载接入说明…</p>
             </div>
           </section>
 
           <section class="content-view inline-docs" id="dsheval-view" aria-labelledby="inline-dsheval-title" hidden>
             <header class="inline-docs-header">
-              <h2 class="inline-docs-title" id="inline-dsheval-title">DSHeval.</h2>
-              <p class="inline-docs-title-zh">新的评测页面。</p>
+              <h1 class="inline-docs-title" id="inline-dsheval-title">关于 DSH-Eval</h1>
+              <p class="inline-docs-title-zh" data-site-copy="lead">公开评测与任务证据</p>
             </header>
             <div id="inline-dsheval-host">
-              <p class="docs-loading">正在加载 DSHeval…</p>
+              <p class="docs-loading" data-site-copy="note">正在加载 DSHeval…</p>
             </div>
           </section>
         </div>
       </section>
     </main>
 
-    <footer class="footer">
-      <span>dsh-top100 · DSH plugin leaderboard</span>
-      <span>Verified sources · AI Chinese summaries · GitHub stars</span>
+    <footer class="dsh-site-footer">
+      <div class="dsh-site-container dsh-footer-inner">
+        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a><p>公开评测，发现值得关注的项目。</p></div>
+        <nav class="dsh-footer-links" aria-label="页脚导航">
+          <a href="https://github.com/dsheval/dsh-eval" target="_blank" rel="noopener noreferrer">评测源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="/faq">常见问题</a>
+        </nav>
+        <span class="dsh-copyright">© 2026 DSH-Eval</span>
+      </div>
     </footer>
 
     <template id="plugin-template">
@@ -3177,7 +3163,7 @@
             <svg class="copy-icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5v8M4.8 6.7 8 9.9l3.2-3.2M2 12.5h12"></path></svg>
           </button>
         </div>
-        <p class="plugin-description"></p>
+        <p class="plugin-description" data-site-copy="note"></p>
         <div class="plugin-meta" aria-label="项目元数据">
           <span class="meta-updated"></span>
           <span class="meta-growth"></span>
@@ -3208,13 +3194,13 @@
         describedBy: "category-hover-description",
       });
 
-      const MANIFEST_URL = "./data/manifest.json";
+      const MANIFEST_URL = "/data/manifest.json";
       const LEGACY_URLS = Object.freeze({
-        hot: "./data/rankings-hot.json",
-        rising: "./data/rankings-rising.json",
-        total: "./data/rankings-total.json",
-        skills: "./data/rankings-skills.json",
-        search: "./data/rankings-search.json",
+        hot: "/data/rankings-hot.json",
+        rising: "/data/rankings-rising.json",
+        total: "/data/rankings-total.json",
+        skills: "/data/rankings-skills.json",
+        search: "/data/rankings-search.json",
       });
 
       const list = document.querySelector("#plugin-list");
@@ -3475,6 +3461,8 @@
 
       function setContentView(view, { historyMode = "replace", scroll = false } = {}) {
         currentContentView = contentViewNames.has(view) ? view : "ranking";
+        const pageTitles = { ranking: "插件榜单", docs: "排名方法", dsh: "安装指南", dsheval: "关于 DSH-Eval" };
+        document.title = currentContentView === "dsheval" ? "关于 DSH-Eval" : `${pageTitles[currentContentView]} · Top100 · DSH-Eval`;
         const requestedContentView = currentContentView;
         const contentViews = {
           ranking: leaderboardView,
@@ -3716,10 +3704,15 @@
             `${categoryLabels[category] ?? "全部分类"}，${formatStars(count)} 个插件`
           );
         }
+        if (!categoryDescription.hidden) {
+          const describedButton = categoryButtons.find((button) => button.dataset.category === categoryDescription.dataset.category);
+          if (describedButton) showCategoryDescription(describedButton);
+        }
       }
 
       function showCategoryDescription(button) {
         const category = button.dataset.category;
+        categoryDescription.dataset.category = category;
         const count = button.querySelector("[data-category-count]").textContent;
         categoryDescriptionTitle.textContent = `${categoryLabels[category] ?? "全部分类"} · ${count} 个插件`;
         categoryDescriptionBody.textContent = categoryDescriptions[category];
@@ -4332,7 +4325,7 @@
             ? manifest?.datasets?.total?.count ?? matched.length
             : matched.length;
           const migrationStatus = currentView === "top100" && !searchActive && excludedHotSkillCount > 0
-            ? `当前快照：${formatStars(shown.length)} 个已验证插件 · 已排除 ${formatStars(excludedHotSkillCount)} 个 Skills`
+            ? `当前快照：${formatStars(shown.length)} 个插件 · 已排除 ${formatStars(excludedHotSkillCount)} 个 Skills`
             : null;
           searchResult.textContent = searchActive
             ? `匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按榜单顺序"} · 显示原榜排名`

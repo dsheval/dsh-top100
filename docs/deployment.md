@@ -13,6 +13,23 @@ high-Star repositories within `DEEPSEEK_SUMMARY_BATCH_SIZE`; tune
 `DEEPSEEK_SUMMARY_ATTEMPTS`, `DEEPSEEK_SUMMARY_TIMEOUT_MS` and
 `DEEPSEEK_SUMMARY_CONCURRENCY` for the API quota available on the deployment.
 
+## CI checks
+
+CI runs for pull requests and pushes to `main`; a new commit cancels the older
+run for the same ref. Branch pushes and release tags do not start duplicate CI.
+Before releasing a tag, verify the tagged commit passed the `main` checks.
+
+Dependency installation uses `npm ci --no-audit --no-fund`. A separate
+`npm run audit:security` checks the complete dependency tree once per run and
+blocks on high/critical findings or audit errors. Each audit request has a
+five-minute timeout and one retry. Docker builds do not repeat this audit;
+manual releases must also have a successful audit for the target commit.
+
+Typechecks, all tests, runtime publication and Compose validation are retained.
+Both web and scheduler images are built using separate GitHub Actions cache
+scopes, loaded locally on the runner and never pushed. No path-based skipping
+is enabled in this first optimization pass.
+
 ## First deployment
 
 ```bash
@@ -96,3 +113,31 @@ Run `./scripts/backup-runtime.sh` before application upgrades and on a regular s
 - Expose only the Web port; do not expose SQLite or the scheduler container.
 - Enable HTTPS and security updates on the host.
 - Keep `RUN_COLLECT_ON_STARTUP=false` unless an immediate network collection is intended.
+
+## Public site mount
+
+DSH-Eval owns `https://dsheval.ai/`. Top100 is mounted at
+`https://dsheval.ai/top100/`; the outer Caddy gateway strips `/top100` before
+proxying to this repository's `web:80`. Nginx continues to serve files from its
+root, so direct container smoke checks at `http://127.0.0.1:8080/` remain valid.
+Use `npm run serve` and `http://127.0.0.1:4173/top100/` for the browser preview.
+
+The gateway must keep `/data/*` and `/api/events` routed to Top100. Released
+plugins continue to use `https://www.dsheval.ai/data`; keep that endpoint working
+without a redirect to a different host. Manifest snapshot URLs are absolute
+paths under `/data/`, independent of the website mount. DSH-Eval report downloads
+use `/eval-data/` to avoid collisions.
+
+The main site's robots and sitemap must advertise the Top100 sitemap at
+`https://dsheval.ai/top100/sitemap.xml`. Existing root HTML links redirect to their
+matching `/top100/` pages with query parameters and fragments preserved by the
+gateway/browser. Root query/hash links are handled by the DSH-Eval landing page.
+
+Repository About and npm public metadata should use:
+- Website: `https://dsheval.ai/top100/`
+- Repository description: `DSH-Eval 旗下的插件与 Skills 发现栏目，按公开 GitHub 信号持续更新。`
+- npm metadata and README: prepared in `plugin/package.json` and `plugin/README.md`;
+  they become public with the next explicitly authorized package release.
+
+Updating repository About, publishing npm, and deploying the gateway are separate
+external actions; local changes do not apply those updates automatically.

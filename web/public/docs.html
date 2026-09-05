@@ -7,7 +7,7 @@
       name="description"
       content="dsh-top100 文档：了解插件收录、智能分类、DSH 接入、Top 100 评分和每日数据更新。"
     />
-    <title>Docs · dsh-top100</title>
+    <title>排名方法 · Top100 · DSH-Eval</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <style>
       :root {
@@ -55,40 +55,7 @@
       }
 
       [id] {
-        scroll-margin-top: 88px;
-      }
-
-      .nav-shell {
-        position: sticky;
-        z-index: 20;
-        top: 0;
-        border-bottom: 1px solid rgba(23, 33, 31, 0.13);
-        background: color-mix(in srgb, var(--paper) 94%, transparent);
-        backdrop-filter: blur(12px);
-      }
-
-      .nav {
-        display: flex;
-        width: min(calc(100% - 48px), var(--content));
-        min-height: 62px;
-        margin: 0 auto;
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-      }
-
-      .wordmark,
-      .back-link {
-        text-decoration: none;
-      }
-
-      .wordmark {
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 18px;
-        font-weight: 850;
-        letter-spacing: -0.03em;
+        scroll-margin-top: calc(var(--site-header-height) + 16px);
       }
 
       .wordmark-mark {
@@ -135,6 +102,7 @@
       }
 
       .docs-hero {
+        --site-copy-color: #c7d8d3;
         position: relative;
         isolation: isolate;
         min-height: 440px;
@@ -240,7 +208,7 @@
       .toc {
         position: sticky;
         z-index: 9;
-        top: 62px;
+        top: var(--site-header-height);
         display: grid;
         margin: 0 0 68px;
         padding: 0;
@@ -530,22 +498,6 @@
         white-space: nowrap;
       }
 
-      .footer {
-        display: flex;
-        min-height: 110px;
-        padding: 28px max(24px, calc((100vw - var(--content)) / 2));
-        align-items: center;
-        justify-content: space-between;
-        gap: 24px;
-        color: var(--paper);
-        background: var(--ink);
-        font-family: var(--mono);
-        font-size: 12px;
-        font-weight: 750;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-      }
-
       @media (max-width: 960px) {
         .toc {
           position: static;
@@ -630,15 +582,7 @@
           font-size: 42px;
         }
 
-        .footer {
-          display: block;
-        }
 
-        .footer span:last-child {
-          display: block;
-          margin-top: 8px;
-          color: #b7c3bf;
-        }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -654,94 +598,100 @@
           transform: none;
         }
       }
+      @media (min-width: 961px) {
+        .doc-section { scroll-margin-top: calc(var(--site-header-height) + 92px); }
+      }
     </style>
+    <link rel="stylesheet" href="./site-controls.css?v=20260905-nav2" />
+    <link rel="canonical" href="https://dsheval.ai/top100/?page=docs" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260905-type8c" />
   </head>
   <body>
-    <div class="nav-shell">
-      <nav class="nav" aria-label="文档导航">
-        <a class="wordmark" href="./" aria-label="返回 dsh-top100 首页">
-          <img src="./favicon.svg" alt="" width="30" height="30" />
-          <span>dsh-top100 / Docs</span>
-        </a>
-        <a class="back-link" href="./#ranking">返回榜单</a>
+    <header class="dsh-site-header">
+      <div class="dsh-site-container dsh-header-inner">
+        <a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a>
+        <nav class="dsh-desktop-nav" aria-label="DSH-Eval 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        <details class="dsh-mobile-menu">
+          <summary>菜单<span class="dsh-menu-icon" aria-hidden="true"></span></summary>
+          <nav aria-label="DSH-Eval 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/faq">常见问题</a></nav>
+        </details>
+      </div>
+    </header>
+
+    <main>
+      <nav class="top100-section-nav" aria-label="Top100 栏目导航">
+        <a class="top100-section-title" href="./"><img src="./assets/dsh-top100-mark.svg" width="28" height="28" alt="" /><span>dsh-top100</span></a>
+        <div class="nav-links">
+          <a href="./#ranking">插件榜单</a>
+          <a href="./skills.html#ranking">Skills 榜单</a>
+          <a href="./?page=dsh#dsh">安装指南</a>
+          <a href="./?page=docs#docs" aria-current="page">排名方法</a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        </div>
       </nav>
-    </div>
 
     <header class="docs-hero">
       <div class="docs-hero-inner">
-        <h1>How rankings and plugins work.</h1>
-        <p class="docs-title-zh">榜单、分类与 DSH 插件。</p>
+        <h1>排名方法</h1>
+        <p class="docs-title-zh" data-site-copy="lead">榜单、分类与 DSH 插件。</p>
       </div>
       <div class="orbit" aria-hidden="true"></div>
     </header>
 
-    <main class="docs-layout">
+    <div class="docs-layout">
       <nav class="toc" aria-label="文档目录">
         <span class="toc-title">本页目录</span>
         <a href="#overview" data-section="01">产品与榜单</a>
         <a href="#plugin" data-section="02">DSH 插件</a>
         <a href="#discovery" data-section="03">仓库发现</a>
-        <a href="#verification" data-section="04">兼容验证</a>
+        <a href="#verification" data-section="04">收录规则</a>
         <a href="#ranking" data-section="05">排行算法</a>
         <a href="#database" data-section="06">数据发布</a>
       </nav>
 
       <article class="docs-content">
         <section class="doc-section" id="overview">
-          <p class="section-kicker">01 · Overview</p>
+          <p class="section-kicker" data-site-label="section" lang="en">01 · Overview</p>
           <h2>三个榜单与分类筛选</h2>
-          <p class="lead">
-            dsh-top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索引。只有已验证的 DSH
-            Plugin 参与排名，排名单位是 GitHub 仓库；Skills 使用独立技能库浏览。
+          <p class="lead" data-site-copy="body">
+            dsh-top100 帮助你发现 DSH 插件、比较项目热度并找到安装入口。排名单位是 GitHub 仓库；Skills 单独展示。收录检查确认项目与 DSH 的关联证据，不代表已安装验证、通过能力评测或安全审计。
           </p>
           <div class="card-grid four">
             <article class="doc-card">
-              <span class="card-label">Composite signal</span>
+              <span class="card-label" data-site-label="section" lang="en">Composite signal</span>
               <h3>Top 100</h3>
-              <p>综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
+              <p data-site-copy="body">综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">Daily momentum</span>
+              <span class="card-label" data-site-label="section" lang="en">Daily momentum</span>
               <h3>新锐榜</h3>
-              <p>当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
+              <p data-site-copy="body">当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">All verified</span>
+              <span class="card-label" data-site-label="section" lang="en">All verified</span>
               <h3>总榜</h3>
-              <p>展示全部活跃、已验证仓库，严格按当前 GitHub Stars 总数降序排列。</p>
+              <p data-site-copy="body">展示全部活跃且符合收录规则的插件仓库，按当前 GitHub Stars 总数降序排列。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">README semantics</span>
+              <span class="card-label" data-site-label="section" lang="en">README semantics</span>
               <h3>分类筛选</h3>
-              <p>分类不再是一张榜：它可叠加在综合热度、新锐或 Stars 排序之上；同一 Plugin 可以进入多个分类。</p>
+              <p data-site-copy="body">在综合热度、新锐或 Stars 排序下，按用途进一步筛选；同一插件可以属于多个分类。</p>
             </article>
           </div>
           <h3>README 智能分类</h3>
-          <p>
+          <p data-site-copy="body">
             DeepSeek 根据 README、描述和 topics 选择一个主分类，再补充一至两个有明确依据的相关分类。
-            分类结果连同置信度、依据和模型信息写入 SQLite，并随榜单 JSON 发布；模型不可用时使用可追踪的规则回退。
+            同一项目可能属于多个分类，所以分类数量相加可能大于项目总数。模型不可用时，使用基于项目资料的规则分类。
           </p>
         </section>
 
         <section class="doc-section" id="plugin">
-          <p class="section-kicker">02 · DSH Plugin</p>
+          <p class="section-kicker" data-site-label="section" lang="en">02 · DSH Plugin</p>
           <h2>排行榜也可以直接进入 DSH</h2>
-          <p class="lead">
-            dsh-top100 提供可独立安装的 DSH 插件。用户不需要下载 Collector、SQLite 或网页后端，
-            即可在 DSH 设置页浏览和搜索榜单，并对作者明确提供且验证通过的安装源进行确认安装。
-          </p>
-          <div class="pipeline" aria-label="DSH 插件数据流">
-            <span>rankings.json</span>
-            <span>插件 Host</span>
-            <span>本地 API</span>
-            <span>设置页 Client</span>
-            <span>DSH Profile</span>
-          </div>
-          <p>
-            插件和官方网站共用同一份线上榜单与分类定义；Host 负责远端数据缓存、安装源验证和受控安装，
-            Client 只通过同源本地接口读取数据。安装说明见首页“安装 dsh-top100”。
-          </p>
-          <p>
+          <p class="lead" data-site-copy="body">安装 dsh-top100 后，可以在 DSH 设置页浏览、搜索榜单，并复制或确认运行项目提供的安装命令。</p>
+          <p data-site-copy="body">插件与网站共用线上榜单。安装来源可以解析，不代表已经实际安装验证；运行前仍需核对项目说明、宿主版本和所需权限。</p>
+          <p data-site-copy="body"><a href="./?page=dsh#dsh">查看安装指南 →</a></p>
+          <p data-site-copy="body">
             安装包还内置 <code>recommend-dsh-plugins</code> Skill，并注册只读的
             <code>dsh_top100_search</code> 搜索工具。当用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，
             DSH 会加载该 Skill，从实时 Top100 插件市场检索并给出有榜单数据依据的推荐。
@@ -749,10 +699,10 @@
         </section>
 
         <section class="doc-section" id="discovery">
-          <p class="section-kicker">03 · Discovery</p>
+          <p class="section-kicker" data-site-label="section" lang="en">03 · Discovery</p>
           <h2>如何尽可能完整地发现仓库</h2>
-          <p class="lead">
-            GitHub 没有 DSH 官方全局插件注册表，因此系统采用多来源召回，再使用同一验证器过滤噪声。
+          <p class="lead" data-site-copy="body">
+            系统从多个公开来源发现候选项目，再按同一套收录规则筛选。自动发现可能有遗漏，收录范围以当日快照为准。
           </p>
           <div class="pipeline" aria-label="数据处理流程">
             <span>多来源候选</span>
@@ -762,20 +712,19 @@
             <span>公开榜单 JSON</span>
           </div>
           <ol class="rule-list">
-            <li><strong>Repository Search：</strong>搜索 DSH 名称、描述、README 与 topics。</li>
-            <li><strong>Code Search：</strong>寻找 <code>SKILL.md</code>、DSH/Cordis 配置和依赖等强结构标记。</li>
-            <li><strong>生态来源：</strong>补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。</li>
-            <li><strong>递归分片：</strong>每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。</li>
-            <li><strong>稳定去重：</strong>优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。</li>
+            <li data-site-copy="body"><strong>Repository Search：</strong>搜索 DSH 名称、描述、README 与 topics。</li>
+            <li data-site-copy="body"><strong>Code Search：</strong>寻找 <code>SKILL.md</code>、DSH/Cordis 配置和依赖等强结构标记。</li>
+            <li data-site-copy="body"><strong>生态来源：</strong>补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。</li>
+            <li data-site-copy="body"><strong>递归分片：</strong>每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。</li>
+            <li data-site-copy="body"><strong>稳定去重：</strong>优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。</li>
           </ol>
         </section>
 
         <section class="doc-section" id="verification">
-          <p class="section-kicker">04 · Verification</p>
+          <p class="section-kicker" data-site-label="section" lang="en">04 · Verification</p>
           <h2>什么仓库可以入榜</h2>
-          <p class="lead">
-            Topic 和关键词只负责召回，不直接证明兼容性。候选仓库必须提供可验证的 DSH
-            插件、Skill、Bundle 或 Cordis 集成证据。
+          <p class="lead" data-site-copy="body">
+            名称、标签和关键词用于发现候选项目，不能单独证明兼容性。候选仓库还需提供 DSH 插件、Skill、Bundle 或 Cordis 集成等结构证据；这些检查不等同于实际运行测试。
           </p>
           <div class="table-wrap">
             <table>
@@ -813,9 +762,9 @@
         </section>
 
         <section class="doc-section" id="ranking">
-          <p class="section-kicker">05 · Ranking</p>
+          <p class="section-kicker" data-site-label="section" lang="en">05 · Ranking</p>
           <h2>Top 100 如何计算</h2>
-          <p class="lead">
+          <p class="lead" data-site-copy="body">
             Top 100 使用 100 分加权模型，按综合热度排序并显示一位小数。
             新锐榜显示今日新增 Stars，总榜显示 GitHub Stars 总数。
           </p>
@@ -839,52 +788,37 @@
             </table>
           </div>
           <div class="formula">TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5</div>
-          <p>
+          <p data-site-copy="body">
             Stars 增长和总热度使用对数归一化，避免一个超大型仓库压缩其余项目的分数差异。综合分相同时，
             依次比较今日新增 Stars、当前 Stars 和仓库全名。
           </p>
         </section>
 
         <section class="doc-section" id="database">
-          <p class="section-kicker">06 · Persistence</p>
-          <h2>数据库、每日更新与企业部署</h2>
-          <p class="lead">
-            当前使用 SQLite 作为单服务器事实来源。它保存最新仓库状态、每日 Stars、中文简介来源和采集审计，
-            前端不会直接连接数据库。
-          </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr><th>表</th><th>用途</th></tr>
-              </thead>
-              <tbody>
-                <tr><td><code>repositories</code></td><td>仓库最新状态、Stars、许可证、来源和活跃状态</td></tr>
-                <tr><td><code>repository_daily_stats</code></td><td>按仓库和日期保存 Stars、Forks 与 Issues 快照</td></tr>
-                <tr><td><code>repository_summaries</code></td><td>中文简介、源内容哈希、模型与提示版本</td></tr>
-                <tr><td><code>repository_categories</code></td><td>多标签分类、置信度、README 依据、模型和分类时间</td></tr>
-                <tr><td><code>collection_runs</code></td><td>每次采集的开始、结束、状态、数量与错误信息</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <h3>更新节奏</h3>
-          <p>
-            北京时间每天 06:00 运行增量发现并刷新全部已收录仓库；每周日运行完整分片发现。
-            成功采集后在一个事务中导入 SQLite，再生成公开 JSON。
-          </p>
-          <h3>迁移与企业扩展</h3>
-          <p>
-            迁移服务器时复制完整 <code>runtime/</code> 即可保留数据库、Stars 历史和简介缓存。
-            单机单写场景继续使用 SQLite 更简单；当出现多实例写入、权限隔离、审计查询或高并发 API
-            需求时，再升级为 PostgreSQL，并保留同一公开 JSON 输出层。
-          </p>
+          <p class="section-kicker" data-site-label="section" lang="en">06 · Persistence</p>
+          <h2>数据何时更新</h2>
+          <p class="lead" data-site-copy="body">计划在北京时间每天 06:00 开始更新，每周日进行更完整的仓库发现。采集需要时间，页面上显示的快照时间才是本次数据的实际更新时间。</p>
+          <h3>为什么数据可能暂时没有变化</h3>
+          <p data-site-copy="body">GitHub 请求限制、网络异常或采集失败可能延迟更新。新快照生成成功后才发布；更新未完成时继续提供上次有效数据。</p>
+          <h3>简介与分类如何更新</h3>
+          <p data-site-copy="body">简介和分类依据公开项目资料整理。缺少可用的中文简介时保留项目原文；项目资料发生变化后，旧的人工整理内容可能失效并等待重新核对。</p>
+          <p data-site-copy="body"><a href="https://github.com/dsheval/dsh-top100/blob/main/README.md" target="_blank" rel="noopener noreferrer">查看采集与部署技术文档 ↗</a></p>
         </section>
 
       </article>
+    </div>
     </main>
 
-    <footer class="footer">
-      <span>dsh-top100 · Documentation</span>
-      <span>Discover · Verify · Snapshot · Rank · Publish</span>
+    <footer class="dsh-site-footer">
+      <div class="dsh-site-container dsh-footer-inner">
+        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a><p>公开评测，发现值得关注的项目。</p></div>
+        <nav class="dsh-footer-links" aria-label="页脚导航">
+          <a href="https://github.com/dsheval/dsh-eval" target="_blank" rel="noopener noreferrer">评测源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
+          <a href="/faq">常见问题</a>
+        </nav>
+        <span class="dsh-copyright">© 2026 DSH-Eval</span>
+      </div>
     </footer>
   </body>
 </html>

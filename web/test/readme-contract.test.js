@@ -12,7 +12,7 @@ const rawAssets = "https://raw.githubusercontent.com/dsheval/dsh-top100/main/web
 test("both READMEs introduce the same product and link to the installation guide", () => {
   for (const readme of [githubReadme, npmReadme]) {
     assert.match(readme, /<h1 align="center">dsh-top100\b[^<]*<\/h1>/);
-    assert.ok(readme.includes("https://www.dsheval.ai/?page=dsh#dsh"));
+    assert.ok(readme.includes("https://dsheval.ai/top100/?page=dsh#dsh"));
     assert.match(readme, /发现、安装和管理插件/);
     assert.match(readme, /Skills/);
     assert.doesNotMatch(readme, /一键下载|dsh-Top100/);

@@ -5,7 +5,8 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY collector/package.json collector/package.json
 COPY schema/package.json schema/package.json
-RUN npm ci
+# CI audits the full lockfile before building; keep network audits outside cached layers.
+RUN npm ci --no-audit --no-fund
 
 COPY collector collector
 COPY schema schema

@@ -18,6 +18,8 @@ const mimeTypes = new Map([
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
   [".txt", "text/plain; charset=utf-8"],
+  [".xml", "application/xml; charset=utf-8"],
+  [".jpg", "image/jpeg"],
 ]);
 
 function proxyData(request, response) {
@@ -74,7 +76,21 @@ const server = createServer((request, response) => {
     return response.end();
   }
 
-  const path = localFileFor(requestUrl.pathname) ?? join(publicRoot, "index.html");
+  // Match the public /top100/ mount while keeping /data/ and /api/events at root.
+  if (requestUrl.pathname === "/" || requestUrl.pathname === "/top100" ||
+      (!requestUrl.pathname.startsWith("/top100/") && localFileFor(requestUrl.pathname))) {
+    const suffix = requestUrl.pathname === "/" || requestUrl.pathname === "/top100"
+      ? "/" : requestUrl.pathname;
+    response.writeHead(308, { location: `/top100${suffix}${requestUrl.search}` });
+    return response.end();
+  }
+  const relativePath = requestUrl.pathname.startsWith("/top100/")
+    ? requestUrl.pathname.slice("/top100".length) : null;
+  const path = relativePath && localFileFor(relativePath === "/" ? "/index.html" : relativePath);
+  if (!path) {
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    return response.end("Not found. This preview serves Top100 at /top100/.\n");
+  }
   response.writeHead(200, {
     "cache-control": "no-cache",
     "content-type": mimeTypes.get(extname(path)) ?? "application/octet-stream",
@@ -84,6 +100,6 @@ const server = createServer((request, response) => {
 });
 
 server.listen(port, "127.0.0.1", () => {
-  console.log(`Local preview: http://127.0.0.1:${port}/`);
+  console.log(`Local preview: http://127.0.0.1:${server.address().port}/top100/`);
   console.log(`Ranking data: ${dataOrigin.origin}/data/`);
 });

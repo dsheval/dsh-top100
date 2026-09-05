@@ -3,13 +3,14 @@
   "version": "1.3.1",
   "private": true,
   "type": "module",
-  "description": "Verified DeepSeek Harness plugin rankings with daily GitHub updates",
+  "description": "DSH-Eval plugin and Skills discovery with daily GitHub rankings",
   "workspaces": [
     "schema",
     "collector",
     "plugin"
   ],
   "scripts": {
+    "audit:security": "npm audit --audit-level=high --fetch-retries=1 --fetch-timeout=300000",
     "check": "npm run version:check && npm run search:build && npm run typecheck && npm test",
     "version:sync": "node scripts/sync-install-version.mjs",
     "version:check": "node scripts/sync-install-version.mjs --check",

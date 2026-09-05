@@ -5,7 +5,7 @@ body:has(#docs-view:not([hidden])) .hero {
 
 body:has(#docs-view:not([hidden])) .ranking {
   background: var(--paper);
-  scroll-margin-top: 62px;
+  scroll-margin-top: var(--site-header-height);
 }
 
 body:has(#docs-view:not([hidden])) .ranking-inner,
@@ -42,7 +42,7 @@ body:has(#dsh-view:not([hidden])) .ranking-inner {
 
 #docs-view .toc {
   position: sticky;
-  top: 86px;
+  top: calc(var(--site-header-height) + 24px);
   display: grid;
   grid-template-columns: 1fr;
   margin: 0;
@@ -79,7 +79,7 @@ body:has(#dsh-view:not([hidden])) .ranking-inner {
 
 #docs-view .doc-section {
   padding: 0 0 36px;
-  scroll-margin-top: 86px;
+  scroll-margin-top: calc(var(--site-header-height) + 24px);
 }
 
 #docs-view .doc-section + .doc-section {
@@ -297,14 +297,14 @@ body:has(#dsh-view:not([hidden])) .ranking-inner {
 @media (max-width: 1100px) {
   #docs-view .docs-layout { display: block; }
   #docs-view .toc {
-    top: 62px;
+    top: var(--site-header-height);
     grid-template-columns: repeat(6, minmax(0, 1fr));
     margin-bottom: 28px;
     border: 1px solid var(--line);
     background: var(--paper);
   }
   #docs-view .toc a { justify-content: center; padding-inline: 8px; }
-  #docs-view .doc-section { scroll-margin-top: 130px; }
+  #docs-view .doc-section { scroll-margin-top: calc(var(--site-header-height) + 68px); }
 }
 
 @media (max-width: 640px) {
@@ -314,7 +314,7 @@ body:has(#dsh-view:not([hidden])) .ranking-inner {
   #dsh-view .dsh-copy-button { min-width: 64px; padding-inline: 12px; }
   #docs-view .inline-docs-header { margin-bottom: 22px; padding-bottom: 22px; }
   #docs-view .toc { position: static; grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  #docs-view .doc-section { scroll-margin-top: 78px; }
+  #docs-view .doc-section { scroll-margin-top: calc(var(--site-header-height) + 16px); }
   #docs-view .doc-section h2 { font-size: 21px; }
   #docs-view .card-grid.four { grid-template-columns: 1fr; }
   #docs-view th, #docs-view td { padding: 10px 12px; }
