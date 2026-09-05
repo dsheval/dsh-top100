@@ -122,7 +122,7 @@ test("Top100 pages share one header and footer and retain their section navigati
     assert.ok(header(html).indexOf(">首页</a>") < header(html).indexOf(">Top100</a>"));
     assert.ok(header(html).indexOf(">Top100</a>") < header(html).indexOf(">评测结果</a>"));
     assert.ok(!html.includes('class="nav-shell"'));
-    assert.match(html, /href="\.\/site-chrome\.css\?v=20260905-nav2" \/>\s*<\/head>/);
+    assert.match(html, /href="\.\/site-chrome\.css\?v=20260905-type8c" \/>\s*<\/head>/);
   }
   assert.match(pages[0], /class="nav-links">[\s\S]*?data-content-switch="ranking"/);
   const layout = pages[2].slice(pages[2].indexOf('<div class="docs-layout">'), pages[2].indexOf("</main>"));

@@ -7,7 +7,7 @@
       name="description"
       content="dsh-top100 文档：了解插件收录、智能分类、DSH 接入、Top 100 评分和每日数据更新。"
     />
-    <title>Docs · dsh-top100</title>
+    <title>排名方法 · Top100 · DSH-Eval</title>
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
     <style>
       :root {
@@ -102,6 +102,7 @@
       }
 
       .docs-hero {
+        --site-copy-color: #c7d8d3;
         position: relative;
         isolation: isolate;
         min-height: 440px;
@@ -603,7 +604,7 @@
     </style>
     <link rel="stylesheet" href="./site-controls.css?v=20260905-nav2" />
     <link rel="canonical" href="https://dsheval.ai/top100/?page=docs" />
-    <link rel="stylesheet" href="./site-chrome.css?v=20260905-nav2" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260905-type8c" />
   </head>
   <body>
     <header class="dsh-site-header">
@@ -632,7 +633,7 @@
     <header class="docs-hero">
       <div class="docs-hero-inner">
         <h1>排名方法</h1>
-        <p class="docs-title-zh">榜单、分类与 DSH 插件。</p>
+        <p class="docs-title-zh" data-site-copy="lead">榜单、分类与 DSH 插件。</p>
       </div>
       <div class="orbit" aria-hidden="true"></div>
     </header>
@@ -650,47 +651,47 @@
 
       <article class="docs-content">
         <section class="doc-section" id="overview">
-          <p class="section-kicker">01 · Overview</p>
+          <p class="section-kicker" data-site-label="section" lang="en">01 · Overview</p>
           <h2>三个榜单与分类筛选</h2>
-          <p class="lead">
+          <p class="lead" data-site-copy="body">
             dsh-top100 帮助你发现 DSH 插件、比较项目热度并找到安装入口。排名单位是 GitHub 仓库；Skills 单独展示。收录检查确认项目与 DSH 的关联证据，不代表已安装验证、通过能力评测或安全审计。
           </p>
           <div class="card-grid four">
             <article class="doc-card">
-              <span class="card-label">Composite signal</span>
+              <span class="card-label" data-site-label="section" lang="en">Composite signal</span>
               <h3>Top 100</h3>
-              <p>综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
+              <p data-site-copy="body">综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">Daily momentum</span>
+              <span class="card-label" data-site-label="section" lang="en">Daily momentum</span>
               <h3>新锐榜</h3>
-              <p>当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
+              <p data-site-copy="body">当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">All verified</span>
+              <span class="card-label" data-site-label="section" lang="en">All verified</span>
               <h3>总榜</h3>
-              <p>展示全部活跃且符合收录规则的插件仓库，按当前 GitHub Stars 总数降序排列。</p>
+              <p data-site-copy="body">展示全部活跃且符合收录规则的插件仓库，按当前 GitHub Stars 总数降序排列。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label">README semantics</span>
+              <span class="card-label" data-site-label="section" lang="en">README semantics</span>
               <h3>分类筛选</h3>
-              <p>在综合热度、新锐或 Stars 排序下，按用途进一步筛选；同一插件可以属于多个分类。</p>
+              <p data-site-copy="body">在综合热度、新锐或 Stars 排序下，按用途进一步筛选；同一插件可以属于多个分类。</p>
             </article>
           </div>
           <h3>README 智能分类</h3>
-          <p>
+          <p data-site-copy="body">
             DeepSeek 根据 README、描述和 topics 选择一个主分类，再补充一至两个有明确依据的相关分类。
             同一项目可能属于多个分类，所以分类数量相加可能大于项目总数。模型不可用时，使用基于项目资料的规则分类。
           </p>
         </section>
 
         <section class="doc-section" id="plugin">
-          <p class="section-kicker">02 · DSH Plugin</p>
+          <p class="section-kicker" data-site-label="section" lang="en">02 · DSH Plugin</p>
           <h2>排行榜也可以直接进入 DSH</h2>
-          <p class="lead">安装 dsh-top100 后，可以在 DSH 设置页浏览、搜索榜单，并复制或确认运行项目提供的安装命令。</p>
-          <p>插件与网站共用线上榜单。安装来源可以解析，不代表已经实际安装验证；运行前仍需核对项目说明、宿主版本和所需权限。</p>
-          <p><a href="./?page=dsh#dsh">查看安装指南 →</a></p>
-          <p>
+          <p class="lead" data-site-copy="body">安装 dsh-top100 后，可以在 DSH 设置页浏览、搜索榜单，并复制或确认运行项目提供的安装命令。</p>
+          <p data-site-copy="body">插件与网站共用线上榜单。安装来源可以解析，不代表已经实际安装验证；运行前仍需核对项目说明、宿主版本和所需权限。</p>
+          <p data-site-copy="body"><a href="./?page=dsh#dsh">查看安装指南 →</a></p>
+          <p data-site-copy="body">
             安装包还内置 <code>recommend-dsh-plugins</code> Skill，并注册只读的
             <code>dsh_top100_search</code> 搜索工具。当用户在 DSH 对话中询问“该装哪个插件”或描述所需能力时，
             DSH 会加载该 Skill，从实时 Top100 插件市场检索并给出有榜单数据依据的推荐。
@@ -698,9 +699,9 @@
         </section>
 
         <section class="doc-section" id="discovery">
-          <p class="section-kicker">03 · Discovery</p>
+          <p class="section-kicker" data-site-label="section" lang="en">03 · Discovery</p>
           <h2>如何尽可能完整地发现仓库</h2>
-          <p class="lead">
+          <p class="lead" data-site-copy="body">
             系统从多个公开来源发现候选项目，再按同一套收录规则筛选。自动发现可能有遗漏，收录范围以当日快照为准。
           </p>
           <div class="pipeline" aria-label="数据处理流程">
@@ -711,18 +712,18 @@
             <span>公开榜单 JSON</span>
           </div>
           <ol class="rule-list">
-            <li><strong>Repository Search：</strong>搜索 DSH 名称、描述、README 与 topics。</li>
-            <li><strong>Code Search：</strong>寻找 <code>SKILL.md</code>、DSH/Cordis 配置和依赖等强结构标记。</li>
-            <li><strong>生态来源：</strong>补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。</li>
-            <li><strong>递归分片：</strong>每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。</li>
-            <li><strong>稳定去重：</strong>优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。</li>
+            <li data-site-copy="body"><strong>Repository Search：</strong>搜索 DSH 名称、描述、README 与 topics。</li>
+            <li data-site-copy="body"><strong>Code Search：</strong>寻找 <code>SKILL.md</code>、DSH/Cordis 配置和依赖等强结构标记。</li>
+            <li data-site-copy="body"><strong>生态来源：</strong>补充 npm、Awesome 列表、相关组织仓库、历史目录和用户提交。</li>
+            <li data-site-copy="body"><strong>递归分片：</strong>每周完整发现按创建时间切分，必要时再按 Stars 和仓库大小切分，避免 GitHub 单次搜索 1,000 条结果上限造成静默遗漏。</li>
+            <li data-site-copy="body"><strong>稳定去重：</strong>优先使用 GitHub repository ID；同一仓库从多个来源命中时合并并保留全部来源证据。</li>
           </ol>
         </section>
 
         <section class="doc-section" id="verification">
-          <p class="section-kicker">04 · Verification</p>
+          <p class="section-kicker" data-site-label="section" lang="en">04 · Verification</p>
           <h2>什么仓库可以入榜</h2>
-          <p class="lead">
+          <p class="lead" data-site-copy="body">
             名称、标签和关键词用于发现候选项目，不能单独证明兼容性。候选仓库还需提供 DSH 插件、Skill、Bundle 或 Cordis 集成等结构证据；这些检查不等同于实际运行测试。
           </p>
           <div class="table-wrap">
@@ -761,9 +762,9 @@
         </section>
 
         <section class="doc-section" id="ranking">
-          <p class="section-kicker">05 · Ranking</p>
+          <p class="section-kicker" data-site-label="section" lang="en">05 · Ranking</p>
           <h2>Top 100 如何计算</h2>
-          <p class="lead">
+          <p class="lead" data-site-copy="body">
             Top 100 使用 100 分加权模型，按综合热度排序并显示一位小数。
             新锐榜显示今日新增 Stars，总榜显示 GitHub Stars 总数。
           </p>
@@ -787,21 +788,21 @@
             </table>
           </div>
           <div class="formula">TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5</div>
-          <p>
+          <p data-site-copy="body">
             Stars 增长和总热度使用对数归一化，避免一个超大型仓库压缩其余项目的分数差异。综合分相同时，
             依次比较今日新增 Stars、当前 Stars 和仓库全名。
           </p>
         </section>
 
         <section class="doc-section" id="database">
-          <p class="section-kicker">06 · Persistence</p>
+          <p class="section-kicker" data-site-label="section" lang="en">06 · Persistence</p>
           <h2>数据何时更新</h2>
-          <p class="lead">计划在北京时间每天 06:00 开始更新，每周日进行更完整的仓库发现。采集需要时间，页面上显示的快照时间才是本次数据的实际更新时间。</p>
+          <p class="lead" data-site-copy="body">计划在北京时间每天 06:00 开始更新，每周日进行更完整的仓库发现。采集需要时间，页面上显示的快照时间才是本次数据的实际更新时间。</p>
           <h3>为什么数据可能暂时没有变化</h3>
-          <p>GitHub 请求限制、网络异常或采集失败可能延迟更新。新快照生成成功后才发布；更新未完成时继续提供上次有效数据。</p>
+          <p data-site-copy="body">GitHub 请求限制、网络异常或采集失败可能延迟更新。新快照生成成功后才发布；更新未完成时继续提供上次有效数据。</p>
           <h3>简介与分类如何更新</h3>
-          <p>简介和分类依据公开项目资料整理。缺少可用的中文简介时保留项目原文；项目资料发生变化后，旧的人工整理内容可能失效并等待重新核对。</p>
-          <p><a href="https://github.com/dsheval/dsh-top100/blob/main/README.md" target="_blank" rel="noopener noreferrer">查看采集与部署技术文档 ↗</a></p>
+          <p data-site-copy="body">简介和分类依据公开项目资料整理。缺少可用的中文简介时保留项目原文；项目资料发生变化后，旧的人工整理内容可能失效并等待重新核对。</p>
+          <p data-site-copy="body"><a href="https://github.com/dsheval/dsh-top100/blob/main/README.md" target="_blank" rel="noopener noreferrer">查看采集与部署技术文档 ↗</a></p>
         </section>
 
       </article>

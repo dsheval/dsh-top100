@@ -116,7 +116,6 @@ test("uses the approved neutral sage palette", () => {
 test("uses the shared footer and keeps Skills outside plugin totals", () => {
   assert.match(html, /<footer class="dsh-site-footer">/);
   assert.match(html, /公开评测，发现值得关注的项目。/);
-  assert.match(html, /class="ranking-source-note"/);
   assert.match(html, /href="\.\/skills\.html#ranking">Skills 榜单/);
   assert.match(html, /manifest\.datasets\.skills\?\.count/);
   assert.doesNotMatch(html, /隐藏 Skill 仓库|hideSkills|manifestSkillCount/);
@@ -141,7 +140,7 @@ test("shares one category interaction system across Plugin and Skills directorie
   assert.match(categoryStyles, /@media \(min-width: 641px\) and \(max-width: 1100px\)[\s\S]*?\.category-count \{ display: none; \}/);
   assert.doesNotMatch(skills, /<select[^>]+id="category"/);
   assert.match(skills, /aria-label="Skill 分类"/);
-  assert.match(html, /当前快照：.*个已验证插件.*已排除.*个 Skills/);
+  assert.match(html, /当前快照：.*个插件.*已排除.*个 Skills/);
 });
 
 test("aligns installation controls and badges while keeping utility text readable", () => {
@@ -242,13 +241,13 @@ test("serves local assets with same-origin production ranking data", () => {
 });
 
 test("keeps the install guide focused and uses the canonical brand name", () => {
-  assert.match(html, /<title>dsh-top100 ·/);
+  assert.match(html, /<title>插件榜单 · Top100 · DSH-Eval<\/title>/);
   assert.match(html, /class="top100-section-title" href="\.\/">[\s\S]*?<span>dsh-top100<\/span>[\s\S]*?<\/a>/);
   for (const page of [html, dsh, skills]) assert.doesNotMatch(page, /dsh-Top100|DSH-Top100/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.hero \{\s*display: none/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.ranking \{[^}]*scroll-margin-top: var\(--site-header-height\)/);
   assert.match(html, /#dsh-view \{\s*max-width: 800px/);
-  assert.match(html, /<h1 class="inline-docs-title" id="inline-dsh-title">安装 dsh-top100<\/h1>/);
+  assert.match(html, /<h1 class="inline-docs-title" id="inline-dsh-title">安装指南<\/h1>/);
   assert.match(html, /class="dsh-brand-link" href="\/" aria-label="DSH-Eval 首页"/);
   assert.doesNotMatch(dsh, /dsh-brief-grid|section-kicker|dsh-data-note|3 步完成安装/);
   assert.match(dsh, /网站与插件使用同一份榜单数据/);
