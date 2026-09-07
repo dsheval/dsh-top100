@@ -68,17 +68,35 @@ test("local preview serves the Top100 mount and preserves old page queries", asy
 test("public catalog links migrate while released plugin data stays compatible", async () => {
   const read = async (path) => readFile(new URL(path, repo), "utf8");
   const pkg = JSON.parse(await read("plugin/package.json"));
-  assert.equal(pkg.homepage, "https://dsheval.ai/top100/");
+  assert.equal(pkg.homepage, "https://www.dsheval.ai/top100/");
   const host = await read("plugin/src/host/catalog.ts");
   assert.ok(host.includes('DEFAULT_DATA_URL = "https://www.dsheval.ai/data"'));
   const recommendations = await read("plugin/src/host/recommendations.ts");
-  assert.ok(recommendations.includes('DSHEVAL_CATALOG_URL = "https://dsheval.ai/top100/#ranking"'));
+  assert.ok(recommendations.includes('DSHEVAL_CATALOG_URL = "https://www.dsheval.ai/top100/#ranking"'));
   const client = await read("plugin/src/client/RankingsPage.tsx");
-  assert.ok(client.includes('DSHEVAL_SITE = "https://dsheval.ai/top100/"'));
+  assert.ok(client.includes('DSHEVAL_SITE = "https://www.dsheval.ai/top100/"'));
   for (const file of ["README.md", "plugin/README.md"]) {
     const readme = await read(file);
-    assert.ok(readme.includes("https://dsheval.ai/top100/?page=dsh#dsh"));
+    assert.ok(readme.includes("https://www.dsheval.ai/top100/?page=dsh#dsh"));
     assert.ok(readme.includes("不代表项目已通过能力评测"));
+  }
+  for (const file of ["index.html", "skills.html", "docs.html", "top300.html"]) {
+    const html = await read(`web/public/${file}`);
+    assert.match(html, /rel="canonical" href="https:\/\/www\.dsheval\.ai\/top100\//, file);
+    assert.doesNotMatch(html, /https?:\/\/dsheval\.ai(?:\/|["\s<])/, file);
+  }
+  const home = await read("web/public/index.html");
+  for (const property of ["og:url", "og:image"]) {
+    assert.match(home, new RegExp(`property="${property}" content="https://www\\.dsheval\\.ai/top100/`));
+  }
+  const structuredData = JSON.parse(home.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.equal(structuredData.url, "https://www.dsheval.ai/top100/");
+  assert.equal(structuredData.isPartOf.url, "https://www.dsheval.ai/");
+  const robots = await read("web/public/robots.txt");
+  assert.ok(robots.includes("Sitemap: https://www.dsheval.ai/top100/sitemap.xml"));
+  const sitemap = await read("web/public/sitemap.xml");
+  for (const [, location] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
+    assert.equal(new URL(location).origin, "https://www.dsheval.ai");
   }
 });
 

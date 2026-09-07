@@ -6,7 +6,7 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "license": "MIT",
-  "homepage": "https://dsheval.ai/top100/",
+  "homepage": "https://www.dsheval.ai/top100/",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dsheval/dsh-top100.git",

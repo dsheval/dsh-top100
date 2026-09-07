@@ -35,7 +35,7 @@ interface RankingsPageProps {
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
 const CATALOG_SCOPES: CatalogScope[] = ["plugins", "skills"];
 const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
-const DSHEVAL_SITE = "https://dsheval.ai/top100/";
+const DSHEVAL_SITE = "https://www.dsheval.ai/top100/";
 type PageSection = "rankings" | "installed" | "diagnostics";
 const GITHUB_ICON = (
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
