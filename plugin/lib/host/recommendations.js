@@ -89,8 +89,8 @@ export function recommendationResult(document, options) {
             type: item.type,
             description: item.descriptionZh || item.description,
             stars: item.stars,
-            dailyStars: item.dailyStars,
-            weeklyStars: item.weeklyStars,
+            ...(item.dailyStars == null ? {} : { dailyStars: item.dailyStars }),
+            ...(item.weeklyStars == null ? {} : { weeklyStars: item.weeklyStars }),
             categories: categoryLabels(document, item),
             installable: item.installable,
             installed: item.installed,
@@ -115,7 +115,7 @@ export function formatRecommendationResult(result) {
     for (const [index, item] of result.items.entries()) {
         const category = item.categories.length > 0 ? item.categories.join("、") : "未分类";
         const install = item.installed ? "已安装" : item.installable ? "支持安装" : "仅提供项目链接";
-        lines.push(`${index + 1}. ${item.fullName} — ${item.description}`, `   类型：${item.type}；分类：${category}；Stars：${item.stars}；日增：${item.dailyStars}；周增：${item.weeklyStars}；${install}`, `   形态：${item.formFactor}；信任层：${item.trustLevel}；证据：${item.trustSignals.join("、")}`, `   注意：${item.trustCaveat}`, `   ${item.repositoryUrl}`);
+        lines.push(`${index + 1}. ${item.fullName} — ${item.description}`, `   类型：${item.type}；分类：${category}；Stars：${item.stars}；日增：${item.dailyStars ?? "未提供"}；周增：${item.weeklyStars ?? "未提供"}；${install}`, `   形态：${item.formFactor}；信任层：${item.trustLevel}；证据：${item.trustSignals.join("、")}`, `   注意：${item.trustCaveat}`, `   ${item.repositoryUrl}`);
     }
     return lines.join("\n");
 }
@@ -164,8 +164,8 @@ export function installRecommendationCapabilities(ctx, config) {
                                 type: { type: "string", required: true },
                                 description: { type: "string", required: true },
                                 stars: { type: "integer", required: true },
-                                dailyStars: { type: "integer", required: true },
-                                weeklyStars: { type: "integer", required: true },
+                                dailyStars: { type: "integer", description: "Daily star growth, omitted when the source dataset did not publish it." },
+                                weeklyStars: { type: "integer", description: "Weekly star growth, omitted when the source dataset did not publish it." },
                                 categories: { type: "array", required: true, items: { type: "string" } },
                                 installable: { type: "boolean", required: true },
                                 installed: { type: "boolean", required: true },

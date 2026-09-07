@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.1"><img alt="正式版本 v1.3.1" src="https://img.shields.io/badge/release-v1.3.1-2f6f68?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.2"><img alt="正式版本 v1.3.2" src="https://img.shields.io/badge/release-v1.3.2-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
   <a href="https://www.dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/blob/main/CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
@@ -40,7 +40,7 @@ Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现�
 
 - **插件市场**：综合热度 Top 100、新锐榜与 Stars 总榜；支持中文搜索、功能分类和安装来源筛选。
 - **Skills 技能库**：独立浏览与搜索，不参与插件排名。
-- **已安装**：查看当前配置中的插件与本地 Skill，按操作边界进行更新、启停和卸载。
+- **已安装**：查看当前配置中的插件与本地 Skill，按操作边界进行更新、启停和卸载。更新会先核对精确版本、来源与脚本；确认后执行，失败或中断时尝试按原锁文件恢复，恢复失败会明确提示。
 - **诊断**：只读检查加载冲突、peer 依赖、榜单数据源与用户补丁。
 - **对话推荐**：自带 `recommend-dsh-plugins` Skill，通过 `dsh_top100_search` 查询榜单后给出推荐。
 
@@ -49,7 +49,7 @@ Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现�
 需要 **Node.js 22.13+** 和 **DSH Web 0.1.0-rc.6+**。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.1
+npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
 npx @deepseek-ai/dsh web
 ```
 
@@ -60,7 +60,7 @@ npx @deepseek-ai/dsh web
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@dsheval/dsh-top100-plugin@1.3.1'
+  - '@dsheval/dsh-top100-plugin@1.3.2'
 ```
 
 默认文件位于用户主目录下的 `.dsh/profiles/web/pnpm-workspace.yaml`；设置了 `DSH_HOME` 时使用该目录下的 `profiles/web/pnpm-workspace.yaml`。首次安装命令会准备 Profile；尚未创建 Profile 时，可先运行 `npx @deepseek-ai/dsh plugin --profile web list`。若 Profile 已存在但缺少 `pnpm-workspace.yaml`，请在该 Profile 目录中创建此文件，再加入上述配置。全局或源码用户需沿用各自的命令前缀。
@@ -68,7 +68,7 @@ minimumReleaseAgeExclude:
 保存后，用同一种方式重新安装：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.1
+npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.2
 ```
 
 该例外只放行这个版本，其他依赖仍遵守原等待期；如果报错指向其他包，应单独核对该包。后续升级须使用新版安装指引，不要沿用旧版本例外。
@@ -130,7 +130,7 @@ npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.
 
 ```sh
 cd /path/to/deepseek-harness
-pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.1
+pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
 pnpm dsh web
 ```
 
@@ -139,7 +139,7 @@ pnpm dsh web
 如果 `dsh --version` 可以正常返回，也可以直接使用：
 
 ```sh
-dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.1
+dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
 dsh web
 ```
 
@@ -200,12 +200,12 @@ DSH_TOP100_DATA_URL=http://127.0.0.1:8080/data dsh web
 - 用户确认前，npm selector 会解析成精确版本，GitHub 来源会解析成 40 位 commit；确认页展示目录声明、实际安装目标、完整性信息、生命周期脚本和风险。
 - npm 包声明的 GitHub repository 如与目录仓库冲突会停止安装；未声明可识别仓库时会明确提示身份无法自动绑定。
 - GitHub 验证会复用 `GITHUB_TOKEN` 或 `GH_TOKEN`（如已配置）并缓存成功结果；没有 Token 时受 GitHub 匿名额度限制。
-- Cordis 插件写入当前 profile；Skill 固定到预检 commit 后只复制合法目录到 `~/.dsh/skills`，并记录文件清单与 SHA-256 内容摘要。
+- Cordis 插件写入当前 profile；Skill 固定到预检 commit 后只复制仓库内的合法目录到 `~/.dsh/skills`，拒绝源及目标目录的符号链接，并记录文件清单与 SHA-256 内容摘要。
 - 安装来源证据写入当前 Profile 的 `.dsh-top100/provenance.json`；一次性确认 Token 不会落盘。
 - 同一 profile 的 `pnpm add` 串行执行；Skill 下载最多 3 路并发。
-- 安装前后都会执行 DSH profile 配置检查；新插件导致检查失败时尝试自动移除该插件。配置检查通过只表示 Profile 可组合，界面会继续显示“需重启/运行时未知”，不会宣称插件已经运行。
+- 安装前后都会执行 DSH profile 配置检查；安装失败或取消时按保存的锁文件恢复依赖并验证，恢复失败会明确提示。配置检查通过只表示 Profile 可组合，界面会继续显示“需重启/运行时未知”，不会宣称插件已经运行。
 - 安装接口只接受同源 POST。
-- 启停只写当前 profile 的用户 `cordis.patch.yml`，不修改第三方插件文件。
+- 启停只写当前 profile 的用户 `cordis.patch.yml`，保留原有文件权限和子功能设置；重新启用移除本插件追加的停用项。停用记录或文件被其他操作修改时会保留当前配置并提示检查。
 - 更新和卸载复用同一 profile 串行队列；官方包、排行插件自身及 `link:` / `file:` 源按保护规则限制操作。
 
 这些检查只核对结构与来源一致性，不构成代码安全审核，也不保证第三方插件的运行结果。

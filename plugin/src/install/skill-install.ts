@@ -2,9 +2,9 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, renameSync, rmSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
-import { basename, join, relative } from "node:path";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 
 const FULL_NAME_RE = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
 const SKILL_NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -54,6 +54,27 @@ function validateSkill(directory: string): void {
   }
 }
 
+/** Reject a linked source directory or ancestor before reading any Skill content. */
+function assertSourceDirectory(checkout: string, directory: string): void {
+  const path = relative(checkout, directory);
+  if (isAbsolute(path) || path === ".." || path.startsWith(`..${sep}`)) throw new Error("Skill 来源超出仓库目录");
+  let current = checkout;
+  for (const part of ["", ...path.split(sep).filter(Boolean)]) {
+    current = join(current, part);
+    const info = lstatSync(current);
+    if (info.isSymbolicLink()) throw new Error("Skill 来源目录包含符号链接，已拒绝安装");
+    if (!info.isDirectory()) throw new Error("Skill 来源不是目录");
+  }
+  const realPath = relative(realpathSync(checkout), realpathSync(directory));
+  if (isAbsolute(realPath) || realPath === ".." || realPath.startsWith(`..${sep}`)) throw new Error("Skill 来源超出仓库目录");
+}
+
+function ensureTargetRoot(directory: string): void {
+  const info = lstatSync(directory, { throwIfNoEntry: false });
+  if (info?.isSymbolicLink()) throw new Error("Skill 安装目录是符号链接，已拒绝安装");
+  mkdirSync(directory, { recursive: true });
+}
+
 function rejectSymlinks(path: string): void {
   for (const entry of readdirSync(path, { withFileTypes: true })) {
     const child = join(path, entry.name);
@@ -88,11 +109,13 @@ function contentManifest(root: string): { digest: string; files: string[] } {
 function copySkill(source: string, targetRoot: string, preferredName: string, commit: string): InstalledSkill {
   const name = preferredName.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "");
   if (!SKILL_NAME_RE.test(name)) throw new Error(`Skill 目录名无效：${name}`);
-  validateSkill(source);
   rejectSymlinks(source);
+  validateSkill(source);
   const manifest = contentManifest(source);
   const target = join(targetRoot, name);
-  if (existsSync(target)) {
+  const targetInfo = lstatSync(target, { throwIfNoEntry: false });
+  if (targetInfo?.isSymbolicLink()) throw new Error(`Skill ${name} 安装目标是符号链接，已拒绝安装`);
+  if (targetInfo) {
     rejectSymlinks(target);
     const installed = contentManifest(target);
     if (installed.digest !== manifest.digest) {
@@ -116,6 +139,7 @@ function copySkill(source: string, targetRoot: string, preferredName: string, co
 
 function copySkills(
   candidates: Array<{ source: string; name: string }>,
+  checkout: string,
   targetRoot: string,
   commit: string,
   signal?: AbortSignal,
@@ -124,6 +148,7 @@ function copySkills(
   try {
     for (const candidate of candidates) {
       signal?.throwIfAborted();
+      assertSourceDirectory(checkout, candidate.source);
       installed.push(copySkill(candidate.source, targetRoot, candidate.name, commit));
     }
     return installed;
@@ -136,12 +161,15 @@ function copySkills(
 }
 
 async function githubJson(url: string, signal?: AbortSignal): Promise<unknown> {
+  signal?.throwIfAborted();
   const headers: Record<string, string> = { accept: "application/json", "user-agent": "dsh-top100-plugin" };
   const token = process.env.GITHUB_TOKEN?.trim() || process.env.GH_TOKEN?.trim();
   if (token) headers.authorization = `Bearer ${token}`;
-  const response = await fetch(url, { headers, signal: signal ?? AbortSignal.timeout(15_000) });
+  const response = await fetch(url, { headers, signal: AbortSignal.any([AbortSignal.timeout(15_000), ...(signal ? [signal] : [])]) });
   if (!response.ok) throw new Error(`Skill 来源验证失败：${response.status} ${response.statusText || "request failed"}`);
-  return response.json();
+  const payload: unknown = await response.json();
+  signal?.throwIfAborted();
+  return payload;
 }
 
 export async function verifySkillSource(fullName: string, signal?: AbortSignal): Promise<VerifiedSkillSource> {
@@ -167,8 +195,8 @@ export async function installSkill(
   const temporary = mkdtempSync(join(tmpdir(), "dsh-top100-skill-"));
   const checkout = join(temporary, "repo");
   const targetRoot = join(process.env.DSH_HOME ?? join(homedir(), ".dsh"), "skills");
-  mkdirSync(targetRoot, { recursive: true });
   try {
+    ensureTargetRoot(targetRoot);
     const source = options.commit
       ? { commit: options.commit }
       : await verifySkillSource(fullName, options.signal);
@@ -184,18 +212,21 @@ export async function installSkill(
       return copySkills([{
         source: checkout,
         name: fullName.split("/")[1] ?? fullName,
-      }], targetRoot, source.commit, options.signal);
+      }], checkout, targetRoot, source.commit, options.signal);
     }
     const skillsRoot = ["skills", "skill"]
       .map((name) => join(checkout, name))
-      .find((path) => existsSync(path));
+      .find((path) => lstatSync(path, { throwIfNoEntry: false }) !== undefined);
     if (!skillsRoot) throw new Error("仓库根目录及 skills/ 下均未找到 SKILL.md");
+    assertSourceDirectory(checkout, skillsRoot);
+    rejectSymlinks(skillsRoot);
     const candidates = readdirSync(skillsRoot, { withFileTypes: true })
       .filter((entry) => entry.isDirectory() && existsSync(join(skillsRoot, entry.name, "SKILL.md")));
     if (candidates.length === 0) throw new Error("skills/ 下没有可安装的直接子目录");
     options.signal?.throwIfAborted();
     return copySkills(
       candidates.map((entry) => ({ source: join(skillsRoot, entry.name), name: entry.name })),
+      checkout,
       targetRoot,
       source.commit,
       options.signal,

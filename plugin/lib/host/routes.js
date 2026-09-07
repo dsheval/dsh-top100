@@ -1,24 +1,69 @@
 /** Host HTTP routes for catalog, install, and status. */
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_DATA_URL, filterCatalog, filteredCatalogCategories, findPublishedEntry, catalogCacheStatus, invalidateCatalog, isRankingView, isCatalogScope, isInstallAvailability, loadCachedRankings, loadCatalogMetadata, loadRankingView, loadSearchRankings, loadSkillRankings, normalizeDataUrl, } from "./catalog.js";
+import { isDeepStrictEqual } from "node:util";
+import { DEFAULT_DATA_URL, filterCatalog, filteredCatalogCategories, findPublishedEntry, CatalogLookupError, catalogCacheStatus, invalidateCatalog, isRankingView, isCatalogScope, isInstallAvailability, loadCachedRankings, loadCatalogMetadata, loadRankingView, loadSearchRankings, loadSkillRankings, normalizeDataUrl, } from "./catalog.js";
 import { cancelActive, progress, runDshPlugin, runDshProfileCheck, } from "../install/dsh-cli.js";
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
 import { FULL_NAME_RE, isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
 import { withPnpmRecovery } from "../install/pnpm-compat.js";
-import { dropFromManifest, INBOX_BUNDLES, isDshProfileName, profileDir, readInstalled, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
+import { dropFromManifest, INBOX_BUNDLES, isDshProfileName, profileDir, readInstalled, readInstalledManifest, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
 import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
 import { isProtectedPackage, parseDshPatchText, rowIdsForPackage, setPackageEnabled, userPatchPackageReferences, userPatchPath, } from "./patch-toggle.js";
 import { installSkill } from "../install/skill-install.js";
-import { consumeInstallApproval, createInstallPreflight } from "./install-preflight.js";
+import { consumeInstallApproval, createInstallPreflight, validateInstallApprovals } from "./install-preflight.js";
+import { createUpdatePreflight, validateUpdateApprovals, assertUpdateUnchanged, discardUpdateApprovals } from "./update-preflight.js";
 import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
 import { isPluginCategoryId } from "../shared/categories.js";
 const MAX_BATCH_SIZE = 20;
+// Twenty scoped npm names plus their approval records can exceed the small-route default.
+const MAX_BATCH_BODY_BYTES = 32 * 1024;
 const MAX_SKILL_CONCURRENCY = 3;
 const TERMINAL_PHASES = ["installed", "failed", "cancelled"];
+class SubmissionError extends Error {
+    status = 409;
+}
+const submissions = new Map();
+const SUBMISSION_ID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+function submissionKey(config, submissionId) {
+    if (typeof submissionId !== "string" || !SUBMISSION_ID_RE.test(submissionId)) {
+        throw new SubmissionError("提交编号无效，请重新检查任务状态");
+    }
+    return JSON.stringify([config.profile, resolve(profileDir(config.profile, config.profileDirectory)), submissionId]);
+}
+function canonicalBody(value) {
+    if (Array.isArray(value))
+        return value.map(canonicalBody);
+    if (value && typeof value === "object")
+        return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, canonicalBody(child)]));
+    return value;
+}
+function prepareSubmission(config, path, body) {
+    if (body.submissionId === undefined)
+        return null; // Older clients remain supported.
+    const key = submissionKey(config, body.submissionId);
+    const fingerprint = createHash("sha256").update(JSON.stringify([path, canonicalBody(body)])).digest("hex");
+    const receipt = submissions.get(key);
+    if (receipt?.fingerprint && receipt.fingerprint !== fingerprint)
+        throw new SubmissionError("同一提交编号不能用于不同操作");
+    if (receipt?.cancelled && !receipt.batchId)
+        throw new SubmissionError("此提交已取消，迟到请求不会执行");
+    return { key, fingerprint, replay: receipt?.batchId ? batchSnapshot(receipt.batchId) : null };
+}
+function acceptedSubmission(response, submission, batch) {
+    // Remember acceptance before writing the response; a lost connection must not
+    // lose the ability to reconcile a running or already completed operation.
+    if (submission)
+        submissions.set(submission.key, { fingerprint: submission.fingerprint, batchId: batch.batchId, cancelled: false });
+    sendJson(response, 202, batch);
+}
+function submissionErrorStatus(error, fallback = 400) {
+    return error instanceof SubmissionError ? error.status : fallback;
+}
 const jobs = new Map();
 const batches = new Map();
 const profileQueues = new Map();
@@ -119,7 +164,112 @@ function publicJob(job) {
         cancelRequested: job.cancelRequested,
     };
 }
-function enqueueManageJob(batch, config, action, name, kind, commandRuntime, allowUnreadablePatch = false) {
+function dependencySnapshot(config, targetPackage) {
+    const manifest = readProfileManifestSnapshot(config.profile, config.profileDirectory);
+    const packages = new Map();
+    for (const name of new Set([...Object.keys(manifest.dependencies), ...(targetPackage ? [targetPackage] : [])])) {
+        const installed = readInstalledManifest(config.profile, name, config.profileDirectory);
+        packages.set(name, installed ? { name: installed.name, version: installed.version } : null);
+    }
+    return { manifest, packages };
+}
+/** Both install and update keep their profile queue lock throughout strict recovery. */
+async function recoverDependencyOperation(job, config, before, error, commandRuntime) {
+    const action = job.action === "update" ? "更新" : "安装";
+    const detail = error instanceof Error ? error.message : String(error);
+    // Cancelling the original operation must not interrupt its recovery command.
+    updateJob(job, "validating", { lastLine: `正在恢复${action}前的依赖，请等待恢复完成` });
+    try {
+        restoreProfileManifest(config.profile, before.manifest, config.profileDirectory);
+        if (!isDeepStrictEqual(readProfileManifestSnapshot(config.profile, config.profileDirectory), before.manifest)) {
+            throw new Error("无法恢复操作前的配置或锁文件");
+        }
+        // Never let automatic pnpm workarounds recalculate the saved lockfile.
+        const restored = await (commandRuntime?.runPlugin ?? runDshPlugin)(config.profile, ["install", "--frozen-lockfile"], { fullName: job.fullName });
+        if (restored.exitCode !== 0 || restored.timedOut || restored.cancelled)
+            throw new Error(installFailure(restored));
+        for (const [name, expected] of before.packages) {
+            const installed = readInstalledManifest(config.profile, name, config.profileDirectory);
+            const actual = installed ? { name: installed.name, version: installed.version } : null;
+            if (!isDeepStrictEqual(actual, expected))
+                throw new Error(`恢复后的依赖 ${name} 与操作前不一致`);
+        }
+        const checked = await checkProfile(config, commandRuntime);
+        if (checked.exitCode !== 0 || checked.timedOut || checked.cancelled)
+            throw new Error(installFailure(checked));
+        invalidateCatalog();
+        updateJob(job, job.cancelRequested ? "cancelled" : "failed", {
+            error: `${detail}；已自动回滚到${action}前版本`,
+            lastLine: `${action}${job.cancelRequested ? "已取消" : "失败"}，原有依赖已恢复`,
+            activationState: "restart-required", requiresRestart: true,
+        });
+    }
+    catch (recoveryError) {
+        updateJob(job, "failed", {
+            error: `${detail}；自动恢复失败，需要手动检查：${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`,
+            lastLine: `${action}未完成且自动恢复失败，需要修复`, activationState: "broken", requiresRestart: true,
+        });
+    }
+}
+/** Keep the profile queue locked until either the update or its recovery finishes. */
+async function runApprovedUpdate(job, config, approval, commandRuntime) {
+    let before = null;
+    let mutationStarted = false;
+    try {
+        assertUpdateUnchanged(approval, config.profile, config.profileDirectory);
+        assertProvenanceLedgerReadable(config);
+        updateJob(job, "validating", { lastLine: "正在检查更新前的 DSH 配置" });
+        const baseline = await checkProfile(config, commandRuntime);
+        if (baseline.cancelled)
+            job.cancelRequested = true;
+        if (baseline.exitCode !== 0 || baseline.timedOut || baseline.cancelled) {
+            throw new Error(`当前 DSH 配置存在问题，更新已停止：${installFailure(baseline)}`);
+        }
+        job.controller.signal.throwIfAborted();
+        assertUpdateUnchanged(approval, config.profile, config.profileDirectory);
+        before = dependencySnapshot(config, approval.name);
+        mutationStarted = true;
+        if (approval.bundleTarget.needsBuildApproval) {
+            if (approval.bundleTarget.buildApprovalKeys.length === 0)
+                throw new Error("更新缺少可验证的构建授权键");
+            allowPackageBuild(config.profile, approval.bundleTarget.buildApprovalKeys, config.profileDirectory);
+        }
+        updateJob(job, "installing", { lastLine: "正在更新到已确认的精确版本" });
+        const result = await runProfilePlugin(config, ["add", approval.bundleTarget.target], approval.name, commandRuntime);
+        if (result.cancelled)
+            job.cancelRequested = true;
+        if (result.exitCode !== 0 || result.timedOut || result.cancelled)
+            throw new Error(installFailure(result));
+        job.controller.signal.throwIfAborted();
+        const installed = readInstalledManifest(config.profile, approval.name, config.profileDirectory);
+        if (installed?.name !== approval.bundleTarget.packageName
+            || (approval.bundleTarget.version !== null && installed?.version !== approval.bundleTarget.version)) {
+            throw new Error("更新后的包名或版本与已确认来源不一致");
+        }
+        updateJob(job, "validating", { lastLine: "正在验证更新后的 DSH 配置" });
+        const checked = await checkProfile(config, commandRuntime);
+        if (checked.cancelled)
+            job.cancelRequested = true;
+        if (checked.exitCode !== 0 || checked.timedOut || checked.cancelled) {
+            throw new Error(`插件更新后未通过 DSH 配置验证：${installFailure(checked)}`);
+        }
+        job.controller.signal.throwIfAborted();
+        recordInstallProvenance(config, approval.preflight);
+        invalidateCatalog();
+        updateJob(job, "installed", {
+            requiresRestart: true, activationState: "restart-required", message: "updated",
+            provenance: approval.preflight.provenance, lastLine: "更新完成，已记录精确来源；重启后验证运行状态",
+        });
+    }
+    catch (error) {
+        if (!mutationStarted || !before) {
+            failJob(job, error);
+            return;
+        }
+        await recoverDependencyOperation(job, config, before, error, commandRuntime);
+    }
+}
+function enqueueManageJob(batch, config, action, name, kind, commandRuntime, allowUnreadablePatch = false, updateApproval) {
     const job = {
         id: id("job"), batchId: batch.id, fullName: name, profile: config.profile, action, kind,
         phase: "queued", lastLine: action === "update" ? "等待更新" : "等待卸载",
@@ -150,7 +300,15 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
             updateJob(job, "cancelled");
             return;
         }
-        updateJob(job, "installing", { lastLine: action === "update" ? "正在更新插件" : "正在卸载插件" });
+        if (action === "update") {
+            if (!updateApproval) {
+                failJob(job, new Error("更新需要重新预检并确认来源"));
+                return;
+            }
+            await runApprovedUpdate(job, config, updateApproval, commandRuntime);
+            return;
+        }
+        updateJob(job, "installing", { lastLine: "正在卸载插件" });
         const timer = setInterval(() => {
             if (progress.fullName === job.fullName && progress.lastLine)
                 job.lastLine = progress.lastLine;
@@ -162,35 +320,30 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                 throw new Error("plugin is not installed");
             if (isProtectedPackage(name))
                 throw new Error("该插件属于宿主或本排行插件，不能在这里管理");
-            const cleanupRows = action === "uninstall"
-                ? rowIdsForPackage(config.profile, name, config.profileDirectory)
-                : [];
+            let cleanupRows = [];
+            let cleanupNote = null;
+            try {
+                cleanupRows = rowIdsForPackage(config.profile, name, config.profileDirectory);
+            }
+            catch {
+                cleanupNote = "未能核对原加载 id，已保留用户补丁，请在诊断页检查";
+            }
             if (action === "uninstall") {
                 const references = userPatchPackageReferences(userPatchPath(config.profile, config.profileDirectory), name);
                 if (references === null && !allowUnreadablePatch)
                     throw new Error("无法安全检查 cordis.patch.yml，已停止卸载");
+                if (references === null) {
+                    // Explicit force authorizes package removal, never rewriting unreadable user configuration.
+                    cleanupRows = [];
+                    cleanupNote = "用户补丁无法解析，已保留原文件，请手动检查配置";
+                }
                 if (references !== null && references.length > 0) {
                     throw new Error(`cordis.patch.yml 仍通过 insert 引用 ${references.join("、")}，请先移除引用`);
                 }
             }
-            const target = action === "update" ? resolveUpdateTarget(name, spec) : name;
-            if (!target)
-                throw new Error("本地 link/file 插件请在源码目录更新");
-            const manifestBefore = action === "update"
-                ? readProfileManifestSnapshot(config.profile, config.profileDirectory)
-                : null;
-            const result = await runProfilePlugin(config, [action === "update" ? "add" : "remove", target], name, commandRuntime);
+            const result = await runProfilePlugin(config, ["remove", name], name, commandRuntime);
             const failed = result.exitCode !== 0 || result.timedOut || result.cancelled;
             if (failed) {
-                if (action === "update" && manifestBefore && !result.cancelled) {
-                    const restored = restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
-                    if (restored.length > 0) {
-                        const reinstall = await runProfilePlugin(config, ["install", "--frozen-lockfile"], name, commandRuntime);
-                        if (reinstall.exitCode !== 0 || reinstall.timedOut || reinstall.cancelled) {
-                            throw new Error(`更新失败；profile 清单已回滚，但旧版本文件恢复失败：${installFailure(reinstall)}`);
-                        }
-                    }
-                }
                 if (action === "uninstall" && !result.cancelled) {
                     const installedOnDisk = existsSync(join(profileDir(config.profile, config.profileDirectory), "node_modules", name, "package.json"));
                     const stillDeclared = readInstalled(config.profile, config.profileDirectory)[name] !== undefined;
@@ -203,27 +356,12 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                             requiresRestart: true,
                             activationState: "restart-required",
                             message: "uninstalled",
-                            lastLine: "卸载已完成，并清理了残留配置",
+                            lastLine: cleanupNote ? `插件已移除；${cleanupNote}` : "卸载已完成，并清理了残留配置",
                         });
                         return;
                     }
                 }
                 throw new Error(installFailure(result));
-            }
-            if (action === "update") {
-                job.lastLine = "正在验证更新后的 DSH 配置";
-                const checked = await checkProfile(config, commandRuntime);
-                if (checked.exitCode !== 0 || checked.timedOut) {
-                    const restored = manifestBefore
-                        ? restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory)
-                        : [];
-                    const reinstall = restored.length > 0
-                        ? await runProfilePlugin(config, ["install", "--frozen-lockfile"], name, commandRuntime)
-                        : null;
-                    const rollbackOk = reinstall === null
-                        || (reinstall.exitCode === 0 && !reinstall.timedOut && !reinstall.cancelled);
-                    throw new Error(`插件更新后未通过 DSH 配置验证${rollbackOk ? "，已自动回滚" : "；清单已回滚，但旧版本文件恢复失败"}：${installFailure(checked)}`);
-                }
             }
             if (action === "uninstall") {
                 const installedOnDisk = existsSync(join(profileDir(config.profile, config.profileDirectory), "node_modules", name, "package.json"));
@@ -235,7 +373,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                 cleanupAfterUninstall(config.profile, name, cleanupRows, config.profileDirectory);
             }
             invalidateCatalog();
-            updateJob(job, "installed", { requiresRestart: true, activationState: "restart-required", message: action === "update" ? "updated" : "uninstalled", lastLine: action === "update" ? "更新完成，重启后验证运行状态" : "已卸载，重启后确认运行状态" });
+            updateJob(job, "installed", { requiresRestart: true, activationState: "restart-required", message: "uninstalled", lastLine: cleanupNote ? `插件已移除；${cleanupNote}` : "已卸载，重启后确认运行状态" });
         }
         catch (error) {
             failJob(job, error);
@@ -250,7 +388,7 @@ function createManageJobs(config, action, items, commandRuntime, allowUnreadable
     const batch = { id: batchId, createdAt: Date.now(), jobIds: [] };
     batches.set(batchId, batch);
     for (const item of items) {
-        enqueueManageJob(batch, config, action, item.name, item.kind, commandRuntime, allowUnreadablePatch);
+        enqueueManageJob(batch, config, action, item.name, item.kind, commandRuntime, allowUnreadablePatch, item.updateApproval);
     }
     return batchSnapshot(batchId);
 }
@@ -406,78 +544,57 @@ async function prepareJob(job, config, commandRuntime) {
                 throw new Error("插件需要构建，但没有可验证的 allowBuilds 键");
             buildApprovalKeys = resolvedTarget.buildApprovalKeys;
         }
-        if (isInstalledEntry(entry, readInstalled(config.profile, config.profileDirectory))) {
-            updateJob(job, "installed", {
-                message: "already installed",
-                requiresRestart: false,
-                activationState: "unknown",
-                provenance: null,
-                lastLine: "Profile 已声明该插件；当前进程运行状态尚未验证",
-            });
-            return;
-        }
         updateJob(job, "waiting-profile-lock", { lastLine: "等待 profile 安装队列" });
         enqueueProfile(config.profile, job, async () => {
             if (job.cancelRequested) {
                 updateJob(job, "cancelled");
                 return;
             }
-            updateJob(job, "installing", { lastLine: "正在写入 DSH profile" });
+            let before = null;
             const progressTimer = setInterval(() => {
-                if (progress.fullName === job.fullName && progress.lastLine)
+                if (job.phase === "installing" && progress.fullName === job.fullName && progress.lastLine)
                     job.lastLine = progress.lastLine;
             }, 250);
             progressTimer.unref?.();
             try {
-                job.lastLine = "正在检查当前 DSH profile";
-                const before = await checkProfile(config, commandRuntime);
-                if (before.exitCode !== 0 || before.timedOut) {
-                    throw new Error(`当前 DSH profile 已存在配置问题，安装已停止：${installFailure(before)}`);
+                updateJob(job, "validating", { lastLine: "正在检查当前 DSH profile" });
+                const baseline = await checkProfile(config, commandRuntime);
+                if (baseline.cancelled)
+                    job.cancelRequested = true;
+                if (baseline.exitCode !== 0 || baseline.timedOut || baseline.cancelled) {
+                    throw new Error(`当前 DSH profile 已存在配置问题，安装已停止：${installFailure(baseline)}`);
                 }
-                if (job.cancelRequested) {
-                    updateJob(job, "cancelled", { lastLine: "已取消" });
+                job.controller.signal.throwIfAborted();
+                if (isInstalledEntry(entry, readInstalled(config.profile, config.profileDirectory))) {
+                    updateJob(job, "installed", {
+                        message: "already installed",
+                        requiresRestart: false,
+                        activationState: "unknown",
+                        provenance: null,
+                        lastLine: "Profile 已声明该插件；当前进程运行状态尚未验证",
+                    });
                     return;
                 }
-                const manifestBefore = readProfileManifestSnapshot(config.profile, config.profileDirectory);
+                before = dependencySnapshot(config, resolvedTarget.packageName);
                 if (buildApprovalKeys.length > 0)
                     allowPackageBuild(config.profile, buildApprovalKeys, config.profileDirectory);
-                job.lastLine = "正在写入 DSH profile";
+                updateJob(job, "installing", { lastLine: "正在写入 DSH profile" });
                 const result = await runProfilePlugin(config, ["add", target], job.fullName, commandRuntime);
-                const ok = result.exitCode === 0 && !result.timedOut && !result.cancelled;
-                if (!ok) {
-                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
+                if (result.cancelled)
+                    job.cancelRequested = true;
+                if (result.exitCode !== 0 || result.timedOut || result.cancelled)
                     throw new Error(installFailure(result));
-                }
-                job.lastLine = "正在验证安装后的 DSH 配置";
+                job.controller.signal.throwIfAborted();
+                updateJob(job, "validating", { lastLine: "正在验证安装后的 DSH 配置" });
                 const after = await checkProfile(config, commandRuntime);
-                if (after.exitCode !== 0 || after.timedOut) {
-                    const packageName = resolvedTarget.packageName;
-                    const rollback = packageName
-                        ? await runProfilePlugin(config, ["remove", packageName], job.fullName, commandRuntime)
-                        : null;
-                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
-                    const rolledBack = rollback !== null
-                        && rollback.exitCode === 0
-                        && !rollback.timedOut
-                        && !rollback.cancelled;
-                    throw new Error(`插件安装后未通过 DSH 配置验证${rolledBack ? "，已自动回滚" : "，自动回滚失败，请手动移除"}：${installFailure(after)}`);
+                if (after.cancelled)
+                    job.cancelRequested = true;
+                if (after.exitCode !== 0 || after.timedOut || after.cancelled) {
+                    throw new Error(`插件安装后未通过 DSH 配置验证：${installFailure(after)}`);
                 }
+                job.controller.signal.throwIfAborted();
+                recordInstallProvenance(config, approval.preflight);
                 invalidateCatalog();
-                try {
-                    recordInstallProvenance(config, approval.preflight);
-                }
-                catch (error) {
-                    const packageName = resolvedTarget.packageName;
-                    const rollback = packageName
-                        ? await runProfilePlugin(config, ["remove", packageName], job.fullName, commandRuntime)
-                        : null;
-                    restoreProfileManifest(config.profile, manifestBefore, config.profileDirectory);
-                    const rolledBack = rollback !== null
-                        && rollback.exitCode === 0
-                        && !rollback.timedOut
-                        && !rollback.cancelled;
-                    throw new Error(`插件已写入但安装来源台账保存失败${rolledBack ? "，已自动回滚" : "，自动回滚失败，请手动移除"}：${error instanceof Error ? error.message : String(error)}`);
-                }
                 updateJob(job, "installed", {
                     requiresRestart: true,
                     activationState: entry.install?.needsConfig ? "configuration-required" : "restart-required",
@@ -489,7 +606,10 @@ async function prepareJob(job, config, commandRuntime) {
                 });
             }
             catch (error) {
-                failJob(job, error);
+                if (before)
+                    await recoverDependencyOperation(job, config, before, error, commandRuntime);
+                else
+                    failJob(job, error);
             }
             finally {
                 clearInterval(progressTimer);
@@ -557,7 +677,17 @@ export function mountRoutes(host, config, commandRuntime) {
         host.webServer.register({
             kind: "exact",
             path: "/dsh-top100/status",
-            handler(_request, response) {
+            handler(request, response) {
+                let receipt;
+                try {
+                    const submissionId = queryOf(request).get("submissionId");
+                    if (submissionId !== null)
+                        receipt = submissions.get(submissionKey(config, submissionId));
+                }
+                catch (error) {
+                    sendJson(response, submissionErrorStatus(error), { error: error.message });
+                    return;
+                }
                 sendJson(response, 200, {
                     ok: true,
                     name: "dsh-top100",
@@ -566,8 +696,10 @@ export function mountRoutes(host, config, commandRuntime) {
                     profile: config.profile,
                     progress,
                     activeBatches: activeBatchSnapshots(config.profile),
+                    submission: receipt?.batchId ? batchSnapshot(receipt.batchId) : null,
+                    submissionCancelled: receipt?.cancelled ?? false,
                     activeJobs: [...jobs.values()]
-                        .filter((job) => !TERMINAL_PHASES.includes(job.phase))
+                        .filter((job) => job.profile === config.profile && !TERMINAL_PHASES.includes(job.phase))
                         .map(publicJob),
                 });
             },
@@ -656,7 +788,12 @@ export function mountRoutes(host, config, commandRuntime) {
                         excludedSkillCount,
                         offset,
                         limit,
-                        items,
+                        items: items.map((item) => {
+                            const totalRank = item.totalRank ?? (!usesViewShard ? item.rank : undefined);
+                            return document.snapshotId && catalogScope !== "skills" && Number.isSafeInteger(totalRank) && totalRank > 0
+                                ? { ...item, installLocator: { snapshotId: document.snapshotId, totalRank } }
+                                : item;
+                        }),
                     });
                 }
                 catch (error) {
@@ -672,6 +809,11 @@ export function mountRoutes(host, config, commandRuntime) {
                     sendJson(response, 403, { error: "same-origin POST required" });
                     return;
                 }
+                const controller = new AbortController();
+                const onClose = () => { if (!response.writableEnded)
+                    controller.abort(); };
+                response.on("close", onClose);
+                let stage = "catalog";
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
                     const fullName = typeof body.fullName === "string" ? body.fullName.trim() : "";
@@ -679,16 +821,43 @@ export function mountRoutes(host, config, commandRuntime) {
                         sendJson(response, 400, { error: "fullName must be owner/repo" });
                         return;
                     }
-                    const entry = await findPublishedEntry(config.dataUrl || DEFAULT_DATA_URL, fullName);
+                    let locator;
+                    if (body.installLocator !== undefined) {
+                        const value = readBodyRecord(body.installLocator);
+                        if (typeof value.snapshotId !== "string" || value.snapshotId.length > 200
+                            || typeof value.totalRank !== "number" || !Number.isSafeInteger(value.totalRank) || value.totalRank < 1) {
+                            sendJson(response, 400, { error: "安装目录定位信息无效，请刷新列表后重试", code: "invalid-locator", stage });
+                            return;
+                        }
+                        locator = { snapshotId: value.snapshotId, totalRank: value.totalRank };
+                    }
+                    const entry = await findPublishedEntry(config.dataUrl || DEFAULT_DATA_URL, fullName, true, locator, controller.signal);
+                    controller.signal.throwIfAborted();
                     if (!entry) {
-                        sendJson(response, 404, { error: "plugin is not in the current published catalog" });
+                        sendJson(response, 404, { error: "plugin is not in the current published catalog", code: "catalog-changed", stage });
                         return;
                     }
-                    const approval = await createInstallPreflight(entry, config.profile);
+                    stage = "source";
+                    const approval = await createInstallPreflight(entry, config.profile, controller.signal);
+                    controller.signal.throwIfAborted();
                     sendJson(response, 200, approval.preflight);
                 }
                 catch (error) {
-                    sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
+                    if (controller.signal.aborted)
+                        return;
+                    const detail = error instanceof Error ? error.message : String(error);
+                    const code = error instanceof CatalogLookupError ? error.code
+                        : /timeout|timed out|超时/i.test(detail) ? "timeout"
+                            : /fetch failed|network|网络|ECONN|ENOTFOUND/i.test(detail) ? "network"
+                                : /完整性|不受信任|不匹配|不一致/.test(detail) ? "verification"
+                                    : "preflight-failed";
+                    const prefix = stage === "catalog" ? "读取安装目录失败" : "核对安装来源失败";
+                    sendJson(response, error instanceof CatalogLookupError ? 409 : 422, {
+                        error: `${prefix}：${detail}`, code, stage,
+                    });
+                }
+                finally {
+                    response.off("close", onClose);
                 }
             },
         }),
@@ -730,6 +899,31 @@ export function mountRoutes(host, config, commandRuntime) {
         }),
         host.webServer.register({
             kind: "exact",
+            path: "/dsh-top100/cancel-submission",
+            async handler(request, response) {
+                if (request.method !== "POST" || !sameOrigin(request)) {
+                    sendJson(response, 403, { error: "same-origin POST required" });
+                    return;
+                }
+                try {
+                    const body = readBodyRecord(await readJsonBody(request));
+                    const key = submissionKey(config, body.submissionId);
+                    const previous = submissions.get(key);
+                    // This tombstone is written synchronously, before any late POST can
+                    // validate its approvals and create a batch in this host process.
+                    submissions.set(key, { fingerprint: previous?.fingerprint ?? null, batchId: previous?.batchId ?? null, cancelled: true });
+                    const batch = previous?.batchId ? batches.get(previous.batchId) : null;
+                    for (const jobId of batch?.jobIds ?? [])
+                        cancelJob(jobId, commandRuntime);
+                    sendJson(response, 200, { cancelled: true, submission: previous?.batchId ? batchSnapshot(previous.batchId) : null });
+                }
+                catch (error) {
+                    sendJson(response, submissionErrorStatus(error), { error: error instanceof Error ? error.message : String(error) });
+                }
+            },
+        }),
+        host.webServer.register({
+            kind: "exact",
             path: "/dsh-top100/cancel",
             async handler(request, response) {
                 if (request.method !== "POST" || !sameOrigin(request)) {
@@ -738,11 +932,10 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
-                    const jobId = typeof body.jobId === "string" ? body.jobId : "";
+                    const jobId = typeof body.jobId === "string" && body.jobId
+                        ? body.jobId : activeProfileJobs.get(config.profile);
                     sendJson(response, 200, {
-                        cancelled: jobId
-                            ? cancelJob(jobId, commandRuntime)
-                            : (commandRuntime?.cancelActive ?? cancelActive)(),
+                        cancelled: Boolean(jobId && jobs.get(jobId)?.profile === config.profile && cancelJob(jobId, commandRuntime)),
                     });
                 }
                 catch (error) {
@@ -759,26 +952,33 @@ export function mountRoutes(host, config, commandRuntime) {
                     return;
                 }
                 try {
-                    const body = readBodyRecord(await readJsonBody(request));
+                    const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
+                    const submission = prepareSubmission(config, "/dsh-top100/install-batch", body);
+                    if (submission?.replay) {
+                        sendJson(response, 202, submission.replay);
+                        return;
+                    }
                     const requested = Array.isArray(body.approvals) ? body.approvals : [];
-                    const references = requested.flatMap((value) => {
-                        if (value === null || typeof value !== "object")
-                            return [];
+                    const references = requested.map((value) => {
+                        if (value === null || typeof value !== "object" || Array.isArray(value))
+                            throw new Error("invalid install approval");
                         const record = value;
                         const fullName = typeof record.fullName === "string" ? record.fullName.trim() : "";
                         const approvalToken = typeof record.approvalToken === "string" ? record.approvalToken.trim() : "";
                         const risksAccepted = record.risksAccepted === true;
-                        return fullName && approvalToken ? [{ fullName, approvalToken, risksAccepted }] : [];
+                        if (!fullName || !approvalToken)
+                            throw new Error("invalid install approval");
+                        return { fullName, approvalToken, risksAccepted };
                     });
                     if (references.length === 0 || references.length > MAX_BATCH_SIZE || references.some(({ fullName }) => !FULL_NAME_RE.test(fullName))) {
                         sendJson(response, 400, { error: `approvals must contain 1-${MAX_BATCH_SIZE} preflight tokens` });
                         return;
                     }
-                    const approvals = references.map(({ fullName, approvalToken, risksAccepted }) => (consumeInstallApproval(approvalToken, fullName, config.profile, risksAccepted)));
-                    sendJson(response, 202, createBatch(approvals, config, commandRuntime));
+                    const approvals = validateInstallApprovals(references, config.profile);
+                    acceptedSubmission(response, submission, createBatch(approvals, config, commandRuntime));
                 }
                 catch (error) {
-                    sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
+                    sendJson(response, submissionErrorStatus(error), { error: error instanceof Error ? error.message : "invalid json" });
                 }
             },
         }),
@@ -792,22 +992,27 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 try {
                     const body = readBodyRecord(await readJsonBody(request));
+                    const submission = prepareSubmission(config, "/dsh-top100/retry", body);
+                    if (submission?.replay) {
+                        sendJson(response, 202, submission.replay);
+                        return;
+                    }
                     const previous = typeof body.jobId === "string" ? jobs.get(body.jobId) : null;
-                    if (!previous || !["failed", "cancelled"].includes(previous.phase)) {
+                    if (!previous || previous.profile !== config.profile || !["failed", "cancelled"].includes(previous.phase)) {
                         sendJson(response, 409, { error: "only failed or cancelled jobs can be retried" });
                         return;
                     }
-                    if (previous.action === "update" || previous.action === "uninstall") {
-                        sendJson(response, 202, createManageJobs(config, previous.action, [{
+                    if (previous.action === "uninstall") {
+                        acceptedSubmission(response, submission, createManageJobs(config, previous.action, [{
                                 name: previous.fullName,
                                 kind: previous.kind === "skill" ? "skill" : "bundle",
                             }], commandRuntime));
                         return;
                     }
-                    sendJson(response, 409, { error: "install retry requires a new preflight and risk confirmation" });
+                    sendJson(response, 409, { error: "install/update retry requires a new preflight and risk confirmation" });
                 }
                 catch (error) {
-                    sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
+                    sendJson(response, submissionErrorStatus(error), { error: error instanceof Error ? error.message : "invalid json" });
                 }
             },
         }),
@@ -821,7 +1026,7 @@ export function mountRoutes(host, config, commandRuntime) {
                 }
                 let cancelled = 0;
                 for (const job of jobs.values()) {
-                    if (cancelJob(job.id, commandRuntime))
+                    if (job.profile === config.profile && cancelJob(job.id, commandRuntime))
                         cancelled += 1;
                 }
                 sendJson(response, 200, { cancelled });
@@ -881,6 +1086,51 @@ export function mountRoutes(host, config, commandRuntime) {
         }),
         host.webServer.register({
             kind: "exact",
+            path: "/dsh-top100/update-preflight",
+            async handler(request, response) {
+                if (request.method !== "POST" || !sameOrigin(request)) {
+                    sendJson(response, 403, { error: "same-origin POST required" });
+                    return;
+                }
+                const controller = new AbortController();
+                const onClose = () => { if (!response.writableEnded)
+                    controller.abort(); };
+                response.on("close", onClose);
+                const issuedTokens = [];
+                let delivered = false;
+                try {
+                    const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
+                    const names = body.names;
+                    if (!Array.isArray(names) || names.length === 0 || names.length > MAX_BATCH_SIZE
+                        || names.some((name) => typeof name !== "string" || !name.trim() || name.trim().length > 214)
+                        || new Set(names.map((name) => name.trim())).size !== names.length) {
+                        sendJson(response, 400, { error: `需要 1-${MAX_BATCH_SIZE} 个不重复的插件名称` });
+                        return;
+                    }
+                    const items = [];
+                    for (const name of names) {
+                        controller.signal.throwIfAborted();
+                        const approval = await createUpdatePreflight(name.trim(), config.profile, config.profileDirectory, controller.signal);
+                        issuedTokens.push(approval.preflight.approvalToken);
+                        items.push({ name: approval.name, currentVersion: approval.currentVersion, preflight: approval.preflight });
+                    }
+                    controller.signal.throwIfAborted();
+                    sendJson(response, 200, { items });
+                    delivered = true;
+                }
+                catch (error) {
+                    if (!controller.signal.aborted)
+                        sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
+                }
+                finally {
+                    response.off("close", onClose);
+                    if (!delivered)
+                        discardUpdateApprovals(issuedTokens);
+                }
+            },
+        }),
+        host.webServer.register({
+            kind: "exact",
             path: "/dsh-top100/manage",
             async handler(request, response) {
                 if (request.method !== "POST" || !sameOrigin(request)) {
@@ -888,7 +1138,12 @@ export function mountRoutes(host, config, commandRuntime) {
                     return;
                 }
                 try {
-                    const body = readBodyRecord(await readJsonBody(request));
+                    const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
+                    const submission = prepareSubmission(config, "/dsh-top100/manage", body);
+                    if (submission?.replay) {
+                        sendJson(response, 202, submission.replay);
+                        return;
+                    }
                     const action = body.action === "update" || body.action === "uninstall" ? body.action : null;
                     const names = Array.isArray(body.names)
                         ? body.names.filter((value) => typeof value === "string").map((value) => value.trim()).filter(Boolean)
@@ -896,7 +1151,9 @@ export function mountRoutes(host, config, commandRuntime) {
                     const unique = [...new Set(names)];
                     const kind = body.kind === "skill" ? "skill" : "bundle";
                     const forceUnreadablePatch = body.force === true;
-                    if (!action || unique.length === 0 || unique.length > MAX_BATCH_SIZE) {
+                    if (!action || unique.length === 0 || unique.length > MAX_BATCH_SIZE
+                        || (Array.isArray(body.names) && (body.names.length > MAX_BATCH_SIZE || body.names.some((name) => typeof name !== "string" || !name.trim())))
+                        || (kind === "bundle" && unique.some((name) => name.length > 214))) {
                         sendJson(response, 400, { error: `action and 1-${MAX_BATCH_SIZE} names are required` });
                         return;
                     }
@@ -933,10 +1190,37 @@ export function mountRoutes(host, config, commandRuntime) {
                             }
                         }
                     }
-                    sendJson(response, 202, createManageJobs(config, action, unique.map((name) => ({ name, kind })), commandRuntime, forceUnreadablePatch));
+                    let updateApprovals = [];
+                    if (action === "update") {
+                        if (!Array.isArray(body.approvals) || body.approvals.length !== unique.length) {
+                            sendJson(response, 409, { error: "更新需要重新预检并确认精确来源" });
+                            return;
+                        }
+                        const approvals = body.approvals.map((value) => {
+                            const record = readBodyRecord(value);
+                            return {
+                                name: typeof record.name === "string" ? record.name : "",
+                                approvalToken: typeof record.approvalToken === "string" ? record.approvalToken : "",
+                                risksAccepted: record.risksAccepted === true,
+                            };
+                        });
+                        if (new Set(approvals.map((item) => item.name)).size !== unique.length
+                            || approvals.some((item) => !unique.includes(item.name))) {
+                            sendJson(response, 409, { error: "更新确认与所选插件不一致" });
+                            return;
+                        }
+                        try {
+                            updateApprovals = validateUpdateApprovals(approvals, config.profile, config.profileDirectory);
+                        }
+                        catch (error) {
+                            sendJson(response, 409, { error: error instanceof Error ? error.message : String(error) });
+                            return;
+                        }
+                    }
+                    acceptedSubmission(response, submission, createManageJobs(config, action, unique.map((name) => ({ name, kind, updateApproval: updateApprovals.find((approval) => approval.name === name) })), commandRuntime, forceUnreadablePatch));
                 }
                 catch (error) {
-                    sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" });
+                    sendJson(response, submissionErrorStatus(error), { error: error instanceof Error ? error.message : "invalid json" });
                 }
             },
         }),
@@ -985,15 +1269,17 @@ export function mountRoutes(host, config, commandRuntime) {
                     return;
                 }
                 try {
+                    const submission = prepareSubmission(config, "/dsh-top100/install", record);
+                    if (submission?.replay) {
+                        sendJson(response, 202, { ok: true, ...submission.replay });
+                        return;
+                    }
                     const approval = consumeInstallApproval(approvalToken, fullName, config.profile, risksAccepted);
                     const snapshot = createBatch([approval], config, commandRuntime);
-                    sendJson(response, 202, {
-                        ok: true,
-                        ...snapshot,
-                    });
+                    acceptedSubmission(response, submission, { ok: true, ...snapshot });
                 }
                 catch (error) {
-                    sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) });
+                    sendJson(response, submissionErrorStatus(error, 502), { error: error instanceof Error ? error.message : String(error) });
                 }
             },
         }),

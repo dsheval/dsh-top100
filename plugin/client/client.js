@@ -3,6 +3,34 @@ var module = { exports: {} }; var exports = module.exports;
 let react = require("react");
 let react_jsx_runtime = require("react/jsx-runtime");
 
+//#region src/client/ErrorBoundary.tsx
+var PluginErrorBoundary = class extends react.Component {
+	state = { failed: false };
+	static getDerivedStateFromError() {
+		return { failed: true };
+	}
+	render() {
+		if (!this.state.failed) return this.props.children;
+		return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+			className: "dsh-top100",
+			children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "error",
+				role: "alert",
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: this.props.t("clientErrorTitle") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: this.props.t("clientErrorHint") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: () => this.setState({ failed: false }),
+						children: this.props.t("retry")
+					})
+				]
+			})
+		});
+	}
+};
+
+//#endregion
 //#region src/client/DescriptionPreview.tsx
 /** Measure actual wrapping: short summaries need no extra control. */
 function DescriptionPreview({ text, t }) {
@@ -60,6 +88,89 @@ function descriptionFor(entry, reviewed = {}, context = {}) {
 }
 
 //#endregion
+//#region src/client/latest-request.ts
+/** Own one read-only request; a cancelled or superseded result must never reach the UI. */
+var LatestRequest = class {
+	controller = null;
+	start() {
+		this.cancel();
+		const controller = new AbortController();
+		this.controller = controller;
+		return {
+			signal: controller.signal,
+			isCurrent: () => this.controller === controller && !controller.signal.aborted
+		};
+	}
+	cancel() {
+		this.controller?.abort();
+		this.controller = null;
+	}
+};
+
+//#endregion
+//#region src/client/metric-presentation.ts
+function deltaLabel(value) {
+	return value === null || !Number.isFinite(value) ? "—" : value > 0 ? `+${value}` : String(value);
+}
+function scoreLabel(value) {
+	return value === null || !Number.isFinite(value) ? "—" : value.toFixed(1);
+}
+
+//#endregion
+//#region src/client/diagnostic-export.ts
+const CODES = new Set([
+	"profile-missing",
+	"catalog-unreachable",
+	"catalog-stale",
+	"bundle-unresolved",
+	"bundle-disabled",
+	"bundle-local",
+	"bundle-unlisted",
+	"peer-mismatch",
+	"peer-missing",
+	"host-core-dependency",
+	"duplicate-entry",
+	"skill-manifest-missing",
+	"core-multi-version",
+	"patch-orphan",
+	"extra-dependency"
+]);
+const count = (value) => Number.isFinite(value) && value >= 0 ? value : null;
+/** Construct a new payload; never copy free-form fields from the report. */
+function diagnosticSummary(report) {
+	const findings = {};
+	for (const finding of report.findings) {
+		const code = CODES.has(finding.code) ? finding.code : "other";
+		findings[code] = (findings[code] ?? 0) + 1;
+	}
+	return {
+		schema: "dsh-top100/diagnostic-summary/v1",
+		pluginVersion: /^\d+\.\d+\.\d+$/.test(report.pluginVersion) ? report.pluginVersion : null,
+		summary: {
+			ok: report.summary.ok === true,
+			errors: count(report.summary.errors),
+			warnings: count(report.summary.warnings),
+			conflicts: count(report.summary.conflicts),
+			dependencies: count(report.summary.dependencies)
+		},
+		catalog: {
+			ok: report.catalog.ok === true,
+			latencyMs: report.catalog.latencyMs === null ? null : count(report.catalog.latencyMs),
+			staleDays: report.catalog.staleDays === null ? null : count(report.catalog.staleDays),
+			total: count(report.catalog.counts.total)
+		},
+		inventory: {
+			official: count(report.inventory.official),
+			community: count(report.inventory.community),
+			skills: count(report.inventory.skills),
+			enabled: count(report.inventory.enabled),
+			disabled: count(report.inventory.disabled)
+		},
+		findings
+	};
+}
+
+//#endregion
 //#region src/client/DiagnosticsPage.tsx
 function FindingList({ items }) {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -78,6 +189,7 @@ function FindingList({ items }) {
 function DiagnosticsPage({ t }) {
 	const [report, setReport] = (0, react.useState)(null);
 	const [error, setError] = (0, react.useState)(null);
+	const [exportError, setExportError] = (0, react.useState)(false);
 	const [loading, setLoading] = (0, react.useState)(true);
 	const load = (0, react.useCallback)(async () => {
 		setLoading(true);
@@ -114,6 +226,29 @@ function DiagnosticsPage({ t }) {
 		className: "lede",
 		children: loading ? t("diagLoading") : t("diagLoadFail")
 	});
+	function exportSummary() {
+		if (!report) return;
+		setExportError(false);
+		let url = null;
+		let link = null;
+		try {
+			const payload = JSON.stringify(diagnosticSummary(report), null, 2);
+			url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
+			link = document.createElement("a");
+			link.href = url;
+			link.download = "dsh-top100-diagnostic-summary.json";
+			document.body.appendChild(link);
+			link.click();
+		} catch {
+			setExportError(true);
+		} finally {
+			link?.remove();
+			if (url) {
+				const objectUrl = url;
+				setTimeout(() => URL.revokeObjectURL(objectUrl), 1e3);
+			}
+		}
+	}
 	const errors = report.findings.filter((item) => item.severity === "error");
 	const warnings = report.findings.filter((item) => item.severity === "warning");
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -151,9 +286,24 @@ function DiagnosticsPage({ t }) {
 						disabled: loading,
 						onClick: () => void load(),
 						children: t("diagRefresh")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						disabled: loading,
+						onClick: exportSummary,
+						children: t("diagExport")
 					})
 				]
 			}),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "lede",
+				children: t("diagExportHint")
+			}),
+			exportError ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "error",
+				role: "alert",
+				children: t("diagExportFailed")
+			}) : null,
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "diag-grid",
 				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
@@ -427,6 +577,652 @@ function presentInstallError(raw) {
 }
 
 //#endregion
+//#region src/client/use-task-tracker.ts
+const BATCH_KEY = "dsh-top100:last-install-batch:v1";
+const RECENT_KEY = "dsh-top100:recent-install-batches:v1";
+const PENDING_KEY = "dsh-top100:pending-submission:v1";
+const SUBMIT_PATHS = new Set([
+	"/dsh-top100/install-batch",
+	"/dsh-top100/install",
+	"/dsh-top100/manage",
+	"/dsh-top100/retry"
+]);
+const subscribers = /* @__PURE__ */ new Set();
+let pendingMemory = null;
+let pendingStored = true;
+const pendingControllers = /* @__PURE__ */ new Map();
+function readStorage(key) {
+	try {
+		return window.localStorage.getItem(key);
+	} catch {
+		return null;
+	}
+}
+function writeStorage(key, value) {
+	try {
+		if (window.localStorage.getItem(key) === value) return;
+		if (value === null) window.localStorage.removeItem(key);
+		else window.localStorage.setItem(key, value);
+	} catch {}
+}
+function pendingSubmission() {
+	let raw;
+	try {
+		raw = window.localStorage.getItem(PENDING_KEY);
+	} catch {
+		return pendingMemory;
+	}
+	if (!raw) return pendingStored ? null : pendingMemory;
+	try {
+		const value = JSON.parse(raw);
+		if (typeof value.id === "string" && /^[\w-]{1,128}$/.test(value.id) && SUBMIT_PATHS.has(value.url) && Number.isFinite(value.startedAt) && [
+			"sending",
+			"uncertain",
+			"cancelling"
+		].includes(value.state)) return value;
+	} catch {}
+	return pendingMemory;
+}
+function persistPending(value) {
+	pendingMemory = value;
+	try {
+		if (value) window.localStorage.setItem(PENDING_KEY, JSON.stringify(value));
+		else window.localStorage.removeItem(PENDING_KEY);
+		pendingStored = true;
+	} catch {
+		pendingStored = false;
+	}
+}
+function clearPending(id) {
+	if (pendingSubmission()?.id === id) persistPending(null);
+}
+function recentIds() {
+	try {
+		const values = JSON.parse(readStorage(RECENT_KEY) ?? "[]");
+		const ids = Array.isArray(values) ? values.filter((id) => typeof id === "string") : [];
+		const last = readStorage(BATCH_KEY);
+		return [...new Set([...last ? [last] : [], ...ids])].slice(0, 10);
+	} catch {
+		const last = readStorage(BATCH_KEY);
+		return last ? [last] : [];
+	}
+}
+function rememberBatches(batches) {
+	if (!batches.length) return;
+	writeStorage(RECENT_KEY, JSON.stringify([...new Set([...batches.map((batch) => batch.batchId), ...recentIds()])].slice(0, 10)));
+	writeStorage(BATCH_KEY, batches[0].batchId);
+}
+function rememberBatch(batch) {
+	rememberBatches([batch]);
+}
+function forgetBatch(id) {
+	const ids = recentIds().filter((value) => value !== id);
+	writeStorage(RECENT_KEY, JSON.stringify(ids));
+	if (readStorage(BATCH_KEY) === id) writeStorage(BATCH_KEY, ids[0] ?? null);
+}
+var TaskHttpError = class extends Error {
+	constructor(message, status) {
+		super(message);
+		this.status = status;
+	}
+};
+async function readTask(url, init) {
+	const response = await fetch(url, init);
+	const body = await response.json();
+	if (!response.ok) throw new TaskHttpError(body.error ?? `${response.status} ${response.statusText}`, response.status);
+	return body;
+}
+function broadcast(batch, error) {
+	if (batch) rememberBatch(batch);
+	subscribers.forEach((accept) => accept(batch, error));
+}
+/** One owner above the settings sections, with a submission lock that survives remounts. */
+function useTaskTracker() {
+	const [state, setState] = (0, react.useState)(() => ({
+		batch: null,
+		busy: null,
+		ready: false,
+		recovered: false,
+		error: null,
+		pending: pendingSubmission(),
+		history: []
+	}));
+	const stateRef = (0, react.useRef)(state);
+	stateRef.current = state;
+	const [recovery, setRecovery] = (0, react.useState)(0);
+	const [cancelling, setCancelling] = (0, react.useState)([]);
+	const generation = (0, react.useRef)(0);
+	const mounted = (0, react.useRef)(false);
+	const known = (0, react.useRef)(/* @__PURE__ */ new Map());
+	const cancellationLocks = (0, react.useRef)(/* @__PURE__ */ new Set());
+	const history = () => [...known.current.values()].filter(isInstallBatchComplete).sort((a, b) => b.createdAt - a.createdAt).slice(0, 10);
+	(0, react.useEffect)(() => {
+		mounted.current = true;
+		return () => {
+			mounted.current = false;
+			generation.current++;
+		};
+	}, []);
+	const requestRecovery = (0, react.useCallback)((batch, error) => {
+		generation.current++;
+		if (batch) known.current.set(batch.batchId, batch);
+		setState((previous) => ({
+			...previous,
+			batch: previous.batch ?? batch ?? null,
+			ready: false,
+			pending: pendingSubmission(),
+			history: history(),
+			error: error === void 0 ? previous.error : error
+		}));
+		setRecovery((value) => value + 1);
+	}, []);
+	(0, react.useEffect)(() => {
+		subscribers.add(requestRecovery);
+		return () => {
+			subscribers.delete(requestRecovery);
+		};
+	}, [requestRecovery]);
+	(0, react.useEffect)(() => {
+		let timer;
+		const recoverSoon = () => {
+			if (timer !== void 0) return;
+			timer = setTimeout(() => {
+				timer = void 0;
+				requestRecovery();
+			}, 50);
+		};
+		const onStorage = (event) => {
+			if (event.key === null || [
+				PENDING_KEY,
+				BATCH_KEY,
+				RECENT_KEY
+			].includes(event.key)) recoverSoon();
+		};
+		const onVisibility = () => {
+			if (document.visibilityState === "visible") recoverSoon();
+		};
+		window.addEventListener("storage", onStorage);
+		window.addEventListener("focus", recoverSoon);
+		document.addEventListener("visibilitychange", onVisibility);
+		return () => {
+			window.removeEventListener("storage", onStorage);
+			window.removeEventListener("focus", recoverSoon);
+			document.removeEventListener("visibilitychange", onVisibility);
+			if (timer !== void 0) clearTimeout(timer);
+		};
+	}, [requestRecovery]);
+	const track = (0, react.useCallback)((batch) => {
+		broadcast(batch);
+	}, []);
+	const retryTracking = (0, react.useCallback)(() => {
+		requestRecovery(void 0, null);
+	}, [requestRecovery]);
+	(0, react.useEffect)(() => {
+		const controller = new AbortController();
+		const epoch = generation.current;
+		let disposed = false;
+		let timer;
+		const current = () => !disposed && !controller.signal.aborted && generation.current === epoch;
+		(async () => {
+			try {
+				const pending = pendingSubmission();
+				const status = await readTask(`/dsh-top100/status${pending ? `?submissionId=${encodeURIComponent(pending.id)}` : ""}`, {
+					signal: controller.signal,
+					cache: "no-store"
+				});
+				if (!current()) return;
+				if (pending && (status.submission || status.submissionCancelled)) {
+					clearPending(pending.id);
+					if (status.submissionCancelled) pendingControllers.get(pending.id)?.abort();
+				}
+				if (status.submission) known.current.set(status.submission.batchId, status.submission);
+				for (const batch of status.activeBatches) known.current.set(batch.batchId, batch);
+				rememberBatches([...status.activeBatches, ...status.submission ? [status.submission] : []]);
+				let missing = false;
+				for (const id of recentIds()) {
+					if (status.activeBatches.some((batch) => batch.batchId === id) || known.current.get(id) && isInstallBatchComplete(known.current.get(id))) continue;
+					try {
+						const batch = await readTask(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(id)}`, {
+							signal: controller.signal,
+							cache: "no-store"
+						});
+						if (!current()) return;
+						if (batch.batchId !== id) throw new Error("Task response did not match the requested batch");
+						known.current.set(id, batch);
+					} catch (cause) {
+						if (!current()) return;
+						if (cause instanceof TaskHttpError && cause.status === 404) {
+							missing = true;
+							forgetBatch(id);
+							known.current.delete(id);
+						} else throw cause;
+					}
+				}
+				if (!current()) return;
+				const remainingPending = pendingSubmission();
+				const active = status.activeBatches.find((batch) => batch.batchId === stateRef.current.busy) ?? status.activeBatches[0];
+				const last = active ?? (readStorage(BATCH_KEY) ? known.current.get(readStorage(BATCH_KEY)) : null) ?? history()[0] ?? null;
+				setState((previous) => ({
+					batch: last,
+					busy: active?.batchId ?? null,
+					ready: !remainingPending,
+					pending: remainingPending,
+					recovered: true,
+					history: history(),
+					error: missing ? {
+						kind: "missing",
+						message: "Task record is no longer available"
+					} : previous.error?.kind === "cancel" && !status.submissionCancelled || previous.error?.kind === "submission" && !status.submission ? previous.error : null
+				}));
+				if (remainingPending) timer = setTimeout(requestRecovery, 1500);
+			} catch (cause) {
+				if (!current()) return;
+				setState((previous) => ({
+					...previous,
+					ready: false,
+					pending: pendingSubmission(),
+					error: {
+						kind: "tracking",
+						message: cause instanceof Error ? cause.message : String(cause)
+					}
+				}));
+			}
+		})();
+		return () => {
+			disposed = true;
+			controller.abort();
+			if (timer !== void 0) clearTimeout(timer);
+		};
+	}, [recovery, requestRecovery]);
+	(0, react.useEffect)(() => {
+		if (!state.busy || !state.ready) return;
+		const batchId = state.busy;
+		const epoch = generation.current;
+		const controller = new AbortController();
+		let disposed = false;
+		let timer;
+		const current = () => !disposed && !controller.signal.aborted && generation.current === epoch;
+		const poll = async () => {
+			let again = true;
+			let delay = 800;
+			try {
+				const snapshot = await readTask(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(batchId)}`, {
+					signal: controller.signal,
+					cache: "no-store"
+				});
+				if (!current()) return;
+				if (snapshot.batchId !== batchId) throw new Error("Task response did not match the requested batch");
+				known.current.set(batchId, snapshot);
+				if (isInstallBatchComplete(snapshot)) {
+					again = false;
+					setState((previous) => ({
+						...previous,
+						batch: snapshot,
+						history: history()
+					}));
+					requestRecovery();
+				} else setState((previous) => previous.busy !== batchId ? previous : {
+					...previous,
+					batch: snapshot,
+					error: previous.error?.kind === "cancel" ? previous.error : null
+				});
+			} catch (cause) {
+				if (!current()) return;
+				delay = 2e3;
+				if (cause instanceof TaskHttpError && cause.status === 404) {
+					again = false;
+					forgetBatch(batchId);
+					known.current.delete(batchId);
+					requestRecovery();
+				} else setState((previous) => ({
+					...previous,
+					error: {
+						kind: "tracking",
+						message: cause instanceof Error ? cause.message : String(cause)
+					}
+				}));
+			} finally {
+				if (current() && again) timer = setTimeout(() => {
+					poll();
+				}, delay);
+			}
+		};
+		poll();
+		return () => {
+			disposed = true;
+			controller.abort();
+			if (timer !== void 0) clearTimeout(timer);
+		};
+	}, [
+		state.busy,
+		state.ready,
+		recovery,
+		requestRecovery
+	]);
+	const submit = (0, react.useCallback)(async (url, body) => {
+		if (!SUBMIT_PATHS.has(url)) throw new Error("Unsupported submission endpoint");
+		if (pendingSubmission() || !stateRef.current.ready || stateRef.current.busy) {
+			requestRecovery();
+			return null;
+		}
+		const pending = {
+			id: crypto.randomUUID(),
+			url,
+			startedAt: Date.now(),
+			state: "sending"
+		};
+		persistPending(pending);
+		broadcast(void 0, null);
+		const controller = new AbortController();
+		pendingControllers.set(pending.id, controller);
+		const timer = setTimeout(() => controller.abort(), 45e3);
+		try {
+			const snapshot = await readTask(url, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					...body,
+					submissionId: pending.id
+				}),
+				signal: controller.signal
+			});
+			clearPending(pending.id);
+			broadcast(snapshot);
+			return snapshot;
+		} catch (cause) {
+			if (cause instanceof TaskHttpError && [
+				400,
+				403,
+				404,
+				409,
+				422
+			].includes(cause.status)) {
+				if (pendingSubmission()?.id !== pending.id) return null;
+				clearPending(pending.id);
+				broadcast(void 0, {
+					kind: "submission",
+					message: cause.message
+				});
+				throw cause;
+			}
+			if (pendingSubmission()?.id === pending.id) {
+				persistPending({
+					...pendingSubmission(),
+					state: pendingSubmission().state === "cancelling" ? "cancelling" : "uncertain"
+				});
+				broadcast(void 0, {
+					kind: "submission",
+					message: cause instanceof Error ? cause.message : String(cause)
+				});
+			}
+			return null;
+		} finally {
+			clearTimeout(timer);
+			pendingControllers.delete(pending.id);
+		}
+	}, [requestRecovery]);
+	const cancelSubmission = (0, react.useCallback)(async () => {
+		const pending = pendingSubmission();
+		if (!pending || cancellationLocks.current.has(pending.id)) return;
+		cancellationLocks.current.add(pending.id);
+		persistPending({
+			...pending,
+			state: "cancelling"
+		});
+		broadcast();
+		try {
+			const result = await readTask("/dsh-top100/cancel-submission", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ submissionId: pending.id })
+			});
+			if (!result.cancelled) throw new Error("The host did not confirm cancellation of this submission");
+			clearPending(pending.id);
+			pendingControllers.get(pending.id)?.abort();
+			broadcast(result.submission ?? void 0, null);
+		} catch (cause) {
+			broadcast(void 0, {
+				kind: "cancel",
+				message: cause instanceof Error ? cause.message : String(cause)
+			});
+		} finally {
+			cancellationLocks.current.delete(pending.id);
+		}
+	}, []);
+	const cancel = (0, react.useCallback)(async (jobId) => {
+		if (cancellationLocks.current.has(jobId)) return;
+		cancellationLocks.current.add(jobId);
+		setCancelling((ids) => [...ids, jobId]);
+		const epoch = generation.current;
+		try {
+			if (!(await readTask("/dsh-top100/cancel", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ jobId })
+			})).cancelled) throw new Error("The host did not accept this cancellation request");
+		} catch (cause) {
+			if (mounted.current && epoch === generation.current) setState((previous) => ({
+				...previous,
+				error: {
+					kind: "cancel",
+					message: cause instanceof Error ? cause.message : String(cause)
+				}
+			}));
+		} finally {
+			cancellationLocks.current.delete(jobId);
+			if (mounted.current) setCancelling((ids) => ids.filter((id) => id !== jobId));
+		}
+	}, []);
+	return {
+		...state,
+		cancelling,
+		track,
+		submit,
+		cancel,
+		cancelSubmission,
+		retryTracking
+	};
+}
+
+//#endregion
+//#region src/client/TaskStatus.tsx
+function TaskStatus({ tracking, t }) {
+	const failed = tracking.history.flatMap((batch) => batch.jobs.filter((job) => job.phase === "failed" || job.phase === "cancelled" || job.activationState === "broken"));
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [tracking.pending ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: "banner",
+		role: "status",
+		children: [
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(tracking.pending.state === "sending" ? "submissionSending" : tracking.pending.state === "cancelling" ? "submissionCancelling" : "submissionUncertain") }),
+			tracking.error ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+				className: "error",
+				children: [
+					tracking.error.kind === "cancel" ? t("cancelFailed") : t("taskTrackingError"),
+					" ",
+					tracking.error.message
+				]
+			}) : null,
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: tracking.retryTracking,
+				children: t("querySubmission")
+			}),
+			" ",
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: () => void tracking.cancelSubmission(),
+				children: t("cancelSubmission")
+			})
+		]
+	}) : tracking.error ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: "error",
+		role: "alert",
+		children: [
+			t(tracking.error.kind === "missing" ? "installTaskUnavailable" : tracking.error.kind === "cancel" ? "cancelFailed" : tracking.error.kind === "submission" ? "submissionRejected" : "taskTrackingError"),
+			tracking.error.kind !== "missing" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: tracking.error.message }) : null,
+			" ",
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: tracking.retryTracking,
+				children: t("retry")
+			})
+		]
+	}) : !tracking.ready ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+		className: "banner",
+		role: "status",
+		children: t("taskRecovering")
+	}) : null, failed.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+		className: "banner",
+		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("previousTaskErrors") }), failed.map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("strong", { children: [
+			job.fullName,
+			" · ",
+			t(`phase_${job.phase}`)
+		] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: job.error ?? job.message ?? job.lastLine })] }, job.id))]
+	}) : null] });
+}
+
+//#endregion
+//#region src/client/trust-presentation.ts
+function presentInstallRisk(risk, t) {
+	return {
+		summary: t(`risk_${risk.code}_summary`),
+		detail: risk.code === "lifecycle-scripts" ? risk.detail : t(`risk_${risk.code}_detail`)
+	};
+}
+
+//#endregion
+//#region src/client/UpdateReview.tsx
+function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+		className: "mask",
+		role: "dialog",
+		"aria-modal": "true",
+		"aria-labelledby": "dsh-top100-update-title",
+		onKeyDownCapture: (event) => {
+			if (event.key === "Escape") {
+				event.stopPropagation();
+				onCancel();
+			}
+		},
+		children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+			className: "dialog",
+			children: [
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
+					className: "confirm-header",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+						id: "dsh-top100-update-title",
+						children: t("reviewUpdateTitle")
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("reviewUpdateHint") })]
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					className: "confirm-body",
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						className: "confirm-list",
+						children: items.map(({ name: name$1, currentVersion, preflight }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "confirm-item",
+							children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "confirm-project",
+									children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: name$1 }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+										t("version"),
+										": ",
+										currentVersion ?? "—",
+										" → ",
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", {
+											className: "confirm-target",
+											children: preflight.provenance.resolvedTarget
+										})
+									] })]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+									className: "confirm-effects",
+									"aria-label": t("installSummary"),
+									children: [
+										preflight.lifecycleScripts.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+											className: "confirm-scripts",
+											"data-warning": "true",
+											children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("confirmScripts") }), preflight.lifecycleScripts.map((script) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+												className: "script-evidence",
+												children: [
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: script.name }),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+														"aria-hidden": "true",
+														children: "→"
+													}),
+													/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: script.command })
+												]
+											}, script.name))]
+										}) : null,
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("ul", {
+											className: "risk-list",
+											children: visibleInstallReviewRisks(preflight.risks, preflight.lifecycleScripts.length).map((risk) => {
+												const presented = presentInstallRisk(risk, t);
+												return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
+													"data-severity": risk.severity,
+													children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: presented.summary }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: presented.detail })]
+												}, risk.code);
+											})
+										}),
+										preflight.risks.some((risk) => risk.code === "restart-required") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+											className: "confirm-followup",
+											children: t("confirmRestart")
+										}) : null
+									]
+								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+									className: "confirm-evidence",
+									children: [
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("viewInstallTechnicalEvidence") }),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(preflight.provenance.source === "github" ? "commitLocked" : preflight.provenance.repositoryIdentity === "unavailable" ? "sourceIdentityUnavailable" : "sourceMatched") }),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("dl", { children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("requestedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.requestedTarget }) })] }),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("resolvedSource") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.resolvedTarget }) })] }),
+											preflight.provenance.integrity ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("dt", { children: t("integrity") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("dd", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.integrity }) })] }) : null
+										] }),
+										preflight.lifecycleScripts.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("noBuildScripts") }) : null
+									]
+								})
+							]
+						}, name$1))
+					})
+				}),
+				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", {
+					className: "confirm-footer",
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+							className: "confirm-caveat",
+							children: t("confirmSecurityNote")
+						}),
+						items.some((item) => item.preflight.requiresExplicitApproval) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", {
+							className: "risk-approval",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
+								type: "checkbox",
+								checked: accepted,
+								onChange: (event) => onAccepted(event.target.checked)
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("riskApproval") })]
+						}) : null,
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "confirm-actions",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								autoFocus: true,
+								onClick: onCancel,
+								children: t("cancel")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: "primary",
+								disabled: !accepted,
+								onClick: onConfirm,
+								children: t("confirmUpdate")
+							})]
+						})
+					]
+				})
+			]
+		})
+	});
+}
+
+//#endregion
 //#region src/client/ManagedPage.tsx
 async function readJson$1(url, init) {
 	const response = await fetch(url, init);
@@ -434,16 +1230,25 @@ async function readJson$1(url, init) {
 	if (!response.ok) throw new Error(body.error || `${response.status} ${response.statusText}`);
 	return body;
 }
-function ManagedPage({ t, initialQuery = "" }) {
+function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "" }) {
 	const [draft, setDraft] = (0, react.useState)(initialQuery);
 	const [query, setQuery] = (0, react.useState)(initialQuery);
 	const [data, setData] = (0, react.useState)(null);
 	const [error, setError] = (0, react.useState)(null);
 	const [loading, setLoading] = (0, react.useState)(true);
-	const [batch, setBatch] = (0, react.useState)(null);
-	const [busy, setBusy] = (0, react.useState)(null);
+	const { batch, busy } = tracking;
+	const completedBatch = (0, react.useRef)(null);
+	const consumedRetry = (0, react.useRef)(null);
 	const [notice, setNotice] = (0, react.useState)(null);
 	const loadSequence = (0, react.useRef)(0);
+	const updateRequest = (0, react.useRef)(new LatestRequest());
+	const [preparing, setPreparing] = (0, react.useState)(false);
+	const [submitting, setSubmitting] = (0, react.useState)(false);
+	const [review, setReview] = (0, react.useState)(null);
+	const [accepted, setAccepted] = (0, react.useState)(false);
+	const [retryNames, setRetryNames] = (0, react.useState)(null);
+	const submissionLock = (0, react.useRef)(false);
+	(0, react.useEffect)(() => () => updateRequest.current.cancel(), []);
 	const load = (0, react.useCallback)(async () => {
 		const requestId = ++loadSequence.current;
 		setLoading(true);
@@ -452,7 +1257,10 @@ function ManagedPage({ t, initialQuery = "" }) {
 			const payload = await readJson$1(`/dsh-top100/managed?q=${encodeURIComponent(query)}`);
 			if (requestId === loadSequence.current) setData(payload);
 		} catch (cause) {
-			if (requestId === loadSequence.current) setError(cause instanceof Error ? cause.message : String(cause));
+			if (requestId === loadSequence.current) {
+				setRetryNames(null);
+				setError(cause instanceof Error ? cause.message : String(cause));
+			}
 		} finally {
 			if (requestId === loadSequence.current) setLoading(false);
 		}
@@ -461,47 +1269,116 @@ function ManagedPage({ t, initialQuery = "" }) {
 		load();
 	}, [load]);
 	(0, react.useEffect)(() => {
-		if (!busy) return void 0;
-		const refresh = () => {
-			readJson$1(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(busy)}`).then((snapshot) => {
-				setBatch(snapshot);
-				if (snapshot.completed === snapshot.total) {
-					setBusy(null);
-					setNotice(snapshot.requiresRestart ? t("restart") : t("manageComplete"));
-					load();
-				}
-			}).catch((cause) => setError(cause instanceof Error ? cause.message : String(cause)));
-		};
-		refresh();
-		const timer = window.setInterval(refresh, 800);
-		return () => window.clearInterval(timer);
+		if (!batch || busy || batch.completed !== batch.total || completedBatch.current === batch.batchId) return;
+		completedBatch.current = batch.batchId;
+		const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
+		const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
+		setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("manageComplete"));
+		load();
 	}, [
+		batch,
 		busy,
 		load,
 		t
 	]);
+	(0, react.useEffect)(() => {
+		if (!retryUpdate || consumedRetry.current === retryUpdate.id || busy || !tracking.ready) return;
+		consumedRetry.current = retryUpdate.id;
+		prepareUpdates(retryUpdate.names);
+		onRetryConsumed?.();
+	}, [
+		retryUpdate,
+		busy,
+		tracking.ready,
+		onRetryConsumed
+	]);
 	const jobByName = (0, react.useMemo)(() => new Map((batch?.jobs ?? []).map((job) => [job.fullName, job])), [batch]);
 	async function manage(action, names, kind) {
-		if (action === "uninstall" && !window.confirm(t(kind === "skill" ? "confirmRemoveSkill" : "confirmRemovePlugin"))) return;
+		if (!window.confirm(t(kind === "skill" ? "confirmRemoveSkill" : "confirmRemovePlugin"))) return;
 		setError(null);
+		setRetryNames(null);
 		setNotice(null);
 		try {
-			const snapshot = await readJson$1("/dsh-top100/manage", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({
-					action,
-					names,
-					kind
-				})
+			await tracking.submit("/dsh-top100/manage", {
+				action,
+				names,
+				kind
 			});
-			setBatch(snapshot);
-			setBusy(snapshot.batchId);
 		} catch (cause) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		}
 	}
+	async function prepareUpdates(names) {
+		if (!names.length || submitting || busy || !tracking.ready) return;
+		const requestedNames = [...new Set(names)];
+		const request = updateRequest.current.start();
+		setPreparing(true);
+		setReview(null);
+		setAccepted(false);
+		setRetryNames(null);
+		setError(null);
+		setNotice(null);
+		try {
+			const response = await readJson$1("/dsh-top100/update-preflight", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ names: requestedNames }),
+				signal: request.signal
+			});
+			if (!request.isCurrent()) return;
+			const byName = new Map(response.items.map((item) => [item.name, item]));
+			if (response.items.length !== requestedNames.length || byName.size !== requestedNames.length || requestedNames.some((name$1) => {
+				const item = byName.get(name$1);
+				return !item || item.preflight.kind !== "bundle" || !item.preflight.approvalToken || !item.preflight.provenance.resolvedTarget;
+			})) throw new Error(t("updatePreflightIncomplete"));
+			const ordered = requestedNames.map((name$1) => byName.get(name$1));
+			setReview(ordered);
+			setAccepted(!ordered.some((item) => item.preflight.requiresExplicitApproval));
+		} catch (cause) {
+			if (!request.isCurrent()) return;
+			setRetryNames(requestedNames);
+			setError(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			if (request.isCurrent()) setPreparing(false);
+		}
+	}
+	function cancelUpdateReview() {
+		updateRequest.current.cancel();
+		setPreparing(false);
+		setReview(null);
+		setRetryNames(null);
+		setAccepted(false);
+		setNotice(t("updatePreflightCancelled"));
+	}
+	async function confirmUpdates() {
+		if (!review?.length || !accepted || submissionLock.current) return;
+		const approved = review;
+		submissionLock.current = true;
+		setSubmitting(true);
+		setReview(null);
+		setError(null);
+		setNotice(null);
+		try {
+			await tracking.submit("/dsh-top100/manage", {
+				action: "update",
+				kind: "bundle",
+				names: approved.map((item) => item.name),
+				approvals: approved.map((item) => ({
+					name: item.name,
+					approvalToken: item.preflight.approvalToken,
+					risksAccepted: item.preflight.requiresExplicitApproval ? accepted : true
+				}))
+			});
+		} catch (cause) {
+			setRetryNames(approved.map((item) => item.name));
+			setError(cause instanceof Error ? cause.message : String(cause));
+		} finally {
+			submissionLock.current = false;
+			setSubmitting(false);
+		}
+	}
 	async function toggle(item) {
+		setRetryNames(null);
 		try {
 			await readJson$1("/dsh-top100/toggle", {
 				method: "POST",
@@ -517,6 +1394,7 @@ function ManagedPage({ t, initialQuery = "" }) {
 			setError(cause instanceof Error ? cause.message : String(cause));
 		}
 	}
+	const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || review !== null;
 	const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
 	function descriptionFor$1(item) {
 		const supplied = item.descriptionZh.trim();
@@ -550,8 +1428,8 @@ function ManagedPage({ t, initialQuery = "" }) {
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 						type: "button",
-						disabled: updates.length === 0 || busy !== null,
-						onClick: () => void manage("update", updates.map((item) => item.name), "bundle"),
+						disabled: updates.length === 0 || operationBlocked,
+						onClick: () => void prepareUpdates(updates.map((item) => item.name)),
 						children: [
 							t("updateAll"),
 							" (",
@@ -584,19 +1462,61 @@ function ManagedPage({ t, initialQuery = "" }) {
 					" ",
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
-						onClick: () => void load(),
+						disabled: operationBlocked,
+						onClick: () => void (retryNames ? prepareUpdates(retryNames) : load()),
 						children: t("retry")
 					})
 				]
 			}) : null,
+			preparing ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "install-activity-banner is-active",
+				role: "status",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("preflighting") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("updatePreflightWait") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					onClick: cancelUpdateReview,
+					children: t("cancel")
+				})]
+			}) : null,
+			submitting ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "banner",
+				role: "status",
+				children: t("updateSubmitting")
+			}) : null,
+			review ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UpdateReview, {
+				items: review,
+				accepted,
+				onAccepted: setAccepted,
+				onCancel: cancelUpdateReview,
+				onConfirm: () => void confirmUpdates(),
+				t
+			}) : null,
 			busy && batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "banner",
+				role: "status",
 				children: [
 					t("batchProgress"),
 					" ",
 					batch.completed,
 					"/",
-					batch.total
+					batch.total,
+					batch.jobs.filter((job) => ![
+						"installed",
+						"failed",
+						"cancelled"
+					].includes(job.phase)).map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+							job.fullName,
+							" · ",
+							t(`phase_${job.phase}`)
+						] }),
+						" ",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							disabled: job.cancelRequested || tracking.cancelling.includes(job.id),
+							onClick: () => void tracking.cancel(job.id),
+							children: t("cancel")
+						})
+					] }, job.id))
 				]
 			}) : null,
 			loading && !data && !error ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -680,24 +1600,30 @@ function ManagedPage({ t, initialQuery = "" }) {
 							children: [
 								job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 									className: "job",
-									children: [t(`phase_${job.phase}`), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: job.lastLine })]
+									children: [t(`phase_${job.phase}`), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: job.error ?? job.message ?? job.lastLine })]
+								}) : null,
+								job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: item.protected || item.local || operationBlocked,
+									onClick: () => void prepareUpdates([item.name]),
+									children: t("retry")
 								}) : null,
 								item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									disabled: item.protected || busy !== null,
+									disabled: item.protected || operationBlocked,
 									onClick: () => void toggle(item),
 									children: item.enabled ? t("disable") : t("enable")
 								}) : null,
 								item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									disabled: item.protected || item.local || busy !== null,
-									onClick: () => void manage("update", [item.name], item.kind),
+									disabled: item.protected || item.local || operationBlocked,
+									onClick: () => void prepareUpdates([item.name]),
 									children: t("update")
 								}) : null,
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									className: "danger",
-									disabled: item.protected || busy !== null,
+									disabled: item.protected || operationBlocked,
 									onClick: () => void manage("uninstall", [item.name], item.kind),
 									children: t("uninstall")
 								})
@@ -734,15 +1660,6 @@ function presentRepositoryIdentity(entry) {
 }
 
 //#endregion
-//#region src/client/trust-presentation.ts
-function presentInstallRisk(risk, t) {
-	return {
-		summary: t(`risk_${risk.code}_summary`),
-		detail: risk.code === "lifecycle-scripts" ? risk.detail : t(`risk_${risk.code}_detail`)
-	};
-}
-
-//#endregion
 //#region src/client/RankingsPage.tsx
 const SORT_VIEWS = [
 	"hot",
@@ -750,7 +1667,6 @@ const SORT_VIEWS = [
 	"total"
 ];
 const CATALOG_SCOPES = ["plugins", "skills"];
-const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai/top100/";
 const GITHUB_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
 	viewBox: "0 0 24 24",
@@ -847,9 +1763,6 @@ function rankingBasisKey(view, query) {
 function rankingBasisShortKey(view, query) {
 	return query ? "basisShort_search" : `basisShort_${view}`;
 }
-function deltaLabel(value) {
-	return value > 0 ? `+${value}` : String(value);
-}
 const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 	className: "card-skeleton",
 	"aria-hidden": "true",
@@ -871,29 +1784,17 @@ const ERROR_LOCALE_KEYS = {
 	generic: "generic"
 };
 var HttpError = class extends Error {
-	constructor(message, status) {
+	constructor(message, status, code) {
 		super(message);
 		this.status = status;
+		this.code = code;
 	}
 };
 async function readJson(url, init) {
 	const response = await fetch(url, init);
 	const body = await response.json();
-	if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status);
+	if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status, body.code);
 	return body;
-}
-function rememberedBatchId() {
-	try {
-		return window.localStorage.getItem(LAST_BATCH_KEY);
-	} catch {
-		return null;
-	}
-}
-function rememberBatch(batchId) {
-	try {
-		if (batchId) window.localStorage.setItem(LAST_BATCH_KEY, batchId);
-		else window.localStorage.removeItem(LAST_BATCH_KEY);
-	} catch {}
 }
 function cacheAgeLabel(ageMs, t) {
 	if (ageMs === null) return t("cacheAgeUnknown");
@@ -915,17 +1816,28 @@ function RankingsPage({ t }) {
 	const [error, setError] = (0, react.useState)(null);
 	const [errorAction, setErrorAction] = (0, react.useState)("load");
 	const [loading, setLoading] = (0, react.useState)(true);
-	const [busy, setBusy] = (0, react.useState)(() => rememberedBatchId());
+	const tracking = useTaskTracker();
+	const { batch, busy } = tracking;
+	const [updateRetry, setUpdateRetry] = (0, react.useState)(null);
+	const updateRetrySequence = (0, react.useRef)(0);
+	const [preflightRetry, setPreflightRetry] = (0, react.useState)(null);
+	const preflightRequest = (0, react.useRef)(new LatestRequest());
+	(0, react.useEffect)(() => () => preflightRequest.current.cancel(), []);
 	const [preparing, setPreparing] = (0, react.useState)(null);
+	(0, react.useEffect)(() => {
+		if (section !== "rankings") {
+			preflightRequest.current.cancel();
+			setPreparing(null);
+		}
+	}, [section]);
 	const [confirming, setConfirming] = (0, react.useState)(null);
 	const [preflights, setPreflights] = (0, react.useState)([]);
 	const [riskAccepted, setRiskAccepted] = (0, react.useState)(false);
-	const [batch, setBatch] = (0, react.useState)(null);
 	const [installActivityOpen, setInstallActivityOpen] = (0, react.useState)(false);
 	const [notice, setNotice] = (0, react.useState)(null);
 	const loadSequence = (0, react.useRef)(0);
 	const loadedSnapshot = (0, react.useRef)(null);
-	const recoveryChecked = (0, react.useRef)(false);
+	const completedBatch = (0, react.useRef)(null);
 	const load = (0, react.useCallback)(async (nextView, nextQuery, nextCategory, nextCatalogScope, nextInstallAvailability, offset = 0, append = false) => {
 		const requestId = ++loadSequence.current;
 		const requestSnapshot = loadedSnapshot.current;
@@ -960,6 +1872,8 @@ function RankingsPage({ t }) {
 			setItems((current) => shouldAppend ? [...current, ...payload.items] : payload.items);
 		} catch (cause) {
 			if (requestId !== loadSequence.current) return;
+			setErrorAction("load");
+			setPreflightRetry(null);
 			setError(cause instanceof Error ? cause.message : String(cause));
 			if (!append) setItems([]);
 		} finally {
@@ -979,52 +1893,21 @@ function RankingsPage({ t }) {
 		view
 	]);
 	(0, react.useEffect)(() => {
-		if (recoveryChecked.current) return;
-		recoveryChecked.current = true;
-		if (busy) return;
-		readJson("/dsh-top100/status").then((status) => {
-			const recovered = status.activeBatches[0];
-			if (!recovered) return;
-			rememberBatch(recovered.batchId);
-			setBatch(recovered);
-			setBusy(recovered.batchId);
-			setNotice(t("installTaskRecovered"));
-		}).catch(() => {});
-	}, [busy, t]);
-	(0, react.useEffect)(() => {
-		if (!busy) return void 0;
-		const refresh = () => {
-			readJson(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(busy)}`).then(async (snapshot) => {
-				setBatch(snapshot);
-				if (isInstallBatchComplete(snapshot)) {
-					rememberBatch(null);
-					setBusy(null);
-					setNotice(snapshot.requiresRestart ? t("restart") : t("batchComplete"));
-					await load(view, query, category, catalogScope, installAvailability, 0, false);
-				}
-			}).catch((cause) => {
-				if (cause instanceof HttpError && cause.status === 404) {
-					rememberBatch(null);
-					setBusy(null);
-					setBatch(null);
-					setNotice(t("installTaskUnavailable"));
-					setError(null);
-					return;
-				}
-				setErrorAction("install");
-				setError(cause instanceof Error ? cause.message : String(cause));
-			});
-		};
-		refresh();
-		const timer = window.setInterval(refresh, 800);
-		return () => window.clearInterval(timer);
+		if (!batch || busy || !isInstallBatchComplete(batch) || completedBatch.current === batch.batchId) return;
+		completedBatch.current = batch.batchId;
+		const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
+		const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
+		setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("batchComplete"));
+		if (section === "rankings") load(view, query, category, catalogScope, installAvailability, 0, false);
 	}, [
+		batch,
 		busy,
 		catalogScope,
 		category,
 		installAvailability,
 		load,
 		query,
+		section,
 		t,
 		view
 	]);
@@ -1034,13 +1917,27 @@ function RankingsPage({ t }) {
 	}, [data, items.length]);
 	const preflightsByName = (0, react.useMemo)(() => new Map(preflights.map((preflight) => [preflight.fullName, preflight])), [preflights]);
 	const activeCategory = data?.categories.find((definition) => definition.id === category);
+	function resetPreflight() {
+		preflightRequest.current.cancel();
+		setPreparing(null);
+		setPreflightRetry(null);
+		setConfirming(null);
+		setPreflights([]);
+		setRiskAccepted(false);
+	}
+	function selectSection(nextSection) {
+		resetPreflight();
+		setSection(nextSection);
+	}
 	function startSearch(value) {
+		resetPreflight();
 		const nextQuery = value.trim();
 		setCategory(null);
 		setDraft(nextQuery);
 		setQuery(nextQuery);
 	}
 	function switchCatalogScope(nextScope) {
+		resetPreflight();
 		setCatalogScope(nextScope);
 		setView(nextScope === "plugins" ? "hot" : "total");
 		setInstallAvailability("all");
@@ -1050,15 +1947,21 @@ function RankingsPage({ t }) {
 		setCategoryMenuOpen(false);
 	}
 	function selectCategory(nextCategory) {
+		resetPreflight();
 		setCategory(nextCategory);
 		setCategoryMenuOpen(false);
 	}
 	function selectRankingView(nextView) {
+		resetPreflight();
 		setView(nextView);
 		setQuery("");
 		setDraft("");
 	}
 	async function prepareInstall(item) {
+		const request = preflightRequest.current.start();
+		setPreflightRetry(null);
+		setConfirming(null);
+		setPreflights([]);
 		setInstallActivityOpen(false);
 		setPreparing(item.fullName);
 		setError(null);
@@ -1067,39 +1970,45 @@ function RankingsPage({ t }) {
 			const preflight = await readJson("/dsh-top100/install-preflight", {
 				method: "POST",
 				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ fullName: item.fullName })
+				body: JSON.stringify({
+					fullName: item.fullName,
+					installLocator: item.installLocator
+				}),
+				signal: request.signal
 			});
+			if (!request.isCurrent()) return;
 			setPreflights([preflight]);
 			setRiskAccepted(!preflight.requiresExplicitApproval);
 			setConfirming([item]);
 		} catch (cause) {
-			setErrorAction("install");
+			if (!request.isCurrent()) return;
+			const needsReload = cause instanceof HttpError && (cause.code === "catalog-changed" || cause.code === "invalid-locator");
+			setPreflightRetry(needsReload ? null : item);
+			setErrorAction(needsReload ? "load" : "install");
 			setError(cause instanceof Error ? cause.message : String(cause));
 		} finally {
-			setPreparing(null);
+			if (request.isCurrent()) setPreparing(null);
 		}
+	}
+	function cancelPreflight() {
+		preflightRequest.current.cancel();
+		setPreparing(null);
+		setPreflightRetry(null);
+		setNotice(t("preflightCancelled"));
 	}
 	async function install(selectedItems) {
 		setConfirming(null);
 		setNotice(null);
 		setError(null);
 		try {
-			const result = await readJson("/dsh-top100/install-batch", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ approvals: selectedItems.map((item) => {
-					const preflight = preflightsByName.get(item.fullName);
-					return {
-						fullName: item.fullName,
-						approvalToken: preflight?.approvalToken ?? "",
-						risksAccepted: preflight?.requiresExplicitApproval ? riskAccepted : true
-					};
-				}) })
-			});
-			setBatch(result);
-			setBusy(result.batchId);
-			rememberBatch(result.batchId);
-			setInstallActivityOpen(true);
+			if (await tracking.submit("/dsh-top100/install-batch", { approvals: selectedItems.map((item) => {
+				const preflight = preflightsByName.get(item.fullName);
+				return {
+					fullName: item.fullName,
+					approvalToken: preflight?.approvalToken ?? "",
+					risksAccepted: preflight?.requiresExplicitApproval ? riskAccepted : true
+				};
+			}) })) setInstallActivityOpen(true);
 		} catch (cause) {
 			setErrorAction("install");
 			setError(cause instanceof Error ? cause.message : String(cause));
@@ -1108,19 +2017,16 @@ function RankingsPage({ t }) {
 			setRiskAccepted(false);
 		}
 	}
-	async function cancelJob(jobId) {
-		try {
-			await readJson("/dsh-top100/cancel", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ jobId })
-			});
-		} catch (cause) {
-			setErrorAction("install");
-			setError(`${t("cancelFailed")} ${cause instanceof Error ? cause.message : String(cause)}`);
-		}
-	}
 	async function retryJob(job) {
+		if (job.action === "update") {
+			setInstallActivityOpen(false);
+			selectSection("installed");
+			setUpdateRetry({
+				id: ++updateRetrySequence.current,
+				names: [job.fullName]
+			});
+			return;
+		}
 		if (!job.action || job.action === "install") {
 			let item = items.find((candidate) => candidate.fullName === job.fullName);
 			if (!item) try {
@@ -1142,15 +2048,7 @@ function RankingsPage({ t }) {
 			return;
 		}
 		try {
-			const result = await readJson("/dsh-top100/retry", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ jobId: job.id })
-			});
-			setBatch(result);
-			setBusy(result.batchId);
-			rememberBatch(result.batchId);
-			setInstallActivityOpen(true);
+			if (await tracking.submit("/dsh-top100/retry", { jobId: job.id })) setInstallActivityOpen(true);
 		} catch (cause) {
 			setErrorAction("install");
 			setError(cause instanceof Error ? cause.message : String(cause));
@@ -1236,7 +2134,8 @@ function RankingsPage({ t }) {
 					"cancelled"
 				].includes(job.phase) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
-					onClick: () => void cancelJob(job.id),
+					disabled: job.cancelRequested || tracking.cancelling.includes(job.id),
+					onClick: () => void tracking.cancel(job.id),
 					children: t("cancel")
 				}) : ["failed", "cancelled"].includes(job.phase) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
@@ -1247,7 +2146,7 @@ function RankingsPage({ t }) {
 					type: "button",
 					onClick: () => {
 						setInstallActivityOpen(false);
-						setSection("installed");
+						selectSection("installed");
 					},
 					children: t("manage")
 				}) : null
@@ -1334,22 +2233,26 @@ function RankingsPage({ t }) {
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
 						"aria-selected": section === "rankings",
-						onClick: () => setSection("rankings"),
+						onClick: () => selectSection("rankings"),
 						children: t("rankings")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
 						"aria-selected": section === "installed",
-						onClick: () => setSection("installed"),
+						onClick: () => selectSection("installed"),
 						children: t("installedPage")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
 						"aria-selected": section === "diagnostics",
-						onClick: () => setSection("diagnostics"),
+						onClick: () => selectSection("diagnostics"),
 						children: t("diagnostics")
 					})
 				]
+			}),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TaskStatus, {
+				tracking,
+				t
 			}),
 			section === "rankings" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
@@ -1447,7 +2350,10 @@ function RankingsPage({ t }) {
 							className: "install-only-toggle",
 							role: "switch",
 							"aria-checked": installAvailability === "installable",
-							onClick: () => setInstallAvailability((current) => current === "installable" ? "all" : "installable"),
+							onClick: () => {
+								resetPreflight();
+								setInstallAvailability((current) => current === "installable" ? "all" : "installable");
+							},
 							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: "switch-track",
 								"aria-hidden": "true",
@@ -1517,8 +2423,26 @@ function RankingsPage({ t }) {
 							type: "button",
 							onClick: () => void load(view, query, category, catalogScope, installAvailability, 0, false),
 							children: t("retry")
+						}) : preflightRetry ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							disabled: preparing !== null || busy !== null,
+							onClick: () => void prepareInstall(preflightRetry),
+							children: t("retry")
 						}) : null
 					]
+				}) : null,
+				preparing ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+					className: "install-activity-banner is-active",
+					role: "status",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("preflighting") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+						preparing,
+						" · ",
+						t("preflightWait")
+					] })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						onClick: cancelPreflight,
+						children: t("cancel")
+					})]
 				}) : null,
 				batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: `install-activity-banner ${busy ? "is-active" : "is-complete"}`,
@@ -1541,10 +2465,10 @@ function RankingsPage({ t }) {
 						const installCapability = presentInstallCapability(item);
 						const rankingMetric = catalogScope === "plugins" && !query && view === "hot" ? {
 							label: t("hotScore"),
-							value: item.hotScore.toFixed(1)
+							value: scoreLabel(item.hotScore)
 						} : catalogScope === "plugins" && !query && view === "rising" ? {
 							label: t("daily"),
-							value: `+${item.dailyStars}`
+							value: deltaLabel(item.dailyStars)
 						} : null;
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
 							className: "ranking-card",
@@ -1614,12 +2538,12 @@ function RankingsPage({ t }) {
 									children: item.installed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										type: "button",
 										className: "primary",
-										onClick: () => setSection("installed"),
+										onClick: () => selectSection("installed"),
 										children: t("manage")
 									}) : item.installable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										type: "button",
 										className: "primary",
-										disabled: busy !== null || preparing !== null,
+										disabled: !tracking.ready || busy !== null || preparing !== null,
 										onClick: () => void prepareInstall(item),
 										children: preparing === item.fullName ? t("preflighting") : t("reviewInstall")
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
@@ -1806,7 +2730,12 @@ function RankingsPage({ t }) {
 						]
 					})
 				}) : null
-			] }) : section === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ManagedPage, { t }) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DiagnosticsPage, { t }),
+			] }) : section === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(ManagedPage, {
+				t,
+				tracking,
+				retryUpdate: updateRetry,
+				onRetryConsumed: () => setUpdateRetry(null)
+			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DiagnosticsPage, { t }),
 			batch && installActivityOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: "install-activity-mask",
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
@@ -3725,6 +4654,29 @@ const css = `
 //#endregion
 //#region src/client/locales.ts
 const zh = {
+	submissionRejected: "提交未被接受，请核对错误后重新操作。",
+	submissionSending: "正在确认提交结果，确认前暂不接受新的安装或更新。",
+	submissionUncertain: "提交结果暂时未知，服务端可能已经开始执行。请查询结果或取消这次提交。",
+	submissionCancelling: "正在确认取消提交；只有服务端确认后才会解除等待。",
+	querySubmission: "查询结果",
+	cancelSubmission: "取消这次提交",
+	previousTaskErrors: "此前任务的失败与恢复记录",
+	taskRecovering: "正在恢复安装与更新任务状态…",
+	taskTrackingError: "无法读取任务状态，任务可能仍在执行。",
+	reviewUpdateTitle: "确认更新",
+	reviewUpdateHint: "核对每个插件的当前版本、锁定目标和执行影响后，再确认更新。",
+	confirmUpdate: "确认更新",
+	updatePreflightWait: "正在核验全部更新来源，全部通过后才会显示确认；尚未开始更新。",
+	updatePreflightCancelled: "已取消更新核验，未开始更新。",
+	updatePreflightIncomplete: "未获得全部插件的完整更新核验结果，未开始更新。请重试。",
+	updateSubmitting: "正在提交已确认的更新…",
+	preflightWait: "正在等待来源核验结果，较慢的连接可能需要更多时间；尚未开始安装。",
+	preflightCancelled: "已取消等待来源核验，未开始安装。",
+	clientErrorTitle: "插件页面暂时无法显示",
+	clientErrorHint: "可重新打开页面。正在执行的安装不会因此取消，恢复后会重新读取安装状态。",
+	diagExport: "导出诊断摘要",
+	diagExportHint: "仅导出版本、计数和问题代码，不包含路径、地址、插件清单或原始日志。",
+	diagExportFailed: "诊断摘要导出失败，请重试。",
 	expandDescription: "展开简介",
 	collapseDescription: "收起简介",
 	nav: "插件排行",
@@ -3844,6 +4796,8 @@ const zh = {
 	protected: "受保护",
 	emptyInstalled: "没有匹配的已安装项目",
 	manageComplete: "操作完成。",
+	manageFailed: "部分操作失败，请查看对应插件的错误与恢复结果。",
+	manageCancelled: "操作已取消，请查看对应插件的恢复结果。",
 	confirmRemoveSkill: "确定卸载这个 Skill？",
 	confirmRemovePlugin: "确定卸载这个插件？",
 	browseOnly: "未识别安装源",
@@ -4042,6 +4996,29 @@ const zh = {
 	diagOrphans: "孤立停用项"
 };
 const en = {
+	submissionRejected: "The submission was not accepted. Review the error before trying again.",
+	submissionSending: "Confirming the submission result. New installations and updates are temporarily blocked.",
+	submissionUncertain: "The submission result is unknown; the server may already be running it. Check the result or cancel this submission.",
+	submissionCancelling: "Waiting for the server to confirm cancellation before releasing this submission.",
+	querySubmission: "Check result",
+	cancelSubmission: "Cancel this submission",
+	previousTaskErrors: "Previous task failures and recovery records",
+	taskRecovering: "Restoring installation and update task status…",
+	taskTrackingError: "Could not read task status. The task may still be running.",
+	reviewUpdateTitle: "Review updates",
+	reviewUpdateHint: "Review each plugin’s current version, pinned target and execution effects before confirming.",
+	confirmUpdate: "Confirm updates",
+	updatePreflightWait: "Verifying all update sources. Review opens only when all are ready; no updates have started.",
+	updatePreflightCancelled: "Update verification cancelled. No updates have started.",
+	updatePreflightIncomplete: "Complete verification was not received for every plugin. No updates have started. Please retry.",
+	updateSubmitting: "Submitting the approved updates…",
+	preflightWait: "Waiting for source verification. A slow connection may take longer; installation has not started.",
+	preflightCancelled: "Stopped waiting for source verification. Installation has not started.",
+	clientErrorTitle: "The plugin page could not be displayed",
+	clientErrorHint: "Reopen this page to recover. Running installations are not cancelled; their status will be loaded again.",
+	diagExport: "Export diagnostic summary",
+	diagExportHint: "Exports only the version, counts and issue codes; excludes paths, addresses, plugin inventories and raw logs.",
+	diagExportFailed: "Could not export the diagnostic summary. Please retry.",
 	expandDescription: "Show description",
 	collapseDescription: "Hide description",
 	nav: "Rankings",
@@ -4161,6 +5138,8 @@ const en = {
 	protected: "Protected",
 	emptyInstalled: "No matching installed items",
 	manageComplete: "Operation complete.",
+	manageFailed: "Some operations failed. Check the affected plugins for errors and recovery results.",
+	manageCancelled: "Operations were cancelled. Check the affected plugins for recovery results.",
 	confirmRemoveSkill: "Uninstall this Skill?",
 	confirmRemovePlugin: "Uninstall this plugin?",
 	browseOnly: "No install source identified",
@@ -4395,14 +5374,20 @@ function apply(ctx) {
 		label: () => t("nav"),
 		locale: NS,
 		inject: () => ({ t })
-	}, () => (0, react.createElement)(RankingsPage, { t })));
+	}, () => (0, react.createElement)(PluginErrorBoundary, {
+		t,
+		children: (0, react.createElement)(RankingsPage, { t })
+	})));
 	ctx.inject?.(["settingsScope"], (scoped) => {
 		scoped.slots.inject("settings.plugin.item", () => scoped.slots.register({
 			name: "settings.plugin.item",
 			key: "dsh-top100",
 			locale: NS,
 			inject: () => ({ t })
-		}, () => (0, react.createElement)(SettingsCard, { t })));
+		}, () => (0, react.createElement)(PluginErrorBoundary, {
+			t,
+			children: (0, react.createElement)(SettingsCard, { t })
+		})));
 	});
 }
 

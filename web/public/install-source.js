@@ -1,3 +1,57 @@
+// plugin/src/shared/github-source.ts
+var REPOSITORY = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
+var PORTS = { "https:": "443", "http:": "80", "ssh:": "22", "git:": "9418" };
+function parseGitHubSource(value, purpose = "install") {
+  if (typeof value !== "string") return null;
+  let source = value.trim().replace(/^git\+/i, "");
+  if (!source || source.length > 2048 || /[\\\s]/.test(source)) return null;
+  let repository;
+  let selector = "";
+  if (/^github:/i.test(source) || REPOSITORY.test(source.split("#")[0].replace(/\.git$/i, ""))) {
+    const parts = source.replace(/^github:/i, "").split("#");
+    if (parts.length > 2) return null;
+    repository = parts[0].replace(/\.git$/i, "");
+    selector = parts[1] ?? "";
+  } else {
+    source = source.replace(/^git@github\.com:/i, "ssh://git@github.com/");
+    let url;
+    try {
+      url = new URL(source);
+    } catch {
+      return null;
+    }
+    if (!Object.hasOwn(PORTS, url.protocol) || url.hostname.toLowerCase() !== "github.com") return null;
+    if (url.port && url.port !== PORTS[url.protocol] || url.search || url.password) return null;
+    if (url.username && !(url.protocol === "ssh:" && url.username === "git")) return null;
+    const rawPath = source.replace(/^[^:]+:\/\/[^/]+/, "").split("#")[0];
+    if (rawPath.split("/").some((part) => part === "." || part === ".." || /%/i.test(part))) return null;
+    const match = /^\/([^/]+)\/([^/]+?)(?:\.git)?(\/.*)?$/i.exec(url.pathname);
+    if (!match) return null;
+    if (purpose === "install" && match[3] && match[3] !== "/") return null;
+    repository = `${match[1]}/${match[2]}`;
+    selector = url.hash.slice(1);
+  }
+  if (!REPOSITORY.test(repository)) return null;
+  if (purpose === "repository") return { repository: repository.toLowerCase(), ref: null, path: null };
+  let ref = null;
+  let path = null;
+  for (const parameter of selector ? selector.split("&") : []) {
+    if (parameter.startsWith("path:")) {
+      if (path !== null) return null;
+      path = parameter.slice(5).replace(/^\/+|\/+$/g, "");
+      if (!path || !/^[A-Za-z0-9@._/-]+$/.test(path) || path.split("/").some((segment) => !segment || segment === "." || segment === "..")) return null;
+    } else {
+      if (ref !== null || !/^[A-Za-z0-9._~+/:=-]+$/.test(parameter)) return null;
+      ref = parameter;
+    }
+  }
+  return { repository: repository.toLowerCase(), ref, path };
+}
+function githubInstallTarget(source) {
+  const selector = [source.ref, source.path ? `path:/${source.path}` : null].filter(Boolean).join("&");
+  return `github:${source.repository}${selector ? `#${selector}` : ""}`;
+}
+
 // plugin/src/shared/install-source.ts
 var NPM_NAME = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
 var NPM_SPEC_RE = new RegExp(`^(${NPM_NAME})(?:@([a-z0-9][a-z0-9._+-]*))?$`, "i");
@@ -6,7 +60,6 @@ var REPO = "(?!\\.{1,2}(?:$|[#/]))[A-Za-z0-9._-]{1,100}";
 var REF = "[A-Za-z0-9._~+/:=-]+";
 var FULL_NAME_RE = new RegExp(`^${OWNER}/${REPO}$`);
 var GITHUB_SPEC_RE = new RegExp(`^github:(${OWNER})/(${REPO})(?:#(${REF}))?$`, "i");
-var GITHUB_URL_RE = new RegExp(`^(?:git\\+)?https://github\\.com/(${OWNER})/(${REPO})/?(?:#(${REF}))?$`, "i");
 var UNSAFE = /[\s|&;<>()$`\\'"!*?]/;
 function normalizeInstallTarget(value) {
   if (typeof value !== "string" || value.length > 2048) return null;
@@ -15,10 +68,8 @@ function normalizeInstallTarget(value) {
     token = token.slice(1, -1);
   }
   if (!token || token.startsWith("-") || UNSAFE.test(token)) return null;
-  const url = token.match(GITHUB_URL_RE);
-  if (url) token = `github:${url[1]}/${url[2].replace(/\.git$/i, "")}${url[3] ? `#${url[3]}` : ""}`;
-  const github = token.match(GITHUB_SPEC_RE);
-  if (github) return `github:${github[1]}/${github[2]}${github[3] ? `#${github[3]}` : ""}`;
+  const github = parseGitHubSource(token);
+  if (github) return githubInstallTarget(github);
   return NPM_SPEC_RE.test(token) ? token : null;
 }
 function stripInstallComment(command) {
@@ -84,7 +135,7 @@ function resolveCatalogInstallTarget(entry) {
   if (!FULL_NAME_RE.test(entry.fullName)) return null;
   const candidates = [normalizeInstallTarget(entry.installTarget)];
   for (const command of entry.install?.commands ?? []) candidates.push(parseDshInstallCommand(command));
-  const github = candidates.find((target) => target?.startsWith("github:") && target.slice(7).split("#", 1)[0].toLowerCase() === entry.fullName.toLowerCase());
+  const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
   if (github) return github;
   const packageName = entry.install?.packageName ?? entry.installPackageName;
   if (typeof packageName === "string") {

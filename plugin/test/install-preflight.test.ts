@@ -4,6 +4,7 @@ import {
   clearInstallApprovals,
   consumeInstallApproval,
   createInstallPreflight,
+  validateInstallApprovals,
 } from "../src/host/install-preflight.js";
 import type { RankingEntry } from "../src/shared/types.js";
 
@@ -41,6 +42,7 @@ afterEach(() => {
   clearInstallApprovals();
   clearInstallVerificationCache();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("install preflight approval", () => {
@@ -138,5 +140,86 @@ describe("install preflight approval", () => {
       install: { needsConfig: true, packageName: "demo", commands: ["dsh plugin add demo@latest"] },
     }), "web");
     expect(approval.preflight.activationExpectation).toBe("configuration-required");
+  });
+});
+
+describe("atomic install batch approval", () => {
+  function mockPackages(extra: Record<string, unknown> = {}) {
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const name = url.includes("other") ? "other" : "demo";
+      return new Response(JSON.stringify({
+        name, version: "1.2.3", repository: `https://github.com/acme/${name}`,
+        dist: { integrity: "sha512-demo" }, dsh: { bundle: { patch: "./patch.yml" } }, ...extra,
+      }));
+    }));
+  }
+  const reference = (approval: Awaited<ReturnType<typeof createInstallPreflight>>, risksAccepted = true) => ({
+    fullName: approval.preflight.fullName, approvalToken: approval.preflight.approvalToken, risksAccepted,
+  });
+  const other = () => entry({ fullName: "acme/other", name: "other", install: { packageName: "other", commands: ["dsh plugin add other@latest"] } });
+
+  it("preserves earlier approvals when a later token is invalid", async () => {
+    mockPackages();
+    const approval = await createInstallPreflight(entry(), "web");
+    expect(() => validateInstallApprovals([reference(approval), {
+      fullName: "acme/other", approvalToken: "invalid", risksAccepted: true,
+    }], "web")).toThrow("已过期");
+    expect(validateInstallApprovals([reference(approval)], "web")).toEqual([approval]);
+  });
+
+  it("preserves earlier approvals when a later approval has expired", async () => {
+    vi.useFakeTimers(); mockPackages();
+    const expired = await createInstallPreflight(other(), "web");
+    vi.advanceTimersByTime(60_000);
+    const fresh = await createInstallPreflight(entry(), "web");
+    vi.advanceTimersByTime(9 * 60_000);
+    expect(() => validateInstallApprovals([reference(fresh), reference(expired)], "web")).toThrow("已过期");
+    expect(validateInstallApprovals([reference(fresh)], "web")).toEqual([fresh]);
+  });
+
+  it("preserves the whole batch when a later risk has not been accepted", async () => {
+    mockPackages({ scripts: { postinstall: "node setup.js" } });
+    const first = await createInstallPreflight(entry(), "web");
+    const second = await createInstallPreflight(other(), "web");
+    expect(() => validateInstallApprovals([reference(first), reference(second, false)], "web")).toThrow("需要明确确认");
+    expect(validateInstallApprovals([reference(first), reference(second)], "web")).toEqual([first, second]);
+    expect(() => validateInstallApprovals([reference(first)], "web")).toThrow("已过期");
+    expect(() => validateInstallApprovals([reference(second)], "web")).toThrow("已过期");
+  });
+
+  it("rejects duplicate names and tokens without consuming approvals", async () => {
+    mockPackages();
+    const first = await createInstallPreflight(entry(), "web");
+    const duplicate = await createInstallPreflight(entry(), "web");
+    expect(() => validateInstallApprovals([reference(first), reference(duplicate)], "web")).toThrow("重复");
+    expect(() => validateInstallApprovals([reference(first), { ...reference(first), fullName: "acme/other" }], "web")).toThrow("重复");
+    expect(validateInstallApprovals([reference(first)], "web")).toEqual([first]);
+    expect(validateInstallApprovals([reference(duplicate)], "web")).toEqual([duplicate]);
+  });
+
+  it("keeps binding to repository and profile during atomic validation", async () => {
+    mockPackages();
+    const first = await createInstallPreflight(entry(), "web");
+    const second = await createInstallPreflight(other(), "another");
+    expect(() => validateInstallApprovals([reference(first), reference(second)], "web")).toThrow("不匹配");
+    expect(() => validateInstallApprovals([{ ...reference(first), fullName: "acme/wrong" }], "web")).toThrow("不匹配");
+    expect(validateInstallApprovals([reference(first)], "web")).toEqual([first]);
+    expect(validateInstallApprovals([reference(second)], "another")).toEqual([second]);
+  });
+
+  it("rejects empty batches", () => {
+    expect(() => validateInstallApprovals([], "web")).toThrow("请选择");
+  });
+
+  it("requires explicit source approval for a misleading repository hostname", async () => {
+    mockPackages({ repository: "https://notgithub.com/acme/demo" });
+    const approval = await createInstallPreflight(entry(), "web");
+    expect(approval.preflight).toMatchObject({
+      requiresExplicitApproval: true,
+      provenance: { repositoryIdentity: "unavailable" },
+      risks: expect.arrayContaining([expect.objectContaining({ code: "repository-identity", severity: "warning" })]),
+    });
+    expect(() => validateInstallApprovals([reference(approval, false)], "web")).toThrow("需要明确确认");
+    expect(validateInstallApprovals([reference(approval)], "web")).toEqual([approval]);
   });
 });

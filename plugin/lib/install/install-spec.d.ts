@@ -10,4 +10,6 @@ export declare function npmPackageSpec(spec: string): {
     selector: string | null;
 } | null;
 export declare function resolveInstallSpec(entry: RankingEntry): InstallSpec | null;
+/** Recognize only registry versions/ranges/tags, never URLs, aliases or other protocols. */
+export declare function isNpmRegistrySpecifier(value: string): boolean;
 export declare function isInstalledEntry(entry: RankingEntry, installed: Record<string, string>): boolean;

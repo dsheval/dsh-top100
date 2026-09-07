@@ -22,6 +22,7 @@ export interface VerifiedInstallTarget {
     buildApprovalKeys: string[];
 }
 export interface VerifyInstallOptions {
+    signal?: AbortSignal;
     expectedRepository?: string;
     expectedPackageName?: string;
     expectedRepositoryPath?: string;

@@ -348,7 +348,7 @@ const EXACT_NPM_TARGET_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~
 const NPM_NAME_RE = /^(@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 const NPM_ONLY_DESKTOP_NOTE = "该桌面客户端的安装边界只接受已发布到 npm 的插件；GitHub-only 插件请改用普通 dsh web 安装。";
 
-async function exactDesktopNpmArgs(args: readonly string[]): Promise<string[] | null> {
+async function exactDesktopNpmArgs(args: readonly string[], signal: AbortSignal): Promise<string[] | null> {
   const targets = args.slice(1).filter((argument) => !argument.startsWith("-"));
   const target = targets[0];
   if (targets.length !== 1 || target === undefined) return null;
@@ -363,7 +363,7 @@ async function exactDesktopNpmArgs(args: readonly string[]): Promise<string[] | 
     const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
     const response = await fetch(`https://registry.npmjs.org/${encoded}/${encodeURIComponent(selector)}`, {
       headers: { accept: "application/json", "user-agent": "dsh-top100-plugin" },
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(15_000)]),
     });
     if (!response.ok) return null;
     const version = (await response.json() as { version?: unknown }).version;
@@ -391,35 +391,29 @@ export function createDesktopPluginRuntime(
     throw new Error("dsh-top100: Desktop invoking directory must be an absolute path without NUL");
   }
   let closed = false;
-  let active: { handle: DesktopPnpmHandleLike; abort: AbortController; done: Promise<InstallResult>; cancelled: boolean } | null = null;
+  interface DesktopOperation {
+    handle: DesktopPnpmHandleLike | null;
+    abort: AbortController;
+    done: Promise<InstallResult>;
+    cancelled: boolean;
+  }
+  let active: DesktopOperation | null = null;
 
   const runPlugin: PluginRunner = async (_profile, originalArgs, meta) => {
     if (closed) return { exitCode: 127, timedOut: false, stdout: "", stderr: "Desktop package runtime is disposed", cancelled: false };
+    if (active) return { exitCode: 127, timedOut: false, stdout: "", stderr: "Desktop package operation is already active", cancelled: false };
     const args = pluginArgsFor(activeProfileDir, originalArgs);
     const target = args[args.length - 1] ?? "";
     if (!SAFE_TARGET_RE.test(target)) {
       return { exitCode: 1, timedOut: false, stdout: "", stderr: `unsafe plugin target rejected: ${JSON.stringify(target)}`, cancelled: false };
     }
     const abort = new AbortController();
-    let handle: DesktopPnpmHandleLike;
-    let boundaryRefusesTarget = false;
-    try {
-      const boundary = args[0] === "add" ? service.runExternalMarketPluginInstall : undefined;
-      const boundaryArgs = boundary ? await exactDesktopNpmArgs(args) : null;
-      boundaryRefusesTarget = boundary !== undefined && boundaryArgs === null;
-      handle = boundary && boundaryArgs
-        ? boundary.call(service, boundaryArgs, invokingDir, abort.signal)
-        : service.runPlugin(args, invokingDir, abort.signal);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      return {
-        exitCode: 127,
-        timedOut: false,
-        stdout: "",
-        stderr: boundaryRefusesTarget ? `${message}\n${NPM_ONLY_DESKTOP_NOTE}` : message,
-        cancelled: false,
-      };
-    }
+    // Own the operation before the first await, including target resolution.
+    // Teardown must await preparation too, even before the host returns a handle.
+    let settle!: (result: InstallResult) => void;
+    const done = new Promise<InstallResult>((resolve) => { settle = resolve; });
+    const operation: DesktopOperation = { handle: null, abort, done, cancelled: false };
+    active = operation;
 
     progress.active = true;
     progress.fullName = meta?.fullName ?? null;
@@ -432,34 +426,44 @@ export function createDesktopPluginRuntime(
     let timedOut = false;
     const onStdout = (chunk: string | Buffer): void => { const text = chunk.toString(); stdout = (stdout + text).slice(-256 * 1024); rememberLine(text); };
     const onStderr = (chunk: string | Buffer): void => { const text = chunk.toString(); stderr = (stderr + text).slice(-64 * 1024); rememberLine(text); };
-    handle.stdout.on("data", onStdout);
-    handle.stderr.on("data", onStderr);
-    let operation!: NonNullable<typeof active>;
-    let timer: NodeJS.Timeout | undefined;
-    const done = (async (): Promise<InstallResult> => {
+    const timer = setTimeout(() => {
+      timedOut = true;
+      abort.abort(new Error("Desktop package operation timed out"));
+      operation.handle?.cancel();
+    }, timeoutMs);
+    timer.unref?.();
+    void (async (): Promise<InstallResult> => {
+      let boundaryRefusesTarget = false;
       try {
+        const boundary = args[0] === "add" ? service.runExternalMarketPluginInstall : undefined;
+        const boundaryArgs = boundary ? await exactDesktopNpmArgs(args, abort.signal) : null;
+        abort.signal.throwIfAborted();
+        boundaryRefusesTarget = boundary !== undefined && boundaryArgs === null;
+        const handle = boundary && boundaryArgs
+          ? boundary.call(service, boundaryArgs, invokingDir, abort.signal)
+          : service.runPlugin(args, invokingDir, abort.signal);
+        operation.handle = handle;
+        handle.stdout.on("data", onStdout);
+        handle.stderr.on("data", onStderr);
+        // A host service may synchronously trigger disposal while returning its handle.
+        if (abort.signal.aborted) handle.cancel();
         const outcome = await handle.done;
         const exitCode = outcome.exitCode;
         if (exitCode !== 0 || timedOut) progress.error = stderr.slice(-200) || `exit ${exitCode}`;
         return { exitCode, timedOut, stdout, stderr, cancelled: operation.cancelled };
       } catch (error) {
-        return { exitCode: 127, timedOut, stdout, stderr: `${stderr}${stderr ? "\n" : ""}${error instanceof Error ? error.message : String(error)}`, cancelled: operation.cancelled };
+        const message = error instanceof Error ? error.message : String(error);
+        const detail = boundaryRefusesTarget ? `${message}\n${NPM_ONLY_DESKTOP_NOTE}` : message;
+        progress.error = message;
+        return { exitCode: 127, timedOut, stdout, stderr: `${stderr}${stderr ? "\n" : ""}${detail}`, cancelled: operation.cancelled };
       } finally {
-        if (timer) clearTimeout(timer);
-        handle.stdout.off("data", onStdout);
-        handle.stderr.off("data", onStderr);
+        clearTimeout(timer);
+        operation.handle?.stdout.off("data", onStdout);
+        operation.handle?.stderr.off("data", onStderr);
         progress.active = false;
         if (active === operation) active = null;
       }
-    })();
-    operation = { handle, abort, done, cancelled: false };
-    active = operation;
-    timer = setTimeout(() => {
-      timedOut = true;
-      abort.abort(new Error("Desktop package operation timed out"));
-      handle.cancel();
-    }, timeoutMs);
-    timer.unref?.();
+    })().then(settle);
     return done;
   };
 
@@ -469,15 +473,16 @@ export function createDesktopPluginRuntime(
       if (!active) return false;
       active.cancelled = true;
       active.abort.abort(new Error("cancelled"));
-      active.handle.cancel();
+      active.handle?.cancel();
       return true;
     },
     dispose: async () => {
       closed = true;
       if (!active) return;
-      active.abort.abort(new Error("disposed"));
-      active.handle.cancel();
-      await active.done.catch(() => undefined);
+      const operation = active;
+      operation.abort.abort(new Error("disposed"));
+      operation.handle?.cancel();
+      await operation.done;
     },
   };
 }

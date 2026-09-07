@@ -38,7 +38,7 @@ export interface CatalogCache {
 }
 
 interface CatalogDiskCache extends CatalogCache {
-  schemaVersion: 1;
+  schemaVersion: 2;
 }
 
 type CatalogParser = (raw: string) => RankingsDocument;
@@ -466,7 +466,7 @@ async function readDiskCache(url: string): Promise<CatalogCache | null> {
   try {
     const payload = JSON.parse(await readFile(catalogCachePath(url), "utf8")) as Partial<CatalogDiskCache>;
     if (
-      payload.schemaVersion !== 1
+      payload.schemaVersion !== 2
       || payload.dataUrl !== url
       || !Number.isFinite(payload.fetchedAt)
       || !validDocument(payload.document)
@@ -498,7 +498,7 @@ async function writeDiskCache(value: CatalogCache): Promise<void> {
   const temporary = `${path}.${process.pid}.tmp`;
   try {
     await mkdir(catalogCacheDirectory(), { recursive: true });
-    const payload: CatalogDiskCache = { schemaVersion: 1, ...value };
+    const payload: CatalogDiskCache = { schemaVersion: 2, ...value };
     await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
     try {
       await rename(temporary, path);
@@ -761,9 +761,9 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
     ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
     stars: Number(entry.stars) || 0,
-    dailyStars: Number(entry.dailyStars) || 0,
-    weeklyStars: Number(entry.weeklyStars) || 0,
-    hotScore: Number(entry.hotScore) || 0,
+    dailyStars: typeof entry.dailyStars === "number" && Number.isFinite(entry.dailyStars) ? entry.dailyStars : null,
+    weeklyStars: typeof entry.weeklyStars === "number" && Number.isFinite(entry.weeklyStars) ? entry.weeklyStars : null,
+    hotScore: typeof entry.hotScore === "number" && Number.isFinite(entry.hotScore) ? entry.hotScore : null,
     forks: Number(entry.forks) || 0,
     openIssues: Number(entry.openIssues) || 0,
     language: typeof entry.language === "string" ? entry.language : null,
@@ -1077,41 +1077,83 @@ function catalogSnapshotTime(value: CatalogCache): number {
   return Number.isFinite(generatedAt) ? generatedAt : value.fetchedAt;
 }
 
-/** Resolve installation metadata from a current, authoritative full catalog snapshot. */
+/** A list locator is only a hint: sources still come from a hash-verified current page. */
+export class CatalogLookupError extends Error {
+  constructor(public readonly code: "catalog-changed" | "invalid-locator", message: string) {
+    super(message);
+    this.name = "CatalogLookupError";
+  }
+}
+
+/** Stop this caller promptly without cancelling shared downloads used by other requests. */
+export function waitForCatalog<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  return new Promise<T>((resolve, reject) => {
+    const abort = () => reject(signal.reason);
+    signal.addEventListener("abort", abort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", abort));
+    if (signal.aborted) abort();
+  });
+}
+
+/** Resolve installation metadata from a current, authoritative catalog snapshot. */
 export async function findPublishedEntry(
   dataUrl: string,
   fullName: string,
   forceManifest = true,
+  locator?: CatalogItem["installLocator"],
+  signal?: AbortSignal,
 ): Promise<RankingEntry | undefined> {
+  signal?.throwIfAborted();
   const baseUrl = normalizeDataUrl(dataUrl);
+  let manifest: RankingManifestV2;
   try {
-    const manifest = await loadRankingManifest(baseUrl, forceManifest);
-    const search = await loadManifestDataset(
-      baseUrl,
-      manifest,
-      manifest.datasets.search,
-      "search",
-    );
+    manifest = await waitForCatalog(loadRankingManifest(baseUrl, forceManifest), signal);
+  } catch (error) {
+    signal?.throwIfAborted();
+    // Only a missing manifest identifies the legacy protocol. A network or integrity
+    // failure must not silently trigger a much larger, less strict catalog download.
+    if (!(error instanceof CatalogSourceError) || error.status !== 404) throw error;
+    if (locator) throw new CatalogLookupError("catalog-changed", "目录版本已变化，请刷新列表后重试");
+    fallbackReasons.set(`${baseUrl}/manifest.json`, "目录未提供 manifest，使用旧版目录");
+    return findLegacyPublishedEntry(baseUrl, fullName, signal);
+  }
+  signal?.throwIfAborted();
+  let totalRank: number;
+  if (locator) {
+    if (!Number.isSafeInteger(locator.totalRank) || locator.totalRank < 1) {
+      throw new CatalogLookupError("invalid-locator", "安装目录定位信息无效，请刷新列表后重试");
+    }
+    if (locator.snapshotId !== manifest.snapshotId || locator.totalRank > manifest.datasets.total.count) {
+      throw new CatalogLookupError("catalog-changed", "目录版本已变化，请刷新列表后重试");
+    }
+    totalRank = locator.totalRank;
+  } else {
+    const search = await waitForCatalog(loadManifestDataset(baseUrl, manifest, manifest.datasets.search, "search"), signal);
+    signal?.throwIfAborted();
     const indexed = findEntry(search, fullName);
     if (!indexed) {
-      const skills = await loadSkillRankings(baseUrl);
+      if (!manifest.datasets.skills) {
+        // Older v2 publications kept Skills exclusively in the legacy catalog.
+        const legacy = await findLegacyPublishedEntry(baseUrl, fullName, signal);
+        return legacy?.type.toLowerCase() === "skill" ? legacy : undefined;
+      }
+      const skills = await waitForCatalog(loadManifestDataset(baseUrl, manifest, manifest.datasets.skills, "skills"), signal);
       return findEntry(skills, fullName);
     }
-    const pageNumber = Math.floor((indexed.rank - 1) / manifest.datasets.total.pageSize) + 1;
-    const pageReference = manifest.datasets.total.pages.find((page) => page.page === pageNumber);
-    if (!pageReference) {
-      throw new CatalogSourceError("榜单 manifest 缺少插件对应的总榜分页", { fallbackToFull: true });
-    }
-    const page = await loadManifestDataset(baseUrl, manifest, pageReference, "total");
-    const entry = findEntry(page, fullName);
-    if (!entry) {
-      throw new CatalogSourceError("搜索索引与总榜分页不一致", { fallbackToFull: true });
-    }
-    return entry;
-  } catch (error) {
-    fallbackReasons.set(`${baseUrl}/manifest.json`, `安装校验回退旧目录：${describeCatalogFetchError(error)}`);
+    totalRank = indexed.totalRank ?? indexed.rank;
   }
+  const pageNumber = Math.floor((totalRank - 1) / manifest.datasets.total.pageSize) + 1;
+  const pageReference = manifest.datasets.total.pages.find((page) => page.page === pageNumber);
+  if (!pageReference) throw new CatalogSourceError("榜单 manifest 缺少插件对应的总榜分页");
+  signal?.throwIfAborted();
+  const page = await waitForCatalog(loadManifestDataset(baseUrl, manifest, pageReference, "total"), signal);
+  const entry = findEntry(page, fullName);
+  if (!entry) throw new CatalogLookupError("catalog-changed", "目录定位与插件不一致，请刷新列表后重试");
+  return entry;
+}
 
+async function findLegacyPublishedEntry(baseUrl: string, fullName: string, signal?: AbortSignal): Promise<RankingEntry | undefined> {
   const fullUrl = `${baseUrl}/rankings.json`;
   const [full, hot, rising, search] = await Promise.all([
     cachedCatalog(fullUrl),
@@ -1119,6 +1161,7 @@ export async function findPublishedEntry(
     cachedCatalog(`${baseUrl}/rankings-rising.json`),
     cachedCatalog(`${baseUrl}/rankings-search.json`),
   ]);
+  signal?.throwIfAborted();
   const newestShardTime = Math.max(
     ...[hot, rising, search].filter((value): value is CatalogCache => value !== null).map(catalogSnapshotTime),
     Number.NEGATIVE_INFINITY,
@@ -1130,7 +1173,8 @@ export async function findPublishedEntry(
   ) {
     return findEntry(full.document, fullName);
   }
-  const current = await loadCatalogDocument(fullUrl, parseRankingsDocument, true, false);
+  signal?.throwIfAborted();
+  const current = await waitForCatalog(loadCatalogDocument(fullUrl, parseRankingsDocument, true, false), signal);
   return findEntry(current, fullName);
 }
 

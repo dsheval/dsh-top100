@@ -90,8 +90,15 @@ export declare function loadSkillRankings(dataUrl: string, force?: boolean): Pro
 export declare function catalogCacheStatus(dataUrl: string, dataset: CatalogCacheStatus["dataset"], view?: "hot" | "rising"): Promise<CatalogCacheStatus>;
 /** Return a last-good full or view cache without ever delaying local management on the network. */
 export declare function loadCachedRankings(dataUrl: string): Promise<RankingsDocument | null>;
-/** Resolve installation metadata from a current, authoritative full catalog snapshot. */
-export declare function findPublishedEntry(dataUrl: string, fullName: string, forceManifest?: boolean): Promise<RankingEntry | undefined>;
+/** A list locator is only a hint: sources still come from a hash-verified current page. */
+export declare class CatalogLookupError extends Error {
+    readonly code: "catalog-changed" | "invalid-locator";
+    constructor(code: "catalog-changed" | "invalid-locator", message: string);
+}
+/** Stop this caller promptly without cancelling shared downloads used by other requests. */
+export declare function waitForCatalog<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T>;
+/** Resolve installation metadata from a current, authoritative catalog snapshot. */
+export declare function findPublishedEntry(dataUrl: string, fullName: string, forceManifest?: boolean, locator?: CatalogItem["installLocator"], signal?: AbortSignal): Promise<RankingEntry | undefined>;
 /** Load the small published shard used by the initial hot/rising tabs. */
 export declare function loadRankingView(dataUrl: string, view: "hot" | "rising", force?: boolean): Promise<RankingsDocument>;
 export declare function findEntry(document: RankingsDocument, fullName: string): RankingEntry | undefined;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { zh } from "../src/client/locales.js";
-import { managedDescriptionZh, resolveUpdateTarget } from "../src/host/manage.js";
+import { managedDescriptionZh, matchCatalogEntry, resolveUpdateTarget } from "../src/host/manage.js";
+import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
 
 describe("managed plugin updates", () => {
   it("resolves npm and GitHub update targets", () => {
@@ -10,11 +11,61 @@ describe("managed plugin updates", () => {
       "sample-plugin",
       `github:owner/repo#${"a".repeat(40)}&path:/packages/sample`,
     )).toBe("github:owner/repo#path:/packages/sample");
+    expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#path:/packages/sample"))
+      .toBe("github:owner/repo#path:/packages/sample");
+    expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#path:packages/sample"))
+      .toBe("github:owner/repo#path:/packages/sample");
   });
 
   it("does not overwrite local source links", () => {
     expect(resolveUpdateTarget("sample-plugin", "link:/tmp/sample")).toBeNull();
     expect(resolveUpdateTarget("sample-plugin", "file:../sample")).toBeNull();
+  });
+});
+
+function catalogEntry(fullName: string, packageName?: string, repositoryPath?: string): RankingEntry {
+  return {
+    fullName, name: fullName.split("/")[1], owner: fullName.split("/")[0], rank: 1,
+    description: "", descriptionZh: "", stars: 0, dailyStars: null, weeklyStars: null,
+    hotScore: null, forks: 0, openIssues: 0, language: null, homepage: null, license: null,
+    topics: [], tags: [], type: "cordis-plugin", sources: [], url: `https://github.com/${fullName}`,
+    pushedAt: "", createdAt: "", updatedAt: "",
+    install: { method: "pnpm-profile", packageName, repositoryPath, target: packageName ?? `github:${fullName}${repositoryPath ? `#path:/${repositoryPath}` : ""}` },
+  };
+}
+
+function catalog(...entries: RankingEntry[]): RankingsDocument {
+  return { schemaVersion: 1, generatedAt: "", snapshotDate: "", rankings: { total: entries, hot: [], rising: [] } };
+}
+
+describe("managed catalog identity", () => {
+  it("never matches package or repository substrings", () => {
+    const document = catalog(catalogEntry("other/git-enhancer", "git-enhancer"));
+    expect(matchCatalogEntry(document, "git", "1.0.0", null)).toBeUndefined();
+    expect(matchCatalogEntry(document, "unknown", "github:other/git", "other/git")).toBeUndefined();
+  });
+
+  it("matches exact npm package names and rejects conflicting repository metadata", () => {
+    const entry = catalogEntry("acme/repository", "@acme/widget");
+    expect(matchCatalogEntry(catalog(entry), "@acme/widget", "^1.0.0", null)).toBe(entry);
+    expect(matchCatalogEntry(catalog(entry), "@acme/widget", "^1.0.0", "other/repository")).toBeUndefined();
+  });
+
+  it("matches a repository source and disambiguates monorepo subdirectories", () => {
+    const root = catalogEntry("acme/repository");
+    expect(matchCatalogEntry(catalog(root), "widget", "github:acme/repository#main", null)).toBe(root);
+    const first = catalogEntry("acme/mono", undefined, "packages/first");
+    const second = catalogEntry("acme/mono", undefined, "packages/second");
+    const document = catalog(first, second);
+    expect(matchCatalogEntry(document, "widget", "github:acme/mono", null)).toBeUndefined();
+    expect(matchCatalogEntry(document, "widget", "github:acme/mono#path:/packages/second", null)).toBe(second);
+    expect(matchCatalogEntry(document, "widget", `github:acme/mono#${"a".repeat(40)}&path:/packages/first`, null)).toBe(first);
+  });
+
+  it("does not guess when multiple entries declare the same npm package", () => {
+    expect(matchCatalogEntry(catalog(
+      catalogEntry("acme/first", "widget"), catalogEntry("acme/second", "widget"),
+    ), "widget", "^1.0.0", null)).toBeUndefined();
   });
 });
 

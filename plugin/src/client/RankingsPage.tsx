@@ -7,13 +7,14 @@ import type {
   InstallJobSnapshot,
   InstallPreflight,
   InstallAvailability,
-  PluginStatusResponse,
   PluginCategoryId,
   RankingView,
 } from "../shared/types.js";
 import type { Translate } from "./locales.js";
 import { DescriptionPreview } from "./DescriptionPreview.js";
 import { descriptionFor } from "../shared/description-rules.js";
+import { LatestRequest } from "./latest-request.js";
+import { deltaLabel, scoreLabel } from "./metric-presentation.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
 import { installStage, isInstallBatchComplete } from "./install-batch-presentation.js";
 import { presentInstallCapability } from "./install-capability.js";
@@ -23,6 +24,8 @@ import {
   presentInstallError,
   type InstallErrorKind,
 } from "./install-presentation.js";
+import { useTaskTracker } from "./use-task-tracker.js";
+import { TaskStatus } from "./TaskStatus.js";
 import { ManagedPage } from "./ManagedPage.js";
 import { shouldRestartPagination } from "./pagination.js";
 import { presentRepositoryIdentity } from "./repository-identity.js";
@@ -34,7 +37,6 @@ interface RankingsPageProps {
 
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
 const CATALOG_SCOPES: CatalogScope[] = ["plugins", "skills"];
-const LAST_BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const DSHEVAL_SITE = "https://www.dsheval.ai/top100/";
 type PageSection = "rankings" | "installed" | "diagnostics";
 const GITHUB_ICON = (
@@ -105,9 +107,6 @@ function rankingBasisShortKey(view: RankingView, query: string): string {
   return query ? "basisShort_search" : `basisShort_${view}`;
 }
 
-function deltaLabel(value: number): string {
-  return value > 0 ? `+${value}` : String(value);
-}
 
 const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => (
   <div className="card-skeleton" aria-hidden="true" key={index}>
@@ -133,27 +132,16 @@ const ERROR_LOCALE_KEYS: Record<InstallErrorKind, string> = {
 };
 
 class HttpError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
   }
 }
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
-  const body = (await response.json()) as T & { error?: string; message?: string };
-  if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status);
+  const body = (await response.json()) as T & { error?: string; message?: string; code?: string };
+  if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status, body.code);
   return body;
-}
-
-function rememberedBatchId(): string | null {
-  try { return window.localStorage.getItem(LAST_BATCH_KEY); } catch { return null; }
-}
-
-function rememberBatch(batchId: string | null): void {
-  try {
-    if (batchId) window.localStorage.setItem(LAST_BATCH_KEY, batchId);
-    else window.localStorage.removeItem(LAST_BATCH_KEY);
-  } catch { /* storage unavailable */ }
 }
 
 function cacheAgeLabel(ageMs: number | null, t: Translate): string {
@@ -177,17 +165,28 @@ export function RankingsPage({ t }: RankingsPageProps) {
   const [error, setError] = useState<string | null>(null);
   const [errorAction, setErrorAction] = useState<"load" | "install">("load");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<string | null>(() => rememberedBatchId());
+  const tracking = useTaskTracker();
+  const { batch, busy } = tracking;
+  const [updateRetry, setUpdateRetry] = useState<{ id: number; names: string[] } | null>(null);
+  const updateRetrySequence = useRef(0);
+  const [preflightRetry, setPreflightRetry] = useState<CatalogItem | null>(null);
+  const preflightRequest = useRef(new LatestRequest());
+  useEffect(() => () => preflightRequest.current.cancel(), []);
   const [preparing, setPreparing] = useState<string | null>(null);
+  useEffect(() => {
+    if (section !== "rankings") {
+      preflightRequest.current.cancel();
+      setPreparing(null);
+    }
+  }, [section]);
   const [confirming, setConfirming] = useState<CatalogItem[] | null>(null);
   const [preflights, setPreflights] = useState<InstallPreflight[]>([]);
   const [riskAccepted, setRiskAccepted] = useState(false);
-  const [batch, setBatch] = useState<InstallBatchSnapshot | null>(null);
   const [installActivityOpen, setInstallActivityOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const loadedSnapshot = useRef<string | null>(null);
-  const recoveryChecked = useRef(false);
+  const completedBatch = useRef<string | null>(null);
 
   const load = useCallback(async (
     nextView: RankingView,
@@ -233,6 +232,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
       setItems((current) => (shouldAppend ? [...current, ...payload.items] : payload.items));
     } catch (cause) {
       if (requestId !== loadSequence.current) return;
+      setErrorAction("load");
+      setPreflightRetry(null);
       setError(cause instanceof Error ? cause.message : String(cause));
       if (!append) setItems([]);
     } finally {
@@ -246,51 +247,13 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }, [catalogScope, category, installAvailability, load, query, section, view]);
 
   useEffect(() => {
-    if (recoveryChecked.current) return;
-    recoveryChecked.current = true;
-    if (busy) return;
-    void readJson<PluginStatusResponse>("/dsh-top100/status")
-      .then((status) => {
-        const recovered = status.activeBatches[0];
-        if (!recovered) return;
-        rememberBatch(recovered.batchId);
-        setBatch(recovered);
-        setBusy(recovered.batchId);
-        setNotice(t("installTaskRecovered"));
-      })
-      .catch(() => { /* the normal page error surface handles host availability */ });
-  }, [busy, t]);
-
-  useEffect(() => {
-    if (!busy) return undefined;
-    const refresh = (): void => {
-      void readJson<InstallBatchSnapshot>(`/dsh-top100/install-jobs?batchId=${encodeURIComponent(busy)}`)
-        .then(async (snapshot) => {
-          setBatch(snapshot);
-          if (isInstallBatchComplete(snapshot)) {
-            rememberBatch(null);
-            setBusy(null);
-            setNotice(snapshot.requiresRestart ? t("restart") : t("batchComplete"));
-            await load(view, query, category, catalogScope, installAvailability, 0, false);
-          }
-        })
-        .catch((cause: unknown) => {
-          if (cause instanceof HttpError && cause.status === 404) {
-            rememberBatch(null);
-            setBusy(null);
-            setBatch(null);
-            setNotice(t("installTaskUnavailable"));
-            setError(null);
-            return;
-          }
-          setErrorAction("install");
-          setError(cause instanceof Error ? cause.message : String(cause));
-        });
-    };
-    refresh();
-    const timer = window.setInterval(refresh, 800);
-    return () => window.clearInterval(timer);
-  }, [busy, catalogScope, category, installAvailability, load, query, t, view]);
+    if (!batch || busy || !isInstallBatchComplete(batch) || completedBatch.current === batch.batchId) return;
+    completedBatch.current = batch.batchId;
+    const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
+    const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
+    setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("batchComplete"));
+    if (section === "rankings") void load(view, query, category, catalogScope, installAvailability, 0, false);
+  }, [batch, busy, catalogScope, category, installAvailability, load, query, section, t, view]);
 
   const remaining = useMemo(() => {
     if (!data) return 0;
@@ -303,7 +266,22 @@ export function RankingsPage({ t }: RankingsPageProps) {
   );
   const activeCategory = data?.categories.find((definition) => definition.id === category);
 
+  function resetPreflight(): void {
+    preflightRequest.current.cancel();
+    setPreparing(null);
+    setPreflightRetry(null);
+    setConfirming(null);
+    setPreflights([]);
+    setRiskAccepted(false);
+  }
+
+  function selectSection(nextSection: PageSection): void {
+    resetPreflight();
+    setSection(nextSection);
+  }
+
   function startSearch(value: string): void {
+    resetPreflight();
     const nextQuery = value.trim();
     setCategory(null);
     setDraft(nextQuery);
@@ -311,6 +289,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   function switchCatalogScope(nextScope: CatalogScope): void {
+    resetPreflight();
     setCatalogScope(nextScope);
     setView(nextScope === "plugins" ? "hot" : "total");
     setInstallAvailability("all");
@@ -321,17 +300,23 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   function selectCategory(nextCategory: PluginCategoryId | null): void {
+    resetPreflight();
     setCategory(nextCategory);
     setCategoryMenuOpen(false);
   }
 
   function selectRankingView(nextView: RankingView): void {
+    resetPreflight();
     setView(nextView);
     setQuery("");
     setDraft("");
   }
 
   async function prepareInstall(item: CatalogItem): Promise<void> {
+    const request = preflightRequest.current.start();
+    setPreflightRetry(null);
+    setConfirming(null);
+    setPreflights([]);
     setInstallActivityOpen(false);
     setPreparing(item.fullName);
     setError(null);
@@ -340,17 +325,29 @@ export function RankingsPage({ t }: RankingsPageProps) {
       const preflight = await readJson<InstallPreflight>("/dsh-top100/install-preflight", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ fullName: item.fullName }),
+        body: JSON.stringify({ fullName: item.fullName, installLocator: item.installLocator }),
+        signal: request.signal,
       });
+      if (!request.isCurrent()) return;
       setPreflights([preflight]);
       setRiskAccepted(!preflight.requiresExplicitApproval);
       setConfirming([item]);
     } catch (cause) {
-      setErrorAction("install");
+      if (!request.isCurrent()) return;
+      const needsReload = cause instanceof HttpError && (cause.code === "catalog-changed" || cause.code === "invalid-locator");
+      setPreflightRetry(needsReload ? null : item);
+      setErrorAction(needsReload ? "load" : "install");
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setPreparing(null);
+      if (request.isCurrent()) setPreparing(null);
     }
+  }
+
+  function cancelPreflight(): void {
+    preflightRequest.current.cancel();
+    setPreparing(null);
+    setPreflightRetry(null);
+    setNotice(t("preflightCancelled"));
   }
 
   async function install(selectedItems: CatalogItem[]): Promise<void> {
@@ -358,10 +355,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
     setNotice(null);
     setError(null);
     try {
-      const result = await readJson<InstallBatchSnapshot>("/dsh-top100/install-batch", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const result = await tracking.submit("/dsh-top100/install-batch", {
           approvals: selectedItems.map((item) => {
             const preflight = preflightsByName.get(item.fullName);
             return {
@@ -370,12 +364,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
               risksAccepted: preflight?.requiresExplicitApproval ? riskAccepted : true,
             };
           }),
-        }),
       });
-      setBatch(result);
-      setBusy(result.batchId);
-      rememberBatch(result.batchId);
-      setInstallActivityOpen(true);
+      if (result) setInstallActivityOpen(true);
     } catch (cause) {
       setErrorAction("install");
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -385,20 +375,13 @@ export function RankingsPage({ t }: RankingsPageProps) {
     }
   }
 
-  async function cancelJob(jobId: string): Promise<void> {
-    try {
-      await readJson("/dsh-top100/cancel", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobId }),
-      });
-    } catch (cause) {
-      setErrorAction("install");
-      setError(`${t("cancelFailed")} ${cause instanceof Error ? cause.message : String(cause)}`);
-    }
-  }
-
   async function retryJob(job: InstallJobSnapshot): Promise<void> {
+    if (job.action === "update") {
+      setInstallActivityOpen(false);
+      selectSection("installed");
+      setUpdateRetry({ id: ++updateRetrySequence.current, names: [job.fullName] });
+      return;
+    }
     if (!job.action || job.action === "install") {
       let item = items.find((candidate) => candidate.fullName === job.fullName);
       if (!item) {
@@ -423,15 +406,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
       return;
     }
     try {
-      const result = await readJson<InstallBatchSnapshot>("/dsh-top100/retry", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jobId: job.id }),
-      });
-      setBatch(result);
-      setBusy(result.batchId);
-      rememberBatch(result.batchId);
-      setInstallActivityOpen(true);
+      const result = await tracking.submit("/dsh-top100/retry", { jobId: job.id });
+      if (result) setInstallActivityOpen(true);
     } catch (cause) {
       setErrorAction("install");
       setError(cause instanceof Error ? cause.message : String(cause));
@@ -505,7 +481,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           </div>
         ) : null}
         {!["installed", "failed", "cancelled"].includes(job.phase) ? (
-          <button type="button" onClick={() => void cancelJob(job.id)}>
+          <button type="button" disabled={job.cancelRequested || tracking.cancelling.includes(job.id)} onClick={() => void tracking.cancel(job.id)}>
             {t("cancel")}
           </button>
         ) : ["failed", "cancelled"].includes(job.phase) ? (
@@ -513,7 +489,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
             {t("retry")}
           </button>
         ) : job.phase === "installed" ? (
-          <button type="button" onClick={() => { setInstallActivityOpen(false); setSection("installed"); }}>
+          <button type="button" onClick={() => { setInstallActivityOpen(false); selectSection("installed"); }}>
             {t("manage")}
           </button>
         ) : null}
@@ -550,10 +526,11 @@ export function RankingsPage({ t }: RankingsPageProps) {
       </header>
 
       <nav className="page-tabs" aria-label={t("nav")}>
-        <button type="button" aria-selected={section === "rankings"} onClick={() => setSection("rankings")}>{t("rankings")}</button>
-        <button type="button" aria-selected={section === "installed"} onClick={() => setSection("installed")}>{t("installedPage")}</button>
-        <button type="button" aria-selected={section === "diagnostics"} onClick={() => setSection("diagnostics")}>{t("diagnostics")}</button>
+        <button type="button" aria-selected={section === "rankings"} onClick={() => selectSection("rankings")}>{t("rankings")}</button>
+        <button type="button" aria-selected={section === "installed"} onClick={() => selectSection("installed")}>{t("installedPage")}</button>
+        <button type="button" aria-selected={section === "diagnostics"} onClick={() => selectSection("diagnostics")}>{t("diagnostics")}</button>
       </nav>
+      <TaskStatus tracking={tracking} t={t} />
 
       {section === "rankings" ? <>
 
@@ -652,7 +629,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
               className="install-only-toggle"
               role="switch"
               aria-checked={installAvailability === "installable"}
-              onClick={() => setInstallAvailability((current) => current === "installable" ? "all" : "installable")}
+              onClick={() => { resetPreflight(); setInstallAvailability((current) => current === "installable" ? "all" : "installable"); }}
             >
               <span className="switch-track" aria-hidden="true"><span /></span>
               <span>{t("installableOnly")}</span>
@@ -705,7 +682,15 @@ export function RankingsPage({ t }: RankingsPageProps) {
             <button type="button" onClick={() => void load(view, query, category, catalogScope, installAvailability, 0, false)}>
               {t("retry")}
             </button>
+          ) : preflightRetry ? (
+            <button type="button" disabled={preparing !== null || busy !== null} onClick={() => void prepareInstall(preflightRetry)}>{t("retry")}</button>
           ) : null}
+        </div>
+      ) : null}
+      {preparing ? (
+        <div className="install-activity-banner is-active" role="status">
+          <div><strong>{t("preflighting")}</strong><span>{preparing} · {t("preflightWait")}</span></div>
+          <button type="button" onClick={cancelPreflight}>{t("cancel")}</button>
         </div>
       ) : null}
       {batch ? (
@@ -724,9 +709,9 @@ export function RankingsPage({ t }: RankingsPageProps) {
           const identity = presentRepositoryIdentity(item);
           const installCapability = presentInstallCapability(item);
           const rankingMetric = catalogScope === "plugins" && !query && view === "hot"
-            ? { label: t("hotScore"), value: item.hotScore.toFixed(1) }
+            ? { label: t("hotScore"), value: scoreLabel(item.hotScore) }
             : catalogScope === "plugins" && !query && view === "rising"
-              ? { label: t("daily"), value: `+${item.dailyStars}` }
+              ? { label: t("daily"), value: deltaLabel(item.dailyStars) }
               : null;
           return (
             <article
@@ -772,14 +757,14 @@ export function RankingsPage({ t }: RankingsPageProps) {
                 </div>
                 <div className="actions">
                   {item.installed ? (
-                    <button type="button" className="primary" onClick={() => setSection("installed")}>
+                    <button type="button" className="primary" onClick={() => selectSection("installed")}>
                       {t("manage")}
                     </button>
                   ) : item.installable ? (
                     <button
                       type="button"
                       className="primary"
-                      disabled={busy !== null || preparing !== null}
+                      disabled={!tracking.ready || busy !== null || preparing !== null}
                       onClick={() => void prepareInstall(item)}
                     >
                       {preparing === item.fullName ? t("preflighting") : t("reviewInstall")}
@@ -904,7 +889,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           </div>
         </div>
       ) : null}
-      </> : section === "installed" ? <ManagedPage t={t} /> : <DiagnosticsPage t={t} />}
+      </> : section === "installed" ? <ManagedPage t={t} tracking={tracking} retryUpdate={updateRetry} onRetryConsumed={() => setUpdateRetry(null)} /> : <DiagnosticsPage t={t} />}
 
       {batch && installActivityOpen ? (
         <div className="install-activity-mask">

@@ -40,9 +40,10 @@ export interface RankingEntry {
     /** README-derived excerpt, present in authoritative detail pages when published. */
     readmeSummary?: string;
     stars: number;
-    dailyStars: number;
-    weeklyStars: number;
-    hotScore: number;
+    /** null means this dataset did not publish the metric; it is not zero growth. */
+    dailyStars: number | null;
+    weeklyStars: number | null;
+    hotScore: number | null;
     forks: number;
     openIssues: number;
     language: string | null;
@@ -96,6 +97,11 @@ export interface CatalogEvidence {
     caveat: string;
 }
 export interface CatalogItem extends RankingEntry {
+    /** A hint into an immutable snapshot; the host must verify the resolved entry. */
+    installLocator?: {
+        snapshotId: string;
+        totalRank: number;
+    };
     installable: boolean;
     installSpec: InstallSpec | null;
     installed: boolean;
@@ -182,6 +188,11 @@ export interface InstallPreflight {
     risks: InstallRiskEvidence[];
     requiresExplicitApproval: boolean;
     activationExpectation: ActivationState;
+}
+export interface UpdatePreflightItem {
+    name: string;
+    currentVersion: string | null;
+    preflight: InstallPreflight;
 }
 export interface InstallJobSnapshot {
     id: string;
