@@ -1,6 +1,22 @@
 # dsh-top100 本地开发交接
 
-更新时间：2026-09-03
+更新时间：2026-09-07
+
+## 当前正式版本
+
+当前正式版为 **1.3.2**：[GitHub Release](https://github.com/dsheval/dsh-top100/releases/tag/v1.3.2)、[npm 下载](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.2)。npm `latest` 已指向 1.3.2，安装命令为：
+
+```bash
+npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
+```
+
+PR #17 已合并，PR 和 main CI 均通过；635 项测试及类型检查通过，正式 npm 包与验收包逐字节一致。Windows 和原生 Desktop 安装尚未实机验证。正式入口以 [安装指南](https://www.dsheval.ai/top100/?page=dsh#dsh) 为准。
+
+开发默认沿用当前任务分支；只有需要并行修改或隔离目录时使用独立 worktree。开始前核对 `git status --short` 与远端状态，保留已有改动。当前任务的授权以用户会话为准。
+
+## 历史交接记录（2026-09-03）
+
+以下记录保留当时的候选版本、分支、验收和授权阶段，仅供追溯，不作为当前发布状态或新任务指令。
 
 ## 1. 交接目标
 
