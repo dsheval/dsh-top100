@@ -1,244 +1,328 @@
 /** Persist enable/disable through the profile user patch layer. */
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { JSON_SCHEMA, Type, load } from "js-yaml";
+import { chmodSync, lstatSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomUUID } from "node:crypto";
+import { dirname, join } from "node:path";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
-const ROW_ID_RE = /^[A-Za-z0-9_.-]+$/;
-const SELF_PACKAGES = new Set([
-    "dsh-top100",
-    "dsh-top100-plugin",
-    "@dsheval/dsh-top100-plugin",
-]);
+import { applyDshPatches, disabledRowIds, insertedRows, readDshPatch, writeDshPatch } from "./dsh-patch.js";
+const SELF_PACKAGES = new Set(["dsh-top100", "dsh-top100-plugin", "@dsheval/dsh-top100-plugin"]);
 export function userPatchPath(profile, explicitDir) {
     return join(profileDir(profile, explicitDir), "cordis.patch.yml");
 }
-const jsExpr = new Type("tag:yaml.org,2002:js", {
-    kind: "scalar",
-    resolve: (data) => typeof data === "string",
-    construct: (data) => ({ __jsExpr: String(data) }),
-});
-const entrySchema = JSON_SCHEMA.extend(jsExpr);
-/** Parse the same entry-list YAML dialect DSH uses, including `!!js` scalars. */
 export function parseDshPatchText(source) {
     try {
-        const value = load(source, { schema: entrySchema });
-        return Array.isArray(value) ? value : null;
+        return readDshPatch(source);
     }
     catch {
         return null;
     }
 }
-/**
- * Find user-owned `insert` rows that still load a package. `null` is a
- * fail-closed result: the patch uses a shape this small DSH-dialect reader
- * cannot inspect safely, so uninstall must not guess.
- */
-export function userPatchPackageReferences(patchPath, packageName) {
-    let source;
+function missing(error) {
+    return error !== null && typeof error === "object" && "code" in error && error.code === "ENOENT";
+}
+/** A missing user layer is optional; unreadable or malformed existing files are not. */
+export function readUserPatch(patchPath) {
     try {
-        source = readFileSync(patchPath, "utf8");
+        return readDshPatch(readFileSync(patchPath, "utf8"));
     }
     catch (error) {
-        const code = error !== null && typeof error === "object" && "code" in error
-            ? error.code
-            : undefined;
-        return code === "ENOENT" ? [] : null;
+        if (missing(error))
+            return [];
+        throw error;
     }
-    const rows = parseDshPatchText(source);
-    if (rows === null)
+}
+export function userPatchPackageReferences(patchPath, packageName) {
+    try {
+        return [...new Set(insertedRows(readUserPatch(patchPath)).map((row) => row.name)
+                .filter((name) => typeof name === "string"
+                && (name === packageName || name.startsWith(`${packageName}/`))))];
+    }
+    catch {
         return null;
-    const insertedNames = new Set();
-    const visiting = new Set();
-    const visited = new Set();
-    const collect = (entries) => {
-        if (visited.has(entries))
-            return true;
-        if (visiting.has(entries))
-            return false;
-        visiting.add(entries);
-        for (const entry of entries) {
-            if (entry === null || typeof entry !== "object" || Array.isArray(entry))
-                return false;
-            const row = entry;
-            if ("name" in row && typeof row.name !== "string")
-                return false;
-            if (typeof row.name === "string")
-                insertedNames.add(row.name);
-            if (row.group === true && Array.isArray(row.config) && !collect(row.config))
-                return false;
-        }
-        visiting.delete(entries);
-        visited.add(entries);
-        return true;
-    };
-    for (const patch of rows) {
-        if (patch === null || typeof patch !== "object" || Array.isArray(patch))
-            return null;
-        const row = patch;
-        if (!("insert" in row))
-            continue;
-        if (!Array.isArray(row.insert) || !collect(row.insert))
-            return null;
     }
-    return [...insertedNames].filter((reference) => reference === packageName || reference.startsWith(`${packageName}/`));
 }
 export function isProtectedPackage(name) {
     return INBOX_BUNDLES.has(name) || SELF_PACKAGES.has(name) || name.startsWith("@deepseek-ai/");
 }
-export function readUserPatchState(patchPath) {
-    const disables = [];
-    const forced = [];
-    let text = "";
-    try {
-        text = readFileSync(patchPath, "utf8");
-    }
-    catch {
-        return { disables, forced };
-    }
-    const lines = text.split(/\r?\n/);
-    for (let index = 0; index < lines.length; index += 1) {
-        const row = /^- id: ['"]?([A-Za-z0-9_.-]+)['"]?\s*$/.exec(lines[index] ?? "");
-        if (row === null)
-            continue;
-        const next = lines[index + 1] ?? "";
-        if (/^ {2}disabled: true\s*$/.test(next))
-            disables.push(row[1]);
-        else if (/^ {2}disabled: false\s*$/.test(next))
-            forced.push(row[1]);
-    }
-    return { disables, forced };
-}
-export function parseInsertedIds(text) {
-    const ids = [];
-    let insertIndent = null;
-    for (const raw of text.split(/\r?\n/)) {
-        const line = raw.replace(/#.*$/, "");
-        if (line.trim() === "")
-            continue;
-        const indent = line.length - line.trimStart().length;
-        if (insertIndent !== null && indent <= insertIndent && !/^\s*-?\s*(id|name|config):/.test(line))
-            insertIndent = null;
-        if (/^\s*-?\s*insert:\s*$/.test(line)) {
-            insertIndent = indent;
-            continue;
+export function userPatchState(patches, knownRows = []) {
+    const names = new Map([...knownRows, ...insertedRows(patches)].map((row) => [row.id, row.name]));
+    const states = new Map();
+    for (const patch of patches) {
+        if (!Object.hasOwn(patch, "insert") && typeof patch.id === "string" && Object.hasOwn(patch, "disabled")) {
+            if (!patch.name || (names.has(patch.id) && patch.name === names.get(patch.id)))
+                states.set(patch.id, patch.disabled);
         }
-        const id = /^\s*-?\s*id:\s*['"]?([^'"\s]+)/.exec(line);
-        if (id !== null && insertIndent !== null && indent > insertIndent && !ids.includes(id[1]))
-            ids.push(id[1]);
     }
-    return ids;
+    return {
+        disables: [...states].filter(([, disabled]) => disabled === true).map(([id]) => id),
+        forced: [...states].filter(([, disabled]) => disabled === false).map(([id]) => id),
+    };
+}
+export function readUserPatchState(patchPath) {
+    return userPatchState(readUserPatch(patchPath));
+}
+export function parseInsertedIds(source) {
+    return [...new Set(insertedRows(readDshPatch(source)).map((row) => row.id)
+            .filter((id) => typeof id === "string" && id.length > 0))];
+}
+/** Resolve the declared layer only; missing declarations/files must not guess a package-name id. */
+export function bundlePatchEntries(packageDirectory) {
+    const manifest = JSON.parse(readFileSync(join(packageDirectory, "package.json"), "utf8"));
+    const declared = manifest?.dsh?.bundle?.patch;
+    if (typeof declared !== "string" || !declared.trim())
+        throw new Error("缺少 dsh.bundle.patch 声明");
+    const path = join(packageDirectory, declared);
+    const patches = readDshPatch(readFileSync(path, "utf8"));
+    return { path, ids: [...new Set(insertedRows(patches).map((row) => row.id).filter((id) => typeof id === "string"))], patches };
+}
+function hostInstallDirectory() {
+    if (!process.argv[1])
+        return null;
+    let directory = dirname(process.argv[1]);
+    for (let depth = 0; depth < 10; depth += 1) {
+        try {
+            if (JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).name === "@deepseek-ai/dsh")
+                return directory;
+        }
+        catch { /* not the host root */ }
+        const parent = dirname(directory);
+        if (parent === directory)
+            break;
+        directory = parent;
+    }
+    return null;
+}
+function packageLayer(profile, packageName, explicitDir) {
+    const directory = profileDir(profile, explicitDir);
+    const host = hostInstallDirectory();
+    const candidates = [join(directory, "node_modules", packageName), ...(host ? [join(host, "node_modules", packageName)] : []), join(dirname(directory), "node_modules", packageName)];
+    for (const packageDirectory of candidates) {
+        try {
+            return bundlePatchEntries(packageDirectory);
+        }
+        catch (error) {
+            // Parent resolution is allowed only when this package itself is absent.
+            try {
+                readFileSync(join(packageDirectory, "package.json"), "utf8");
+            }
+            catch (manifestError) {
+                if (missing(manifestError))
+                    continue;
+            }
+            throw error;
+        }
+    }
+    throw new Error("找不到插件 package.json，无法确定真实加载 id");
 }
 export function rowIdsForPackage(profile, packageName, explicitDir) {
-    const ids = new Set();
-    const packageDir = join(profileDir(profile, explicitDir), "node_modules", packageName);
-    const candidates = ["cordis.patch.yml"];
+    return packageLayer(profile, packageName, explicitDir).ids;
+}
+/** Resolve the profile's declared order, including groups inserted by earlier bundles. */
+function profilePatchLayers(profile, packageName, own, explicitDir) {
+    let manifest;
     try {
-        const manifest = JSON.parse(readFileSync(join(packageDir, "package.json"), "utf8"));
-        if (typeof manifest.dsh?.bundle?.patch === "string")
-            candidates.unshift(manifest.dsh.bundle.patch);
+        manifest = JSON.parse(readFileSync(join(profileDir(profile, explicitDir), "package.json"), "utf8"));
     }
-    catch { /* package missing */ }
-    for (const relative of candidates) {
+    catch (error) {
+        if (missing(error))
+            return own.patches;
+        throw error;
+    }
+    const declared = manifest.dsh?.profile?.bundles;
+    const names = Array.isArray(declared) ? declared.filter((name) => typeof name === "string") : Object.keys(manifest.dependencies ?? {});
+    if (!names.length)
+        return own.patches;
+    if (!names.includes(packageName))
+        throw new Error("当前 profile 未加载该插件，无法确认开关状态");
+    return [...new Set(names)].flatMap((name) => {
+        if (name === packageName)
+            return own.patches;
+        // A missing host layer is diagnosed separately. Before mutation, every
+        // managed loader must still resolve in the composed context below.
         try {
-            for (const id of parseInsertedIds(readFileSync(join(packageDir, relative), "utf8")))
-                ids.add(id);
+            return packageLayer(profile, name, explicitDir).patches;
         }
-        catch { /* no patch */ }
-    }
-    if (ids.size === 0) {
-        const fallback = packageName.replace(/^@[^/]+\//, "").replace(/^@/, "");
-        if (ROW_ID_RE.test(fallback))
-            ids.add(fallback);
-    }
-    return [...ids].filter((id) => ROW_ID_RE.test(id));
+        catch {
+            return [];
+        }
+    });
 }
-function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
-function rowBlock(rowId, disabled) { return `- id: ${rowId}\n  disabled: ${disabled ? "true" : "false"}\n`; }
-function withPlaceholderRestored(text) {
-    if (text.replace(/^[ \t]*#.*$/gm, "").trim() !== "")
-        return text;
-    const uncommented = text.replace(/^[ \t]*#[ \t]*\[[ \t]*\][ \t]*(?:\r?\n|$)/m, "[]\n");
-    if (uncommented !== text)
-        return uncommented;
-    return text === "" || text.endsWith("\n") ? `${text}[]\n` : `${text}\n[]\n`;
-}
-function appendPatchEntry(patchPath, block) {
-    let text = "";
+const BLOCK_START = /^# dsh-top100:disable-v1 (\S+) ([a-f0-9]{64})\r?\n/gm;
+const BLOCK_END = "# dsh-top100:end-disable-v1";
+function digest(patches) { return createHash("sha256").update(writeDshPatch(patches)).digest("hex"); }
+function parseSection(source) { return source.replace(/^#.*$/gm, "").replace(/^---\s*$/gm, "").trim() ? readDshPatch(source) : []; }
+/** The original settings stay in the file. A removable, checksummed overlay is
+ * committed with them in one rename, so restart needs no sidecar recovery. */
+function readPatchDocument(path) {
+    let source;
+    let mode = 0o600;
     try {
-        text = readFileSync(patchPath, "utf8");
+        const info = lstatSync(path);
+        if (!info.isFile())
+            throw new Error("用户补丁不是普通文件，已拒绝替换");
+        mode = info.mode & 0o777;
+        source = readFileSync(path, "utf8");
     }
-    catch {
-        writeFileSync(patchPath, block);
-        return { ok: true, reason: null };
+    catch (error) {
+        if (missing(error))
+            return { source: null, mode, sections: [] };
+        throw error;
     }
-    const withoutComments = text.replace(/^[ \t]*#.*$/gm, "").trim();
-    if (withoutComments === "") {
-        writeFileSync(patchPath, `${text.endsWith("\n") ? text : `${text}\n`}${block}`);
-        return { ok: true, reason: null };
+    const allPatches = readDshPatch(source);
+    const sections = [];
+    const owners = new Set();
+    let cursor = 0;
+    let patchCursor = 0;
+    for (const match of source.matchAll(BLOCK_START)) {
+        if (match.index < cursor)
+            throw new Error("插件停用标记重叠，请先检查用户补丁");
+        const beforeCount = parseSection(source.slice(0, match.index)).length;
+        if (beforeCount > patchCursor)
+            sections.push({ patches: allPatches.slice(patchCursor, beforeCount) });
+        const bodyStart = match.index + match[0].length;
+        const end = source.indexOf(`\n${BLOCK_END}`, bodyStart);
+        if (end < 0 || (source[end + 1 + BLOCK_END.length] && !/[\r\n]/.test(source[end + 1 + BLOCK_END.length])))
+            throw new Error("插件停用标记不完整，请先检查用户补丁");
+        const patches = parseSection(source.slice(bodyStart, end));
+        const owner = decodeURIComponent(match[1]);
+        if (!owner || owners.has(owner) || patches.length === 0 || digest(patches) !== match[2]
+            || patches.some((patch) => typeof patch.id !== "string" || patch.disabled !== true
+                || Object.keys(patch).some((key) => !["id", "name", "disabled"].includes(key)))) {
+            throw new Error("插件停用块已被修改，已保留当前配置；请先检查该块");
+        }
+        owners.add(owner);
+        sections.push({ owner, patches });
+        patchCursor = beforeCount + patches.length;
+        cursor = end + 1 + BLOCK_END.length;
     }
-    if (withoutComments === "[]" || withoutComments === "[ ]") {
-        const commented = text.replace(/^[ \t]*\[[ \t]*\][ \t]*(?:#.*)?(?:\r?\n|$)/m, "# []\n");
-        writeFileSync(patchPath, `${commented.endsWith("\n") ? commented : `${commented}\n`}${block}`);
-        return { ok: true, reason: null };
+    const trailing = source.slice(cursor);
+    if (trailing.includes(BLOCK_END))
+        throw new Error("插件停用标记不完整，请先检查用户补丁");
+    if (allPatches.length > patchCursor)
+        sections.push({ patches: allPatches.slice(patchCursor) });
+    return { source, mode, sections };
+}
+function writePatchAtomic(patchPath, document) {
+    const parts = document.sections.filter((section) => section.patches.length).map((section) => {
+        const body = writeDshPatch(section.patches);
+        return section.owner ? `# dsh-top100:disable-v1 ${encodeURIComponent(section.owner)} ${digest(section.patches)}\n${body}${BLOCK_END}\n` : body;
+    });
+    const output = parts.join("") || "[]\n";
+    readDshPatch(output);
+    const temporary = `${patchPath}.${randomUUID()}.tmp`;
+    try {
+        writeFileSync(temporary, output, { encoding: "utf8", flag: "wx", mode: document.mode });
+        chmodSync(temporary, document.mode);
+        let current = null;
+        let currentMode = document.mode;
+        try {
+            const info = lstatSync(patchPath);
+            if (!info.isFile())
+                throw new Error("用户补丁已被替换，已取消写入");
+            currentMode = info.mode & 0o777;
+            current = readFileSync(patchPath, "utf8");
+        }
+        catch (error) {
+            if (!missing(error))
+                throw error;
+        }
+        if (current !== document.source || currentMode !== document.mode)
+            throw new Error("用户补丁已被其他操作修改，请刷新后重试");
+        renameSync(temporary, patchPath);
     }
-    const last = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line !== "" && !line.startsWith("#")).pop() ?? "";
-    if (/^[\[{]/.test(last))
-        return { ok: false, reason: "补丁层以顶层流式结构结尾，已拒绝写入" };
-    writeFileSync(patchPath, `${text.endsWith("\n") ? text : `${text}\n`}${block}`);
-    return { ok: true, reason: null };
+    finally {
+        rmSync(temporary, { force: true });
+    }
 }
 export function setRowDisabled(patchPath, rowId, disabled) {
-    if (!ROW_ID_RE.test(rowId))
-        return { ok: false, reason: `无效的补丁行 id：${rowId}` };
-    const state = readUserPatchState(patchPath);
-    if (disabled && state.disables.includes(rowId))
-        return { ok: true, reason: null };
-    if (!disabled && state.forced.includes(rowId) && !state.disables.includes(rowId))
-        return { ok: true, reason: null };
-    const text = existsSync(patchPath) ? readFileSync(patchPath, "utf8") : "";
-    const disableRe = new RegExp(`^- id: ['"]?${escapeRegExp(rowId)}['"]?\\r?\\n  disabled: true\\r?\\n`, "m");
-    const forceRe = new RegExp(`^- id: ['"]?${escapeRegExp(rowId)}['"]?\\r?\\n  disabled: false\\r?\\n`, "m");
-    if (disabled) {
-        if (forceRe.test(text)) {
-            writeFileSync(patchPath, text.replace(forceRe, rowBlock(rowId, true)));
-            return { ok: true, reason: null };
-        }
-        return appendPatchEntry(patchPath, rowBlock(rowId, true));
-    }
-    if (disableRe.test(text)) {
-        writeFileSync(patchPath, withPlaceholderRestored(text.replace(disableRe, "")));
+    try {
+        if (!rowId)
+            throw new Error("无效的补丁行 id");
+        const document = readPatchDocument(patchPath);
+        document.sections.push({ patches: [{ id: rowId, disabled }] });
+        writePatchAtomic(patchPath, document);
         return { ok: true, reason: null };
     }
-    return appendPatchEntry(patchPath, rowBlock(rowId, false));
+    catch (error) {
+        return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+    }
 }
 export function removeRowBlocks(patchPath, rowIds) {
-    if (!existsSync(patchPath) || rowIds.length === 0)
+    if (rowIds.length === 0)
         return;
-    let text = readFileSync(patchPath, "utf8");
-    const original = text;
-    for (const rowId of rowIds) {
-        const blockRe = new RegExp(`^- id: ['"]?${escapeRegExp(rowId)}['"]?\\r?\\n  disabled: (?:true|false)\\r?\\n`, "m");
-        text = text.replace(blockRe, "");
-    }
-    if (text !== original)
-        writeFileSync(patchPath, withPlaceholderRestored(text));
+    const document = readPatchDocument(patchPath);
+    const wanted = new Set(rowIds);
+    let changed = false;
+    for (const section of document.sections)
+        section.patches = section.patches.flatMap((patch) => {
+            if (Object.hasOwn(patch, "insert") || typeof patch.id !== "string" || !wanted.has(patch.id) || typeof patch.disabled !== "boolean")
+                return [patch];
+            changed = true;
+            const { disabled: _disabled, ...rest } = patch;
+            return Object.keys(rest).every((key) => key === "id" || key === "name") ? [] : [rest];
+        });
+    if (changed)
+        writePatchAtomic(patchPath, document);
 }
 export function packageIsDisabled(profile, packageName, explicitDir) {
-    const rows = rowIdsForPackage(profile, packageName, explicitDir);
-    const state = readUserPatchState(userPatchPath(profile, explicitDir));
-    return rows.some((id) => state.disables.includes(id));
+    try {
+        const layer = packageLayer(profile, packageName, explicitDir);
+        const rows = applyDshPatches([...profilePatchLayers(profile, packageName, layer, explicitDir), ...readUserPatch(userPatchPath(profile, explicitDir))]);
+        const disabled = disabledRowIds(rows);
+        return layer.ids.length > 0 && layer.ids.every((id) => disabled.has(id));
+    }
+    catch {
+        return false;
+    } // Inventory stays available; diagnostics reports invalid layers.
 }
 export function setPackageEnabled(profile, packageName, enabled, explicitDir) {
     if (isProtectedPackage(packageName))
         return { ok: false, reason: "该插件属于宿主或本排行插件，不能在这里开关", rows: [] };
-    const rows = rowIdsForPackage(profile, packageName, explicitDir);
-    if (rows.length === 0)
-        return { ok: false, reason: "找不到可写入的补丁行", rows };
-    const patchPath = userPatchPath(profile, explicitDir);
-    for (const rowId of rows) {
-        const result = setRowDisabled(patchPath, rowId, !enabled);
-        if (!result.ok)
-            return { ...result, rows };
+    let rows = [];
+    try {
+        const layer = packageLayer(profile, packageName, explicitDir);
+        rows = layer.ids;
+        const baseLayers = profilePatchLayers(profile, packageName, layer, explicitDir);
+        if (rows.length === 0)
+            throw new Error("插件未声明可管理的真实加载 id");
+        const path = userPatchPath(profile, explicitDir);
+        const document = readPatchDocument(path);
+        const owned = document.sections.find((section) => section.owner === packageName);
+        if (enabled) {
+            if (owned)
+                document.sections = document.sections.filter((section) => section !== owned);
+            else {
+                // Legacy/user disable flags can be lifted without forcing default-off
+                // optional rows on. Never replace conditional or expression overrides.
+                const defaults = disabledRowIds(applyDshPatches(baseLayers));
+                for (const section of document.sections) {
+                    if (section.owner)
+                        continue;
+                    section.patches = section.patches.filter((patch) => !(rows.includes(String(patch.id))
+                        && !defaults.has(String(patch.id)) && patch.disabled === true
+                        && Object.keys(patch).every((key) => key === "id" || key === "disabled")));
+                }
+                const restored = disabledRowIds(applyDshPatches([...baseLayers, ...document.sections.flatMap((section) => section.patches)]));
+                if (rows.every((id) => restored.has(id)))
+                    throw new Error("当前停用来自插件默认值或带配置的用户补丁，无法安全自动启用；请在配置中调整");
+            }
+        }
+        else if (!owned) {
+            const effective = insertedRows([{ insert: applyDshPatches([...baseLayers, ...document.sections.flatMap((section) => section.patches)]) }]);
+            const names = new Map(effective.map((row) => [row.id, row.name]));
+            if (rows.some((id) => !names.has(id)))
+                throw new Error("无法在当前 profile 补丁层中解析全部加载行，已取消停用");
+            document.sections.push({ owner: packageName, patches: rows.map((id) => ({ id, ...(typeof names.get(id) === "string" ? { name: names.get(id) } : {}), disabled: true })) });
+        }
+        else {
+            const current = disabledRowIds(applyDshPatches([...baseLayers, ...document.sections.flatMap((section) => section.patches)]));
+            if (!rows.every((id) => current.has(id)))
+                throw new Error("插件加载行或用户补丁已变化，原停用块不再完全生效；请先恢复后重新停用");
+            return { ok: true, reason: null, rows };
+        }
+        writePatchAtomic(path, document);
+        return { ok: true, reason: null, rows };
     }
-    return { ok: true, reason: null, rows };
+    catch (error) {
+        return { ok: false, reason: error instanceof Error ? error.message : String(error), rows };
+    }
 }

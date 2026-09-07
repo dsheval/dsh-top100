@@ -1,11 +1,13 @@
 /** Read-only profile and rankings diagnostics for the Settings page. */
 
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_DATA_URL, loadSearchRankings, normalizeDataUrl } from "./catalog.js";
 import { matchCatalogEntry, skillsRoot } from "./manage.js";
-import { isProtectedPackage, packageIsDisabled, parseInsertedIds, readUserPatchState, userPatchPath } from "./patch-toggle.js";
+import { bundlePatchEntries, isProtectedPackage, readUserPatch, userPatchState, userPatchPath } from "./patch-toggle.js";
+import { applyDshPatches, disabledRowIds, insertedRows, type DshPatch } from "./dsh-patch.js";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
 import { compareSemver, parseSemver, satisfiesRange } from "./semver.js";
 import {
@@ -71,15 +73,23 @@ function resolvePackageDir(profileDirectory: string, name: string, hostDir: stri
   return candidates.find((candidate): candidate is string => Boolean(candidate && existsSync(join(candidate, "package.json")))) ?? null;
 }
 
-function patchEntries(directory: string | null, manifest: Record<string, unknown> | null): { path: string | null; ids: string[] } {
-  if (!directory || !manifest) return { path: null, ids: [] };
+function resolvePeerDirectory(packageDirectory: string, profileDirectory: string, name: string, hostDir: string | null): string | null {
+  // pnpm resolves peers beside the plugin's real installation, not necessarily at profile root.
+  try {
+    const resolve = createRequire(join(realpathSync(packageDirectory), "package.json")).resolve;
+    const candidates = (resolve.paths(name) ?? []).map((directory) => join(directory, name));
+    const found = candidates.find((directory) => existsSync(join(directory, "package.json")));
+    if (found) return found;
+  } catch { /* Fall back to the known DSH profile/host locations. */ }
+  return resolvePackageDir(profileDirectory, name, hostDir);
+}
+
+function patchEntries(directory: string | null, manifest: Record<string, unknown> | null): { path: string | null; ids: string[]; patches: DshPatch[]; error: string | null } {
+  if (!directory || !manifest) return { path: null, ids: [], patches: [], error: null };
   const declared = isRecord(manifest.dsh) && isRecord(manifest.dsh.bundle) && typeof manifest.dsh.bundle.patch === "string"
-    ? manifest.dsh.bundle.patch : "cordis.patch.yml";
-  const path = join(directory, declared);
-  const fallback = join(directory, "cordis.patch.yml");
-  const actual = existsSync(path) ? path : existsSync(fallback) ? fallback : null;
-  if (!actual) return { path: null, ids: [] };
-  try { return { path: actual, ids: parseInsertedIds(readFileSync(actual, "utf8")) }; } catch { return { path: actual, ids: [] }; }
+    ? manifest.dsh.bundle.patch : null;
+  try { return { ...bundlePatchEntries(directory), error: null }; }
+  catch (error) { return { path: declared ? join(directory, declared) : null, ids: [], patches: [], error: error instanceof Error ? error.message : String(error) }; }
 }
 
 function listSkills(): DiagnosticSkill[] {
@@ -151,12 +161,21 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
   const peers: DiagnosticPeer[] = [];
   const hostDeps: DiagnosticHostDep[] = [];
   const idLayers = new Map<string, string[]>();
+  const patchPath = userPatchPath(profile, directory);
+  let userPatches: DshPatch[] = [];
+  const bundlePatches: DshPatch[] = [];
+  let patchState = { disables: [] as string[], forced: [] as string[] };
+  try { userPatches = readUserPatch(patchPath); }
+  catch (error) {
+    findings.push({ severity: "error", code: "user-patch-invalid", subject: "cordis.patch.yml", message: "用户补丁不可读取或不是有效的 DSH 补丁列表", detail: error instanceof Error ? error.message : String(error) });
+  }
   for (const name of bundleNames) {
     const official = INBOX_BUNDLES.has(name) || name.startsWith("@deepseek-ai/");
     const spec = dependencies[name] ?? "(host inbox)";
     const packageDirectory = resolvePackageDir(directory, name, hostDir);
     const packageManifest = packageDirectory ? readJsonFile(join(packageDirectory, "package.json")) : null;
     const patch = patchEntries(packageDirectory, packageManifest);
+    bundlePatches.push(...patch.patches);
     const version = typeof packageManifest?.version === "string" ? packageManifest.version : null;
     const local = spec.startsWith("link:") || spec.startsWith("file:");
     const catalogEntry = matchCatalogEntry(document, name, spec, null);
@@ -164,20 +183,23 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     if (!packageDirectory) error = "包未解析到安装目录";
     else if (!packageManifest) error = "package.json 不可读";
     else if (!official && !isRecord(packageManifest.dsh)) error = "不是 DSH bundle（缺少 dsh 清单字段）";
-    const enabled = official || !packageIsDisabled(profile, name, directory);
+    else if (patch.error) error = `插件补丁缺失或无效：${patch.error}`;
+    const enabled = true; // Computed once below after all bundle layers have composed.
     bundles.push({ name, spec, version, kind: official ? "official" : "community", directory: packageDirectory, patchPath: patch.path, entries: patch.ids, error, enabled, local, protected: isProtectedPackage(name), catalogName: catalogEntry?.fullName ?? null, latest: null, updateAvailable: false });
     for (const id of patch.ids) idLayers.set(id, [...(idLayers.get(id) ?? []), name]);
-    if (error) findings.push({ severity: official ? "warning" : "error", code: "bundle-unresolved", subject: name, message: error, detail: spec });
-    if (!enabled) findings.push({ severity: "info", code: "bundle-disabled", subject: name, message: "用户补丁层已停用该插件" });
+    if (error) findings.push({ severity: official && !packageDirectory ? "warning" : "error", code: "bundle-unresolved", subject: name, message: error, detail: spec });
     if (local) findings.push({ severity: "info", code: "bundle-local", subject: name, message: "本地 link/file 插件不能从排行页更新", detail: spec });
     if (document && !catalogEntry && !official) findings.push({ severity: "info", code: "bundle-unlisted", subject: name, message: "已安装但不在当前榜单里" });
     if (packageManifest && !official) {
       for (const [dependency, range] of Object.entries(stringRecord(packageManifest.peerDependencies))) {
-        const resolvedDir = resolvePackageDir(directory, dependency, hostDir);
+        const resolvedDir = resolvePeerDirectory(packageDirectory!, directory, dependency, hostDir);
         const resolvedManifest = resolvedDir ? readJsonFile(join(resolvedDir, "package.json")) : null;
         const resolved = typeof resolvedManifest?.version === "string" ? resolvedManifest.version : null;
         const satisfied = resolved ? satisfiesRange(resolved, range) : null;
         peers.push({ plugin: name, name: dependency, range, resolved, satisfied });
+        const peerMeta = isRecord(packageManifest.peerDependenciesMeta) ? packageManifest.peerDependenciesMeta[dependency] : null;
+        const optional = isRecord(peerMeta) && peerMeta.optional === true;
+        if (!resolved && !optional) findings.push({ severity: "error", code: "peer-missing", subject: name, message: `缺少必需依赖 ${dependency}（声明 ${range}）` });
         if (satisfied === false) findings.push({ severity: "warning", code: "peer-mismatch", subject: name, message: `${dependency} 声明 ${range}，解析到 ${resolved}` });
       }
       for (const [dependency, range] of Object.entries(stringRecord(packageManifest.dependencies))) {
@@ -188,14 +210,19 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     }
   }
 
+  const baseRows = applyDshPatches(bundlePatches);
+  patchState = userPatchState(userPatches, insertedRows([{ insert: baseRows }]));
+  const disabled = disabledRowIds(applyDshPatches([...bundlePatches, ...userPatches]));
+  for (const bundle of bundles) {
+    bundle.enabled = bundle.entries.length === 0 || !bundle.entries.every((id) => disabled.has(id));
+    if (!bundle.enabled) findings.push({ severity: "info", code: "bundle-disabled", subject: bundle.name, message: "当前配置已停用该插件的全部加载行" });
+  }
   const duplicates = [...idLayers].filter(([, layers]) => layers.length > 1).map(([id, layers]) => ({ id, layers, count: layers.length }));
   for (const item of duplicates) findings.push({ severity: "error", code: "duplicate-entry", subject: item.id, message: `加载 id 出现在 ${item.layers.join(" / ")}` });
   const skills = listSkills();
   for (const skill of skills) if (!skill.hasManifest) findings.push({ severity: "warning", code: "skill-manifest-missing", subject: skill.name, message: "Skill 目录缺少 SKILL.md" });
   const multiVersion = lockfileCoreVersions(directory);
   for (const item of multiVersion) findings.push({ severity: "warning", code: "core-multi-version", subject: item.name, message: `锁文件里有多个版本：${item.versions.join(" / ")}` });
-  const patchPath = userPatchPath(profile, directory);
-  const patchState = readUserPatchState(patchPath);
   const knownIds = new Set(bundles.flatMap((bundle) => bundle.entries));
   const orphans = patchState.disables.filter((id) => !knownIds.has(id));
   for (const id of orphans) findings.push({ severity: "warning", code: "patch-orphan", subject: id, message: "用户补丁停用了一个当前加载层找不到的 id" });
@@ -211,7 +238,7 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     profileDir: directory,
     scannedAt: now,
     pluginVersion: pluginVersion(),
-    summary: { ok: errors.length === 0, errors: errors.length, warnings: warnings.length, infos: infos.length, conflicts: duplicates.length, dependencies: peers.filter((item) => item.satisfied === false).length + multiVersion.length + hostDeps.length, catalogIssues: findings.filter((item) => item.code.startsWith("catalog-")).length, order: extraDependencies.length },
+    summary: { ok: errors.length === 0, errors: errors.length, warnings: warnings.length, infos: infos.length, conflicts: duplicates.length, dependencies: findings.filter((item) => item.code === "peer-missing" || item.code === "peer-mismatch").length + multiVersion.length + hostDeps.length, catalogIssues: findings.filter((item) => item.code.startsWith("catalog-")).length, order: extraDependencies.length },
     catalog,
     inventory: { official: bundles.filter((item) => item.kind === "official").length, community: bundles.filter((item) => item.kind === "community").length, skills: skills.length, enabled: bundles.filter((item) => item.enabled).length, disabled: bundles.filter((item) => !item.enabled).length, protected: bundles.filter((item) => item.protected).length, local: bundles.filter((item) => item.local).length, updates: 0, catalogMatched: bundles.filter((item) => item.catalogName).length, missingOnDisk: bundles.filter((item) => !item.directory).length, extraDependencies },
     bundles,

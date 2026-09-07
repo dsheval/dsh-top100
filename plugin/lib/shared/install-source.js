@@ -1,3 +1,4 @@
+import { parseGitHubSource, githubInstallTarget } from "./github-source.js";
 /** Pure, allow-listed source recognition. Never execute README commands or forward their flags. */
 const NPM_NAME = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
 export const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME})(?:@([a-z0-9][a-z0-9._+-]*))?$`, "i");
@@ -6,7 +7,6 @@ const REPO = "(?!\\.{1,2}(?:$|[#/]))[A-Za-z0-9._-]{1,100}";
 const REF = "[A-Za-z0-9._~+/:=-]+";
 export const FULL_NAME_RE = new RegExp(`^${OWNER}/${REPO}$`);
 export const GITHUB_SPEC_RE = new RegExp(`^github:(${OWNER})/(${REPO})(?:#(${REF}))?$`, "i");
-const GITHUB_URL_RE = new RegExp(`^(?:git\\+)?https://github\\.com/(${OWNER})/(${REPO})/?(?:#(${REF}))?$`, "i");
 const UNSAFE = /[\s|&;<>()$`\\'"!*?]/;
 export function normalizeInstallTarget(value) {
     if (typeof value !== "string" || value.length > 2048)
@@ -17,12 +17,9 @@ export function normalizeInstallTarget(value) {
     }
     if (!token || token.startsWith("-") || UNSAFE.test(token))
         return null;
-    const url = token.match(GITHUB_URL_RE);
-    if (url)
-        token = `github:${url[1]}/${url[2].replace(/\.git$/i, "")}${url[3] ? `#${url[3]}` : ""}`;
-    const github = token.match(GITHUB_SPEC_RE);
+    const github = parseGitHubSource(token);
     if (github)
-        return `github:${github[1]}/${github[2]}${github[3] ? `#${github[3]}` : ""}`;
+        return githubInstallTarget(github);
     return NPM_SPEC_RE.test(token) ? token : null;
 }
 /** A # inside a ref or a quoted token is not a shell comment. */
@@ -112,8 +109,7 @@ export function resolveCatalogInstallTarget(entry) {
     const candidates = [normalizeInstallTarget(entry.installTarget)];
     for (const command of entry.install?.commands ?? [])
         candidates.push(parseDshInstallCommand(command));
-    const github = candidates.find((target) => target?.startsWith("github:")
-        && target.slice(7).split("#", 1)[0].toLowerCase() === entry.fullName.toLowerCase());
+    const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
     if (github)
         return github;
     const packageName = entry.install?.packageName ?? entry.installPackageName;

@@ -141,4 +141,30 @@ describe("DSH plugin recommendations", () => {
     const output = formatRecommendationResult(recommendationResult(document, { query: "quantum banana" }));
     expect(output).toContain("没有找到匹配项");
   });
+
+  it("distinguishes unpublished growth metrics from measured zero growth", () => {
+    const partialDocument: RankingsDocument = {
+      ...document,
+      rankings: {
+        hot: [],
+        rising: [],
+        total: [entry("acme/vision-reader", {
+          descriptionZh: "OCR 图片识别",
+          dailyStars: null,
+          weeklyStars: null,
+          hotScore: null,
+        })],
+      },
+    };
+    const missing = recommendationResult(partialDocument, { query: "ocr" });
+    expect(missing.items[0]).not.toHaveProperty("dailyStars");
+    expect(missing.items[0]).not.toHaveProperty("weeklyStars");
+    expect(formatRecommendationResult(missing)).toContain("日增：未提供；周增：未提供");
+
+    partialDocument.rankings.total[0].dailyStars = 0;
+    partialDocument.rankings.total[0].weeklyStars = 0;
+    const measured = recommendationResult(partialDocument, { query: "ocr" });
+    expect(measured.items[0]).toMatchObject({ dailyStars: 0, weeklyStars: 0 });
+    expect(formatRecommendationResult(measured)).toContain("日增：0；周增：0");
+  });
 });

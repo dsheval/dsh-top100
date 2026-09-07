@@ -1,4 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -122,6 +123,108 @@ describe("collector to plugin manifest contract", () => {
     }
   });
 
+  async function freshPublication() {
+    const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-locator-"));
+    temporaryCaches.push(cacheDirectory);
+    process.env.DSH_TOP100_CACHE_DIR = cacheDirectory;
+    const publication = buildRankingPublication(publishedDocument(), { publicUrlPrefix: "/data" });
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.endsWith("/manifest.json")) return new Response(JSON.stringify(publication.manifest));
+      const file = publication.files.find((file) => url.endsWith(`/snapshots/${publication.manifest.snapshotId}/${file.relativePath}`));
+      return file ? new Response(file.content) : new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    return { publication, fetchMock, locator: { snapshotId: publication.manifest.snapshotId, totalRank: 1 } };
+  }
+
+  it("discards old parsed caches that fabricated zero growth for compact search entries", async () => {
+    const { publication, fetchMock } = await freshPublication();
+    const url = `https://catalog.example${publication.manifest.datasets.search.url}`;
+    const key = createHash("sha256").update(url).digest("hex").slice(0, 24);
+    const directory = process.env.DSH_TOP100_CACHE_DIR!;
+    await mkdir(directory, { recursive: true });
+    const stale = publishedDocument();
+    stale.rankings.total[0].dailyStars = 0;
+    stale.rankings.total[0].weeklyStars = 0;
+    await writeFile(join(directory, `${key}.json`), JSON.stringify({
+      schemaVersion: 1, dataUrl: url, fetchedAt: Date.now(), document: stale,
+    }));
+    const search = await loadSearchRankings("https://catalog.example/data");
+    expect(search.rankings.total[0]).toMatchObject({ dailyStars: null, weeklyStars: null, hotScore: null });
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toContain(url);
+  });
+
+  it("keeps Skills from older v2 publications installable through their legacy directory", async () => {
+    const { publication, fetchMock } = await freshPublication();
+    const original = fetchMock.getMockImplementation()!;
+    const { skills: _skills, ...datasets } = publication.manifest.datasets;
+    const document = publishedDocument();
+    fetchMock.mockImplementation(async (input) => {
+      if (String(input).endsWith("/manifest.json")) return new Response(JSON.stringify({ ...publication.manifest, datasets }));
+      if (String(input).endsWith("/rankings.json")) return new Response(JSON.stringify({
+        ...document, rankings: { ...document.rankings, total: [...document.rankings.total, ...document.directories!.skills] },
+      }));
+      return original(input);
+    });
+    await expect(findPublishedEntry("https://catalog.example/data", "acme/skill"))
+      .resolves.toMatchObject({ fullName: "acme/skill", type: "skill" });
+  });
+
+  it("resolves a visible plugin using only the current manifest and its authoritative page", async () => {
+    const { publication, fetchMock, locator } = await freshPublication();
+    await expect(findPublishedEntry("https://catalog.example/data", "acme/catalog", true, locator))
+      .resolves.toMatchObject({ fullName: "acme/catalog", dailyStars: 5, weeklyStars: 20 });
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      "https://catalog.example/data/manifest.json",
+      `https://catalog.example${publication.manifest.datasets.total.pages[0].url}`,
+    ]);
+  });
+
+  it.each(["stale-snapshot", "wrong-plugin", "invalid-rank"])("rejects a %s locator without broadening the download", async (reason) => {
+    const { fetchMock, locator } = await freshPublication();
+    if (reason === "stale-snapshot") locator.snapshotId = "old";
+    if (reason === "invalid-rank") locator.totalRank = 0;
+    await expect(findPublishedEntry("https://catalog.example/data", reason === "wrong-plugin" ? "acme/other" : "acme/catalog", true, locator))
+      .rejects.toThrow(/刷新列表/);
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toEqual(expect.arrayContaining([
+      expect.stringMatching(/search\.json|rankings\.json/),
+    ]));
+  });
+
+  it("does not downgrade installation validation after a page integrity failure", async () => {
+    const { fetchMock, locator } = await freshPublication();
+    const original = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (input) => String(input).endsWith("/manifest.json")
+      ? original(input) : new Response('{"tampered":true}'));
+    await expect(findPublishedEntry("https://catalog.example/data", "acme/catalog", true, locator))
+      .rejects.toThrow("完整性");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails promptly on manifest timeout instead of downloading the legacy full catalog", async () => {
+    const { fetchMock, locator } = await freshPublication();
+    fetchMock.mockRejectedValue(new DOMException("request timed out", "TimeoutError"));
+    await expect(findPublishedEntry("https://catalog.example/data", "acme/catalog", true, locator))
+      .rejects.toThrow(/timed out|超时/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("cancels a caller waiting for a shared manifest without starting a page lookup", async () => {
+    const { fetchMock, locator, publication } = await freshPublication();
+    let release!: (response: Response) => void;
+    fetchMock.mockImplementationOnce(() => new Promise<Response>((resolve) => { release = resolve; }));
+    const controller = new AbortController();
+    const request = findPublishedEntry("https://catalog.example/data", "acme/catalog", true, locator, controller.signal);
+    const outcome = expect(request).rejects.toMatchObject({ name: "AbortError" });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    controller.abort();
+    await outcome;
+    release(new Response(JSON.stringify(publication.manifest)));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("loads the real v2 search snapshot and resolves installation from one total page", async () => {
     const cacheDirectory = await mkdtemp(join(tmpdir(), "dsh-top100-publication-contract-"));
     temporaryCaches.push(cacheDirectory);
@@ -149,6 +252,7 @@ describe("collector to plugin manifest contract", () => {
     const search = await loadSearchRankings("https://catalog.example/data");
     expect(search.rankings.total[0]).toMatchObject({
       fullName: "acme/catalog",
+      dailyStars: null, weeklyStars: null, hotScore: null,
       install: { packageName: "@acme/catalog", commands: ["dsh plugin add @acme/catalog"] },
     });
     await expect(findPublishedEntry("https://catalog.example/data", "acme/catalog"))

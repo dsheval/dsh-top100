@@ -3,43 +3,41 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { withReviewedDescription } from "../shared/descriptions.js";
-import { findEntry } from "./catalog.js";
-import { NPM_SPEC_RE } from "../install/install-spec.js";
+import { isNpmRegistrySpecifier, npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
 import { isProtectedPackage, packageIsDisabled, removeRowBlocks, rowIdsForPackage, userPatchPath } from "./patch-toggle.js";
 import { readInstalled, readInstalledManifest, readInstalledVersion } from "./profile.js";
 import { compareSemver } from "./semver.js";
+import { parseGitHubSource, githubRepositoryIdentity, githubInstallTarget } from "../shared/github-source.js";
 const UPDATE_CACHE_MS = 5 * 60 * 1000;
 const latestCache = new Map();
 export function skillsRoot() {
     return join(process.env.DSH_HOME ?? join(homedir(), ".dsh"), "skills");
 }
-function repositoryUrl(repository) {
-    if (typeof repository === "string")
-        return repository;
-    if (repository !== null && typeof repository === "object" && typeof repository.url === "string") {
-        return repository.url;
-    }
-    return null;
-}
-function githubFullName(spec, repository) {
-    const fromSpec = spec.match(/^github:([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)/);
-    if (fromSpec)
-        return fromSpec[1];
-    const fromUrl = repositoryUrl(repository)?.match(/github\.com[:/]([A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+?)(?:\.git)?$/i);
-    return fromUrl?.[1] ?? null;
-}
 export function matchCatalogEntry(document, name, spec, fullName) {
     if (!document)
         return undefined;
-    if (fullName) {
-        const exact = findEntry(document, fullName);
-        if (exact)
-            return exact;
-    }
-    return document.rankings.total.find((entry) => {
-        const haystack = `${entry.fullName} ${entry.name} ${entry.install?.target ?? ""}`.toLowerCase();
-        return haystack.includes(name.toLowerCase()) || (fullName !== null && haystack.includes(fullName.toLowerCase()));
+    const source = parseGitHubSource(spec);
+    const repository = (source?.repository ?? fullName)?.toLowerCase();
+    const packageName = name.toLowerCase();
+    const matches = document.rankings.total.filter((entry) => {
+        const target = resolveInstallSpec(entry);
+        const declaredNames = [entry.install?.packageName, target?.kind === "npm" ? npmPackageSpec(target.spec)?.name : null]
+            .filter((value) => Boolean(value)).map((value) => value.toLowerCase());
+        const packageMatches = declaredNames.includes(packageName);
+        if (declaredNames.length > 0 && !packageMatches)
+            return false;
+        if (repository && entry.fullName.toLowerCase() !== repository)
+            return false;
+        if (source?.path) {
+            const entryPath = entry.install?.repositoryPath?.replace(/^\.\//, "").replace(/^\/+|\/+$/g, "")
+                ?? (target?.kind === "github" ? parseGitHubSource(target.spec)?.path : null);
+            if (entryPath !== source.path)
+                return false;
+        }
+        return packageMatches || entry.fullName.toLowerCase() === (repository ?? packageName);
     });
+    // Monorepos or duplicate package declarations need more evidence, not a first-match guess.
+    return matches.length === 1 ? matches[0] : undefined;
 }
 export async function fetchNpmLatest(name) {
     const cached = latestCache.get(name);
@@ -89,15 +87,10 @@ export function managedDescriptionZh(options) {
         : `已安装的 DSH 插件：${options.name}。暂无中文简介。`;
 }
 export function resolveUpdateTarget(name, spec) {
-    if (spec.startsWith("link:") || spec.startsWith("file:"))
-        return null;
-    if (spec.startsWith("github:")) {
-        const match = spec.match(/^(github:[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+)(?:#[^&]+)?(?:&path:(\/?[^\s]+))?$/);
-        if (!match)
-            return null;
-        return match[2] ? `${match[1]}#path:${match[2]}` : match[1];
-    }
-    if (NPM_SPEC_RE.test(name))
+    const source = parseGitHubSource(spec);
+    if (source)
+        return githubInstallTarget({ ...source, ref: null });
+    if (npmPackageSpec(name)?.name === name && isNpmRegistrySpecifier(spec))
         return `${name}@latest`;
     return null;
 }
@@ -132,12 +125,13 @@ function listSkills() {
 export async function listManagedPlugins(profile, document, explicitDir) {
     const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
         const manifest = readInstalledManifest(profile, name, explicitDir);
-        const fullName = githubFullName(spec, manifest?.repository);
+        const source = parseGitHubSource(spec);
+        const fullName = source?.repository ?? githubRepositoryIdentity(manifest?.repository);
         const matched = matchCatalogEntry(document, name, spec, fullName);
         const catalog = matched ? withReviewedDescription(matched, document ?? {}) : undefined;
         const version = readInstalledVersion(profile, name, explicitDir);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
-        const latest = local || spec.startsWith("github:") ? null : await fetchNpmLatest(name);
+        const latest = local || source || !isNpmRegistrySpecifier(spec) ? null : await fetchNpmLatest(name);
         const description = catalog?.description || manifest?.description || "";
         const enabled = !packageIsDisabled(profile, name, explicitDir);
         return {

@@ -5,7 +5,7 @@ import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDesktopPluginRuntime, isCmdSafeProfileName, proxyEnvForPnpm, safeExecArgv, toolSearchDirs } from "../src/install/dsh-cli.js";
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("safeExecArgv", () => {
   it("preserves loader and diagnostic flags used by source checkouts", () => {
@@ -132,5 +132,53 @@ describe("desktop launch environment", () => {
       exitCode: 127,
       stderr: expect.stringContaining("GitHub-only"),
     });
+  });
+
+  it("does not start an exact npm install after disposal during preparation", async () => {
+    const start = vi.fn(() => ({ stdout: new PassThrough(), stderr: new PassThrough(),
+      done: Promise.resolve({ exitCode: 0, signal: null }), cancel: vi.fn() }));
+    const runtime = createDesktopPluginRuntime({ runPlugin: start, runExternalMarketPluginInstall: start }, mkdtempSync(join(tmpdir(), "dsh-top100-desktop-")));
+    const result = runtime.runPlugin("desktop", ["add", "demo@1.0.0"]);
+    await runtime.dispose?.();
+    expect(start).not.toHaveBeenCalled();
+    await expect(result).resolves.toMatchObject({ exitCode: 127, cancelled: false, stderr: "disposed" });
+    expect(runtime.cancelActive()).toBe(false);
+  });
+
+  it.each(["cancel", "dispose", "timeout"] as const)("aborts pending npm resolution on %s without starting the host command", async (action) => {
+    vi.useFakeTimers();
+    let requestSignal!: AbortSignal;
+    vi.stubGlobal("fetch", vi.fn((_url: string, init: RequestInit) => {
+      requestSignal = init.signal as AbortSignal;
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal.addEventListener("abort", () => reject(requestSignal.reason), { once: true });
+      });
+    }));
+    const start = vi.fn(() => { throw new Error("must not run"); });
+    const runtime = createDesktopPluginRuntime({ runPlugin: start, runExternalMarketPluginInstall: start }, mkdtempSync(join(tmpdir(), "dsh-top100-desktop-")), process.cwd(), 100);
+    const result = runtime.runPlugin("desktop", ["add", "demo@next"]);
+    if (action === "cancel") expect(runtime.cancelActive()).toBe(true);
+    else if (action === "dispose") await runtime.dispose?.();
+    else await vi.advanceTimersByTimeAsync(100);
+    await expect(result).resolves.toMatchObject({ exitCode: 127, cancelled: action === "cancel", timedOut: action === "timeout" });
+    expect(requestSignal.aborted).toBe(true);
+    expect(start).not.toHaveBeenCalled();
+    expect(runtime.cancelActive()).toBe(false);
+    await runtime.dispose?.();
+  });
+
+  it("cancels and awaits a handle returned during reentrant host disposal", async () => {
+    let finish!: (value: { exitCode: number | null; signal: NodeJS.Signals | null }) => void;
+    const done = new Promise<{ exitCode: number | null; signal: NodeJS.Signals | null }>((resolve) => { finish = resolve; });
+    let disposed!: Promise<void>;
+    const cancel = vi.fn(() => { finish({ exitCode: null, signal: "SIGTERM" }); });
+    const runtime = createDesktopPluginRuntime({ runPlugin: () => {
+      disposed = runtime.dispose!();
+      return { stdout: new PassThrough(), stderr: new PassThrough(), done, cancel };
+    } }, mkdtempSync(join(tmpdir(), "dsh-top100-desktop-")));
+    const result = runtime.runPlugin("desktop", ["remove", "demo"]);
+    await disposed;
+    await expect(result).resolves.toMatchObject({ exitCode: null, cancelled: false });
+    expect(cancel).toHaveBeenCalledOnce();
   });
 });

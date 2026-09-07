@@ -12,8 +12,8 @@ export interface RecommendationItem {
     type: string;
     description: string;
     stars: number;
-    dailyStars: number;
-    weeklyStars: number;
+    dailyStars?: number;
+    weeklyStars?: number;
     categories: string[];
     installable: boolean;
     installed: boolean;

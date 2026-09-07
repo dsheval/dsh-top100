@@ -239,3 +239,95 @@ describe("install source verification", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("GitHub repository authority verification", () => {
+  function mockRepository(repository: string) {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      name: "@acme/demo", version: "1.2.3", repository,
+      dist: { integrity: "sha512-demo" }, dsh: { bundle: { patch: "./patch.yml" } },
+    }))));
+  }
+
+  it.each([
+    "https://github.com/acme/demo",
+    "git+https://github.com/acme/demo.git",
+    "https://GITHUB.COM/ACME/DEMO.git/",
+    "https://github.com/acme/demo/tree/main/packages/plugin",
+    "git://github.com/acme/demo.git",
+    "ssh://git@github.com/acme/demo.git",
+    "git+ssh://git@github.com/acme/demo.git",
+    "ssh://git@github.com:22/acme/demo.git",
+    "git@github.com:acme/demo.git",
+  ])("recognizes legitimate repository URL %s", async (repository) => {
+    mockRepository(repository);
+    await expect(verifyInstallSpec({ kind: "npm", spec: "@acme/demo@latest" }, {
+      expectedRepository: "acme/demo", expectedPackageName: "@acme/demo",
+    })).resolves.toMatchObject({ repositoryIdentity: "matched" });
+  });
+
+  it.each([
+    "https://notgithub.com/acme/demo",
+    "https://evil.test/github.com/acme/demo",
+    "https://github.com.evil.test/acme/demo",
+    "https://github.com@evil.test/acme/demo",
+    "https://evil.test/?repo=https://github.com/acme/demo",
+    "https://github.com:8443/acme/demo",
+    "ftp://github.com/acme/demo",
+    "https://github.com\\@evil.test/acme/demo",
+    "https://user:password@github.com/acme/demo",
+  ])("does not bind misleading repository URL %s", async (repository) => {
+    mockRepository(repository);
+    await expect(verifyInstallSpec({ kind: "npm", spec: "@acme/demo@latest" }, {
+      expectedRepository: "acme/demo", expectedPackageName: "@acme/demo",
+    })).resolves.toMatchObject({ repositoryIdentity: "unavailable" });
+  });
+});
+
+describe("persisted GitHub sources", () => {
+  it("keeps both an existing immutable commit and its exact package path", async () => {
+    const sha = "c".repeat(40);
+    const fetchMock = vi.fn(async (url: string) => {
+      expect(url).toBe(`https://api.github.com/repos/acme/mono/contents/packages/Demo/package.json?ref=${sha}`);
+      return new Response(JSON.stringify({ content: Buffer.from(JSON.stringify({
+        name: "@acme/demo", version: "2.0.0", dsh: { bundle: { patch: "./patch.yml" } },
+      })).toString("base64") }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const verified = await verifyInstallSpec({ kind: "github", spec: `git+https://github.com/acme/mono.git#${sha}&path:/packages/Demo` }, {
+      expectedRepository: "acme/mono", expectedPackageName: "@acme/demo", expectedRepositoryPath: "packages/Demo",
+    });
+    expect(verified.target).toBe(`github:acme/mono#${sha}&path:/packages/Demo`);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not treat distinct case-sensitive package paths as equivalent", async () => {
+    const fetchMock = vi.fn(); vi.stubGlobal("fetch", fetchMock);
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/mono#path:/packages/Other" }, {
+      expectedRepository: "acme/mono", expectedPackageName: "@acme/demo", expectedRepositoryPath: "packages/other",
+    })).rejects.toThrow("不一致");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+
+describe("verification cache path identity", () => {
+  it("keeps case-sensitive monorepo directories in separate cache entries", async () => {
+    const sha = "d".repeat(40);
+    const content = Buffer.from(JSON.stringify({ name: "demo", dsh: { bundle: { patch: "cordis.patch.yml" } } })).toString("base64");
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify(
+      url.includes("/commits/") ? { sha } : url.includes("/contents/") ? { content } : { default_branch: "main" },
+    )));
+    vi.stubGlobal("fetch", fetchMock);
+    const spec = { kind: "github" as const, spec: "github:acme/mono" };
+    const common = { expectedRepository: "acme/mono", expectedPackageName: "demo" };
+    const upper = await verifyInstallSpec(spec, { ...common, expectedRepositoryPath: "packages/Plugin" });
+    const lower = await verifyInstallSpec(spec, { ...common, expectedRepositoryPath: "packages/plugin" });
+    expect(upper.target).toBe(`github:acme/mono#${sha}&path:/packages/Plugin`);
+    expect(lower.target).toBe(`github:acme/mono#${sha}&path:/packages/plugin`);
+    expect(fetchMock).toHaveBeenCalledWith(`https://api.github.com/repos/acme/mono/contents/packages/plugin/package.json?ref=${sha}`, expect.any(Object));
+    const requests = fetchMock.mock.calls.length;
+    expect(await verifyInstallSpec(spec, { ...common, expectedRepositoryPath: "packages/Plugin" })).toBe(upper);
+    expect(await verifyInstallSpec(spec, { ...common, expectedRepositoryPath: "packages/plugin" })).toBe(lower);
+    expect(fetchMock).toHaveBeenCalledTimes(requests);
+  });
+});

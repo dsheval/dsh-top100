@@ -3,6 +3,7 @@
  */
 
 import { createElement as h } from "react";
+import { PluginErrorBoundary } from "./ErrorBoundary.js";
 import { RankingsPage } from "./RankingsPage.js";
 import { SettingsCard } from "./SettingsCard.js";
 import { css } from "./styles.js";
@@ -60,7 +61,7 @@ export function apply(ctx: ClientContext): void {
         locale: NS,
         inject: () => ({ t }),
       },
-      () => h(RankingsPage, { t }),
+      () => h(PluginErrorBoundary, { t, children: h(RankingsPage, { t }) }),
     ),
   );
 
@@ -73,7 +74,7 @@ export function apply(ctx: ClientContext): void {
           locale: NS,
           inject: () => ({ t }),
         },
-        () => h(SettingsCard, { t }),
+        () => h(PluginErrorBoundary, { t, children: h(SettingsCard, { t }) }),
       ),
     );
   });

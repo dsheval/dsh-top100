@@ -70,12 +70,33 @@ function bundleRisks(value: VerifiedInstallTarget): InstallRiskEvidence[] {
   return risks;
 }
 
-export async function createInstallPreflight(entry: RankingEntry, profile: string): Promise<ApprovedInstall> {
+/** Shared evidence presentation; approval storage remains owned by each operation. */
+export function bundleInstallPreflight(
+  bundleTarget: VerifiedInstallTarget,
+  options: { fullName: string; profile: string; approvalToken: string; expiresAt: number; needsConfig?: boolean },
+): InstallPreflight {
+  const risks = bundleRisks(bundleTarget);
+  return {
+    approvalToken: options.approvalToken,
+    expiresAt: options.expiresAt,
+    fullName: options.fullName,
+    profile: options.profile,
+    kind: "bundle",
+    provenance: bundleProvenance(bundleTarget),
+    lifecycleScripts: bundleTarget.lifecycleScripts,
+    risks,
+    requiresExplicitApproval: risks.some((risk) => risk.severity === "warning"),
+    activationExpectation: options.needsConfig ? "configuration-required" : "restart-required",
+  };
+}
+
+export async function createInstallPreflight(entry: RankingEntry, profile: string, signal?: AbortSignal): Promise<ApprovedInstall> {
+  signal?.throwIfAborted();
   removeExpiredApprovals();
   const approvalToken = randomUUID();
   const expiresAt = Date.now() + APPROVAL_TTL_MS;
   if (entry.type?.toLowerCase() === "skill") {
-    const skillSource = await verifySkillSource(entry.fullName);
+    const skillSource = await verifySkillSource(entry.fullName, signal);
     const provenance: InstallProvenance = {
       source: "github",
       requestedTarget: `github:${entry.fullName}`,
@@ -106,6 +127,7 @@ export async function createInstallPreflight(entry: RankingEntry, profile: strin
       activationExpectation: entry.install?.needsConfig ? "configuration-required" : "not-applicable",
     };
     const approved = { entry, preflight, bundleTarget: null, skillSource };
+    signal?.throwIfAborted();
     approvals.set(approvalToken, approved);
     return approved;
   }
@@ -113,26 +135,51 @@ export async function createInstallPreflight(entry: RankingEntry, profile: strin
   const spec = resolveInstallSpec(entry);
   if (!spec) throw new Error("this catalog entry has no trusted DSH install source");
   const bundleTarget = await verifyInstallSpec(spec, {
+    signal,
     expectedRepository: entry.fullName,
     expectedPackageName: entry.install?.packageName,
     expectedRepositoryPath: entry.install?.repositoryPath,
   });
-  const risks = bundleRisks(bundleTarget);
-  const preflight: InstallPreflight = {
+  const preflight = bundleInstallPreflight(bundleTarget, {
     approvalToken,
     expiresAt,
     fullName: entry.fullName,
     profile,
-    kind: "bundle",
-    provenance: bundleProvenance(bundleTarget),
-    lifecycleScripts: bundleTarget.lifecycleScripts,
-    risks,
-    requiresExplicitApproval: risks.some((risk) => risk.severity === "warning"),
-    activationExpectation: entry.install?.needsConfig ? "configuration-required" : "restart-required",
-  };
+    needsConfig: entry.install?.needsConfig,
+  });
   const approved = { entry, preflight, bundleTarget, skillSource: null };
+  signal?.throwIfAborted();
   approvals.set(approvalToken, approved);
   return approved;
+}
+
+/** Validate the whole batch before consuming any approval, so failure is retryable. */
+export function validateInstallApprovals(
+  requests: readonly { fullName: string; approvalToken: string; risksAccepted?: boolean }[],
+  profile: string,
+): ApprovedInstall[] {
+  removeExpiredApprovals();
+  if (requests.length === 0) throw new Error("请选择需要安装的插件");
+  const fullNames = new Set<string>();
+  const tokens = new Set<string>();
+  const result = requests.map((request) => {
+    if (fullNames.has(request.fullName.toLowerCase()) || tokens.has(request.approvalToken)) {
+      throw new Error("安装列表包含重复的插件或确认令牌");
+    }
+    fullNames.add(request.fullName.toLowerCase());
+    tokens.add(request.approvalToken);
+    const approval = approvals.get(request.approvalToken);
+    if (!approval) throw new Error("安装确认已过期，请重新检查精确来源与风险");
+    if (approval.preflight.fullName !== request.fullName || approval.preflight.profile !== profile) {
+      throw new Error("安装确认与当前插件或 Profile 不匹配");
+    }
+    if (approval.preflight.requiresExplicitApproval && request.risksAccepted !== true) {
+      throw new Error("该安装包含警告项，需要明确确认来源、脚本与风险");
+    }
+    return approval;
+  });
+  for (const approval of result) approvals.delete(approval.preflight.approvalToken);
+  return result;
 }
 
 export function consumeInstallApproval(
@@ -141,17 +188,7 @@ export function consumeInstallApproval(
   profile: string,
   risksAccepted = false,
 ): ApprovedInstall {
-  removeExpiredApprovals();
-  const approval = approvals.get(token);
-  if (!approval) throw new Error("安装确认已过期，请重新检查精确来源与风险");
-  if (approval.preflight.fullName !== fullName || approval.preflight.profile !== profile) {
-    throw new Error("安装确认与当前插件或 Profile 不匹配");
-  }
-  if (approval.preflight.requiresExplicitApproval && !risksAccepted) {
-    throw new Error("该安装包含警告项，需要明确确认来源、脚本与风险");
-  }
-  approvals.delete(token);
-  return approval;
+  return validateInstallApprovals([{ approvalToken: token, fullName, risksAccepted }], profile)[0];
 }
 
 export function clearInstallApprovals(): void {
