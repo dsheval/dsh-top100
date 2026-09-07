@@ -89,7 +89,7 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(html, /closest\("a\.github-link"\)/);
   assert.doesNotMatch(html, /closest\("\.github-link"\)/);
   assert.doesNotMatch(html, /track\([^\n]+state\.query/);
-  assert.match(html, /rel="canonical" href="https:\/\/dsheval\.ai\/top100\/"/);
+  assert.match(html, /rel="canonical" href="https:\/\/www\.dsheval\.ai\/top100\/"/);
   assert.match(html, /type="application\/ld\+json"/);
   assert.doesNotMatch(html, /github\.githubassets\.com\/favicons/);
 });

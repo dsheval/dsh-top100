@@ -116,8 +116,10 @@ Run `./scripts/backup-runtime.sh` before application upgrades and on a regular s
 
 ## Public site mount
 
-DSH-Eval owns `https://dsheval.ai/`. Top100 is mounted at
-`https://dsheval.ai/top100/`; the outer Caddy gateway strips `/top100` before
+DSH-Eval uses `https://www.dsheval.ai/` as its primary public origin. Public page
+requests on the bare domain redirect to `www`; do not redirect `www` back to the
+bare domain. Top100 is mounted at
+`https://www.dsheval.ai/top100/`; the outer Caddy gateway strips `/top100` before
 proxying to this repository's `web:80`. Nginx continues to serve files from its
 root, so direct container smoke checks at `http://127.0.0.1:8080/` remain valid.
 Use `npm run serve` and `http://127.0.0.1:4173/top100/` for the browser preview.
@@ -129,12 +131,12 @@ paths under `/data/`, independent of the website mount. DSH-Eval report download
 use `/eval-data/` to avoid collisions.
 
 The main site's robots and sitemap must advertise the Top100 sitemap at
-`https://dsheval.ai/top100/sitemap.xml`. Existing root HTML links redirect to their
+`https://www.dsheval.ai/top100/sitemap.xml`. Existing root HTML links redirect to their
 matching `/top100/` pages with query parameters and fragments preserved by the
 gateway/browser. Root query/hash links are handled by the DSH-Eval landing page.
 
 Repository About and npm public metadata should use:
-- Website: `https://dsheval.ai/top100/`
+- Website: `https://www.dsheval.ai/top100/`
 - Repository description: `DSH-Eval 旗下的插件与 Skills 发现栏目，按公开 GitHub 信号持续更新。`
 - npm metadata and README: prepared in `plugin/package.json` and `plugin/README.md`;
   they become public with the next explicitly authorized package release.

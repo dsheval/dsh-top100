@@ -10,27 +10,27 @@
 </p>
 
 <p align="center">
-  <a href="https://dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.1"><img alt="正式版本 v1.3.1" src="https://img.shields.io/badge/release-v1.3.1-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
-  <a href="https://dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
   <a href="https://github.com/dsheval/dsh-top100/issues/new?labels=submission&title=%5BSubmit%5D%20owner%2Frepo"><img alt="提交插件" src="https://img.shields.io/badge/提交插件-Submit-2ea44f?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/dsheval/dsh-top100?style=flat-square&logo=github&label=Stars"></a>
-  <a href="https://dsheval.ai/top100/#ranking"><img alt="收录规模以实时榜单为准" src="https://img.shields.io/badge/收录-实时更新-5865f2?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/top100/#ranking"><img alt="收录规模以实时榜单为准" src="https://img.shields.io/badge/收录-实时更新-5865f2?style=flat-square"></a>
   <a href="./LICENSE"><img alt="MIT License" src="https://img.shields.io/github/license/dsheval/dsh-top100?style=flat-square&label=License"></a>
   <a href="https://github.com/dsheval/dsh-top100/actions/workflows/ci.yml"><img alt="CI Status" src="https://img.shields.io/github/actions/workflow/status/dsheval/dsh-top100/ci.yml?branch=main&style=flat-square&label=CI"></a>
-  <a href="https://dsheval.ai/top100/"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
+  <a href="https://www.dsheval.ai/top100/"><img alt="每日 06:00 自动更新" src="https://img.shields.io/badge/每日自动更新-06%3A00-2ea44f?style=flat-square"></a>
 </p>
 
 <p align="center">
   <strong>官方网站：</strong>
-  <a href="https://dsheval.ai/top100/"><strong>https://dsheval.ai/top100/</strong></a>
+  <a href="https://www.dsheval.ai/top100/"><strong>https://www.dsheval.ai/top100/</strong></a>
 </p>
 
 在官网浏览榜单，也可以把榜单带进 DSH，发现、安装和管理插件。综合热度、新锐榜和 Stars 总榜提供不同的比较视角；Skills 保持独立目录。
 
-Top100 是 [DSH-Eval](https://dsheval.ai/) 旗下的插件与 Skills 发现栏目；收录与排行依据公开项目信息，不代表项目已通过能力评测。评测结果与方法请访问 [DSH-Eval 主站](https://dsheval.ai/results)。
+Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现栏目；收录与排行依据公开项目信息，不代表项目已通过能力评测。评测结果与方法请访问 [DSH-Eval 主站](https://www.dsheval.ai/results)。
 
 ## 可以做什么
 
@@ -97,7 +97,7 @@ npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.
 
 </details>
 
-打开 DSH Web，进入 **设置 → 插件排行**。安装和启动必须使用同一种命令前缀；全局 CLI、源码运行及问题排查见 [安装指南](https://dsheval.ai/top100/?page=dsh#dsh)。
+打开 DSH Web，进入 **设置 → 插件排行**。安装和启动必须使用同一种命令前缀；全局 CLI、源码运行及问题排查见 [安装指南](https://www.dsheval.ai/top100/?page=dsh#dsh)。
 
 这里只安装榜单插件，不会自动安装榜单中的其他项目。安装其他插件前，仍需核对来源、脚本与风险；安装后按提示重启 DSH 并检查运行状态。
 
