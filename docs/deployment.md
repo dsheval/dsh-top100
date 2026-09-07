@@ -138,8 +138,8 @@ gateway/browser. Root query/hash links are handled by the DSH-Eval landing page.
 Repository About and npm public metadata should use:
 - Website: `https://www.dsheval.ai/top100/`
 - Repository description: `DSH-Eval 旗下的插件与 Skills 发现栏目，按公开 GitHub 信号持续更新。`
-- npm metadata and README: prepared in `plugin/package.json` and `plugin/README.md`;
-  they become public with the next explicitly authorized package release.
+- Current npm release: `@dsheval/dsh-top100-plugin@1.3.2`; `latest` points to 1.3.2.
+  Public metadata and README are published from `plugin/package.json` and `plugin/README.md`.
 
 Updating repository About, publishing npm, and deploying the gateway are separate
 external actions; local changes do not apply those updates automatically.
