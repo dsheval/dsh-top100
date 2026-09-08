@@ -17,8 +17,10 @@
 
   <g transform="translate(78 64)">
     <rect width="58" height="58" rx="16" fill="#ffffff" stroke="#b8c9c5"/>
-    <path d="M13 36.5 22 42l14-24-9-5.5Z" fill="#2f6f68"/>
-    <path d="m34 30 9-5.5L56 45l-9 5.5Z" fill="#2f6f68"/>
+    <svg x="7" y="7" width="44" height="44" viewBox="0 0 32 32" aria-hidden="true">
+      <defs><mask id="top100-og-slashed-d"><rect width="32" height="32" fill="white"/><path d="M16.2 0H19.8L11 32H7.4Z" fill="black"/></mask></defs>
+      <path mask="url(#top100-og-slashed-d)" fill="#126657" fill-rule="evenodd" d="M4 3H15C23.3 3 29 8.2 29 16S23.3 29 15 29H4V3ZM10 9V23H15C20 23 23 20.4 23 16S20 9 15 9H10Z"/>
+    </svg>
   </g>
   <text x="152" y="101" fill="#17211f" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="800" letter-spacing="-.5">dsh-top100</text>
   <text x="78" y="171" fill="#2f6f68" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="16" font-weight="800" letter-spacing="1.4">VERIFIED DSH PLUGIN CATALOG · DAILY UPDATE</text>
