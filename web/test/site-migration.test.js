@@ -45,7 +45,7 @@ test("local preview serves the Top100 mount and preserves old page queries", asy
     assert.equal(response.status, 200);
     const html = await response.text();
     assert.ok(html.includes('aria-label="DSH-Eval 主导航"'));
-    for (const path of ["/", "/results", "/methodology", "/faq", "/top100/"]) {
+    for (const path of ["/", "/results", "/methodology", "/about", "/about#faq", "/top100/"]) {
       assert.ok(html.includes(`href="${path}"`));
     }
     for (const [, path] of html.matchAll(/(?:src|href)="(\.\/[^"?#]+\.(?:css|js|svg))"/g)) {
@@ -124,7 +124,7 @@ test("Top100 pages share one header and footer and retain their section navigati
   const pages = await Promise.all(["index.html", "skills.html", "docs.html"].map((file) =>
     readFile(new URL(`web/public/${file}`, repo), "utf8")));
   const normalize = (value) => value.replace(/\s+/g, " ").trim();
-  const header = (html) => html.match(/<header class="dsh-site-header">[\s\S]*?<\/header>/)?.[0];
+  const header = (html) => html.match(/<header class="dsh-site-header dsh-nav-emphasis">[\s\S]*?<\/header>/)?.[0];
   const footer = (html) => html.match(/<footer class="dsh-site-footer">[\s\S]*?<\/footer>/)?.[0];
   for (const html of pages) {
     assert.ok(header(html));
@@ -136,11 +136,11 @@ test("Top100 pages share one header and footer and retain their section navigati
     const section = html.match(/<nav class="top100-section-nav"[\s\S]*?<\/nav>/)[0];
     for (const label of ["插件榜单", "Skills 榜单", "安装指南", "排名方法", "GitHub"]) assert.ok(section.includes(label));
     assert.doesNotMatch(section, /<img/);
-    assert.ok(section.includes("<span>dsh-top100</span>"));
+    assert.ok(section.includes("<span>Top100</span>"));
     assert.ok(header(html).indexOf(">首页</a>") < header(html).indexOf(">Top100</a>"));
     assert.ok(header(html).indexOf(">Top100</a>") < header(html).indexOf(">评测结果</a>"));
     assert.ok(!html.includes('class="nav-shell"'));
-    assert.match(html, /href="\.\/site-chrome\.css\?v=20260908-wordmark2" \/>\s*<\/head>/);
+    assert.match(html, /href="\.\/site-chrome\.css\?v=20260908-nav3" \/>\s*<\/head>/);
   }
   assert.match(pages[0], /class="nav-links">[\s\S]*?data-content-switch="ranking"/);
   const layout = pages[2].slice(pages[2].indexOf('<div class="docs-layout">'), pages[2].indexOf("</main>"));
