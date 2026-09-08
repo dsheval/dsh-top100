@@ -135,12 +135,12 @@ test("Top100 pages share one header and footer and retain their section navigati
     assert.match(html, /<main[^>]*>\s*<nav class="top100-section-nav"/);
     const section = html.match(/<nav class="top100-section-nav"[\s\S]*?<\/nav>/)[0];
     for (const label of ["插件榜单", "Skills 榜单", "安装指南", "排名方法", "GitHub"]) assert.ok(section.includes(label));
-    assert.match(section, /<img src="\.\/assets\/dsh-top100-mark\.svg" width="28" height="28" alt=""/);
+    assert.doesNotMatch(section, /<img/);
     assert.ok(section.includes("<span>dsh-top100</span>"));
     assert.ok(header(html).indexOf(">首页</a>") < header(html).indexOf(">Top100</a>"));
     assert.ok(header(html).indexOf(">Top100</a>") < header(html).indexOf(">评测结果</a>"));
     assert.ok(!html.includes('class="nav-shell"'));
-    assert.match(html, /href="\.\/site-chrome\.css\?v=20260905-type8c" \/>\s*<\/head>/);
+    assert.match(html, /href="\.\/site-chrome\.css\?v=20260908-wordmark2" \/>\s*<\/head>/);
   }
   assert.match(pages[0], /class="nav-links">[\s\S]*?data-content-switch="ranking"/);
   const layout = pages[2].slice(pages[2].indexOf('<div class="docs-layout">'), pages[2].indexOf("</main>"));
