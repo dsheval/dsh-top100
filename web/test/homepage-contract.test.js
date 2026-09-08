@@ -242,7 +242,7 @@ test("serves local assets with same-origin production ranking data", () => {
 
 test("keeps the install guide focused and uses the canonical brand name", () => {
   assert.match(html, /<title>插件榜单 · Top100 · DSH-Eval<\/title>/);
-  assert.match(html, /class="top100-section-title" href="\.\/">[\s\S]*?<span>dsh-top100<\/span>[\s\S]*?<\/a>/);
+  assert.match(html, /class="top100-section-title" href="\.\/">[\s\S]*?<span>Top100<\/span>[\s\S]*?<\/a>/);
   for (const page of [html, dsh, skills]) assert.doesNotMatch(page, /dsh-Top100|DSH-Top100/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.hero \{\s*display: none/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.ranking \{[^}]*scroll-margin-top: var\(--site-header-height\)/);

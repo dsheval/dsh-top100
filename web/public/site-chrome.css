@@ -364,3 +364,21 @@
     --site-group-title-size: 20px;
   }
 }
+
+/* Keep global navigation in sync with the main site. */
+.dsh-nav-emphasis .dsh-desktop-nav { align-items: center; gap: 8px; }
+.dsh-nav-emphasis .dsh-desktop-nav a { position: relative; min-height: 44px; padding: 0 16px; font-size: 15px; }
+.dsh-nav-emphasis .dsh-desktop-nav a:hover { color: #126657; text-decoration: none; }
+.dsh-nav-emphasis .dsh-desktop-nav a[aria-current='page'] {
+  color: #126657; font-weight: 700; box-shadow: none; text-decoration: none;
+}
+.dsh-nav-emphasis .dsh-desktop-nav a::after {
+  content: ''; position: absolute; bottom: 0; left: 50%; width: 24px;
+  height: 2px; background: #126657; transform: translateX(-50%); opacity: 0;
+}
+.dsh-nav-emphasis .dsh-desktop-nav a:hover::after { opacity: .45; }
+.dsh-nav-emphasis .dsh-desktop-nav a:is([aria-current='page'], :focus-visible)::after { opacity: 1; }
+@media (min-width: 761px) and (max-width: 900px) {
+  .dsh-nav-emphasis .dsh-desktop-nav { gap: 2px; }
+  .dsh-nav-emphasis .dsh-desktop-nav a { padding-inline: 10px; font-size: 14px; }
+}

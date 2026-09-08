@@ -154,13 +154,21 @@
   font-family: var(--site-ui-font);
   letter-spacing: normal;
 }
-.top100-section-title { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 52px; color: #13201c; font: 650 18px/1.2 var(--site-ui-font); letter-spacing: -.025em; text-decoration: none; }
+.top100-section-title { display: inline-flex; align-items: center; gap: 7px; flex: none; min-height: 52px; color: #174942; font: 700 22px/1.2 var(--site-ui-font); letter-spacing: -.04em; text-decoration: none; }
+.top100-section-title:hover { color: #126657; }
 .top100-section-title img { display: block; flex: none; }
 .top100-section-nav .nav-links { display: flex; min-width: 0; align-items: center; gap: 28px; overflow-x: auto; }
-.top100-section-nav .nav-links a:nth-child(n) { display: inline-flex; align-items: center; gap: 4px; flex: none; position: relative; min-height: 52px; padding: 0; color: #4f5e59; font: 500 13px/20px var(--site-ui-font); text-decoration: none; white-space: nowrap; }
-.top100-section-nav .nav-links a::after { display: none; }
+.top100-section-nav .nav-links a:nth-child(n) { display: inline-flex; align-items: center; gap: 4px; flex: none; position: relative; min-height: 44px; padding: 0; color: #4f5e59; font: 500 13px/20px var(--site-ui-font); text-decoration: none; white-space: nowrap; }
+.top100-section-nav .nav-links a::after {
+  content: ''; display: block; position: absolute; inset: auto auto 0 50%;
+  width: 24px; height: 2px; background: #126657;
+  transform: translateX(-50%); opacity: 0; transition: none;
+}
 .top100-section-nav .nav-links a:hover { color: #126657; }
-.top100-section-nav .nav-links a[aria-current="page"] { color: #126657; font-weight: 600; box-shadow: inset 0 -2px #126657; }
+.top100-section-nav .nav-links a[aria-current="page"] { color: #126657; font-weight: 600; box-shadow: none; }
+.top100-section-nav .nav-links a:hover::after { opacity: .45; }
+.top100-section-nav .nav-links a:is([aria-current="page"], :focus-visible)::after { opacity: 1; }
+.top100-section-nav .nav-links a[target="_blank"]::after { display: none; }
 .top100-section-nav a:focus-visible { outline: 2px solid #126657; outline-offset: -2px; }
 .top100-section-nav + .hero .hero-inner { padding-top: 64px; }
 .ranking-source-note { margin: 12px 0 0; color: var(--muted); font: 400 13px/1.6 var(--sans); }
