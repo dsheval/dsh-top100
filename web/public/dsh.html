@@ -1,63 +1,194 @@
 <div class="docs-layout dsh-guide">
   <article class="docs-content">
     <div class="dsh-prerequisites">
-      <p class="dsh-requirements" data-site-copy="body">开始前确认：<strong>DSH Web 0.1.0-rc.6+</strong> · <strong>Node.js 22.13+</strong></p>
-      <p class="dsh-scope-note" data-site-copy="note">以下只安装 dsh-top100，不会自动安装榜单中的项目。</p>
+      <p class="dsh-scope-note" data-site-copy="note">将 Top100 插件市场加入 DSH Web，再挑选需要的插件；不会自动安装榜单中的项目。</p>
+      <fieldset class="dsh-experience">
+        <legend>选择你的情况</legend>
+        <div class="dsh-experience-options">
+          <label class="dsh-experience-option">
+            <input type="radio" name="dsh-experience" value="new" aria-controls="new-guide" checked>
+            <span>还没有 DSH</span>
+          </label>
+          <label class="dsh-experience-option">
+            <input type="radio" name="dsh-experience" value="existing" aria-controls="existing-install">
+            <span>已经在用 DSH</span>
+          </label>
+        </div>
+      </fieldset>
+      <nav class="dsh-guide-nav" aria-label="跳过 Top100 安装">
+        <a href="#use-plugins">已装好 Top100？查看如何使用 <span aria-hidden="true">↓</span></a>
+      </nav>
     </div>
 
-    <section class="doc-section" id="install" aria-label="安装步骤">
+    <div id="new-guide" data-guide-panel="new">
+      <aside class="dsh-prepare" aria-labelledby="prepare-title">
+        <h2 id="prepare-title">开始前：准备两个工具</h2>
+        <p>先安装 <a href="https://nodejs.org/en/download" target="_blank" rel="noopener noreferrer">Node.js 24 LTS ↗</a>，再打开终端（Windows 用 PowerShell），粘贴下面的命令并回车，安装 pnpm。已有这两个工具可跳过。</p>
+        <div class="dsh-command-row">
+              <code class="dsh-install-command">npm install -g pnpm@11.24.0</code>
+              <button class="dsh-copy-button" type="button" data-copy-command="npm install -g pnpm@11.24.0" aria-label="复制 pnpm 安装命令">复制</button>
+            </div>
+        <details class="dsh-detail dsh-inline-help">
+          <summary>不确定是否已准备好？</summary>
+          <div class="dsh-detail-body">
+            <p>运行下面三行，都返回版本号就可以继续。npm 随 Node.js 安装；装好后仍提示找不到命令，关闭并重新打开终端。遇到权限错误，查看 <a href="https://pnpm.io/installation" target="_blank" rel="noopener noreferrer">pnpm 安装帮助</a>。</p>
+            <div class="dsh-command-row">
+              <code class="dsh-install-command">node --version
+npm --version
+pnpm --version</code>
+              <button class="dsh-copy-button" type="button" data-copy-command="node --version
+npm --version
+pnpm --version" aria-label="复制环境检查命令">复制</button>
+            </div>
+          </div>
+        </details>
+      </aside>
+      <section class="doc-section" id="install" aria-label="安装步骤">
+        <ol class="dsh-install-steps" role="list">
+          <li class="dsh-install-step">
+            <span class="dsh-step-number" aria-hidden="true">1</span>
+            <div class="dsh-step-content">
+              <h2>安装 Top100</h2>
+              <p data-site-copy="body">在终端粘贴并回车。命令会下载 DSH，并安装 Top100，无需单独安装 DSH。</p>
+              <div class="dsh-command-row">
+              <code class="dsh-install-command">npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
+              <button class="dsh-copy-button" type="button" data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2" aria-label="复制 Top100 安装命令">复制</button>
+            </div>
+              <p class="dsh-success">出现 <code>Ok to proceed? (y)</code> 时输入 <code>y</code> 并回车，等待命令结束后再继续。</p>
+              <details class="dsh-detail dsh-inline-help">
+                <summary>检查是否装好</summary>
+                <div class="dsh-detail-body">
+                  <p>运行下面的命令，列表应包含 <code>@dsheval/dsh-top100-plugin</code> <span data-install-version>1.3.2</span>。出现报错可查看<a href="#help">安装帮助</a>。请在 DSH 源码目录外的普通文件夹执行安装和启动命令。</p>
+                  <div class="dsh-command-row">
+              <code class="dsh-install-command">npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web list --depth 0</code>
+              <button class="dsh-copy-button" type="button" data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web list --depth 0" aria-label="复制安装结果检查命令">复制</button>
+            </div>
+                </div>
+              </details>
+            </div>
+          </li>
+          <li class="dsh-install-step" id="beginner-start">
+            <span class="dsh-step-number" aria-hidden="true">2</span>
+            <div class="dsh-step-content">
+              <h2>启动 DSH Web</h2>
+              <p data-site-copy="body">在同一个终端运行：</p>
+              <div class="dsh-command-row">
+              <code class="dsh-install-command">npx @deepseek-ai/dsh@0.1.2-rc.1 web</code>
+              <button class="dsh-copy-button" type="button" data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 web" aria-label="复制 DSH 启动命令">复制</button>
+            </div>
+              <p class="dsh-success">保持终端运行。浏览器未自动打开时，打开终端打印的完整本地网址。</p>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </div>
+
+    <section class="doc-section" id="existing-install" data-guide-panel="existing" hidden aria-label="为现有 DSH 安装 Top100">
       <ol class="dsh-install-steps" role="list">
         <li class="dsh-install-step">
           <span class="dsh-step-number" aria-hidden="true">1</span>
           <div class="dsh-step-content">
-            <h2>安装榜单插件</h2>
-            <p data-site-copy="body">打开终端或 PowerShell，在 DSH 源码目录外运行：</p>
-            <div class="dsh-command-row">
-              <code class="dsh-install-command">npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
-              <button class="dsh-copy-button" type="button" data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2" aria-label="复制插件安装命令">复制</button>
+            <h2>安装 Top100</h2>
+            <label class="dsh-field-label" for="existing-method">你平时用哪条命令启动 DSH？</label>
+            <select id="existing-method" data-dsh-method>
+              <option value="">选择启动命令</option>
+              <option value="npx">npx @deepseek-ai/dsh… web</option>
+              <option value="global">dsh web</option>
+              <option value="source">pnpm dsh web</option>
+            </select>
+            <div data-npx-version-field hidden>
+              <label class="dsh-field-label" for="existing-version">当前 DSH 版本</label>
+              <input id="existing-version" data-dsh-version type="text" placeholder="例如 0.1.2-rc.1" autocomplete="off" spellcheck="false" aria-describedby="existing-version-help existing-command-status">
+              <p id="existing-version-help" class="dsh-scope-note">填写原启动命令或 DSH 版本信息中的完整版本号，继续使用原版本。</p>
             </div>
-            <p data-site-copy="note">命令固定安装当前版本。</p>
+            <p class="dsh-success" id="existing-command-status" data-existing-status role="status">选择后显示安装命令。</p>
+            <div data-existing-ready hidden>
+              <p class="dsh-scope-note" data-existing-location></p>
+              <div class="dsh-command-row">
+                  <code class="dsh-install-command" data-existing-command="install"></code>
+                  <button class="dsh-copy-button" type="button" data-existing-copy="install" aria-label="复制现有 DSH 的 Top100 安装命令">复制</button>
+                </div>
+              <p class="dsh-success">粘贴到终端并回车，等待安装结束。</p>
+              <details class="dsh-detail dsh-inline-help">
+                <summary>检查是否装好</summary>
+                <div class="dsh-detail-body">
+                  <p>运行下面的命令，列表应包含 <code>@dsheval/dsh-top100-plugin</code> <span data-install-version>1.3.2</span>。</p>
+                  <div class="dsh-command-row">
+                  <code class="dsh-install-command" data-existing-command="check"></code>
+                  <button class="dsh-copy-button" type="button" data-existing-copy="check" aria-label="复制现有 DSH 的安装检查命令">复制</button>
+                </div>
+                </div>
+              </details>
+            </div>
+            <details class="dsh-detail dsh-inline-help">
+              <summary>不确定启动方式，或安装报错？</summary>
+              <div class="dsh-detail-body">
+                <p>查看原来的终端命令。安装和启动必须使用相同的命令前缀、DSH 版本和配置目录（包括自定义 <code>DSH_HOME</code>）。使用桌面应用图标启动的用户，请查看该应用的插件安装说明。</p>
+                <p>安装需要 pnpm；运行 <code>pnpm --version</code> 应返回版本号。缺少工具或遇到报错，查看<a href="#help">安装帮助</a>。</p>
+              </div>
+            </details>
           </div>
         </li>
         <li class="dsh-install-step">
           <span class="dsh-step-number" aria-hidden="true">2</span>
           <div class="dsh-step-content">
-            <h2>启动 DSH Web</h2>
-            <p data-site-copy="body">安装完成后，在同一个终端运行：</p>
-            <div class="dsh-command-row">
-              <code class="dsh-install-command">npx @deepseek-ai/dsh web</code>
-              <button class="dsh-copy-button" type="button" data-copy-command="npx @deepseek-ai/dsh web" aria-label="复制 DSH 启动命令">复制</button>
-            </div>
-          </div>
-        </li>
-        <li class="dsh-install-step">
-          <span class="dsh-step-number" aria-hidden="true">3</span>
-          <div class="dsh-step-content">
-            <h2>进入插件排行</h2>
-            <p data-site-copy="body">在 DSH Web 中依次打开：</p>
-            <div class="dsh-open-target" aria-label="设置，然后打开插件排行">
-              <span>设置</span><span aria-hidden="true">→</span><strong>插件排行</strong>
-            </div>
-            <p class="dsh-success" data-site-copy="body">看到榜单后，在「已安装」中核对版本为 <span data-install-version>1.3.2</span>；若 DSH 已在运行，请先重启。</p>
+            <h2>重启 DSH Web</h2>
+            <p data-site-copy="body">安装完成后，在原来运行 DSH 的终端按 <code>Ctrl+C</code> 停止，再执行原来的启动命令。仅刷新网页不能代替重启。</p>
+            <details class="dsh-detail dsh-inline-help" data-existing-ready hidden>
+              <summary>查看对应的启动命令</summary>
+              <div class="dsh-detail-body">
+                <div class="dsh-command-row">
+                  <code class="dsh-install-command" data-existing-command="start"></code>
+                  <button class="dsh-copy-button" type="button" data-existing-copy="start" aria-label="复制现有 DSH 的启动命令">复制</button>
+                </div>
+                <p>原命令有自定义参数时请保留；后台服务沿用原有服务管理方式。打开终端打印的完整本地网址，并保持终端运行。</p>
+              </div>
+            </details>
           </div>
         </li>
       </ol>
     </section>
 
-    <section class="doc-section" id="preview" aria-labelledby="preview-title">
-      <h2 id="preview-title">安装后的界面</h2>
-      <p class="dsh-section-intro" data-site-copy="body">在插件市场搜索、筛选和浏览榜单。</p>
-      <figure class="dsh-preview-item dsh-market-preview">
-        <a class="dsh-preview-link" href="./assets/dsh-plugin-market.png" target="_blank" rel="noopener noreferrer" aria-label="查看插件市场大图（新标签页）">
-          <img src="./assets/dsh-plugin-market.png" width="1600" height="1600" loading="lazy" decoding="async" alt="DSH 设置中的插件排行页面，包含插件与 Skills 切换、搜索、分类和榜单。">
-        </a>
-        <figcaption data-site-copy="note">本地开发版截图 · 点击查看大图</figcaption>
-      </figure>
-      <details class="dsh-detail dsh-install-example">
-        <summary>如何安装榜单中的其他插件？</summary>
+    <section class="doc-section" id="confirm" aria-labelledby="confirm-title">
+      <div class="dsh-install-step">
+        <span class="dsh-step-number" aria-hidden="true">3</span>
+        <div class="dsh-step-content">
+          <h2 id="confirm-title">确认安装成功</h2>
+          <div class="dsh-confirm-layout">
+            <div>
+              <p>在 DSH Web 中打开：</p>
+              <div class="dsh-open-target" aria-label="设置，然后打开插件排行">
+                <span>设置</span><span aria-hidden="true">→</span><strong>插件排行</strong>
+              </div>
+              <p>看到榜单，并在「已安装」中找到 Top100 <span data-install-version>1.3.2</span>，就装好了。</p>
+              <p class="dsh-scope-note">首次使用 DSH 对话功能，还需按提示配置模型。</p>
+            </div>
+            <figure class="dsh-preview-item dsh-market-preview">
+              <a class="dsh-preview-link" href="./assets/dsh-plugin-market.png" target="_blank" rel="noopener noreferrer" aria-label="查看插件市场大图（新标签页）">
+                <img src="./assets/dsh-plugin-market.png" width="1600" height="1600" loading="lazy" decoding="async" alt="DSH 设置中的插件排行页面，包含插件与 Skills 切换、搜索、分类和榜单。">
+              </a>
+              <figcaption data-site-copy="note">本地开发版截图 · 点击查看大图</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="doc-section dsh-support-section" id="use-plugins" aria-labelledby="use-plugins-title">
+      <details class="dsh-detail">
+        <summary id="use-plugins-title">装好了，如何安装其他插件？</summary>
         <div class="dsh-detail-body">
-          <p data-site-copy="body">点击项目的「安装」，核对版本、来源与脚本后再确认。安装后重启 DSH，并检查插件是否正常运行。</p>
-          <p data-site-copy="body">没有「安装」按钮？点击「查看项目」，到项目仓库了解安装方式。<strong>来源校验不等于安全审核。</strong></p>
+          <ol class="dsh-use-steps">
+            <li>在 DSH 的「设置 → 插件排行」中搜索需要的插件。</li>
+            <li>点击「安装」，核对来源、版本及安装脚本，再确认。</li>
+            <li>按作者说明完成额外配置；提示重启时，按<a href="#restart">重启说明</a>操作。</li>
+            <li>到「已安装」核对项目，再打开插件功能，确认可以使用。</li>
+          </ol>
+          <p>只有「查看项目」？请按作者说明安装。官网的「复制安装命令」需要到终端执行。</p>
+          <p class="dsh-scope-note">「已安装」表示文件或配置已写入，运行效果还需实际验证。来源校验不等于安全审核。</p>
+                <details class="dsh-detail dsh-install-example">
+        <summary>查看安装确认示例</summary>
+        <div class="dsh-detail-body">
           <figure class="dsh-preview-item dsh-confirm-preview">
             <a class="dsh-preview-link" href="./assets/dsh-install-confirm.png" target="_blank" rel="noopener noreferrer" aria-label="查看安装确认大图（新标签页）">
               <img src="./assets/dsh-install-confirm.png" width="960" height="802" loading="lazy" decoding="async" alt="以 dsh-pet 为例的安装确认窗口，展示精确版本、安装脚本、重启提醒及风险同意选项。">
@@ -66,67 +197,65 @@
           </figure>
         </div>
       </details>
+
+        </div>
+      </details>
     </section>
 
-    <section class="doc-section" id="help" aria-labelledby="help-title">
-      <h2 id="help-title">其他方式与帮助</h2>
-      <details class="dsh-detail" id="other-methods">
-        <summary>使用全局 dsh 或源码安装</summary>
+    <section class="doc-section dsh-support-section" id="help" aria-labelledby="help-title">
+      <details class="dsh-detail dsh-help-disclosure">
+        <summary id="help-title">遇到问题？查看安装帮助</summary>
         <div class="dsh-detail-body">
-          <p data-site-copy="body">已在使用下面的方式？请沿用原来的方式安装。<strong>安装和启动必须使用相同的命令前缀，不要混用。</strong></p>
-          <section class="dsh-method" aria-labelledby="global-method-title">
-            <h3 id="global-method-title">已安装全局 dsh 命令</h3>
-            <p data-site-copy="body">确认 <code>dsh --version</code> 能正常返回，再依次安装、启动：</p>
-            <div class="dsh-command-group">
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
-                <button class="dsh-copy-button" type="button" data-copy-command="dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2" aria-label="复制全局 CLI 安装命令">复制</button>
-              </div>
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">dsh web</code>
-                <button class="dsh-copy-button" type="button" data-copy-command="dsh web" aria-label="复制全局 CLI 启动命令">复制</button>
-              </div>
-            </div>
-          </section>
-          <section class="dsh-method" aria-labelledby="source-method-title">
-            <h3 id="source-method-title">从 DSH 源码运行</h3>
-            <p data-site-copy="body">进入 DSH 源码仓库根目录，再依次安装、启动：</p>
-            <div class="dsh-command-group">
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
-                <button class="dsh-copy-button" type="button" data-copy-command="pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2" aria-label="复制源码方式安装命令">复制</button>
-              </div>
-              <div class="dsh-command-row">
-                <code class="dsh-install-command">pnpm dsh web</code>
-                <button class="dsh-copy-button" type="button" data-copy-command="pnpm dsh web" aria-label="复制源码方式启动命令">复制</button>
-              </div>
-            </div>
-          </section>
+      <details class="dsh-detail" id="restart">
+        <summary>怎样重启 DSH？</summary>
+        <div class="dsh-detail-body">
+          <p data-site-copy="body">回到正在运行 DSH 的终端，按 <code>Ctrl+C</code> 停止，再执行原来的启动命令。打开终端打印的完整本地网址，并保持终端运行。后台服务用户沿用原有服务管理方式；仅刷新网页不能代替重启。</p>
         </div>
       </details>
       <details class="dsh-detail">
-        <summary>安装后找不到「插件排行」</summary>
+        <summary>提示找不到 node、npm 或 pnpm</summary>
+        <div class="dsh-detail-body">
+          <p data-site-copy="body">缺少 Node.js 或 npm 时，前往<a href="https://nodejs.org/en/download" target="_blank" rel="noopener noreferrer">Node.js 官方下载页</a>。只有 pnpm 缺失时，查看<a href="https://pnpm.io/installation" target="_blank" rel="noopener noreferrer">pnpm 安装帮助</a>。安装后关闭并重新打开终端，再检查版本。出现 <code>pnpm not found on PATH</code> 表示 DSH 没有找到 pnpm，尚未完成插件安装。</p>
+        </div>
+      </details>
+      <details class="dsh-detail">
+        <summary>安装后找不到「插件排行」，或榜单无法加载</summary>
         <div class="dsh-detail-body">
           <ul class="dsh-help-list">
-            <li data-site-copy="body">确认 DSH Web 版本为 0.1.0-rc.6 或更新版本。</li>
-            <li data-site-copy="body">确认安装和启动用了相同的命令前缀，且使用 <code>web</code> profile。</li>
-            <li data-site-copy="body">如果安装时 DSH 已在运行，用原来的方式重启，再刷新浏览器。</li>
+            <li data-site-copy="body">运行所选路径中的安装结果检查命令，确认插件已加入 <code>web</code> profile。</li>
+            <li data-site-copy="body">确认安装和启动使用了同一个 DSH 版本、相同命令前缀和配置目录。</li>
+            <li data-site-copy="body">若安装时 DSH 已在运行，先<a href="#restart">重启 DSH</a>，再刷新浏览器。</li>
+            <li data-site-copy="body">入口已出现但榜单无法加载时，检查是否能访问<a href="https://www.dsheval.ai/top100/" target="_blank" rel="noopener noreferrer">官网榜单</a>，再重试加载；这与插件没有安装是不同的问题。</li>
           </ul>
+        </div>
+      </details>
+      <details class="dsh-detail">
+        <summary>新版本被发布等待期拦截</summary>
+        <div class="dsh-detail-body">
+          <p data-site-copy="body">仅当出现 <code>ERR_PNPM_NO_MATURE_MATCHING_VERSION</code> 或 <code>minimumReleaseAge</code> 报错时，才需要处理。不同 pnpm 版本和配置行为不同；可以等满报错要求的发布时间后重试。</p>
+          <p data-site-copy="body">需要立即安装此版本时，在当前 Web Profile 的 <code>pnpm-workspace.yaml</code> 中合并以下精确版本例外，保留其他配置和已有条目：</p>
+          <pre class="dsh-yaml"><code>minimumReleaseAgeExclude:
+  - '@dsheval/dsh-top100-plugin@1.3.2'</code></pre>
+          <p data-site-copy="body">默认文件在用户主目录的 <code>.dsh/profiles/web/pnpm-workspace.yaml</code>；设置了 <code>DSH_HOME</code> 时，在该目录的 <code>profiles/web/</code> 下。对应路径中的安装检查命令会准备 Profile；若文件仍不存在，请在该 Profile 目录创建它。</p>
+          <p data-site-copy="body">保存后，将你刚才实际执行的安装命令中的 <code>add</code> 改为 <code>add -w</code>，其余部分保持不变，再运行一次。</p>
+          <p data-site-copy="body">该例外只适用于这个版本。报错若指向其他包，需单独核对，不要关闭全部依赖的等待期。</p>
         </div>
       </details>
       <details class="dsh-detail">
         <summary>npx 长时间没有输出</summary>
         <div class="dsh-detail-body">
-          <p data-site-copy="body">先运行 <code>npx @deepseek-ai/dsh --version</code>。如果也一直没有输出，可能卡在依赖解析；停止命令，改用上面的源码方式。</p>
-          <p data-site-copy="body">不要单独添加 <code>--legacy-peer-deps</code>，以免漏装运行时依赖。详见 <a href="https://github.com/deepseek-ai/deepseek-harness/discussions/3786" target="_blank" rel="noopener noreferrer">DSH 上游讨论</a>。</p>
+          <p data-site-copy="body">先确认终端是否在等待输入 <code>y</code>。首次下载可能需要几分钟；已有进度时请继续等待。持续无输出时，按 <code>Ctrl+C</code> 停止，检查网络，用你当前的命令前缀运行 <code>--version</code> 检查 DSH。新用户对应命令为 <code>npx @deepseek-ai/dsh@0.1.2-rc.1 --version</code>。</p>
+          <p data-site-copy="body">版本检查也无法完成时，问题发生在 DSH 下载或启动阶段。请保留报错并查看 <a href="https://github.com/deepseek-ai/deepseek-harness" target="_blank" rel="noopener noreferrer">DSH 官方安装说明</a>。不要单独添加 <code>--legacy-peer-deps</code>，以免漏装运行时依赖。</p>
         </div>
       </details>
       <details class="dsh-detail" id="features">
-        <summary>版本与数据来源</summary>
+        <summary>使用的版本与验证范围</summary>
         <div class="dsh-detail-body">
-          <p data-site-copy="body">当前发布版本为 <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.2" target="_blank" rel="noopener noreferrer">v1.3.2</a>。上面的命令固定安装此版本，不会自动选择旧版。</p>
-          <p data-site-copy="body">数据来自 DSHeval 排行服务。网站与插件使用同一份榜单数据，每日更新。</p>
-          <p data-site-copy="body">安装包包含排行插件和 <code>recommend-dsh-plugins</code> Skill，不包含采集程序、数据库或网站后端。</p>
+          <p data-site-copy="body">本页新手命令固定使用 DSH 0.1.2-rc.1 和 <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.2" target="_blank" rel="noopener noreferrer">Top100 <span data-install-version>1.3.2</span></a>。2026-09-07 已在 macOS 验证安装和加载；启动使用 Node.js 24.20.0，插件安装使用 pnpm 11.24.0。</p>
+          <p data-site-copy="body">Windows、原生 Desktop 和其他版本组合尚未完成实机验证。单个第三方插件仍需按作者要求配置和验证。</p>
+          <p data-site-copy="body">数据来自 DSHeval 排行服务。网站与插件使用同一份榜单数据，每日更新。安装包包含排行插件和 <code>recommend-dsh-plugins</code> Skill，无需自行运行采集程序或数据库。</p>
+        </div>
+      </details>
         </div>
       </details>
     </section>

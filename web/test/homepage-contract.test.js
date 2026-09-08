@@ -83,7 +83,7 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(html, /id="hero-search-form"/);
   assert.doesNotMatch(html, /market-radar|radar-item|renderMarketRadar/);
   assert.match(html, /data-content-switch="dsh"/);
-  assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh plugin/);
+  assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.2-rc\.1 plugin/);
   assert.match(html, /data-track-ranking-view="hot"/);
   assert.match(html, /track\("search_used"/);
   assert.match(html, /closest\("a\.github-link"\)/);
@@ -257,89 +257,145 @@ test("keeps the install guide focused and uses the canonical brand name", () => 
   assert.doesNotMatch(dsh, />rankings\.json</);
 });
 
-test("guides installation through three steps before collapsed secondary help", () => {
-  const [primary, help] = dsh.split('<section class="doc-section" id="help"');
-  assert.ok(primary && help);
-  assert.equal((primary.match(/class="dsh-install-step"/g) ?? []).length, 3);
-  assert.equal((primary.match(/data-copy-command=/g) ?? []).length, 2);
-  assert.match(primary, /DSH Web 0\.1\.0-rc\.6\+/);
-  assert.match(primary, /Node\.js 22\.13\+/);
-  assert.ok(primary.includes(`<span data-install-version>${packageJson.version}</span>`));
-  assert.match(primary, /不会自动安装榜单中的项目/);
+test("shows the beginner guide by default and offers an accessible existing-user path", () => {
+  const choices = [...dsh.matchAll(/<input\b[^>]*name="dsh-experience"[^>]*>/g)].map((match) => match[0]);
+  assert.equal(choices.length, 2);
+  for (const choice of choices) assert.match(choice, /type="radio"/);
+  const beginnerChoice = choices.find((choice) => /value="new"/.test(choice));
+  const existingChoice = choices.find((choice) => /value="existing"/.test(choice));
+  assert.ok(beginnerChoice && existingChoice);
+  assert.match(beginnerChoice, /\schecked(?:\s|>|=)/);
+  assert.doesNotMatch(existingChoice, /\schecked(?:\s|>|=)/);
+  const beginnerPanel = dsh.match(/<[^>]+data-guide-panel="new"[^>]*>/)?.[0];
+  const existingPanel = dsh.match(/<[^>]+data-guide-panel="existing"[^>]*>/)?.[0];
+  assert.ok(beginnerPanel && existingPanel);
+  assert.doesNotMatch(beginnerPanel, /\shidden(?:\s|>|=)/);
+  assert.match(existingPanel, /\shidden(?:\s|>|=)/);
+  assert.ok(dsh.indexOf('name="dsh-experience"') < dsh.indexOf('id="install"'));
+  assert.doesNotMatch(dsh, /class="dsh-method"|id="other-methods"/);
+});
+
+test("lets existing users choose their own DSH installation method", () => {
+  const existing = dsh.match(/<section\b[^>]*id="existing-install"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(existing);
+  const methods = existing.match(/<select\b[^>]*data-dsh-method[^>]*>[\s\S]*?<\/select>/)?.[0];
+  assert.ok(methods);
+  for (const method of ["npx", "global", "source"]) {
+    assert.match(methods, new RegExp(`<option[^>]*value="${method}"`));
+  }
+  assert.match(methods, /<option value="">/);
+  const versionInput = existing.match(/<input\b[^>]*data-dsh-version[^>]*>/)?.[0];
+  assert.ok(versionInput);
+  assert.doesNotMatch(versionInput, /\svalue="[^"]+"/);
+  const steps = [...existing.matchAll(/<li\b[^>]*class="dsh-install-step"[^>]*>/g)];
+  assert.equal(steps.length, 2);
+  for (const [step] of steps) assert.doesNotMatch(step, /\shidden(?:\s|>|=)/);
+  const readyGroups = [...existing.matchAll(/<[^>]+data-existing-ready[^>]*>/g)];
+  assert.equal(readyGroups.length, 2);
+  for (const [group] of readyGroups) assert.match(group, /\shidden(?:\s|>|=)/);
+  for (const command of ["install", "check", "start"]) {
+    assert.match(existing, new RegExp(`<code[^>]*data-existing-command="${command}"[^>]*><\\/code>`));
+    assert.match(existing, new RegExp(`<button[^>]*data-existing-copy="${command}"`));
+  }
+  assert.doesNotMatch(existing, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.2-rc\.1/);
+});
+
+test("keeps setup before the main three-step installation flow and folds recovery guidance", () => {
+  const prepare = dsh.match(/<aside\b[^>]*class="dsh-prepare"[\s\S]*?<\/aside>/)?.[0];
+  const install = dsh.match(/<section\b[^>]*id="install"[\s\S]*?<\/section>/)?.[0];
+  const confirm = dsh.match(/<section\b[^>]*id="confirm"[\s\S]*?<\/section>/)?.[0];
+  const help = dsh.match(/<section\b[^>]*id="help"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(prepare && install && confirm && help);
+  assert.ok(dsh.indexOf(prepare) < dsh.indexOf(install));
+  assert.equal((install.match(/class="dsh-install-step"/g) ?? []).length, 2);
+  assert.match(prepare, /href="https:\/\/nodejs\.org\/en\/download"/);
+  assert.match(prepare, /Node\.js 24/);
+  assert.match(prepare, /npm install -g pnpm@11\.24\.0/);
+  assert.ok(prepare.indexOf("Node.js 24") < prepare.indexOf("<details"));
+  assert.ok(prepare.indexOf("npm install -g pnpm") < prepare.indexOf("<details"));
+  assert.match(confirm, /class="dsh-step-number"[^>]*>3<\/span>/);
+  assert.match(confirm, /设置[\s\S]*插件排行/);
+  assert.ok(confirm.includes(`<span data-install-version>${packageJson.version}</span>`));
+  assert.match(dsh, /不会自动安装榜单中的项目/);
   assert.match(html, /\.dsh-open-target strong \{[^}]*color: var\(--ink\)/);
   assert.match(html, /#dsh-view \.dsh-step-content > \.dsh-success \{[^}]*color: var\(--muted\)/);
   assert.doesNotMatch(html, /#dsh-view \.dsh-step-content > \.dsh-success \{[^}]*font-size/);
-  assert.equal((help.match(/<details\b/g) ?? []).length, 4);
+  assert.match(help, /^<section[^>]*>\s*<details\b/);
   assert.doesNotMatch(help, /<details[^>]*\sopen(?:\s|>|=)/);
-  assert.match(help, /安装和启动必须使用相同的命令前缀/);
+  assert.match(help, /pnpm/);
+  assert.match(help, /安装后找不到/);
+  assert.match(help, /发布等待期|minimumReleaseAge/);
+  assert.match(help, /npx 长时间没有输出/);
+  assert.match(help, /id="features"/);
+  assert.match(help, /DSHeval 排行服务/);
+  assert.match(dsh, /安装和启动必须使用相同的命令前缀/);
   assert.match(help, /不要单独添加 <code>--legacy-peer-deps/);
 });
 
-test("preserves copyable command pairs for all three supported launch methods", () => {
-  const commands = [...dsh.matchAll(/data-copy-command="([^"]+)"/g)].map((match) => match[1]);
-  const displayed = [...dsh.matchAll(/<code class="dsh-install-command">([^<]+)<\/code>/g)].map((match) => match[1]);
+test("keeps displayed commands equal to copied commands and pins the beginner DSH version", () => {
+  const decode = (value) => value.replace(/&#10;|&#x0a;/gi, "\n").replace(/&amp;/g, "&");
+  const commands = [...dsh.matchAll(/data-copy-command="([^"]+)"/g)].map((match) => decode(match[1]));
+  const displayed = [...dsh.matchAll(/<code class="dsh-install-command">([^<]+)<\/code>/g)].map((match) => decode(match[1]));
   assert.deepEqual(commands, displayed);
-  assert.deepEqual(commands, [
-    `npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
-    "npx @deepseek-ai/dsh web",
-    `dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
-    "dsh web",
-    `pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
-    "pnpm dsh web",
-  ]);
+  for (const command of [
+    "node --version\nnpm --version\npnpm --version",
+    "npm install -g pnpm@11.24.0",
+    `npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
+    "npx @deepseek-ai/dsh@0.1.2-rc.1 web",
+    "npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web list --depth 0",
+  ]) assert.ok(commands.includes(command), `missing copyable command: ${command}`);
+  assert.doesNotMatch(dsh, /npx @deepseek-ai\/dsh (?:plugin|web|--version)/);
   const labels = [...dsh.matchAll(/<button[^>]*aria-label="([^"]+)"/g)].map((match) => match[1]);
-  assert.equal(labels.length, 6);
   assert.equal(new Set(labels).size, labels.length);
 });
 
-test("separates the three installation steps from usage previews and optional help", () => {
-  const install = dsh.match(/<section class="doc-section" id="install"[\s\S]*?<\/section>/)?.[0];
-  assert.ok(install);
-  assert.equal((install.match(/class="dsh-install-step"/g) ?? []).length, 3);
-  assert.equal((install.match(/data-copy-command=/g) ?? []).length, 2);
-  assert.doesNotMatch(install, /<img|<details/);
-  assert.match(install, /安装榜单插件/);
-  assert.match(install, /启动 DSH Web/);
-  assert.match(install, /进入插件排行/);
+test("keeps other-plugin instructions optional after installation succeeds", () => {
+  const usage = dsh.match(/<section\b[^>]*id="use-plugins"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(usage);
+  assert.match(usage, /^<section[^>]*>\s*<details\b/);
+  assert.doesNotMatch(usage, /<details[^>]*\sopen(?:\s|>|=)/);
+  for (const action of ["安装", "配置", "重启", "查看项目"]) assert.ok(usage.includes(action));
+  assert.match(usage, /来源校验不等于安全审核/);
+  assert.match(usage, /href="#restart"/);
+  assert.ok(dsh.indexOf('id="restart"') > dsh.indexOf('id="help"'));
   assert.ok(dsh.indexOf('class="dsh-scope-note"') < dsh.indexOf('id="install"'));
-  assert.ok(dsh.indexOf('id="install"') < dsh.indexOf('id="preview"'));
-  assert.ok(dsh.indexOf('id="preview"') < dsh.indexOf('id="help"'));
-  assert.match(dsh, /其他方式与帮助/);
+  assert.ok(dsh.indexOf('id="install"') < dsh.indexOf('id="confirm"'));
+  assert.ok(dsh.indexOf('id="existing-install"') < dsh.indexOf('id="confirm"'));
+  assert.ok(dsh.indexOf('id="confirm"') < dsh.indexOf('id="use-plugins"'));
+  assert.ok(dsh.indexOf('id="use-plugins"') < dsh.indexOf('id="help"'));
 });
 
-test("shows the market preview first and keeps the other-plugin installation example optional", async () => {
-  const preview = dsh.match(/<section class="doc-section" id="preview"[\s\S]*?<\/section>/)?.[0];
-  assert.ok(preview);
-  assert.ok(dsh.indexOf(preview) > dsh.indexOf("</ol>"));
-  assert.ok(dsh.indexOf(preview) < dsh.indexOf('id="help"'));
-  assert.match(preview, /本地开发版截图/);
-  assert.ok(preview.indexOf('dsh-plugin-market.png') < preview.indexOf('<details'));
-  const example = preview.match(/<details class="dsh-detail dsh-install-example">[\s\S]*?<\/details>/)?.[0];
+test("uses a small success screenshot and keeps the installation example in optional help", async () => {
+  const confirm = dsh.match(/<section\b[^>]*id="confirm"[\s\S]*?<\/section>/)?.[0];
+  const usage = dsh.match(/<section\b[^>]*id="use-plugins"[\s\S]*?<\/section>/)?.[0];
+  assert.ok(confirm && usage);
+  assert.doesNotMatch(dsh, /id="preview"/);
+  assert.match(confirm, /本地开发版截图/);
+  assert.match(confirm, /dsh-plugin-market\.png/);
+  assert.doesNotMatch(confirm, /<details/);
+  const example = usage.match(/<details class="dsh-detail dsh-install-example">[\s\S]*?<\/details>/)?.[0];
   assert.ok(example);
-  assert.match(example, /如何安装榜单中的其他插件？/);
   assert.match(example, /dsh-install-confirm\.png/);
-  assert.match(example, /来源校验不等于安全审核/);
-  assert.match(example, /安装后重启 DSH/);
-  assert.doesNotMatch(preview, /<details[^>]*\sopen(?:\s|>|=)/);
-  const images = [...preview.matchAll(/<img src="([^"]+)" width="(\d+)" height="(\d+)" loading="lazy" decoding="async" alt="([^"]+)">/g)];
-  assert.equal(images.length, 2);
-  for (const [, src, width, height] of images) {
+  assert.doesNotMatch(example, /<details[^>]*\sopen(?:\s|>|=)/);
+  for (const section of [confirm, example]) {
+    const images = [...section.matchAll(/<img src="([^"]+)" width="(\d+)" height="(\d+)" loading="lazy" decoding="async" alt="([^"]+)">/g)];
+    assert.equal(images.length, 1);
+    const [, src, width, height] = images[0];
     assert.match(src, /^\.\/assets\/dsh-(plugin-market|install-confirm)\.png$/);
     const image = await readFile(new URL(src.replace("./", "../public/"), import.meta.url));
     assert.equal(image.subarray(1, 4).toString(), "PNG");
     assert.equal(image.readUInt32BE(16), Number(width));
     assert.equal(image.readUInt32BE(20), Number(height));
     assert.ok(image.length < 400_000);
-    assert.ok(preview.includes(`href="${src}" target="_blank" rel="noopener noreferrer"`));
+    assert.ok(section.includes(`href="${src}" target="_blank" rel="noopener noreferrer"`));
   }
   assert.match(html, /#dsh-view \.dsh-preview-link:focus-visible/);
-  assert.match(html, /#dsh-view \.dsh-market-preview \{\s*max-width: 640px/);
+  assert.match(html, /#dsh-view \.dsh-market-preview \{\s*max-width: 320px/);
   assert.match(html, /#dsh-view \.dsh-confirm-preview \{\s*max-width: 480px/);
   assert.doesNotMatch(html, /\.dsh-preview-grid/);
-  assert.match(dsh, /不会自动安装榜单中的项目/);
 });
 
-test("separates expanded installation methods and strengthens guide-only contrast", () => {
+test("keeps guide-only contrast readable", () => {
   const guideStyle = html.match(/#dsh-view \{([^}]+)\}/)?.[1];
   assert.ok(guideStyle);
   assert.match(guideStyle, /--muted: #364b43/);
@@ -347,23 +403,13 @@ test("separates expanded installation methods and strengthens guide-only contras
   assert.match(guideStyle, /--code-ink: #f7f9f8/);
   assert.match(html, /#dsh-view \.doc-section > h2 \{[^}]*font-size: 20px/);
   assert.match(html, /\.dsh-detail summary \{[^}]*font: 600 16px/);
-  assert.match(html, /#dsh-view \.dsh-method h3 \{[^}]*font: 600 15px/);
   assert.match(html, /\.dsh-detail-body \{[^}]*padding: 0;/);
   assert.doesNotMatch(html, /\.dsh-detail-body \{[^}]*border-left/);
   assert.match(html, /\.dsh-detail summary \{[^}]*color: var\(--ink\)/);
-  assert.match(html, /#dsh-view \.dsh-method h3 \{[^}]*color: var\(--ink\)/);
   assert.doesNotMatch(html, /\.dsh-detail\[open\] summary \{/);
   assert.match(html, /\.dsh-command-group \.dsh-command-row \{\s*border: 0/);
   assert.doesNotMatch(html, /\.dsh-method \+ \.dsh-method \{[^}]*border-top/);
   assert.doesNotMatch(html, /\.dsh-detail-body \.dsh-command-row \+ \.dsh-command-row/);
-  const methods = [...dsh.matchAll(/<section class="dsh-method" aria-labelledby="([^"]+)">([\s\S]*?)<\/section>/g)];
-  assert.equal(methods.length, 2);
-  for (const [, id, content] of methods) {
-    assert.ok(content.includes('id="' + id + '"'));
-    assert.equal((content.match(/class="dsh-command-group"/g) ?? []).length, 1);
-    assert.ok(content.indexOf('class="dsh-command-group"') < content.indexOf('data-copy-command='));
-    assert.equal((content.match(/data-copy-command=/g) ?? []).length, 2);
-  }
   const luminance = (hex) => hex.match(/[a-f\d]{2}/gi)
     .map((part) => parseInt(part, 16) / 255)
     .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
@@ -389,12 +435,12 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.match(html, /class="hero-side">[\s\S]*?class="install-console"/);
   assert.match(html, /class="release-grid"/);
   assert.match(html, /class="hero-command-row"/);
-  assert.match(html, />安装到 DSH<\/a>/);
+  assert.match(html, />安装 Top100 到 DSH<\/a>/);
   assert.doesNotMatch(html, /hero-release-version/);
   assert.doesNotMatch(html, /class="release-band"/);
-  assert.ok(html.includes(`data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}"`));
+  assert.ok(html.includes(`data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}"`));
   assert.ok(dsh.includes(`@dsheval/dsh-top100-plugin/v/${packageJson.version}`));
-  assert.match(dsh, /npx @deepseek-ai\/dsh plugin --profile web add @dsheval\/dsh-top100-plugin/);
+  assert.match(dsh, /npx @deepseek-ai\/dsh@0\.1\.2-rc\.1 plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?padding-bottom: 0\.08em/);

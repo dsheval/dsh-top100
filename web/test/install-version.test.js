@@ -31,7 +31,11 @@ test("a release bump fails the check until all install surfaces are synchronized
       const targets = [...content.matchAll(/--profile web add(?: -w)? (@dsheval\/dsh-top100-plugin[^\s<"'`]+)/g)];
       assert.ok(targets.length, file);
       assert.ok(targets.every(([, target]) => target === "@dsheval/dsh-top100-plugin@9.8.7"), file);
-      assert.match(content, /0\.1\.0-rc\.6\+/, "DSH requirements must not change");
+      if (file.endsWith("README.md")) {
+        assert.match(content, /0\.1\.0-rc\.6\+/, "existing README compatibility notes must not change");
+      } else {
+        assert.match(content, /npx @deepseek-ai\/dsh@0\.1\.2-rc\.1/, "a Top100 release bump must preserve the tested DSH version");
+      }
       if (file.endsWith("README.md")) assert.ok(content.includes("- '@dsheval/dsh-top100-plugin@9.8.7'"));
     }
     const readme = await readFile(join(directory, "README.md"), "utf8");

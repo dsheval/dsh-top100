@@ -295,7 +295,7 @@
           <p class="eyebrow" data-site-label="page" lang="en">Explore · Reuse · Compose</p>
           <h1><span>发现值得复用的</span><span>Agent Skills</span></h1>
           <p class="hero-copy" data-site-copy="lead">按用途、分类和 GitHub Stars 发现可复用的工作方法，让 Agent 更好地完成你的任务。</p>
-          <div class="hero-actions"><a class="hero-link hero-content-switch is-active" href="#ranking">浏览 Skills 榜单</a><a class="hero-placeholder" href="./index.html?page=dsh#dsh">安装到 DSH</a></div>
+          <div class="hero-actions"><a class="hero-link hero-content-switch is-active" href="#ranking">浏览 Skills 榜单</a><a class="hero-placeholder" href="./index.html?page=dsh#dsh">安装 Top100 到 DSH</a></div>
           </div>
           <div class="hero-side">
             <aside class="install-console" aria-labelledby="install-console-title">
@@ -306,17 +306,18 @@
               </div>
               <dl class="release-grid">
                 <div><dt>插件版本</dt><dd>v1.3.2</dd></div>
-                <div><dt>DSH Web 要求</dt><dd>0.1.0-rc.6+</dd></div>
+                <div><dt>指南使用 DSH</dt><dd>0.1.2-rc.1</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
+                <code>npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2"
-                >复制</button>
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2"
+                >复制安装命令</button>
               </div>
-              <p class="install-console-note" data-site-copy="note">命令固定安装当前版排行插件。使用方法请查看<a href="./index.html?page=dsh#dsh">安装指南</a>。</p>
+              <p class="install-console-note" data-site-copy="note">复制后请在终端执行，再启动或重启 DSH。首次使用需准备 Node.js 和 pnpm，请先查看<a href="./index.html?page=dsh#dsh">安装指南</a>。</p>
+              <p class="install-console-note install-copy-feedback" role="status" aria-live="polite"></p>
             </aside>
           </div>
         </div>

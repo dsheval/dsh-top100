@@ -1699,6 +1699,161 @@
         border-bottom: 1px solid var(--line);
       }
 
+      #dsh-view .dsh-guide-nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 24px;
+        margin: 18px 0;
+        font: 600 15px/1.7 var(--sans);
+      }
+
+      #dsh-view .dsh-experience {
+        margin: 20px 0 0;
+        padding: 0;
+        border: 0;
+        min-width: 0;
+      }
+
+      #dsh-view .dsh-experience legend {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+
+      #dsh-view .dsh-experience-options {
+        display: inline-grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-width: 100%;
+        padding: 4px;
+        gap: 4px;
+        border: 1px solid var(--line);
+        background: var(--paper);
+      }
+
+      #dsh-view .dsh-experience-option {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 44px;
+        padding: 8px 22px;
+        cursor: pointer;
+        color: var(--muted);
+        font: 600 15px/1.5 var(--sans);
+      }
+
+      #dsh-view .dsh-experience-option:has(:checked) {
+        color: var(--accent-contrast);
+        background: var(--accent);
+      }
+
+      #dsh-view .dsh-experience-option:has(:focus-visible) {
+        outline: 2px solid var(--ink);
+        outline-offset: 2px;
+      }
+
+      #dsh-view .dsh-experience-option input {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+      }
+      #dsh-view [data-guide-panel][hidden],
+      #dsh-view [data-existing-ready][hidden],
+      #dsh-view [data-npx-version-field][hidden] { display: none; }
+
+      #dsh-view .dsh-field-label { display: block; margin: 16px 0 8px; color: var(--ink); font: 600 14px/1.6 var(--sans); }
+      #dsh-view [data-dsh-method],
+      #dsh-view [data-dsh-version] {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 520px;
+        min-height: 44px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 0;
+        background: var(--card);
+        color: var(--ink);
+        font: 400 16px/1.5 var(--sans);
+      }
+      #dsh-view [data-dsh-version][aria-invalid="true"] { border-color: #a82f20; }
+      #dsh-view [data-dsh-method]:focus-visible,
+      #dsh-view [data-dsh-version]:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+      #dsh-view [data-npx-version-field] { margin-bottom: 16px; }
+      @media (max-width: 600px) {
+        #dsh-view .dsh-experience-options { display: grid; }
+        #dsh-view .dsh-experience-option { padding: 8px 12px; }
+      }
+
+      #dsh-view .dsh-prepare {
+        margin-bottom: 28px;
+        padding: 20px;
+        border: 1px solid var(--line);
+        background: color-mix(in srgb, var(--accent) 4%, var(--card));
+      }
+      #dsh-view .dsh-prepare h2 { margin: 0 0 8px; font: 600 17px/1.5 var(--sans); }
+      #dsh-view .dsh-prepare p,
+      #dsh-view .dsh-confirm-layout p { margin: 8px 0 12px; color: var(--muted); font: 400 15px/1.7 var(--sans); }
+      #dsh-view .dsh-inline-help { margin-top: 12px; border: 0; }
+      #dsh-view .dsh-inline-help > summary { min-height: 44px; padding: 6px 0; font: 500 14px/1.6 var(--sans); }
+      #dsh-view [data-existing-ready] > .dsh-success { margin: 8px 0; color: var(--muted); font: 400 14px/1.7 var(--sans); }
+      #dsh-view [data-existing-status]:empty { display: none; }
+      #dsh-view [data-existing-location] { margin: 16px 0 8px; }
+      #dsh-view .dsh-confirm-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(180px, 280px); gap: 24px; align-items: start; }
+      @media (max-width: 600px) {
+        #dsh-view .dsh-confirm-layout { grid-template-columns: 1fr; gap: 12px; }
+        #dsh-view .dsh-prepare { padding: 16px; }
+      }
+
+      #dsh-view .dsh-guide-nav a {
+        padding-block: 6px;
+        color: var(--ink);
+        text-underline-offset: 5px;
+      }
+
+      #dsh-view [id] {
+        scroll-margin-top: calc(var(--site-header-height) + 24px);
+      }
+
+      #dsh-view .dsh-guide-nav a:focus-visible,
+      #dsh-view .dsh-detail summary:focus-visible {
+        outline: 2px solid var(--ink);
+        outline-offset: 4px;
+      }
+
+      #dsh-view .dsh-use-steps {
+        padding-left: 24px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.8;
+      }
+
+      #dsh-view .dsh-use-steps li + li {
+        margin-top: 10px;
+      }
+
+      #dsh-view .dsh-yaml {
+        padding: 16px;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+        background: var(--code-surface);
+        color: var(--code-ink);
+      }
+
+      #dsh-view .dsh-yaml code {
+        color: inherit;
+        background: transparent;
+      }
+
+      #dsh-view .dsh-step-content > .dsh-success + p {
+        margin-top: 16px;
+      }
+
       #dsh-view .doc-section {
         margin: 0;
         padding: 0;
@@ -1709,6 +1864,25 @@
         margin-top: 36px;
         padding-top: 28px;
         border-top: 1px solid var(--line);
+      }
+
+      #dsh-view .dsh-guide .doc-section.dsh-support-section {
+        margin: 24px 0 0;
+        padding: 0 0 0 40px;
+        border: 0;
+      }
+
+      #dsh-view .dsh-support-section > .dsh-detail > summary {
+        font: 600 20px/1.4 var(--sans);
+        letter-spacing: 0;
+      }
+
+      #dsh-view .dsh-guide .dsh-support-section + .dsh-support-section {
+        margin-top: 0;
+      }
+
+      #dsh-view .dsh-support-section:last-child > .dsh-detail {
+        border-bottom: 0;
       }
 
       #dsh-view .doc-section h2 {
@@ -1868,7 +2042,7 @@
       }
 
       #dsh-view .dsh-market-preview {
-        max-width: 640px;
+        max-width: 320px;
       }
 
       #dsh-view .dsh-confirm-preview {
@@ -1942,7 +2116,7 @@
         line-height: 1;
       }
 
-      .dsh-detail[open] summary::after {
+      .dsh-detail[open] > summary::after {
         content: "−";
       }
 
@@ -2326,6 +2500,10 @@
         .dsh-install-step {
           grid-template-columns: 24px minmax(0, 1fr);
           gap: 10px;
+        }
+
+        #dsh-view .dsh-guide .doc-section.dsh-support-section {
+          padding-left: 34px;
         }
 
         .dsh-step-number {
@@ -2930,7 +3108,7 @@
                 class="hero-placeholder hero-content-switch"
                 href="?page=dsh#dsh"
                 data-content-switch="dsh"
-              >安装到 DSH</a>
+              >安装 Top100 到 DSH</a>
             </div>
           </div>
 
@@ -2943,18 +3121,19 @@
               </div>
               <dl class="release-grid">
                 <div><dt>插件版本</dt><dd>v1.3.2</dd></div>
-                <div><dt>DSH Web 要求</dt><dd>0.1.0-rc.6+</dd></div>
+                <div><dt>指南使用 DSH</dt><dd>0.1.2-rc.1</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
+                <code>npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2"
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2"
                   data-analytics="install-command"
-                >复制</button>
+                >复制安装命令</button>
               </div>
-              <p class="install-console-note" data-site-copy="note">命令固定安装当前版排行插件。使用方法请查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
+              <p class="install-console-note" data-site-copy="note">复制后请在终端执行，再启动或重启 DSH。首次使用需准备 Node.js 和 pnpm，请先查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
+              <p class="install-console-note install-copy-feedback" role="status" aria-live="polite"></p>
             </aside>
           </div>
         </div>
@@ -3115,7 +3294,7 @@
           <section class="content-view inline-docs" id="dsh-view" aria-labelledby="inline-dsh-title" hidden>
             <header class="inline-docs-header">
               <h1 class="inline-docs-title" id="inline-dsh-title">安装指南</h1>
-              <p class="inline-docs-intro" data-site-copy="lead">安装 dsh-top100，在 DSH 中浏览榜单、搜索和安装插件。</p>
+              <p class="inline-docs-intro" data-site-copy="lead">从准备环境到安装完成，一步步把 Top100 插件市场添加到 DSH。</p>
             </header>
             <div id="inline-dsh-host">
               <p class="docs-loading" data-site-copy="note">正在加载接入说明…</p>
@@ -3184,6 +3363,7 @@
       import { catalogPresentation, catalogInstallCapability, installCommand } from "./catalog-presentation.js";
       import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
       import { enhanceDescriptions } from "./description-preview.js";
+      import { initializeInstallGuide } from "./install-guide.js";
       import { descriptionFor, loadReviewedDescriptions } from "./description-presentation.js";
       const reviewedDescriptions = await loadReviewedDescriptions();
       import { showFeaturedPlugin } from "./featured-plugin.js";
@@ -3433,6 +3613,7 @@
             }
 
             page.host.replaceChildren(document.importNode(sourceLayout, true));
+            if (name === "dsh") initializeInstallGuide(page.host);
           })
           .catch((error) => {
             const errorBox = document.createElement("div");
@@ -3601,7 +3782,7 @@
           }
         }, copied ? 3000 : 5000);
         if (!copied) return;
-        showFeedback("安装命令已复制；运行前请核对来源与权限。");
+        showFeedback("命令已复制。下一步：打开终端或 PowerShell，粘贴并按回车执行。");
         track("install_command_copy", {
           view: currentContentView === "dsh"
             ? "dsh"
