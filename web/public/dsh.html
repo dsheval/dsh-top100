@@ -202,6 +202,19 @@ pnpm --version" aria-label="复制环境检查命令">复制</button>
       </details>
     </section>
 
+    <section class="doc-section dsh-support-section" id="manage-updates" aria-labelledby="manage-updates-title">
+      <details class="dsh-detail">
+        <summary id="manage-updates-title">如何更新插件和保留 Skill 修改？</summary>
+        <div class="dsh-detail-body">
+          <p>进入「设置 → 插件排行 → 已安装」检查更新。当前版本已最新时不会重复安装；检查失败可刷新后重试。批量更新单次最多检查 200 项，逐项说明无需更新或失败的原因，可更新项目统一确认后执行。</p>
+          <p>默认沿用原 npm 频道、版本范围或 GitHub 分支。只有明确选择「切换到最新版」才改用最新发布频道或默认分支。旧安装如提示「固定当前版本并保留频道」，请先核对并确认整理；这一步保留当前版本，避免更新其他插件时顺带升级。</p>
+          <p>Top100 自身通过上面的安装命令升级，沿用原来的 DSH 版本、命令前缀和 Profile。完成后按<a href="#restart">重启说明</a>重启，再检查「已安装」中的版本。</p>
+          <p>Skill 由所有 Profile 共用。在 Skills 目录点击「安装 / 更新 Skill」核对来源；替换或卸载前会完整备份原目录，包括本地修改和新增文件。操作结果显示备份路径，恢复前先核对当前目录中的新修改。</p>
+          <p class="dsh-scope-note">复杂 workspace 的旧频道整理可能需要手动维护；失败、取消或外部修改时请按页面提示检查备份。具体范围见<a href="https://github.com/dsheval/dsh-top100/blob/main/plugin/README.md#更新插件与保留-skill-修改" target="_blank" rel="noopener noreferrer">更新与备份说明</a>。</p>
+        </div>
+      </details>
+    </section>
+
     <section class="doc-section dsh-support-section" id="help" aria-labelledby="help-title">
       <details class="dsh-detail dsh-help-disclosure">
         <summary id="help-title">遇到问题？查看安装帮助</summary>
