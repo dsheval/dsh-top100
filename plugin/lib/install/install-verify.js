@@ -1,6 +1,8 @@
 /** Verify an install target exposes a real DSH bundle manifest before running pnpm. */
 import { npmPackageSpec } from "./install-spec.js";
 import { githubRepositoryIdentity, parseGitHubSource, githubInstallTarget } from "../shared/github-source.js";
+import { eq, maxSatisfying, satisfies, valid } from "semver";
+import { parseNpmSelector } from "./npm-selector.js";
 const MANIFEST_TIMEOUT_MS = 15_000;
 const VERIFICATION_CACHE_MS = 10 * 60 * 1000;
 export class InstallVerificationError extends Error {
@@ -162,15 +164,35 @@ async function fetchOptionalJson(url, signal) {
         throw error;
     }
 }
+/** Ranges must resolve against the packument; the single-version endpoint only accepts versions/tags. */
+export async function fetchNpmManifest(name, requestedSelector = "latest", signal) {
+    const selector = parseNpmSelector(requestedSelector);
+    if (npmPackageSpec(name)?.name !== name || !selector)
+        throw new InstallVerificationError("npm 安装源格式无效", true);
+    const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
+    const base = `https://registry.npmjs.org/${encoded}`;
+    if (selector.kind !== "range")
+        return fetchJson(`${base}/${encodeURIComponent(selector.value)}`, signal);
+    const packument = await fetchJson(base, signal);
+    const versions = packument?.versions;
+    if (!versions || typeof versions !== "object" || Array.isArray(versions)) {
+        throw new InstallVerificationError("npm registry 缺少可核对的版本列表，无法保留当前更新范围", true);
+    }
+    const version = maxSatisfying(Object.keys(versions).filter((value) => valid(value)), selector.value);
+    if (!version)
+        throw new InstallVerificationError(`npm 当前没有满足更新范围 ${selector.value} 的版本`, true);
+    const manifest = versions[version];
+    if (!manifest || typeof manifest !== "object" || manifest.version !== version) {
+        throw new InstallVerificationError("npm registry 版本列表与包元数据不一致，已停止安装", true);
+    }
+    return manifest;
+}
 async function verifyNpm(spec, options) {
     const parsed = npmPackageSpec(spec);
     if (!parsed)
         throw new InstallVerificationError("npm 安装源格式无效", true);
-    const encoded = parsed.name.startsWith("@")
-        ? `@${encodeURIComponent(parsed.name.slice(1))}`
-        : encodeURIComponent(parsed.name);
-    const selector = encodeURIComponent(parsed.selector ?? "latest");
-    const manifest = await fetchJson(`https://registry.npmjs.org/${encoded}/${selector}`, options.signal);
+    const selector = parseNpmSelector(parsed.selector ?? "latest");
+    const manifest = await fetchNpmManifest(parsed.name, selector.value, options.signal);
     if (!isBundleManifest(manifest)) {
         throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
     }
@@ -181,8 +203,12 @@ async function verifyNpm(spec, options) {
         throw new InstallVerificationError(`npm registry 返回的包名 ${packageName} 与请求目标 ${parsed.name} 不一致，已停止安装`, true);
     }
     const version = manifest.version;
-    if (typeof version !== "string" || !version.trim()) {
+    if (typeof version !== "string" || !valid(version)) {
         throw new InstallVerificationError("npm registry 返回的包缺少精确 version，已停止安装", true);
+    }
+    if ((selector.kind === "version" && !eq(version, selector.value))
+        || (selector.kind === "range" && !satisfies(version, selector.value))) {
+        throw new InstallVerificationError("npm registry 返回的版本不满足请求的更新范围，已停止安装", true);
     }
     const declaredRepository = repositoryUrl(manifest.repository);
     const integrity = typeof manifest.dist?.integrity === "string"
@@ -210,9 +236,11 @@ async function githubCommit(owner, repo, ref, signal) {
 }
 async function githubDefaultBranch(owner, repo, signal) {
     const repository = await fetchJson(`https://api.github.com/repos/${owner}/${repo}`, signal);
-    return typeof repository?.default_branch === "string"
-        ? repository.default_branch
-        : "main";
+    const branch = repository?.default_branch;
+    if (typeof branch !== "string" || !branch.trim()) {
+        throw new InstallVerificationError("GitHub 没有返回可核对的默认分支，已停止安装", true);
+    }
+    return branch;
 }
 async function githubManifest(owner, repo, packagePath, commit, signal) {
     const encodedPath = packagePath.split("/").map(encodeURIComponent).join("/");
@@ -295,7 +323,7 @@ async function verifyGitHub(spec, options) {
             throw new InstallVerificationError(`目录选中的插件子目录 ${expectedPath} 没有 dsh.bundle`, true);
         }
         assertExpectedPackage(manifest, options);
-        return verifiedGitHubTarget(`github:${owner}/${repo}#path:/${expectedPath}`, manifest, owner, repo, commit, options.signal);
+        return verifiedGitHubTarget(githubInstallTarget({ ...source, path: expectedPath }), manifest, owner, repo, commit, options.signal);
     }
     const rootManifest = await githubManifest(owner, repo, "package.json", commit, options.signal);
     if (rootManifest) {
@@ -341,7 +369,7 @@ export async function verifyInstallSpec(spec, options = {}) {
         normalizedRepositoryPath(options.expectedRepositoryPath) ?? "",
     ].join(":");
     const cached = verificationCache.get(key);
-    if (cached && Date.now() - cached.verifiedAt < VERIFICATION_CACHE_MS)
+    if (!options.forceRefresh && cached && Date.now() - cached.verifiedAt < VERIFICATION_CACHE_MS)
         return cached.value;
     const value = spec.kind === "npm" ? await verifyNpm(spec.spec, options) : await verifyGitHub(spec.spec, options);
     options.signal?.throwIfAborted();

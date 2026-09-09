@@ -30,6 +30,8 @@ import { ManagedPage } from "./ManagedPage.js";
 import { shouldRestartPagination } from "./pagination.js";
 import { presentRepositoryIdentity } from "./repository-identity.js";
 import { presentInstallRisk } from "./trust-presentation.js";
+import { SkillBackupList } from "./SkillBackupList.js";
+import { useDialogFocus } from "./use-dialog-focus.js";
 
 interface RankingsPageProps {
   t: Translate;
@@ -183,6 +185,9 @@ export function RankingsPage({ t }: RankingsPageProps) {
   const [preflights, setPreflights] = useState<InstallPreflight[]>([]);
   const [riskAccepted, setRiskAccepted] = useState(false);
   const [installActivityOpen, setInstallActivityOpen] = useState(false);
+  const installInvoker = useRef<HTMLElement | null>(null);
+  const reviewDialog = useDialogFocus<HTMLDivElement>(Boolean(confirming), installInvoker.current);
+  const activityDialog = useDialogFocus<HTMLElement>(Boolean(batch && installActivityOpen));
   const [notice, setNotice] = useState<string | null>(null);
   const loadSequence = useRef(0);
   const loadedSnapshot = useRef<string | null>(null);
@@ -313,6 +318,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   async function prepareInstall(item: CatalogItem): Promise<void> {
+    installInvoker.current = document.activeElement as HTMLElement | null;
     const request = preflightRequest.current.start();
     setPreflightRetry(null);
     setConfirming(null);
@@ -389,7 +395,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           const result = await readJson<CatalogResponse>(`/dsh-top100/rankings?${new URLSearchParams({
             view: "total",
             category: "",
-            catalogScope: "plugins",
+            catalogScope: job.kind === "skill" ? "skills" : "plugins",
             installAvailability: "all",
             q: job.fullName,
             offset: "0",
@@ -460,6 +466,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
         {job.phase === "installed" ? (
           <p className={`activation activation-${job.activationState}`}>{t(`activation_${job.activationState}`)}</p>
         ) : null}
+        <SkillBackupList jobs={[job]} t={t} />
         {error && errorKey ? (
           <div className="job-error-message" role="alert">
             <strong>{t(`installError_${errorKey}_title`)}</strong>
@@ -756,7 +763,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                   </span>
                 </div>
                 <div className="actions">
-                  {item.installed ? (
+                  {item.installed && item.type?.toLowerCase() !== "skill" ? (
                     <button type="button" className="primary" onClick={() => selectSection("installed")}>
                       {t("manage")}
                     </button>
@@ -767,7 +774,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                       disabled={!tracking.ready || busy !== null || preparing !== null}
                       onClick={() => void prepareInstall(item)}
                     >
-                      {preparing === item.fullName ? t("preflighting") : t("reviewInstall")}
+                      {preparing === item.fullName ? t("preflighting") : t(item.type?.toLowerCase() === "skill" ? "reviewSkillInstall" : "reviewInstall")}
                     </button>
                   ) : (
                     <a className="project-link" href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">
@@ -790,6 +797,8 @@ export function RankingsPage({ t }: RankingsPageProps) {
 
       {confirming ? (
         <div
+          ref={reviewDialog}
+          tabIndex={-1}
           className="mask"
           role="dialog"
           aria-modal="true"
@@ -889,11 +898,13 @@ export function RankingsPage({ t }: RankingsPageProps) {
           </div>
         </div>
       ) : null}
-      </> : section === "installed" ? <ManagedPage t={t} tracking={tracking} retryUpdate={updateRetry} onRetryConsumed={() => setUpdateRetry(null)} /> : <DiagnosticsPage t={t} />}
+      </> : section === "installed" ? <ManagedPage t={t} tracking={tracking} retryUpdate={updateRetry} onRetryConsumed={() => setUpdateRetry(null)} onBrowseSkills={() => { resetPreflight(); setCatalogScope("skills"); setCategory(null); setQuery(""); setDraft(""); setSection("rankings"); }} /> : <DiagnosticsPage t={t} />}
 
       {batch && installActivityOpen ? (
         <div className="install-activity-mask">
           <section
+            ref={activityDialog}
+            tabIndex={-1}
             className="install-activity-dialog"
             role="dialog"
             aria-modal="true"

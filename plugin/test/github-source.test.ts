@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { parseGitHubSource, githubInstallTarget, githubRepositoryIdentity } from "../src/shared/github-source.js";
 import { parseInstallSpec, isInstalledEntry, isNpmRegistrySpecifier } from "../src/install/install-spec.js";
 import { resolveUpdateTarget } from "../src/host/manage.js";
+import { resolveUpdateSource } from "../src/host/update-source.js";
 import type { RankingEntry } from "../src/shared/types.js";
 
 const sha = "a".repeat(40);
@@ -16,7 +17,8 @@ describe("shared GitHub source normalization", () => {
     const source = parseGitHubSource(raw);
     expect(source).toEqual({ repository: "acme/mono", ref: sha, path: "packages/demo" });
     expect(githubInstallTarget(source!)).toBe(`github:acme/mono#${sha}&path:/packages/demo`);
-    expect(resolveUpdateTarget("@acme/demo", raw)).toBe("github:acme/mono#path:/packages/demo");
+    expect(() => resolveUpdateTarget("@acme/demo", raw)).toThrow("无法确认原更新分支");
+    expect(resolveUpdateSource("@acme/demo", raw, { strategy: "latest" })?.target).toBe("github:acme/mono#path:/packages/demo");
     expect(githubRepositoryIdentity(raw)).toBe("acme/mono");
   });
 
@@ -53,7 +55,8 @@ describe("shared GitHub source normalization", () => {
 describe("registry sources and installed identity", () => {
   it.each(["1.2.3", "^1.2.3", "~1.2.3", ">=1.0.0 <2", "1.2.x", "*", "latest", "next", "1.2.3-beta.1"])("recognizes registry spec %s", (spec) => {
     expect(isNpmRegistrySpecifier(spec)).toBe(true);
-    expect(resolveUpdateTarget("@acme/demo", spec)).toBe("@acme/demo@latest");
+    const selector = spec === "1.2.3" || spec === "1.2.3-beta.1" ? `^${spec}` : spec;
+    expect(resolveUpdateTarget("@acme/demo", spec)).toBe(`@acme/demo@${selector}`);
   });
   it.each(["npm:other@1.0.0", "npm:@other/demo@1.0.0", "file:../demo", "link:../demo", "workspace:*", "https://registry.test/demo.tgz", "demo@1.0.0", "@acme/demo@1.0.0", ""])("never switches unsupported spec %s to a same-name registry package", (spec) => {
     expect(isNpmRegistrySpecifier(spec)).toBe(false);

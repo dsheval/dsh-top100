@@ -18,8 +18,11 @@ describe("pnpm profile compatibility", () => {
     const workspace = mkdtempSync(join(tmpdir(), "dsh-top100-pnpm-"));
     writeFileSync(join(workspace, "pnpm-workspace.yaml"), "packages:\n  - .\n");
     const ordinary = mkdtempSync(join(tmpdir(), "dsh-top100-pnpm-"));
-    expect(pluginArgsFor(workspace, ["add", "demo"])).toEqual(["add", "-w", "demo"]);
-    expect(pluginArgsFor(ordinary, ["add", "demo"])).toEqual(["add", "demo"]);
+    expect(pluginArgsFor(workspace, ["add", "demo"])).toEqual(["add", "-w", "--save-exact", "demo"]);
+    expect(pluginArgsFor(ordinary, ["add", "demo"])).toEqual(["add", "--save-exact", "demo"]);
+    const pinned = pluginArgsFor(workspace, ["add", "demo@2.0.0-beta.2"]);
+    expect(pluginArgsFor(workspace, pinned)).toEqual(pinned);
+    expect(pinned.at(-1)).toBe("demo@2.0.0-beta.2");
   });
 
   it("retries a fetch timeout once with a longer per-request timeout", async () => {

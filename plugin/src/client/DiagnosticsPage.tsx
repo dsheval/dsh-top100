@@ -1,13 +1,25 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DiagnosticFinding, DiagnosticReport } from "../shared/types.js";
 import { diagnosticSummary } from "./diagnostic-export.js";
+import { diagnosticLabels, presentDiagnosticBundleError, presentDiagnosticFinding, type DiagnosticLanguage } from "./diagnostic-presentation.js";
 import type { Translate } from "./locales.js";
 
-function FindingList({ items }: { items: DiagnosticFinding[] }) {
-  return <div className="diag-list">{items.map((item) => <div key={`${item.code}-${item.subject}-${item.message}`} className={`diag-${item.severity}`}><strong>{item.subject}</strong> — {item.message}{item.detail ? <small>{item.detail}</small> : null}</div>)}</div>;
+function TechnicalDetails({ text, language }: { text: string | null; language: DiagnosticLanguage }) {
+  return text ? <details><summary>{diagnosticLabels(language).technicalDetails}</summary><pre>{text}</pre></details> : null;
+}
+
+function FindingList({ items, report, language }: { items: DiagnosticFinding[]; report: DiagnosticReport; language: DiagnosticLanguage }) {
+  return <div className="diag-list">{items.map((item, index) => {
+    const presented = presentDiagnosticFinding(item, report, language);
+    return <div key={`${item.code}-${item.subject}-${index}`} className={`diag-${item.severity}`}>
+      <strong>{item.subject}</strong> — {presented.message}
+      <TechnicalDetails text={presented.technicalDetails} language={language} />
+    </div>;
+  })}</div>;
 }
 
 export function DiagnosticsPage({ t }: { t: Translate }) {
+  const language: DiagnosticLanguage = t("descriptionLocale") === "en" ? "en" : "zh";
   const [report, setReport] = useState<DiagnosticReport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportError, setExportError] = useState(false);
@@ -23,7 +35,7 @@ export function DiagnosticsPage({ t }: { t: Translate }) {
     finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
-  if (error) return <div className="error">{t("diagLoadFail")}: {error} <button type="button" onClick={() => void load()}>{t("retry")}</button></div>;
+  if (error) return <div className="error">{t("diagLoadFail")} <TechnicalDetails text={error} language={language} /><button type="button" onClick={() => void load()}>{t("retry")}</button></div>;
   if (!report) return <p className="lede">{loading ? t("diagLoading") : t("diagLoadFail")}</p>;
   function exportSummary(): void {
     if (!report) return;
@@ -46,6 +58,7 @@ export function DiagnosticsPage({ t }: { t: Translate }) {
   }
   const errors = report.findings.filter((item) => item.severity === "error");
   const warnings = report.findings.filter((item) => item.severity === "warning");
+  const infos = report.findings.filter((item) => item.severity === "info");
   return (
     <div className="diag-page">
       <div className="diag-summary">
@@ -58,12 +71,18 @@ export function DiagnosticsPage({ t }: { t: Translate }) {
       <p className="lede">{t("diagExportHint")}</p>
       {exportError ? <p className="error" role="alert">{t("diagExportFailed")}</p> : null}
       <div className="diag-grid">
-        <section><h3>{t("diagCatalogTitle")}</h3><p><code>{report.catalog.dataUrl}</code></p><p>{t("updated")}: {report.catalog.snapshotDate ?? "—"} · {report.catalog.counts.total} plugins</p></section>
-        <section><h3>{t("diagInventory")}</h3><p>{t("diagOfficial")}: {report.inventory.official} · {t("diagCommunity")}: {report.inventory.community} · Skills: {report.inventory.skills}</p><p>{t("enabled")}: {report.inventory.enabled} · {t("disabled")}: {report.inventory.disabled}</p></section>
+        <section><h3>{t("diagCatalogTitle")}</h3><p><code>{report.catalog.dataUrl}</code></p><p>{t("updated")}: {report.catalog.snapshotDate ?? "—"} · {report.catalog.counts.total} {t("entries")}</p></section>
+        <section><h3>{t("diagInventory")}</h3><p>{t("diagOfficial")}: {report.inventory.official} · {t("diagCommunity")}: {report.inventory.community} · {t("skillKind")}: {report.inventory.skills}</p><p>{t("enabled")}: {report.inventory.enabled} · {t("disabled")}: {report.inventory.disabled}</p></section>
       </div>
-      <details open={errors.length > 0}><summary>{t("diagErrors")} ({errors.length})</summary><FindingList items={errors} /></details>
-      <details open={warnings.length > 0}><summary>{t("diagWarnings")} ({warnings.length})</summary><FindingList items={warnings} /></details>
-      <details><summary>{t("diagBundles")} ({report.bundles.length})</summary><div className="diag-list">{report.bundles.map((item) => <div key={item.name}><strong>{item.name}</strong> · {item.version ?? "—"} · {item.enabled ? t("enabled") : t("disabled")}{item.error ? <small className="diag-error">{item.error}</small> : null}</div>)}</div></details>
+      <details open={errors.length > 0}><summary>{t("diagErrors")} ({errors.length})</summary><FindingList items={errors} report={report} language={language} /></details>
+      <details open={warnings.length > 0}><summary>{t("diagWarnings")} ({warnings.length})</summary><FindingList items={warnings} report={report} language={language} /></details>
+      {infos.length ? <details><summary>{diagnosticLabels(language).information} ({infos.length})</summary><FindingList items={infos} report={report} language={language} /></details> : null}
+      <details><summary>{t("diagBundles")} ({report.bundles.length})</summary><div className="diag-list">{report.bundles.map((item) => {
+        const error = presentDiagnosticBundleError(item, language);
+        return <div key={item.name}><strong>{item.name}</strong> · {item.version ?? "—"} · {item.enabled ? t("enabled") : t("disabled")}
+          {error ? <><small className="diag-error">{error.message}</small><TechnicalDetails text={error.technicalDetails} language={language} /></> : null}
+        </div>;
+      })}</div></details>
       <details><summary>{t("diagSkills")} ({report.skills.length})</summary><div className="diag-list">{report.skills.map((item) => <div key={item.name}><strong>{item.name}</strong> · {item.hasManifest ? "SKILL.md ✓" : "SKILL.md ✕"}</div>)}</div></details>
       <details><summary>{t("diagPatch")}</summary><div className="diag-list"><code>{report.patch.path}</code><div>{t("disabled")}: {report.patch.disables.join(", ") || "—"}</div><div>{t("diagOrphans")}: {report.patch.orphans.join(", ") || "—"}</div></div></details>
     </div>

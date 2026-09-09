@@ -9,6 +9,11 @@ export const AUTO_INSTALL_PEERS_OFF = "--config.auto-install-peers=false";
 export function pluginArgsFor(directory, args) {
     if (args[0] !== "add" && args[0] !== "remove")
         return args;
+    // The approved version must remain exact on disk so its original channel can
+    // be recovered from provenance on the next update.
+    if (args[0] === "add" && !args.includes("--save-exact") && !args.includes("-E")) {
+        args = [args[0], "--save-exact", ...args.slice(1)];
+    }
     if (!existsSync(join(directory, "pnpm-workspace.yaml")))
         return args;
     if (args.includes("-w") || args.includes("--workspace-root"))

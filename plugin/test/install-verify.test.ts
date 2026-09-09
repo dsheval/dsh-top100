@@ -11,6 +11,56 @@ afterEach(() => {
 });
 
 describe("install source verification", () => {
+  it.each([
+    ["^1.0.0", "1.9.0"], ["~1.2.0", "1.2.8"], [">=1.2.0 <1.8.0", "1.2.8"],
+    ["1.0.0 - 1.2.8", "1.2.8"], ["1.x || 2.x", "2.4.0"], ["^2.5.0-beta.1", "2.5.0-beta.3"],
+  ])("resolves npm range %s against the packument and pins %s", async (selector, expected) => {
+    const versions = Object.fromEntries(["1.0.0", "1.2.8", "1.9.0", "2.4.0", "2.5.0-beta.3", "3.0.0"].map((version) => [version, {
+      name: "demo", version, dist: { integrity: `sha512-${version}` }, dsh: { bundle: { patch: "./patch.yml" } },
+    }]));
+    const fetchMock = vi.fn(async (url: string) => {
+      expect(url).toBe("https://registry.npmjs.org/demo");
+      return new Response(JSON.stringify({ versions }));
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    expect(await verifyInstallSpec({ kind: "npm", spec: `demo@${selector}` })).toMatchObject({
+      requestedTarget: `demo@${selector}`, target: `demo@${expected}`, version: expected,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a registry exact-version response that silently changes the requested version", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      name: "demo", version: "2.0.0", dist: { integrity: "sha512-test" }, dsh: { bundle: { patch: "patch.yml" } },
+    }))));
+    await expect(verifyInstallSpec({ kind: "npm", spec: "demo@1.0.0" })).rejects.toThrow("不满足请求的更新范围");
+  });
+
+  it("rejects an unavailable range without falling back to latest", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ "dist-tags": { latest: "3.0.0" }, versions: { "3.0.0": { version: "3.0.0" } } }))));
+    await expect(verifyInstallSpec({ kind: "npm", spec: "demo@^1.0.0" })).rejects.toThrow("没有满足更新范围");
+  });
+
+  it("does not guess main when GitHub default-branch metadata is unavailable", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({})));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/demo" })).rejects.toThrow("没有返回可核对的默认分支");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the original GitHub branch in requestedTarget when adding an inferred monorepo path", async () => {
+    const sha = "f".repeat(40);
+    const fetchMock = vi.fn(async (url: string) => new Response(JSON.stringify(url.includes("/commits/release%2F1.x") ? { sha } : {
+      content: Buffer.from(JSON.stringify({ name: "demo", version: "1.0.0", dsh: { bundle: { patch: "patch.yml" } } })).toString("base64"),
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(verifyInstallSpec({ kind: "github", spec: "github:acme/mono#release/1.x" }, {
+      expectedRepositoryPath: "packages/demo", expectedPackageName: "demo",
+    })).resolves.toMatchObject({ requestedTarget: "github:acme/mono#release/1.x&path:/packages/demo",
+      target: `github:acme/mono#${sha}&path:/packages/demo` });
+    expect(fetchMock).toHaveBeenCalledWith("https://api.github.com/repos/acme/mono/commits/release%2F1.x", expect.anything());
+  });
+
   it("looks up an exact npm tag and recognizes lifecycle scripts", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
       name: "@acme/demo",
@@ -237,6 +287,23 @@ describe("install source verification", () => {
     await verifyInstallSpec(spec);
     await verifyInstallSpec(spec);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes a moving target only when requested and updates the ordinary cache", async () => {
+    let version = "1.0.0";
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      name: "demo", version, dist: { integrity: `sha512-${version}` },
+      dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    })));
+    vi.stubGlobal("fetch", fetchMock);
+    const spec = { kind: "npm", spec: "demo@latest" } as const;
+    await expect(verifyInstallSpec(spec)).resolves.toMatchObject({ version: "1.0.0" });
+    version = "1.1.0";
+    await expect(verifyInstallSpec(spec)).resolves.toMatchObject({ version: "1.0.0" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await expect(verifyInstallSpec(spec, { forceRefresh: true })).resolves.toMatchObject({ version: "1.1.0" });
+    await expect(verifyInstallSpec(spec)).resolves.toMatchObject({ version: "1.1.0" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 

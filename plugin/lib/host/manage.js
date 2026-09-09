@@ -3,11 +3,14 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { withReviewedDescription } from "../shared/descriptions.js";
-import { isNpmRegistrySpecifier, npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { fetchNpmManifest } from "../install/install-verify.js";
 import { isProtectedPackage, packageIsDisabled, removeRowBlocks, rowIdsForPackage, userPatchPath } from "./patch-toggle.js";
 import { readInstalled, readInstalledManifest, readInstalledVersion } from "./profile.js";
-import { compareSemver } from "./semver.js";
-import { parseGitHubSource, githubRepositoryIdentity, githubInstallTarget } from "../shared/github-source.js";
+import { compareSemver, parseSemver } from "./semver.js";
+import { readBundleProvenance } from "./provenance.js";
+import { resolveUpdateSource } from "./update-source.js";
+import { parseGitHubSource, githubRepositoryIdentity } from "../shared/github-source.js";
 const UPDATE_CACHE_MS = 5 * 60 * 1000;
 const latestCache = new Map();
 export function skillsRoot() {
@@ -39,30 +42,29 @@ export function matchCatalogEntry(document, name, spec, fullName) {
     // Monorepos or duplicate package declarations need more evidence, not a first-match guess.
     return matches.length === 1 ? matches[0] : undefined;
 }
-export async function fetchNpmLatest(name) {
-    const cached = latestCache.get(name);
-    if (cached && Date.now() - cached.fetchedAt < UPDATE_CACHE_MS)
+export async function fetchNpmLatest(name, forceRefresh = false, selector = "latest") {
+    const key = `${name}@${selector}`;
+    const cached = latestCache.get(key);
+    if (!forceRefresh && cached && Date.now() - cached.fetchedAt < UPDATE_CACHE_MS)
         return cached.version;
     try {
-        const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
-        const response = await fetch(`https://registry.npmjs.org/${encoded}/latest`, {
-            headers: { accept: "application/json", "user-agent": "dsh-top100-plugin" },
-            signal: AbortSignal.timeout(8_000),
-        });
-        if (!response.ok)
-            throw new Error(String(response.status));
-        const body = (await response.json());
-        const version = typeof body.version === "string" ? body.version : null;
-        latestCache.set(name, { version, fetchedAt: Date.now() });
+        const body = await fetchNpmManifest(name, selector, AbortSignal.timeout(8_000));
+        const version = typeof body?.version === "string" && parseSemver(body.version.replace(/^v/, "")) ? body.version : null;
+        if (version)
+            latestCache.set(key, { version, fetchedAt: Date.now() });
+        else
+            latestCache.delete(key);
         return version;
     }
     catch {
-        latestCache.set(name, { version: null, fetchedAt: Date.now() });
+        latestCache.delete(key);
         return null;
     }
 }
 function updateAvailable(current, latest) {
-    return Boolean(current && latest && compareSemver(current.replace(/^v/, ""), latest.replace(/^v/, "")) < 0);
+    const installed = current?.replace(/^v/, "");
+    const target = latest?.replace(/^v/, "");
+    return Boolean(installed && target && parseSemver(installed) && parseSemver(target) && compareSemver(installed, target) < 0);
 }
 const HAN_TEXT_RE = /\p{Script=Han}/u;
 function cleanDescription(value) {
@@ -87,12 +89,7 @@ export function managedDescriptionZh(options) {
         : `已安装的 DSH 插件：${options.name}。暂无中文简介。`;
 }
 export function resolveUpdateTarget(name, spec) {
-    const source = parseGitHubSource(spec);
-    if (source)
-        return githubInstallTarget({ ...source, ref: null });
-    if (npmPackageSpec(name)?.name === name && isNpmRegistrySpecifier(spec))
-        return `${name}@latest`;
-    return null;
+    return resolveUpdateSource(name, spec)?.target ?? null;
 }
 function listSkills() {
     const root = skillsRoot();
@@ -118,11 +115,12 @@ function listSkills() {
             local: true,
             protected: false,
             kind: "skill",
+            scope: "global",
             activationState: "not-applicable",
         };
     });
 }
-export async function listManagedPlugins(profile, document, explicitDir) {
+export async function listManagedPlugins(profile, document, explicitDir, refreshUpdates = false) {
     const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
         const manifest = readInstalledManifest(profile, name, explicitDir);
         const source = parseGitHubSource(spec);
@@ -131,7 +129,35 @@ export async function listManagedPlugins(profile, document, explicitDir) {
         const catalog = matched ? withReviewedDescription(matched, document ?? {}) : undefined;
         const version = readInstalledVersion(profile, name, explicitDir);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
-        const latest = local || source || !isNpmRegistrySpecifier(spec) ? null : await fetchNpmLatest(name);
+        let updateTarget = null;
+        let updatePolicy = "当前安装来源不支持自动更新";
+        let updateError;
+        if (!local) {
+            try {
+                const updateSource = resolveUpdateSource(name, spec, {
+                    version, provenance: readBundleProvenance(name, profile, explicitDir),
+                });
+                if (updateSource) {
+                    updateTarget = updateSource.target;
+                    updatePolicy = updateSource.policy;
+                }
+            }
+            catch (error) {
+                updateError = error instanceof Error ? error.message : String(error);
+                updatePolicy = updateError;
+            }
+        }
+        const npmTarget = updateTarget ? npmPackageSpec(updateTarget) : null;
+        const latest = npmTarget ? await fetchNpmLatest(name, refreshUpdates, npmTarget.selector ?? "latest") : null;
+        const available = updateAvailable(version, latest);
+        const protectedPackage = isProtectedPackage(name);
+        const updateStatus = local || protectedPackage ? "not-supported"
+            : updateError || (npmTarget && !latest) ? "failed"
+                : latest && version && parseSemver(version.replace(/^v/, "")) ? available ? "available" : "current"
+                    : "unknown";
+        const updateCheckedAt = npmTarget
+            ? latestCache.get(`${name}@${npmTarget.selector ?? "latest"}`)?.fetchedAt ?? Date.now()
+            : updateError ? Date.now() : undefined;
         const description = catalog?.description || manifest?.description || "";
         const enabled = !packageIsDisabled(profile, name, explicitDir);
         return {
@@ -148,10 +174,15 @@ export async function listManagedPlugins(profile, document, explicitDir) {
             fullName: catalog?.fullName ?? fullName,
             url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
             enabled,
-            updateAvailable: updateAvailable(version, latest),
+            updateAvailable: available,
+            updateStatus,
+            ...(updateCheckedAt ? { updateCheckedAt } : {}),
             latest,
+            updateTarget,
+            updatePolicy,
+            ...(updateError ? { updateError } : {}),
             local,
-            protected: isProtectedPackage(name),
+            protected: protectedPackage,
             kind: "bundle",
             activationState: enabled ? "unknown" : "inert",
         };

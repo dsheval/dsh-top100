@@ -63,7 +63,12 @@ describe("parseInstallSpec", () => {
     expect(parseInstallSpec("https://evil.example/pkg")).toBeNull();
     expect(parseInstallSpec("link:/tmp/plugin")).toBeNull();
     expect(parseInstallSpec("--yes")).toBeNull();
-    expect(parseInstallSpec("plugin@^1.0.0")).toBeNull();
+    expect(parseInstallSpec("plugin@^1.0.0 && id")).toBeNull();
+  });
+
+  it.each(["^1.0.0", "~0.2.1", ">=1.0.0 <2.0.0", "1.x || 2.x", "1.2.0 - 1.8.0", "*"])("accepts the standard npm range %s for internal verification", (selector) => {
+    expect(parseInstallSpec(`@acme/plugin@${selector}`)).toEqual({ kind: "npm", spec: `@acme/plugin@${selector}` });
+    expect(npmPackageSpec(`@acme/plugin@${selector}`)).toEqual({ name: "@acme/plugin", selector });
   });
 
   it("separates an npm package name from its tag or exact version", () => {

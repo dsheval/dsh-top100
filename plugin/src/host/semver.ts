@@ -1,12 +1,14 @@
 /** Small semver helpers for peer-range diagnostics. */
 
-const SEMVER_RE = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 
 export interface Semver { major: number; minor: number; patch: number; pre: string }
 
 export function parseSemver(value: string): Semver | null {
   const match = SEMVER_RE.exec(value.trim());
   if (!match) return null;
+  if (match.slice(1, 4).some((part) => !Number.isSafeInteger(Number(part)))
+    || match[4]?.split(".").some((part) => /^0\d+$/.test(part))) return null;
   return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]), pre: match[4] ?? "" };
 }
 
@@ -20,7 +22,21 @@ export function compareSemver(left: string, right: string): number {
   if (a.pre === b.pre) return 0;
   if (!a.pre) return 1;
   if (!b.pre) return -1;
-  return a.pre < b.pre ? -1 : 1;
+  const leftParts = a.pre.split(".");
+  const rightParts = b.pre.split(".");
+  for (let index = 0; index < Math.max(leftParts.length, rightParts.length); index++) {
+    const leftPart = leftParts[index];
+    const rightPart = rightParts[index];
+    if (leftPart === undefined) return -1;
+    if (rightPart === undefined) return 1;
+    if (leftPart === rightPart) continue;
+    const leftNumeric = /^\d+$/.test(leftPart);
+    const rightNumeric = /^\d+$/.test(rightPart);
+    if (leftNumeric && rightNumeric) return BigInt(leftPart) < BigInt(rightPart) ? -1 : 1;
+    if (leftNumeric !== rightNumeric) return leftNumeric ? -1 : 1;
+    return leftPart < rightPart ? -1 : 1;
+  }
+  return 0;
 }
 
 function caretUpper(target: Semver): string {

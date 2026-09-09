@@ -4,13 +4,16 @@ import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { withReviewedDescription } from "../shared/descriptions.js";
-import { isNpmRegistrySpecifier, npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { fetchNpmManifest } from "../install/install-verify.js";
 import { isProtectedPackage, packageIsDisabled, removeRowBlocks, rowIdsForPackage, userPatchPath } from "./patch-toggle.js";
 import { readInstalled, readInstalledManifest, readInstalledVersion } from "./profile.js";
-import { compareSemver } from "./semver.js";
+import { compareSemver, parseSemver } from "./semver.js";
 import type { ManagedPlugin, RankingsDocument } from "../shared/types.js";
+import { readBundleProvenance } from "./provenance.js";
+import { resolveUpdateSource } from "./update-source.js";
 
-import { parseGitHubSource, githubRepositoryIdentity, githubInstallTarget } from "../shared/github-source.js";
+import { parseGitHubSource, githubRepositoryIdentity } from "../shared/github-source.js";
 
 const UPDATE_CACHE_MS = 5 * 60 * 1000;
 const latestCache = new Map<string, { version: string | null; fetchedAt: number }>();
@@ -42,28 +45,26 @@ export function matchCatalogEntry(document: RankingsDocument | null, name: strin
   return matches.length === 1 ? matches[0] : undefined;
 }
 
-export async function fetchNpmLatest(name: string): Promise<string | null> {
-  const cached = latestCache.get(name);
-  if (cached && Date.now() - cached.fetchedAt < UPDATE_CACHE_MS) return cached.version;
+export async function fetchNpmLatest(name: string, forceRefresh = false, selector = "latest"): Promise<string | null> {
+  const key = `${name}@${selector}`;
+  const cached = latestCache.get(key);
+  if (!forceRefresh && cached && Date.now() - cached.fetchedAt < UPDATE_CACHE_MS) return cached.version;
   try {
-    const encoded = name.startsWith("@") ? `@${encodeURIComponent(name.slice(1))}` : encodeURIComponent(name);
-    const response = await fetch(`https://registry.npmjs.org/${encoded}/latest`, {
-      headers: { accept: "application/json", "user-agent": "dsh-top100-plugin" },
-      signal: AbortSignal.timeout(8_000),
-    });
-    if (!response.ok) throw new Error(String(response.status));
-    const body = (await response.json()) as { version?: unknown };
-    const version = typeof body.version === "string" ? body.version : null;
-    latestCache.set(name, { version, fetchedAt: Date.now() });
+    const body = await fetchNpmManifest(name, selector, AbortSignal.timeout(8_000)) as { version?: unknown };
+    const version = typeof body?.version === "string" && parseSemver(body.version.replace(/^v/, "")) ? body.version : null;
+    if (version) latestCache.set(key, { version, fetchedAt: Date.now() });
+    else latestCache.delete(key);
     return version;
   } catch {
-    latestCache.set(name, { version: null, fetchedAt: Date.now() });
+    latestCache.delete(key);
     return null;
   }
 }
 
 function updateAvailable(current: string | null, latest: string | null): boolean {
-  return Boolean(current && latest && compareSemver(current.replace(/^v/, ""), latest.replace(/^v/, "")) < 0);
+  const installed = current?.replace(/^v/, "");
+  const target = latest?.replace(/^v/, "");
+  return Boolean(installed && target && parseSemver(installed) && parseSemver(target) && compareSemver(installed, target) < 0);
 }
 
 const HAN_TEXT_RE = /\p{Script=Han}/u;
@@ -95,10 +96,7 @@ export function managedDescriptionZh(options: {
 }
 
 export function resolveUpdateTarget(name: string, spec: string): string | null {
-  const source = parseGitHubSource(spec);
-  if (source) return githubInstallTarget({ ...source, ref: null });
-  if (npmPackageSpec(name)?.name === name && isNpmRegistrySpecifier(spec)) return `${name}@latest`;
-  return null;
+  return resolveUpdateSource(name, spec)?.target ?? null;
 }
 
 function listSkills(): ManagedPlugin[] {
@@ -121,12 +119,13 @@ function listSkills(): ManagedPlugin[] {
       local: true,
       protected: false,
       kind: "skill" as const,
+      scope: "global" as const,
       activationState: "not-applicable" as const,
     };
   });
 }
 
-export async function listManagedPlugins(profile: string, document: RankingsDocument | null, explicitDir?: string): Promise<ManagedPlugin[]> {
+export async function listManagedPlugins(profile: string, document: RankingsDocument | null, explicitDir?: string, refreshUpdates = false): Promise<ManagedPlugin[]> {
   const plugins = await Promise.all(Object.entries(readInstalled(profile, explicitDir)).map(async ([name, spec]) => {
     const manifest = readInstalledManifest(profile, name, explicitDir);
     const source = parseGitHubSource(spec);
@@ -135,7 +134,31 @@ export async function listManagedPlugins(profile: string, document: RankingsDocu
     const catalog = matched ? withReviewedDescription(matched, document ?? {}) : undefined;
     const version = readInstalledVersion(profile, name, explicitDir);
     const local = spec.startsWith("link:") || spec.startsWith("file:");
-    const latest = local || source || !isNpmRegistrySpecifier(spec) ? null : await fetchNpmLatest(name);
+    let updateTarget: string | null = null;
+    let updatePolicy = "当前安装来源不支持自动更新";
+    let updateError: string | undefined;
+    if (!local) {
+      try {
+        const updateSource = resolveUpdateSource(name, spec, {
+          version, provenance: readBundleProvenance(name, profile, explicitDir),
+        });
+        if (updateSource) { updateTarget = updateSource.target; updatePolicy = updateSource.policy; }
+      } catch (error) {
+        updateError = error instanceof Error ? error.message : String(error);
+        updatePolicy = updateError;
+      }
+    }
+    const npmTarget = updateTarget ? npmPackageSpec(updateTarget) : null;
+    const latest = npmTarget ? await fetchNpmLatest(name, refreshUpdates, npmTarget.selector ?? "latest") : null;
+    const available = updateAvailable(version, latest);
+    const protectedPackage = isProtectedPackage(name);
+    const updateStatus = local || protectedPackage ? "not-supported" as const
+      : updateError || (npmTarget && !latest) ? "failed" as const
+      : latest && version && parseSemver(version.replace(/^v/, "")) ? available ? "available" as const : "current" as const
+      : "unknown" as const;
+    const updateCheckedAt = npmTarget
+      ? latestCache.get(`${name}@${npmTarget.selector ?? "latest"}`)?.fetchedAt ?? Date.now()
+      : updateError ? Date.now() : undefined;
     const description = catalog?.description || manifest?.description || "";
     const enabled = !packageIsDisabled(profile, name, explicitDir);
     return {
@@ -152,10 +175,15 @@ export async function listManagedPlugins(profile: string, document: RankingsDocu
       fullName: catalog?.fullName ?? fullName,
       url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),
       enabled,
-      updateAvailable: updateAvailable(version, latest),
+      updateAvailable: available,
+      updateStatus,
+      ...(updateCheckedAt ? { updateCheckedAt } : {}),
       latest,
+      updateTarget,
+      updatePolicy,
+      ...(updateError ? { updateError } : {}),
       local,
-      protected: isProtectedPackage(name),
+      protected: protectedPackage,
       kind: "bundle" as const,
       activationState: enabled ? "unknown" as const : "inert" as const,
     };

@@ -225,11 +225,25 @@ export function readInstalledManifest(
 }
 
 export function argvProfile(argv: readonly string[] = process.argv): string | undefined {
-  const flag = argv.indexOf("--profile");
-  if (flag !== -1 && flag + 1 < argv.length && !argv[flag + 1].startsWith("-")) {
-    return argv[flag + 1];
+  let profile: string | undefined;
+  // DSH's launcher accepts repeated and --flag=value options, then forwards
+  // everything from the first unknown token to the app without parsing it.
+  for (let index = 2; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument.startsWith("--profile=")) {
+      profile = argument.slice("--profile=".length);
+    } else if (argument === "--profile") {
+      profile = argv[++index];
+    } else if (argument === "--patch" || argument === "--from-default-profile") {
+      index += 1;
+    } else if (argument.startsWith("--patch=") || argument.startsWith("--from-default-profile=")
+      || argument === "--dump-config" || argument === "--dump-default-config") {
+      continue;
+    } else {
+      break;
+    }
   }
-  return undefined;
+  return profile;
 }
 
 export function resolveActiveProfile(configured?: string, argv: readonly string[] = process.argv): string {

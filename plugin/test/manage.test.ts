@@ -1,16 +1,62 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { zh } from "../src/client/locales.js";
-import { managedDescriptionZh, matchCatalogEntry, resolveUpdateTarget } from "../src/host/manage.js";
+import { fetchNpmLatest, listManagedPlugins, managedDescriptionZh, matchCatalogEntry, resolveUpdateTarget } from "../src/host/manage.js";
 import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
+
+afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+describe("update version refresh", () => {
+  it("reports a failed check separately from current and retains the actual cached check time", async () => {
+    const directory = mkdtempSync(join(tmpdir(), "managed-status-"));
+    vi.stubEnv("DSH_HOME", directory);
+    try {
+      const name = "status-network-fixture";
+      mkdirSync(join(directory, "node_modules", name), { recursive: true });
+      writeFileSync(join(directory, "package.json"), JSON.stringify({ dependencies: { [name]: "latest" } }));
+      writeFileSync(join(directory, "node_modules", name, "package.json"), JSON.stringify({ name, version: "1.0.0" }));
+      const fetcher = vi.fn().mockRejectedValueOnce(new Error("offline"))
+        .mockResolvedValueOnce(new Response(JSON.stringify({ version: "1.0.0" })));
+      vi.stubGlobal("fetch", fetcher);
+      const failed = (await listManagedPlugins("web", null, directory))[0];
+      expect(failed).toMatchObject({ updateStatus: "failed", updateAvailable: false, latest: null, updateCheckedAt: expect.any(Number) });
+      const recovered = (await listManagedPlugins("web", null, directory))[0];
+      expect(recovered).toMatchObject({ updateStatus: "current", updateAvailable: false, latest: "1.0.0" });
+      expect((await listManagedPlugins("web", null, directory))[0].updateCheckedAt).toBe(recovered.updateCheckedAt);
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+  it("lets a recovered network retry immediately after failure", async () => {
+    const fetcher = vi.fn().mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ version: "2.0.0" })));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await fetchNpmLatest("network-retry-fixture")).toBeNull();
+    expect(await fetchNpmLatest("network-retry-fixture")).toBe("2.0.0");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+
+  it("refreshes an explicitly requested version without waiting for cached metadata", async () => {
+    const fetcher = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify({ version: "1.0.0" })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ version: "2.0.0" })));
+    vi.stubGlobal("fetch", fetcher);
+    expect(await fetchNpmLatest("refresh-version-fixture")).toBe("1.0.0");
+    expect(await fetchNpmLatest("refresh-version-fixture")).toBe("1.0.0");
+    expect(await fetchNpmLatest("refresh-version-fixture", true)).toBe("2.0.0");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  });
+});
 
 describe("managed plugin updates", () => {
   it("resolves npm and GitHub update targets", () => {
-    expect(resolveUpdateTarget("sample-plugin", "^1.0.0")).toBe("sample-plugin@latest");
-    expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#main")).toBe("github:owner/repo");
-    expect(resolveUpdateTarget(
+    expect(resolveUpdateTarget("sample-plugin", "^1.0.0")).toBe("sample-plugin@^1.0.0");
+    expect(resolveUpdateTarget("sample-plugin", "beta")).toBe("sample-plugin@beta");
+    expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#main")).toBe("github:owner/repo#main");
+    expect(() => resolveUpdateTarget(
       "sample-plugin",
       `github:owner/repo#${"a".repeat(40)}&path:/packages/sample`,
-    )).toBe("github:owner/repo#path:/packages/sample");
+    )).toThrow("无法确认原更新分支");
     expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#path:/packages/sample"))
       .toBe("github:owner/repo#path:/packages/sample");
     expect(resolveUpdateTarget("sample-plugin", "github:owner/repo#path:packages/sample"))

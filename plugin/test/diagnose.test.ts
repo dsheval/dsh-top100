@@ -56,6 +56,8 @@ describe("profile diagnostics", () => {
     expect(report.summary.ok).toBe(optional);
     expect(report.summary.dependencies).toBe(optional ? 0 : 1);
     expect(report.findings.filter((finding) => finding.code === "peer-missing")).toHaveLength(optional ? 0 : 1);
+    if (!optional) expect(report.findings.find((finding) => finding.code === "peer-missing")?.parameters)
+      .toEqual({ dependency: "audit-missing-peer", range: "^1.0.0" });
     expect(report.peers).toContainEqual({
       plugin: "audit-plugin", name: "audit-missing-peer", range: "^1.0.0", resolved: null, satisfied: null,
     });
@@ -104,6 +106,10 @@ describe("structured patch diagnostics", () => {
     const report = await buildDiagnosticReport("web", {profileDir: directory, document: emptyCatalog, now: Date.parse(emptyCatalog.generatedAt)});
     expect(report.summary.ok).toBe(false);
     expect(report.findings.some((finding) => finding.severity === "error" && finding.code === (scenario === "malformed-user-patch" ? "user-patch-invalid" : "bundle-unresolved"))).toBe(true);
+    if (scenario !== "malformed-user-patch") {
+      expect(report.bundles[0]?.errorCode).toBe("patch-invalid");
+      expect(report.findings.find((finding) => finding.code === "bundle-unresolved")?.parameters).toEqual({ reason: "patch-invalid" });
+    }
   });
 
   it("uses flow/alias loader ids and flow disabled overrides consistently", async () => {

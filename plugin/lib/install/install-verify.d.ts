@@ -23,9 +23,13 @@ export interface VerifiedInstallTarget {
 }
 export interface VerifyInstallOptions {
     signal?: AbortSignal;
+    /** Explicit update checks must resolve moving tags and branches again. */
+    forceRefresh?: boolean;
     expectedRepository?: string;
     expectedPackageName?: string;
     expectedRepositoryPath?: string;
 }
 export declare function clearInstallVerificationCache(): void;
+/** Ranges must resolve against the packument; the single-version endpoint only accepts versions/tags. */
+export declare function fetchNpmManifest(name: string, requestedSelector?: string, signal?: AbortSignal): Promise<unknown>;
 export declare function verifyInstallSpec(spec: InstallSpec, options?: VerifyInstallOptions): Promise<VerifiedInstallTarget>;

@@ -1,19 +1,26 @@
-import type { UpdatePreflightItem } from "../shared/types.js";
+import type { UpdatePreflightItem, UpdatePreflightIssue, UpdateStrategy } from "../shared/types.js";
 import type { Translate } from "./locales.js";
 import { visibleInstallReviewRisks } from "./install-review-presentation.js";
 import { presentInstallRisk } from "./trust-presentation.js";
+import { useDialogFocus } from "./use-dialog-focus.js";
+import { UpdateCheckResults } from "./UpdateCheckResults.js";
 
-export function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }: {
+export function UpdateReview({ items, issues = [], strategy = "preserve", accepted, onAccepted, onCancel, onConfirm, t, restoreFocusTo }: {
   items: UpdatePreflightItem[]; accepted: boolean; onAccepted: (accepted: boolean) => void;
+  issues?: UpdatePreflightIssue[]; strategy?: UpdateStrategy;
   onCancel: () => void; onConfirm: () => void; t: Translate;
+  restoreFocusTo?: HTMLElement | null;
 }) {
-  return <div className="mask" role="dialog" aria-modal="true" aria-labelledby="dsh-top100-update-title"
+  const dialog = useDialogFocus<HTMLDivElement>(true, restoreFocusTo);
+  return <div ref={dialog} tabIndex={-1} className="mask" role="dialog" aria-modal="true" aria-labelledby="dsh-top100-update-title"
     onKeyDownCapture={(event) => { if (event.key === "Escape") { event.stopPropagation(); onCancel(); } }}>
     <div className="dialog">
-      <header className="confirm-header"><h3 id="dsh-top100-update-title">{t("reviewUpdateTitle")}</h3><p>{t("reviewUpdateHint")}</p></header>
+      <header className="confirm-header"><h3 id="dsh-top100-update-title">{t("reviewUpdateTitle")}</h3><p>{t("reviewUpdateHint")}</p><p>{t(strategy === "latest" ? "updateLatestHint" : "updatePreserveHint")}</p></header>
       <div className="confirm-body"><div className="confirm-list">
+        {issues.length ? <section><strong>{t("updateCheckResults")} ({issues.length})</strong><UpdateCheckResults issues={issues} t={t} /></section> : null}
         {items.map(({ name, currentVersion, preflight }) => <div className="confirm-item" key={name}>
           <div className="confirm-project"><strong>{name}</strong><p>{t("version")}: {currentVersion ?? "—"} → <code className="confirm-target">{preflight.provenance.resolvedTarget}</code></p></div>
+          <p>{t("updateTarget")}: <code>{preflight.provenance.requestedTarget}</code></p>
           <section className="confirm-effects" aria-label={t("installSummary")}>
             {preflight.lifecycleScripts.length > 0 ? <div className="confirm-scripts" data-warning="true">
               <p>{t("confirmScripts")}</p>

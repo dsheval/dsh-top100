@@ -29,6 +29,20 @@ describe("profile resolution", () => {
     expect(resolveActiveProfile(undefined, ["node", "dsh"])).toBe("web");
   });
 
+  it.each([
+    [["--profile=testing"], "testing"],
+    [["--profile", "first", "--profile", "second"], "second"],
+    [["--profile", "first", "--patch", "/tmp/overlay.yml", "--profile=second"], "second"],
+    [["--from-default-profile=web", "--profile=testing"], "testing"],
+    [["--profile", "-custom"], "-custom"],
+    [["--profile", "testing", "--", "--profile", "app-argument"], "testing"],
+    [["--profile", "testing", "--port", "3000", "--profile", "app-argument"], "testing"],
+    [["web", "--profile", "app-argument"], "web"],
+  ])("matches DSH launcher profile selection for %j", (args, expected) => {
+    expect(resolveActiveProfile(undefined, ["node", "dsh", ...args])).toBe(expected);
+    expect(resolveActiveProfile("configured", ["node", "dsh", ...args])).toBe("configured");
+  });
+
   it("accepts DSH profile names with dots, spaces, and Unicode but rejects traversal", () => {
     expect(isDshProfileName("test.profile")).toBe(true);
     expect(isDshProfileName("测试 环境")).toBe(true);

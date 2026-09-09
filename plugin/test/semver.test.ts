@@ -14,4 +14,17 @@ describe("semver diagnostics", () => {
     expect(satisfiesRange("0.1.5", "~0.1.1")).toBe(true);
     expect(satisfiesRange("4.2.0", ">=4.0.0 <5.0.0")).toBe(true);
   });
+
+  it("orders prerelease identifiers numerically and before text identifiers", () => {
+    expect(compareSemver("1.0.0-rc.9", "1.0.0-rc.10")).toBeLessThan(0);
+    expect(compareSemver("1.0.0-beta.2", "1.0.0-beta.11")).toBeLessThan(0);
+    expect(compareSemver("1.0.0-beta.11", "1.0.0-rc.1")).toBeLessThan(0);
+    expect(compareSemver("1.0.0-1", "1.0.0-alpha")).toBeLessThan(0);
+    expect(compareSemver("1.0.0-beta", "1.0.0-beta.1")).toBeLessThan(0);
+    expect(compareSemver("1.0.0+build1", "1.0.0+build2")).toBe(0);
+  });
+
+  it.each(["01.0.0", "1.0.0-rc..1", "1.0.0-rc.01", "1.0.0+", "1.0.0+build..1"])("rejects malformed version %s", (version) => {
+    expect(parseSemver(version)).toBeNull();
+  });
 });

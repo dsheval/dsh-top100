@@ -109,3 +109,37 @@ export function recordInstallProvenance(config, preflight, skills = []) {
         throw error;
     }
 }
+/** Callers must also bind this evidence to the currently installed target. */
+export function readBundleProvenance(name, profile, profileDirectory) {
+    const ledger = readLedger(ledgerPath({ profile, profileDirectory, dataUrl: "" }));
+    const entry = ledger.records[`bundle:${name.toLowerCase()}`];
+    if (!entry || entry.profile !== profile || entry.preflight.kind !== "bundle"
+        || entry.preflight.provenance.packageName?.toLowerCase() !== name.toLowerCase())
+        return null;
+    return structuredClone(entry.preflight.provenance);
+}
+/** Prepare a complete ledger before a caller's multi-file transaction; never writes or creates directories. */
+export function renderBundleProvenance(config, preflights) {
+    const ledger = readLedger(ledgerPath(config));
+    for (const preflight of preflights) {
+        if (preflight.kind !== "bundle" || preflight.profile !== config.profile || !preflight.provenance.packageName) {
+            throw new Error("安装来源记录与当前 Profile 不匹配");
+        }
+        const { approvalToken: _token, expiresAt: _expiresAt, ...persisted } = preflight;
+        const entry = {
+            fullName: preflight.fullName, profile: config.profile, installedAt: Date.now(), preflight: persisted, skills: [],
+        };
+        for (const [key, record] of identityRecords(entry))
+            ledger.records[key] = record;
+    }
+    return `${JSON.stringify(ledger, null, 2)}\n`;
+}
+/** Skills are global; a missing record in this Profile leaves their modification state unknown. */
+export function readSkillProvenance(name, profile, profileDirectory) {
+    const ledger = readLedger(ledgerPath({ profile, profileDirectory, dataUrl: "" }));
+    const entry = ledger.records[`skill:${name.toLowerCase()}`];
+    if (!entry || entry.profile !== profile || entry.preflight.kind !== "skill")
+        return null;
+    const skill = entry.skills.find((value) => value.name === name);
+    return skill ? { digest: skill.digest, files: [...skill.files] } : null;
+}

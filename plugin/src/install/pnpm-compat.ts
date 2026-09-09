@@ -14,6 +14,11 @@ export type PluginRunner = (profile: string, args: string[]) => Promise<InstallR
 /** pnpm 9 needs `-w` at a workspace root; every pnpm version rejects it outside one. */
 export function pluginArgsFor(directory: string, args: string[]): string[] {
   if (args[0] !== "add" && args[0] !== "remove") return args;
+  // The approved version must remain exact on disk so its original channel can
+  // be recovered from provenance on the next update.
+  if (args[0] === "add" && !args.includes("--save-exact") && !args.includes("-E")) {
+    args = [args[0], "--save-exact", ...args.slice(1)];
+  }
   if (!existsSync(join(directory, "pnpm-workspace.yaml"))) return args;
   if (args.includes("-w") || args.includes("--workspace-root")) return args;
   return [args[0], "-w", ...args.slice(1)];

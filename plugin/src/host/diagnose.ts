@@ -127,7 +127,7 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
   const findings: DiagnosticFinding[] = [];
   const manifest = readJsonFile(join(directory, "package.json"));
   const dependencies = stringRecord(manifest?.dependencies);
-  if (!manifest) findings.push({ severity: "error", code: "profile-missing", subject: profile, message: `profile 目录不可读：${directory}` });
+  if (!manifest) findings.push({ severity: "error", code: "profile-missing", subject: profile, message: `profile 目录不可读：${directory}`, parameters: { directory } });
 
   const declared = isRecord(manifest?.dsh) && isRecord(manifest.dsh.profile) && Array.isArray(manifest.dsh.profile.bundles)
     ? manifest.dsh.profile.bundles.filter((item): item is string => typeof item === "string") : Object.keys(dependencies);
@@ -154,7 +154,7 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     staleDays: document?.snapshotDate ? daysBetween(document.snapshotDate, now) : null,
   };
   if (!catalog.ok) findings.push({ severity: "error", code: "catalog-unreachable", subject: dataUrl, message: catalog.error ?? "榜单不可用" });
-  else if ((catalog.staleDays ?? 0) > STALE_DAYS) findings.push({ severity: "warning", code: "catalog-stale", subject: dataUrl, message: `榜单快照已有 ${catalog.staleDays} 天` });
+  else if ((catalog.staleDays ?? 0) > STALE_DAYS) findings.push({ severity: "warning", code: "catalog-stale", subject: dataUrl, message: `榜单快照已有 ${catalog.staleDays} 天`, parameters: { days: catalog.staleDays! } });
 
   const hostDir = findDshInstallDir();
   const bundles: DiagnosticBundle[] = [];
@@ -180,14 +180,15 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     const local = spec.startsWith("link:") || spec.startsWith("file:");
     const catalogEntry = matchCatalogEntry(document, name, spec, null);
     let error: string | null = null;
-    if (!packageDirectory) error = "包未解析到安装目录";
-    else if (!packageManifest) error = "package.json 不可读";
-    else if (!official && !isRecord(packageManifest.dsh)) error = "不是 DSH bundle（缺少 dsh 清单字段）";
-    else if (patch.error) error = `插件补丁缺失或无效：${patch.error}`;
+    let errorCode: DiagnosticBundle["errorCode"];
+    if (!packageDirectory) { error = "包未解析到安装目录"; errorCode = "package-missing"; }
+    else if (!packageManifest) { error = "package.json 不可读"; errorCode = "manifest-unreadable"; }
+    else if (!official && !isRecord(packageManifest.dsh)) { error = "不是 DSH bundle（缺少 dsh 清单字段）"; errorCode = "not-dsh-bundle"; }
+    else if (patch.error) { error = `插件补丁缺失或无效：${patch.error}`; errorCode = "patch-invalid"; }
     const enabled = true; // Computed once below after all bundle layers have composed.
-    bundles.push({ name, spec, version, kind: official ? "official" : "community", directory: packageDirectory, patchPath: patch.path, entries: patch.ids, error, enabled, local, protected: isProtectedPackage(name), catalogName: catalogEntry?.fullName ?? null, latest: null, updateAvailable: false });
+    bundles.push({ name, spec, version, kind: official ? "official" : "community", directory: packageDirectory, patchPath: patch.path, entries: patch.ids, error, ...(errorCode ? { errorCode } : {}), enabled, local, protected: isProtectedPackage(name), catalogName: catalogEntry?.fullName ?? null, latest: null, updateAvailable: false });
     for (const id of patch.ids) idLayers.set(id, [...(idLayers.get(id) ?? []), name]);
-    if (error) findings.push({ severity: official && !packageDirectory ? "warning" : "error", code: "bundle-unresolved", subject: name, message: error, detail: spec });
+    if (error) findings.push({ severity: official && !packageDirectory ? "warning" : "error", code: "bundle-unresolved", subject: name, message: error, detail: spec, ...(errorCode ? { parameters: { reason: errorCode } } : {}) });
     if (local) findings.push({ severity: "info", code: "bundle-local", subject: name, message: "本地 link/file 插件不能从排行页更新", detail: spec });
     if (document && !catalogEntry && !official) findings.push({ severity: "info", code: "bundle-unlisted", subject: name, message: "已安装但不在当前榜单里" });
     if (packageManifest && !official) {
@@ -199,13 +200,13 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
         peers.push({ plugin: name, name: dependency, range, resolved, satisfied });
         const peerMeta = isRecord(packageManifest.peerDependenciesMeta) ? packageManifest.peerDependenciesMeta[dependency] : null;
         const optional = isRecord(peerMeta) && peerMeta.optional === true;
-        if (!resolved && !optional) findings.push({ severity: "error", code: "peer-missing", subject: name, message: `缺少必需依赖 ${dependency}（声明 ${range}）` });
-        if (satisfied === false) findings.push({ severity: "warning", code: "peer-mismatch", subject: name, message: `${dependency} 声明 ${range}，解析到 ${resolved}` });
+        if (!resolved && !optional) findings.push({ severity: "error", code: "peer-missing", subject: name, message: `缺少必需依赖 ${dependency}（声明 ${range}）`, parameters: { dependency, range } });
+        if (satisfied === false) findings.push({ severity: "warning", code: "peer-mismatch", subject: name, message: `${dependency} 声明 ${range}，解析到 ${resolved}`, parameters: { dependency, range, resolved: resolved! } });
       }
       for (const [dependency, range] of Object.entries(stringRecord(packageManifest.dependencies))) {
         if (!HOST_CORE_RE.test(dependency)) continue;
         hostDeps.push({ plugin: name, dependency, range });
-        findings.push({ severity: "warning", code: "host-core-dependency", subject: name, message: `把宿主核心包 ${dependency} 写进了 dependencies`, detail: range });
+        findings.push({ severity: "warning", code: "host-core-dependency", subject: name, message: `把宿主核心包 ${dependency} 写进了 dependencies`, detail: range, parameters: { dependency, range } });
       }
     }
   }
@@ -218,11 +219,11 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     if (!bundle.enabled) findings.push({ severity: "info", code: "bundle-disabled", subject: bundle.name, message: "当前配置已停用该插件的全部加载行" });
   }
   const duplicates = [...idLayers].filter(([, layers]) => layers.length > 1).map(([id, layers]) => ({ id, layers, count: layers.length }));
-  for (const item of duplicates) findings.push({ severity: "error", code: "duplicate-entry", subject: item.id, message: `加载 id 出现在 ${item.layers.join(" / ")}` });
+  for (const item of duplicates) findings.push({ severity: "error", code: "duplicate-entry", subject: item.id, message: `加载 id 出现在 ${item.layers.join(" / ")}`, parameters: { layers: item.layers } });
   const skills = listSkills();
   for (const skill of skills) if (!skill.hasManifest) findings.push({ severity: "warning", code: "skill-manifest-missing", subject: skill.name, message: "Skill 目录缺少 SKILL.md" });
   const multiVersion = lockfileCoreVersions(directory);
-  for (const item of multiVersion) findings.push({ severity: "warning", code: "core-multi-version", subject: item.name, message: `锁文件里有多个版本：${item.versions.join(" / ")}` });
+  for (const item of multiVersion) findings.push({ severity: "warning", code: "core-multi-version", subject: item.name, message: `锁文件里有多个版本：${item.versions.join(" / ")}`, parameters: { versions: item.versions } });
   const knownIds = new Set(bundles.flatMap((bundle) => bundle.entries));
   const orphans = patchState.disables.filter((id) => !knownIds.has(id));
   for (const id of orphans) findings.push({ severity: "warning", code: "patch-orphan", subject: id, message: "用户补丁停用了一个当前加载层找不到的 id" });

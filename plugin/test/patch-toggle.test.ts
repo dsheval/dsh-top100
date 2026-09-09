@@ -17,7 +17,12 @@ function temporaryProfile(prefix: string): string {
   temporaryProfiles.push(directory);
   return directory;
 }
-afterEach(() => { vi.restoreAllMocks(); for (const directory of temporaryProfiles.splice(0)) rmSync(directory, {recursive: true, force: true}); });
+afterEach(() => {
+  vi.restoreAllMocks();
+  // Vitest 4 restores spies separately from vi.mock factory implementations.
+  vi.mocked(writeFileSync).mockReset();
+  for (const directory of temporaryProfiles.splice(0)) rmSync(directory, {recursive: true, force: true});
+});
 
 describe("profile plugin toggle", () => {
   it("finds ids inserted by a bundle patch", () => {

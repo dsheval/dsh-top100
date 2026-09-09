@@ -160,6 +160,7 @@ export interface LifecycleScriptEvidence {
     command: string;
 }
 export interface InstallProvenance {
+    verification?: "remote" | "local-existing-install";
     source: "npm" | "github";
     requestedTarget: string;
     resolvedTarget: string;
@@ -194,6 +195,19 @@ export interface UpdatePreflightItem {
     currentVersion: string | null;
     preflight: InstallPreflight;
 }
+export type UpdateStrategy = "preserve" | "latest";
+export interface UpdatePreflightIssue {
+    name: string;
+    status: "current" | "failed";
+    code?: string;
+    message: string;
+}
+export interface UpdatePreflightResponse {
+    items: UpdatePreflightItem[];
+    issues?: UpdatePreflightIssue[];
+}
+export declare const UPDATE_PREFLIGHT_GROUP_SIZE = 20;
+export declare const MAX_UPDATE_BATCH_SIZE = 200;
 export interface InstallJobSnapshot {
     id: string;
     batchId: string;
@@ -203,6 +217,10 @@ export interface InstallJobSnapshot {
     kind?: ManagedKind;
     phase: InstallPhase;
     lastLine: string;
+    skillBackups?: Array<{
+        name: string;
+        path: string;
+    }>;
     error: string | null;
     message: string | null;
     requiresRestart: boolean;
@@ -253,12 +271,20 @@ export interface ManagedPlugin {
     protected: boolean;
     kind: ManagedKind;
     activationState: ActivationState;
+    updateTarget?: string | null;
+    updatePolicy?: string;
+    updateError?: string;
+    updateStatus?: "current" | "available" | "failed" | "unknown" | "not-supported";
+    updateCheckedAt?: number;
+    scope?: "profile" | "global";
+    modificationState?: "unchanged" | "modified" | "unknown";
 }
 export interface ManagedListResponse {
     profile: string;
     query: string;
     total: number;
     items: ManagedPlugin[];
+    sourceMigrationRequired?: boolean;
 }
 export declare const DIAGNOSTIC_SCHEMA = "dsh-top100/diagnostics/v1";
 export type DiagnosticSeverity = "error" | "warning" | "info";
@@ -268,6 +294,7 @@ export interface DiagnosticFinding {
     subject: string;
     message: string;
     detail?: string;
+    parameters?: Record<string, string | number | string[]>;
 }
 export interface DiagnosticBundle {
     name: string;
@@ -278,6 +305,7 @@ export interface DiagnosticBundle {
     patchPath: string | null;
     entries: string[];
     error: string | null;
+    errorCode?: "package-missing" | "manifest-unreadable" | "not-dsh-bundle" | "patch-invalid";
     enabled: boolean;
     local: boolean;
     protected: boolean;

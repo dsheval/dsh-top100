@@ -171,22 +171,145 @@ function diagnosticSummary(report) {
 }
 
 //#endregion
+//#region src/client/diagnostic-presentation.ts
+function diagnosticLabels(language) {
+	return language === "en" ? {
+		technicalDetails: "Technical details",
+		information: "Information"
+	} : {
+		technicalDetails: "技术详情",
+		information: "提示"
+	};
+}
+function parameter(finding, key) {
+	const value = finding.parameters?.[key];
+	return typeof value === "string" || typeof value === "number" ? String(value) : null;
+}
+function listParameter(finding, key) {
+	const value = finding.parameters?.[key];
+	return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : null;
+}
+function only(items) {
+	return items.length === 1 ? items[0] : void 0;
+}
+function bundleError(reason, language) {
+	return {
+		"package-missing": ["包未解析到安装目录", "The package installation directory could not be resolved."],
+		"manifest-unreadable": ["package.json 不可读", "The package.json manifest could not be read."],
+		"not-dsh-bundle": ["不是 DSH bundle（缺少 dsh 清单字段）", "The package is missing the dsh manifest field required for a DSH bundle."],
+		"patch-invalid": ["插件补丁缺失或无效；请查看技术详情", "The plugin patch is missing or invalid. See technical details."]
+	}[reason ?? ""]?.[language === "en" ? 1 : 0] ?? (language === "en" ? "The plugin could not be validated. See technical details." : "插件未通过检查，请查看技术详情");
+}
+function presentDiagnosticBundleError(bundle, language) {
+	if (!bundle.error) return null;
+	const message = bundleError(bundle.errorCode ?? (!bundle.directory ? "package-missing" : void 0), language);
+	return {
+		message,
+		technicalDetails: bundle.error !== message ? bundle.error : null
+	};
+}
+function presentDiagnosticFinding(finding, report, language) {
+	const en$1 = language === "en";
+	const bundle = report.bundles.find((item) => item.name === finding.subject);
+	let message;
+	switch (finding.code) {
+		case "profile-missing":
+			message = en$1 ? "The Profile directory or package.json could not be read." : "Profile 目录或 package.json 不可读取。";
+			break;
+		case "catalog-unreachable":
+			message = en$1 ? "The catalog is unavailable. Check the connection and data source." : "榜单不可用，请检查连接和数据源。";
+			break;
+		case "catalog-stale": {
+			const days = parameter(finding, "days") ?? report.catalog.staleDays;
+			message = days === null ? en$1 ? "The catalog snapshot is out of date." : "榜单快照已过期。" : en$1 ? `The catalog snapshot is ${days} days old.` : `榜单快照已有 ${days} 天。`;
+			break;
+		}
+		case "user-patch-invalid":
+			message = en$1 ? "The user patch could not be read or is not a valid DSH patch list." : "用户补丁不可读取或不是有效的 DSH 补丁列表。";
+			break;
+		case "bundle-unresolved":
+			message = bundleError(parameter(finding, "reason") ?? bundle?.errorCode ?? (bundle && !bundle.directory ? "package-missing" : void 0), language);
+			break;
+		case "bundle-local":
+			message = en$1 ? "Local link/file plugins must be updated at their source." : "本地 link/file 插件需在来源目录更新。";
+			break;
+		case "bundle-unlisted":
+			message = en$1 ? "This installed plugin is not in the current catalog." : "已安装的插件不在当前榜单里。";
+			break;
+		case "bundle-disabled":
+			message = en$1 ? "All loading entries for this plugin are disabled in the current configuration." : "当前配置已停用该插件的全部加载行。";
+			break;
+		case "peer-missing":
+		case "peer-mismatch": {
+			const missing = finding.code === "peer-missing";
+			const peer = only(report.peers.filter((item) => item.plugin === finding.subject && (missing ? item.resolved === null : item.satisfied === false)));
+			const dependency = parameter(finding, "dependency") ?? peer?.name;
+			const range = parameter(finding, "range") ?? peer?.range;
+			const resolved = parameter(finding, "resolved") ?? peer?.resolved;
+			if (dependency && range && (missing || resolved)) message = missing ? en$1 ? `Required dependency ${dependency} is missing (declared ${range}).` : `缺少必需依赖 ${dependency}（声明 ${range}）。` : en$1 ? `${dependency} requires ${range}, but resolves to ${resolved}.` : `${dependency} 声明 ${range}，解析到 ${resolved}。`;
+			else message = missing ? en$1 ? "A required peer dependency is missing. See technical details." : "缺少必需依赖，请查看技术详情。" : en$1 ? "A peer dependency version does not satisfy the declared range. See technical details." : "依赖版本不满足声明范围，请查看技术详情。";
+			break;
+		}
+		case "host-core-dependency": {
+			const dependency = parameter(finding, "dependency") ?? only(report.hostDeps.filter((item) => item.plugin === finding.subject))?.dependency;
+			message = dependency ? en$1 ? `Host core package ${dependency} is declared in dependencies.` : `把宿主核心包 ${dependency} 写进了 dependencies。` : en$1 ? "A host core package is declared in dependencies. See technical details." : "把宿主核心包写进了 dependencies，请查看技术详情。";
+			break;
+		}
+		case "duplicate-entry": {
+			const layers = listParameter(finding, "layers") ?? report.duplicates.find((item) => item.id === finding.subject)?.layers;
+			message = layers?.length ? en$1 ? `The loading ID appears in ${layers.join(" / ")}.` : `加载 id 出现在 ${layers.join(" / ")}。` : en$1 ? "The loading ID is declared by multiple bundles." : "多个插件声明了同一个加载 id。";
+			break;
+		}
+		case "skill-manifest-missing":
+			message = en$1 ? "The Skill directory is missing SKILL.md." : "Skill 目录缺少 SKILL.md。";
+			break;
+		case "core-multi-version": {
+			const versions = listParameter(finding, "versions") ?? report.multiVersion.find((item) => item.name === finding.subject)?.versions;
+			message = versions?.length ? en$1 ? `The lockfile contains multiple versions: ${versions.join(" / ")}.` : `锁文件里有多个版本：${versions.join(" / ")}。` : en$1 ? "The lockfile contains multiple versions of this core package." : "锁文件中该核心包存在多个版本。";
+			break;
+		}
+		case "patch-orphan":
+			message = en$1 ? "The user patch disables an ID that is absent from the current loading layers." : "用户补丁停用了一个当前加载层找不到的 id。";
+			break;
+		case "extra-dependency":
+			message = en$1 ? "The package is listed in package.json but not in dsh.profile.bundles loading order." : "写在 package.json 里，但不在 dsh.profile.bundles 加载顺序中。";
+			break;
+		default: message = en$1 ? "An additional diagnostic finding was reported. See technical details." : "发现其他诊断问题，请查看技术详情。";
+	}
+	const technicalDetails = [finding.message !== message ? finding.message : null, finding.detail].filter((value) => Boolean(value)).join("\n");
+	return {
+		message,
+		technicalDetails: technicalDetails || null
+	};
+}
+
+//#endregion
 //#region src/client/DiagnosticsPage.tsx
-function FindingList({ items }) {
+function TechnicalDetails({ text, language }) {
+	return text ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: diagnosticLabels(language).technicalDetails }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", { children: text })] }) : null;
+}
+function FindingList({ items, report, language }) {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 		className: "diag-list",
-		children: items.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-			className: `diag-${item.severity}`,
-			children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.subject }),
-				" — ",
-				item.message,
-				item.detail ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: item.detail }) : null
-			]
-		}, `${item.code}-${item.subject}-${item.message}`))
+		children: items.map((item, index) => {
+			const presented = presentDiagnosticFinding(item, report, language);
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: `diag-${item.severity}`,
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.subject }),
+					" — ",
+					presented.message,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TechnicalDetails, {
+						text: presented.technicalDetails,
+						language
+					})
+				]
+			}, `${item.code}-${item.subject}-${index}`);
+		})
 	});
 }
 function DiagnosticsPage({ t }) {
+	const language = t("descriptionLocale") === "en" ? "en" : "zh";
 	const [report, setReport] = (0, react.useState)(null);
 	const [error, setError] = (0, react.useState)(null);
 	const [exportError, setExportError] = (0, react.useState)(false);
@@ -212,9 +335,11 @@ function DiagnosticsPage({ t }) {
 		className: "error",
 		children: [
 			t("diagLoadFail"),
-			": ",
-			error,
 			" ",
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TechnicalDetails, {
+				text: error,
+				language
+			}),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 				type: "button",
 				onClick: () => void load(),
@@ -251,6 +376,7 @@ function DiagnosticsPage({ t }) {
 	}
 	const errors = report.findings.filter((item) => item.severity === "error");
 	const warnings = report.findings.filter((item) => item.severity === "warning");
+	const infos = report.findings.filter((item) => item.severity === "info");
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 		className: "diag-page",
 		children: [
@@ -315,7 +441,8 @@ function DiagnosticsPage({ t }) {
 						report.catalog.snapshotDate ?? "—",
 						" · ",
 						report.catalog.counts.total,
-						" plugins"
+						" ",
+						t("entries")
 					] })
 				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("diagInventory") }),
@@ -327,7 +454,9 @@ function DiagnosticsPage({ t }) {
 						t("diagCommunity"),
 						": ",
 						report.inventory.community,
-						" · Skills: ",
+						" · ",
+						t("skillKind"),
+						": ",
 						report.inventory.skills
 					] }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
@@ -348,7 +477,11 @@ function DiagnosticsPage({ t }) {
 					" (",
 					errors.length,
 					")"
-				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, { items: errors })]
+				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
+					items: errors,
+					report,
+					language
+				})]
 			}),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
 				open: warnings.length > 0,
@@ -357,8 +490,22 @@ function DiagnosticsPage({ t }) {
 					" (",
 					warnings.length,
 					")"
-				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, { items: warnings })]
+				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
+					items: warnings,
+					report,
+					language
+				})]
 			}),
+			infos.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
+				diagnosticLabels(language).information,
+				" (",
+				infos.length,
+				")"
+			] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
+				items: infos,
+				report,
+				language
+			})] }) : null,
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
 				t("diagBundles"),
 				" (",
@@ -366,17 +513,23 @@ function DiagnosticsPage({ t }) {
 				")"
 			] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: "diag-list",
-				children: report.bundles.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
-					" · ",
-					item.version ?? "—",
-					" · ",
-					item.enabled ? t("enabled") : t("disabled"),
-					item.error ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", {
-						className: "diag-error",
-						children: item.error
-					}) : null
-				] }, item.name))
+				children: report.bundles.map((item) => {
+					const error$1 = presentDiagnosticBundleError(item, language);
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
+						" · ",
+						item.version ?? "—",
+						" · ",
+						item.enabled ? t("enabled") : t("disabled"),
+						error$1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", {
+							className: "diag-error",
+							children: error$1.message
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TechnicalDetails, {
+							text: error$1.technicalDetails,
+							language
+						})] }) : null
+					] }, item.name);
+				})
 			})] }),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
 				t("diagSkills"),
@@ -1090,9 +1243,67 @@ function presentInstallRisk(risk, t) {
 }
 
 //#endregion
+//#region src/client/use-dialog-focus.ts
+/** Keep keyboard navigation in an open dialog, then return to its invoking control. */
+function useDialogFocus(active, restoreTarget) {
+	const dialog = (0, react.useRef)(null);
+	const previous = (0, react.useRef)(null);
+	const wasActive = (0, react.useRef)(false);
+	if (active && !wasActive.current && typeof document !== "undefined") previous.current = restoreTarget ?? document.activeElement;
+	wasActive.current = active;
+	(0, react.useEffect)(() => {
+		const root = dialog.current;
+		if (!active || !root) return;
+		const focusable = () => Array.from(root.querySelectorAll("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex]:not([tabindex=\"-1\"])")).filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest("[inert], [hidden]"));
+		const focusFirst = () => (focusable()[0] ?? root).focus();
+		const onFocus = (event) => {
+			if (!root.contains(event.target)) focusFirst();
+		};
+		const onKey = (event) => {
+			if (event.key !== "Tab") return;
+			const targets = focusable();
+			const first = targets[0];
+			const last = targets.at(-1);
+			if (!first || !last) {
+				event.preventDefault();
+				root.focus();
+				return;
+			}
+			const current = document.activeElement;
+			if (!root.contains(current) || event.shiftKey && current === first || !event.shiftKey && current === last) {
+				event.preventDefault();
+				(event.shiftKey ? last : first).focus();
+			}
+		};
+		if (!root.contains(document.activeElement)) focusFirst();
+		document.addEventListener("keydown", onKey, true);
+		document.addEventListener("focusin", onFocus);
+		return () => {
+			document.removeEventListener("keydown", onKey, true);
+			document.removeEventListener("focusin", onFocus);
+			if (previous.current?.isConnected) previous.current.focus();
+		};
+	}, [active]);
+	return dialog;
+}
+
+//#endregion
+//#region src/client/UpdateCheckResults.tsx
+function UpdateCheckResults({ issues, t }) {
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)(react_jsx_runtime.Fragment, { children: issues.map((issue) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+		issue.name,
+		" · ",
+		t(issue.status === "current" ? "noUpdateAvailable" : "updateCheckFailed"),
+		t("descriptionLocale") === "en" ? ` · ${t(issue.status === "current" ? "updateIssueCurrent" : issue.code === "update-strategy-required" ? "updateIssueStrategy" : "updateIssueFailed")}` : ` · ${issue.message}`
+	] }), t("descriptionLocale") === "en" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("updateCheckDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: issue.message })] }) : null] }, issue.name)) });
+}
+
+//#endregion
 //#region src/client/UpdateReview.tsx
-function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
+function UpdateReview({ items, issues = [], strategy = "preserve", accepted, onAccepted, onCancel, onConfirm, t, restoreFocusTo }) {
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+		ref: useDialogFocus(true, restoreFocusTo),
+		tabIndex: -1,
 		className: "mask",
 		role: "dialog",
 		"aria-modal": "true",
@@ -1108,16 +1319,28 @@ function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
 			children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("header", {
 					className: "confirm-header",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
-						id: "dsh-top100-update-title",
-						children: t("reviewUpdateTitle")
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("reviewUpdateHint") })]
+					children: [
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", {
+							id: "dsh-top100-update-title",
+							children: t("reviewUpdateTitle")
+						}),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("reviewUpdateHint") }),
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(strategy === "latest" ? "updateLatestHint" : "updatePreserveHint") })
+					]
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "confirm-body",
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: "confirm-list",
-						children: items.map(({ name: name$1, currentVersion, preflight }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						children: [issues.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("strong", { children: [
+							t("updateCheckResults"),
+							" (",
+							issues.length,
+							")"
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UpdateCheckResults, {
+							issues,
+							t
+						})] }) : null, items.map(({ name: name$1, currentVersion, preflight }) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: "confirm-item",
 							children: [
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -1133,6 +1356,11 @@ function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
 										})
 									] })]
 								}),
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+									t("updateTarget"),
+									": ",
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: preflight.provenance.requestedTarget })
+								] }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
 									className: "confirm-effects",
 									"aria-label": t("installSummary"),
@@ -1182,7 +1410,7 @@ function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
 									]
 								})
 							]
-						}, name$1))
+						}, name$1))]
 					})
 				}),
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("footer", {
@@ -1223,14 +1451,139 @@ function UpdateReview({ items, accepted, onAccepted, onCancel, onConfirm, t }) {
 }
 
 //#endregion
+//#region src/host/semver.ts
+/** Small semver helpers for peer-range diagnostics. */
+const SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
+function parseSemver(value) {
+	const match = SEMVER_RE.exec(value.trim());
+	if (!match) return null;
+	if (match.slice(1, 4).some((part) => !Number.isSafeInteger(Number(part))) || match[4]?.split(".").some((part) => /^0\d+$/.test(part))) return null;
+	return {
+		major: Number(match[1]),
+		minor: Number(match[2]),
+		patch: Number(match[3]),
+		pre: match[4] ?? ""
+	};
+}
+
+//#endregion
+//#region src/shared/types.ts
+const UPDATE_PREFLIGHT_GROUP_SIZE = 20;
+const MAX_UPDATE_BATCH_SIZE = 200;
+
+//#endregion
+//#region src/client/update-batch.ts
+/** Keep requests small while reviewing all successful targets together. No package operation runs here. */
+async function prepareUpdateBatch(names, strategy, options) {
+	const selected = [...new Set(names)];
+	if (selected.length > MAX_UPDATE_BATCH_SIZE) throw new Error(`At most ${MAX_UPDATE_BATCH_SIZE} updates can be reviewed at once`);
+	const items = [];
+	const issues = [];
+	if (selected.length === 0) return {
+		items,
+		issues
+	};
+	let sessionToken = null;
+	async function sessionAction(action) {
+		options.signal.throwIfAborted();
+		const response = await fetch("/dsh-top100/update-preflight-session", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				action,
+				...sessionToken ? { sessionToken } : {}
+			}),
+			signal: options.signal
+		});
+		const body = await response.json();
+		if (!response.ok) throw Object.assign(new Error(body.error || `${response.status} ${response.statusText}`), { code: body.code });
+		return body;
+	}
+	try {
+		const started = await sessionAction("start");
+		if (typeof started.sessionToken !== "string" || !started.sessionToken) throw new Error("updatePreflightIncomplete");
+		sessionToken = started.sessionToken;
+		for (let offset = 0; offset < selected.length; offset += UPDATE_PREFLIGHT_GROUP_SIZE) {
+			options.signal.throwIfAborted();
+			const group = selected.slice(offset, offset + UPDATE_PREFLIGHT_GROUP_SIZE);
+			const response = await fetch("/dsh-top100/update-preflight", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					names: group,
+					strategy,
+					partial: true,
+					sessionToken
+				}),
+				signal: options.signal
+			});
+			const body = await response.json();
+			options.signal.throwIfAborted();
+			if (!response.ok) throw Object.assign(new Error(body.error || `${response.status} ${response.statusText}`), { code: body.code });
+			if (!Array.isArray(body.items) || body.issues !== void 0 && !Array.isArray(body.issues)) throw new Error("updatePreflightIncomplete");
+			const byName = new Map(body.items.map((item) => [item.name, item]));
+			const failures = body.issues ?? [];
+			const accounted = [...body.items.map((item) => item.name), ...failures.map((issue) => issue.name)];
+			if (accounted.length !== group.length || new Set(accounted).size !== group.length || accounted.some((name$1) => !group.includes(name$1)) || body.items.some((item) => item.preflight?.kind !== "bundle" || !item.preflight.approvalToken || !item.preflight.provenance?.resolvedTarget) || failures.some((issue) => !["current", "failed"].includes(issue.status) || typeof issue.message !== "string")) throw new Error("updatePreflightIncomplete");
+			items.push(...group.flatMap((name$1) => byName.has(name$1) ? [byName.get(name$1)] : []));
+			issues.push(...failures);
+			options.onProgress?.(offset + group.length, selected.length);
+		}
+		const finalized = await sessionAction("finalize");
+		options.signal.throwIfAborted();
+		const drafts = new Map(items.map((item) => [item.name, item]));
+		if (!Array.isArray(finalized.items) || finalized.items.length !== items.length || new Set(finalized.items.map((item) => item.name)).size !== items.length || finalized.items.some((item) => {
+			const draft = drafts.get(item.name);
+			return !draft || !item.preflight?.approvalToken || !Number.isFinite(item.preflight.expiresAt) || item.preflight.expiresAt <= Date.now() || item.preflight.provenance?.resolvedTarget !== draft.preflight.provenance.resolvedTarget || item.preflight.provenance?.requestedTarget !== draft.preflight.provenance.requestedTarget;
+		})) throw new Error("updatePreflightIncomplete");
+		sessionToken = null;
+		const ready = new Map(finalized.items.map((item) => [item.name, item]));
+		return {
+			items: items.map((item) => ready.get(item.name)),
+			issues
+		};
+	} finally {
+		if (sessionToken) fetch("/dsh-top100/update-preflight-session", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({
+				action: "cancel",
+				sessionToken
+			}),
+			keepalive: true
+		}).catch(() => {});
+	}
+}
+
+//#endregion
+//#region src/client/SkillBackupList.tsx
+function SkillBackupList({ jobs, t }) {
+	const backups = jobs.flatMap((job) => job.skillBackups ?? []);
+	if (!backups.length) return null;
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: "banner",
+		role: "status",
+		children: [
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("skillBackupSaved") }),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("skillBackupSavedHint") }),
+			backups.map((backup) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+				backup.name,
+				" · ",
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: backup.path })
+			] }, backup.path))
+		]
+	});
+}
+
+//#endregion
 //#region src/client/ManagedPage.tsx
 async function readJson$1(url, init) {
 	const response = await fetch(url, init);
 	const body = await response.json();
-	if (!response.ok) throw new Error(body.error || `${response.status} ${response.statusText}`);
+	if (!response.ok) throw Object.assign(new Error(body.error || `${response.status} ${response.statusText}`), { code: body.code });
 	return body;
 }
-function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "" }) {
+function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "", onBrowseSkills }) {
 	const [draft, setDraft] = (0, react.useState)(initialQuery);
 	const [query, setQuery] = (0, react.useState)(initialQuery);
 	const [data, setData] = (0, react.useState)(null);
@@ -1247,14 +1600,21 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 	const [review, setReview] = (0, react.useState)(null);
 	const [accepted, setAccepted] = (0, react.useState)(false);
 	const [retryNames, setRetryNames] = (0, react.useState)(null);
+	const [updateStrategy, setUpdateStrategy] = (0, react.useState)("preserve");
+	const [issues, setIssues] = (0, react.useState)([]);
+	const [checkedCount, setCheckedCount] = (0, react.useState)(0);
+	const [checkingTotal, setCheckingTotal] = (0, react.useState)(0);
+	const [migrating, setMigrating] = (0, react.useState)(false);
+	const migrationLock = (0, react.useRef)(false);
 	const submissionLock = (0, react.useRef)(false);
+	const updateInvoker = (0, react.useRef)(null);
 	(0, react.useEffect)(() => () => updateRequest.current.cancel(), []);
-	const load = (0, react.useCallback)(async () => {
+	const load = (0, react.useCallback)(async (refreshUpdates = false) => {
 		const requestId = ++loadSequence.current;
 		setLoading(true);
 		setError(null);
 		try {
-			const payload = await readJson$1(`/dsh-top100/managed?q=${encodeURIComponent(query)}`);
+			const payload = await readJson$1(`/dsh-top100/managed?q=${encodeURIComponent(query)}${refreshUpdates ? "&refresh=1" : ""}`);
 			if (requestId === loadSequence.current) setData(payload);
 		} catch (cause) {
 			if (requestId === loadSequence.current) {
@@ -1310,34 +1670,40 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 	}
 	async function prepareUpdates(names) {
 		if (!names.length || submitting || busy || !tracking.ready) return;
-		const requestedNames = [...new Set(names)];
+		updateInvoker.current = document.activeElement;
+		const requestedNames = [...new Set(names)].slice(0, MAX_UPDATE_BATCH_SIZE);
 		const request = updateRequest.current.start();
 		setPreparing(true);
 		setReview(null);
+		setIssues([]);
+		setCheckedCount(0);
+		setCheckingTotal(requestedNames.length);
 		setAccepted(false);
 		setRetryNames(null);
 		setError(null);
 		setNotice(null);
 		try {
-			const response = await readJson$1("/dsh-top100/update-preflight", {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify({ names: requestedNames }),
-				signal: request.signal
+			const response = await prepareUpdateBatch(requestedNames, updateStrategy, {
+				signal: request.signal,
+				onProgress: (checked) => {
+					if (request.isCurrent()) setCheckedCount(checked);
+				}
 			});
 			if (!request.isCurrent()) return;
-			const byName = new Map(response.items.map((item) => [item.name, item]));
-			if (response.items.length !== requestedNames.length || byName.size !== requestedNames.length || requestedNames.some((name$1) => {
-				const item = byName.get(name$1);
-				return !item || item.preflight.kind !== "bundle" || !item.preflight.approvalToken || !item.preflight.provenance.resolvedTarget;
-			})) throw new Error(t("updatePreflightIncomplete"));
-			const ordered = requestedNames.map((name$1) => byName.get(name$1));
-			setReview(ordered);
-			setAccepted(!ordered.some((item) => item.preflight.requiresExplicitApproval));
+			setIssues(response.issues);
+			setReview(response.items.length ? response.items : null);
+			setAccepted(!response.items.some((item) => item.preflight.requiresExplicitApproval));
+			if (!response.items.length) setNotice(t("noUpdatesPrepared"));
+			if (response.issues.some((issue) => issue.status === "current")) load(true);
 		} catch (cause) {
 			if (!request.isCurrent()) return;
+			if (cause instanceof Error && "code" in cause && cause.code === "no-update") {
+				setNotice(cause.message);
+				load(true);
+				return;
+			}
 			setRetryNames(requestedNames);
-			setError(cause instanceof Error ? cause.message : String(cause));
+			setError(cause instanceof Error ? cause.message === "updatePreflightIncomplete" ? t(cause.message) : cause.message : String(cause));
 		} finally {
 			if (request.isCurrent()) setPreparing(false);
 		}
@@ -1348,6 +1714,7 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 		setReview(null);
 		setRetryNames(null);
 		setAccepted(false);
+		setIssues([]);
 		setNotice(t("updatePreflightCancelled"));
 	}
 	async function confirmUpdates() {
@@ -1394,9 +1761,46 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 			setError(cause instanceof Error ? cause.message : String(cause));
 		}
 	}
-	const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || review !== null;
-	const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
+	async function migrateSources() {
+		if (migrationLock.current || busy || !tracking.ready) return;
+		migrationLock.current = true;
+		setMigrating(true);
+		setError(null);
+		setNotice(null);
+		try {
+			const preflight = await readJson$1("/dsh-top100/source-migration", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ action: "preflight" })
+			});
+			if (preflight.items.length === 0) {
+				await load(true);
+				return;
+			}
+			const changes = preflight.items.map((item) => `${item.name}: ${item.from} → ${item.version}`).join("\n");
+			if (!window.confirm(`${t("sourceMigrationConfirm")}\n\n${changes}`)) return;
+			await readJson$1("/dsh-top100/source-migration", {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({
+					action: "apply",
+					approvalToken: preflight.approvalToken
+				})
+			});
+			await load(true);
+			setNotice(t("sourceMigrationComplete"));
+		} catch (cause) {
+			await load(true);
+			setError(`${t("sourceMigrationFailed")} ${cause instanceof Error ? cause.message : String(cause)}`);
+		} finally {
+			migrationLock.current = false;
+			setMigrating(false);
+		}
+	}
+	const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || migrating || review !== null;
+	const updates = data?.items.filter((item) => item.kind === "bundle" && !item.protected && !item.local && (updateStrategy === "latest" || item.updateAvailable || !item.latest)) ?? [];
 	function descriptionFor$1(item) {
+		if (t("descriptionLocale") === "en") return item.description.trim() || `${t(item.kind === "skill" ? "installedSkillFallback" : "installedPluginFallback")}: ${item.name}.`;
 		const supplied = item.descriptionZh.trim();
 		if (supplied) return supplied;
 		return item.kind === "skill" ? `${t("installedSkillFallback")}：${item.name}。${t("noChineseDescription")}。` : `${t("installedPluginFallback")}：${item.name}。${t("noChineseDescription")}。`;
@@ -1413,6 +1817,7 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 						type: "search",
+						"aria-label": t("searchInstalled"),
 						value: draft,
 						placeholder: t("searchInstalled"),
 						onChange: (event) => setDraft(event.target.value),
@@ -1426,19 +1831,73 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 						onClick: () => setQuery(draft.trim()),
 						children: t("search")
 					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						disabled: loading || operationBlocked,
+						onClick: () => void load(true),
+						children: t("refreshInstalled")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", { children: [
+						t("updateStrategy"),
+						" ",
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
+							"aria-label": t("updateStrategy"),
+							value: updateStrategy,
+							disabled: operationBlocked,
+							onChange: (event) => {
+								setUpdateStrategy(event.target.value);
+								setIssues([]);
+								setNotice(null);
+							},
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								value: "preserve",
+								children: t("updatePreserve")
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
+								value: "latest",
+								children: t("updateLatest")
+							})]
+						})
+					] }),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 						type: "button",
-						disabled: updates.length === 0 || operationBlocked,
+						disabled: updates.length === 0 || operationBlocked || data?.sourceMigrationRequired === true,
 						onClick: () => void prepareUpdates(updates.map((item) => item.name)),
 						children: [
 							t("updateAll"),
 							" (",
-							updates.length,
+							Math.min(updates.length, MAX_UPDATE_BATCH_SIZE),
 							")"
 						]
 					})
 				]
 			}),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "lede",
+				children: t(updateStrategy === "latest" ? "updateLatestHint" : "updatePreserveHint")
+			}),
+			data?.sourceMigrationRequired ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "banner",
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("sourceMigrationTitle") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("sourceMigrationHint") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						disabled: operationBlocked,
+						onClick: () => void migrateSources(),
+						children: t(migrating ? "sourceMigrationWorking" : "sourceMigrationAction")
+					})
+				]
+			}) : null,
+			updates.length > MAX_UPDATE_BATCH_SIZE ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+				className: "banner",
+				children: [
+					t("updateBatchLimit"),
+					" ",
+					MAX_UPDATE_BATCH_SIZE,
+					" / ",
+					updates.length
+				]
+			}) : null,
 			data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
 				className: "lede",
 				children: [
@@ -1455,6 +1914,10 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 				className: "banner",
 				children: notice
 			}) : null,
+			batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SkillBackupList, {
+				jobs: batch.jobs,
+				t
+			}) : null,
 			error ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "error",
 				children: [
@@ -1463,15 +1926,38 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
 						disabled: operationBlocked,
-						onClick: () => void (retryNames ? prepareUpdates(retryNames) : load()),
-						children: t("retry")
+						onClick: () => void (retryNames ? prepareUpdates(retryNames) : load(true)),
+						children: t(retryNames ? "retry" : "refreshInstalled")
 					})
+				]
+			}) : null,
+			issues.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "banner",
+				role: "status",
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("updateCheckResults") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(UpdateCheckResults, {
+						issues,
+						t
+					}),
+					issues.some((issue) => issue.status === "failed") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						disabled: operationBlocked,
+						onClick: () => void prepareUpdates(issues.filter((issue) => issue.status === "failed").map((issue) => issue.name)),
+						children: t("retryFailedChecks")
+					}) : null
 				]
 			}) : null,
 			preparing ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "install-activity-banner is-active",
 				role: "status",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t("preflighting") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("updatePreflightWait") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("strong", { children: [
+					t("preflighting"),
+					" ",
+					checkedCount,
+					"/",
+					checkingTotal
+				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("updatePreflightWait") })] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 					type: "button",
 					onClick: cancelUpdateReview,
 					children: t("cancel")
@@ -1484,11 +1970,14 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 			}) : null,
 			review ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(UpdateReview, {
 				items: review,
+				issues,
+				strategy: updateStrategy,
 				accepted,
 				onAccepted: setAccepted,
 				onCancel: cancelUpdateReview,
 				onConfirm: () => void confirmUpdates(),
-				t
+				t,
+				restoreFocusTo: updateInvoker.current
 			}) : null,
 			busy && batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "banner",
@@ -1528,6 +2017,8 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 				className: "list managed-list",
 				children: [(data?.items ?? []).map((item) => {
 					const job = jobByName.get(item.name);
+					const versionsKnown = Boolean(item.version && item.latest && parseSemver(item.version.replace(/^v/, "")) && parseSemver(item.latest.replace(/^v/, "")));
+					const noUpdate = updateStrategy === "preserve" && versionsKnown && !item.updateAvailable;
 					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", { children: [
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 							className: "status-cell",
@@ -1570,10 +2061,30 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 											item.version ?? "—"
 										] }),
 										item.latest ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("latest"),
+											t("sourceLatestVersion"),
 											": ",
 											item.latest
 										] }) : null,
+										item.updateTarget ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("updateTarget"),
+											": ",
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: item.updateTarget })
+										] }) : null,
+										item.updateStatus && item.updateStatus !== "not-supported" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`updateStatus_${item.updateStatus}`) }) : null,
+										item.updateCheckedAt ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("updateCheckedAt"),
+											": ",
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("time", {
+												dateTime: new Date(item.updateCheckedAt).toISOString(),
+												children: new Date(item.updateCheckedAt).toLocaleString(t("descriptionLocale") === "en" ? "en-US" : "zh-CN")
+											})
+										] }) : null,
+										item.updateError ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("updateCheckDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: item.updateError })] }) : null,
+										item.kind === "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											className: "badge",
+											children: t("globalSkill")
+										}) : null,
+										item.modificationState ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`skillModification_${item.modificationState}`) }) : null,
 										item.fullName && item.fullName !== item.name ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 											t("project"),
 											": ",
@@ -1592,7 +2103,20 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 											children: t("updateAvailable")
 										}) : null
 									]
-								})
+								}),
+								item.kind === "bundle" && (item.protected || item.local) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+									className: "lede",
+									children: [t(item.protected ? "protectedManageHint" : "localManageHint"), item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [" ", /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+										href: "https://www.dsheval.ai/top100/?page=dsh#dsh",
+										target: "_blank",
+										rel: "noreferrer",
+										children: t("maintenanceGuide")
+									})] }) : null]
+								}) : null,
+								item.kind === "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "lede",
+									children: t("skillReinstallHint")
+								}) : null
 							]
 						}),
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -1616,14 +2140,20 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 								}) : null,
 								item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									disabled: item.protected || item.local || operationBlocked,
+									disabled: item.protected || item.local || noUpdate || operationBlocked || data?.sourceMigrationRequired === true,
 									onClick: () => void prepareUpdates([item.name]),
-									children: t("update")
+									children: t(noUpdate ? "noUpdateAvailable" : item.updateAvailable ? "update" : "checkUpdates")
+								}) : null,
+								item.kind === "skill" && onBrowseSkills ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									disabled: operationBlocked,
+									onClick: onBrowseSkills,
+									children: t("browseSkillUpdates")
 								}) : null,
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									className: "danger",
-									disabled: item.protected || operationBlocked,
+									disabled: item.protected || operationBlocked || item.kind === "bundle" && data?.sourceMigrationRequired === true,
 									onClick: () => void manage("uninstall", [item.name], item.kind),
 									children: t("uninstall")
 								})
@@ -1834,6 +2364,9 @@ function RankingsPage({ t }) {
 	const [preflights, setPreflights] = (0, react.useState)([]);
 	const [riskAccepted, setRiskAccepted] = (0, react.useState)(false);
 	const [installActivityOpen, setInstallActivityOpen] = (0, react.useState)(false);
+	const installInvoker = (0, react.useRef)(null);
+	const reviewDialog = useDialogFocus(Boolean(confirming), installInvoker.current);
+	const activityDialog = useDialogFocus(Boolean(batch && installActivityOpen));
 	const [notice, setNotice] = (0, react.useState)(null);
 	const loadSequence = (0, react.useRef)(0);
 	const loadedSnapshot = (0, react.useRef)(null);
@@ -1958,6 +2491,7 @@ function RankingsPage({ t }) {
 		setDraft("");
 	}
 	async function prepareInstall(item) {
+		installInvoker.current = document.activeElement;
 		const request = preflightRequest.current.start();
 		setPreflightRetry(null);
 		setConfirming(null);
@@ -2033,7 +2567,7 @@ function RankingsPage({ t }) {
 				item = (await readJson(`/dsh-top100/rankings?${new URLSearchParams({
 					view: "total",
 					category: "",
-					catalogScope: "plugins",
+					catalogScope: job.kind === "skill" ? "skills" : "plugins",
 					installAvailability: "all",
 					q: job.fullName,
 					offset: "0",
@@ -2108,6 +2642,10 @@ function RankingsPage({ t }) {
 					className: `activation activation-${job.activationState}`,
 					children: t(`activation_${job.activationState}`)
 				}) : null,
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SkillBackupList, {
+					jobs: [job],
+					t
+				}),
 				error$1 && errorKey ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "job-error-message",
 					role: "alert",
@@ -2535,7 +3073,7 @@ function RankingsPage({ t }) {
 									]
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 									className: "actions",
-									children: item.installed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									children: item.installed && item.type?.toLowerCase() !== "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 										type: "button",
 										className: "primary",
 										onClick: () => selectSection("installed"),
@@ -2545,7 +3083,7 @@ function RankingsPage({ t }) {
 										className: "primary",
 										disabled: !tracking.ready || busy !== null || preparing !== null,
 										onClick: () => void prepareInstall(item),
-										children: preparing === item.fullName ? t("preflighting") : t("reviewInstall")
+										children: preparing === item.fullName ? t("preflighting") : t(item.type?.toLowerCase() === "skill" ? "reviewSkillInstall" : "reviewInstall")
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 										className: "project-link",
 										href: item.url || `https://github.com/${item.fullName}`,
@@ -2576,6 +3114,8 @@ function RankingsPage({ t }) {
 					]
 				}) : null,
 				confirming ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+					ref: reviewDialog,
+					tabIndex: -1,
 					className: "mask",
 					role: "dialog",
 					"aria-modal": "true",
@@ -2734,11 +3274,21 @@ function RankingsPage({ t }) {
 				t,
 				tracking,
 				retryUpdate: updateRetry,
-				onRetryConsumed: () => setUpdateRetry(null)
+				onRetryConsumed: () => setUpdateRetry(null),
+				onBrowseSkills: () => {
+					resetPreflight();
+					setCatalogScope("skills");
+					setCategory(null);
+					setQuery("");
+					setDraft("");
+					setSection("rankings");
+				}
 			}) : /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DiagnosticsPage, { t }),
 			batch && installActivityOpen ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: "install-activity-mask",
 				children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+					ref: activityDialog,
+					tabIndex: -1,
 					className: "install-activity-dialog",
 					role: "dialog",
 					"aria-modal": "true",
@@ -3718,6 +4268,12 @@ const css = `
   grid-row: 1;
   min-width: 0;
 }
+.dsh-top100 .managed-page .toolbar { flex-wrap: wrap; align-items: center; }
+.dsh-top100 .managed-page .toolbar > input { flex: 1 1 180px; min-width: 0; }
+.dsh-top100 .managed-page .toolbar > button { flex-shrink: 0; white-space: nowrap; }
+.dsh-top100 .managed-page .toolbar > label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 100%; }
+.dsh-top100 .managed-page .toolbar select { max-width: 100%; }
+.dsh-top100 .managed-page code, .dsh-top100 .banner code { overflow-wrap: anywhere; }
 .dsh-top100 .managed-list .row-actions {
   grid-column: 2;
   grid-row: 2;
@@ -4666,7 +5222,7 @@ const zh = {
 	reviewUpdateTitle: "确认更新",
 	reviewUpdateHint: "核对每个插件的当前版本、锁定目标和执行影响后，再确认更新。",
 	confirmUpdate: "确认更新",
-	updatePreflightWait: "正在核验全部更新来源，全部通过后才会显示确认；尚未开始更新。",
+	updatePreflightWait: "每 20 项核验一组。检查失败或暂无更新的项目会单独列出，可更新项目核验后统一确认；尚未开始更新。",
 	updatePreflightCancelled: "已取消更新核验，未开始更新。",
 	updatePreflightIncomplete: "未获得全部插件的完整更新核验结果，未开始更新。请重试。",
 	updateSubmitting: "正在提交已确认的更新…",
@@ -4773,7 +5329,7 @@ const zh = {
 	searchInstalled: "搜索已安装插件或技能（Skill）",
 	loadingInstalled: "正在读取已安装项目…",
 	installedManagerTitle: "已安装插件管理",
-	installedManagerHint: "查看当前配置中的插件与技能，并进行启停、更新或卸载。",
+	installedManagerHint: "插件属于当前 Profile；Skills 为用户全局共享。Skill 卸载或替换前会完整备份原目录。",
 	profile: "当前配置（Profile）",
 	managedItems: "个已安装项目",
 	bundleKind: "插件（Bundle）",
@@ -4783,7 +5339,51 @@ const zh = {
 	installedSkillFallback: "已安装的本地技能（Skill）",
 	noChineseDescription: "暂无中文简介",
 	update: "更新",
-	updateAll: "全部更新",
+	checkUpdates: "检查更新",
+	noUpdateAvailable: "暂无更新",
+	refreshInstalled: "刷新列表与版本",
+	updateAll: "批量检查更新",
+	updateStrategy: "更新方式",
+	updatePreserve: "沿用原来源（推荐）",
+	updateLatest: "切换到最新版",
+	updatePreserveHint: "保留原版本范围、发布频道或 GitHub 分支。没有来源记录的精确 npm 版本只检查兼容版本。",
+	updateLatestHint: "明确改用 npm latest 或 GitHub 默认分支，可能跨主要版本或离开原频道；确认页会展示精确目标。",
+	updateBatchLimit: "本次检查列表前面的项目；其余项目可在完成后刷新或搜索分批处理：",
+	updateCheckResults: "未进入本次更新的项目",
+	updateCheckFailed: "检查失败",
+	updateStatus_current: "当前来源内暂无更新",
+	updateStatus_available: "当前来源内有可用更新",
+	updateStatus_failed: "版本检查失败，可刷新后重试",
+	updateStatus_unknown: "尚未核对远端版本或提交",
+	updateCheckedAt: "版本检查时间",
+	updateCheckDetails: "查看检查详情",
+	updateIssueCurrent: "目标与当前版本相同或更旧，已跳过。",
+	updateIssueStrategy: "无法确认原更新分支，请明确选择更新方式后重试。",
+	updateIssueFailed: "来源未通过检查。请查看详情，修复后重新检查。",
+	protectedManageHint: "宿主核心包和 Top100 自身不能在此修改。请沿用当前 DSH 的安装方式：Desktop 使用应用的更新入口；命令行用户在启动 DSH 的环境中维护对应 Profile。",
+	localManageHint: "本地 link/file 插件由源码目录维护。请在原目录拉取修改并重新构建，再按当前 DSH 的启动方式重启。",
+	maintenanceGuide: "查看安装与维护说明",
+	reviewSkillInstall: "安装 / 更新 Skill",
+	browseSkillUpdates: "去 Skills 目录检查更新",
+	skillReinstallHint: "在 Skills 目录找到原项目后，点击“安装 / 更新 Skill”核对来源。替换前会备份完整原目录。",
+	skillBackupSaved: "Skill 原内容已备份",
+	skillBackupSavedHint: "备份包含本地修改，可从以下目录找回。Skills 由所有 Profile 共用。",
+	retryFailedChecks: "重新检查失败项",
+	noUpdatesPrepared: "本次没有可确认的更新，请查看逐项检查结果。",
+	updateTarget: "更新来源",
+	sourceLatestVersion: "当前来源目标版本",
+	sourceMigrationTitle: "旧版频道依赖需要先整理",
+	sourceMigrationHint: "当前配置直接使用 beta/latest 等频道名，包管理器可能顺带更新未选择的插件。请先固定当前已安装版本并保留原频道，再执行安装、更新或卸载。",
+	sourceMigrationAction: "固定当前版本并保留频道",
+	sourceMigrationWorking: "正在核对并整理…",
+	sourceMigrationConfirm: "将下列依赖固定为当前已安装版本，并同步锁文件、保存原频道供以后检查更新。此操作不会下载、升级或运行安装脚本。确认这些变更？",
+	sourceMigrationComplete: "当前版本已固定，原频道已保留。现在可以重新检查更新。",
+	sourceMigrationFailed: "未确认整理成功。已刷新当前状态，请核对详情后重试；复杂工作区需要按原安装方式维护。",
+	globalSkill: "全局 Skill · 所有 Profile 共用",
+	skillModification_unchanged: "内容与安装记录一致",
+	skillModification_modified: "检测到本地修改，操作前会完整备份",
+	skillModification_unknown: "缺少可核对记录，操作前会完整备份",
+	descriptionLocale: "zh",
 	updateAvailable: "有可用更新",
 	uninstall: "卸载",
 	enable: "启用",
@@ -4798,7 +5398,7 @@ const zh = {
 	manageComplete: "操作完成。",
 	manageFailed: "部分操作失败，请查看对应插件的错误与恢复结果。",
 	manageCancelled: "操作已取消，请查看对应插件的恢复结果。",
-	confirmRemoveSkill: "确定卸载这个 Skill？",
+	confirmRemoveSkill: "这个 Skill 由所有 Profile 共用。卸载会影响所有 Profile；原目录及本地修改会完整保留到 DSH_HOME/skill-backups，操作结果会显示备份路径。确定卸载？",
 	confirmRemovePlugin: "确定卸载这个插件？",
 	browseOnly: "未识别安装源",
 	browseOnlyHint: "暂未识别到匹配当前项目的安装源，不代表无法安装；请前往 GitHub 查看说明。",
@@ -4951,7 +5551,7 @@ const zh = {
 	"risk_repository-identity_summary": "npm 包未能与目录仓库自动绑定",
 	"risk_repository-identity_detail": "包未声明可识别的 GitHub repository；精确版本已锁定，但发布者身份仍需人工判断。",
 	"risk_skill-content_summary": "Skill 是会影响模型行为的主动内容",
-	"risk_skill-content_detail": "将复制该 commit 中的 SKILL.md、脚本、模板和资源；安装器拒绝符号链接，但不把结构验证表述为安全审核。",
+	"risk_skill-content_detail": "将复制该 commit 的内容到所有 Profile 共用的全局 Skills。若同名内容变化，会先完整备份原目录与本地修改到 DSH_HOME/skill-backups，再替换；失败时尝试恢复。安装器拒绝符号链接，结构验证不等于安全审核。",
 	"risk_restart-required_summary": "写入成功后仍需重启并验证运行状态",
 	"risk_restart-required_detail": "安装后的配置检查只证明 Profile 可以组合，不代表插件已经在当前 DSH 进程中运行。",
 	trust_indexed: "已收录，结构待确认",
@@ -5008,7 +5608,7 @@ const en = {
 	reviewUpdateTitle: "Review updates",
 	reviewUpdateHint: "Review each plugin’s current version, pinned target and execution effects before confirming.",
 	confirmUpdate: "Confirm updates",
-	updatePreflightWait: "Verifying all update sources. Review opens only when all are ready; no updates have started.",
+	updatePreflightWait: "Checking groups of 20. Failed checks and unavailable updates are listed separately; review the available updates before anything is installed.",
 	updatePreflightCancelled: "Update verification cancelled. No updates have started.",
 	updatePreflightIncomplete: "Complete verification was not received for every plugin. No updates have started. Please retry.",
 	updateSubmitting: "Submitting the approved updates…",
@@ -5115,7 +5715,7 @@ const en = {
 	searchInstalled: "Search installed plugins or Skills",
 	loadingInstalled: "Loading installed items…",
 	installedManagerTitle: "Installed plugin management",
-	installedManagerHint: "Review plugins and Skills in this profile, then enable, disable, update, or uninstall them.",
+	installedManagerHint: "Plugins belong to this Profile. Skills are shared globally; their complete directory is backed up before removal or replacement.",
 	profile: "Profile",
 	managedItems: "items",
 	bundleKind: "Plugin (Bundle)",
@@ -5125,7 +5725,51 @@ const en = {
 	installedSkillFallback: "Installed local Skill",
 	noChineseDescription: "No Chinese summary available",
 	update: "Update",
-	updateAll: "Update all",
+	checkUpdates: "Check for updates",
+	noUpdateAvailable: "No update available",
+	refreshInstalled: "Refresh list and versions",
+	updateAll: "Check updates in batch",
+	updateStrategy: "Update source",
+	updatePreserve: "Keep original source (recommended)",
+	updateLatest: "Switch to latest",
+	updatePreserveHint: "Keep the original version range, release channel, or GitHub branch. Exact npm versions without source records stay within compatible versions.",
+	updateLatestHint: "Use npm latest or the GitHub default branch. This may cross major versions or leave the original channel; review the exact target before confirming.",
+	updateBatchLimit: "This run checks the first items shown. Refresh after completion or search to process the rest:",
+	updateCheckResults: "Items excluded from this update",
+	updateCheckFailed: "Check failed",
+	updateStatus_current: "No update within the current source",
+	updateStatus_available: "Update available within the current source",
+	updateStatus_failed: "Version check failed; refresh to retry",
+	updateStatus_unknown: "Remote version or commit has not been checked",
+	updateCheckedAt: "Version checked",
+	updateCheckDetails: "View check details",
+	updateIssueCurrent: "The target is the same or older; this item was skipped.",
+	updateIssueStrategy: "The original branch could not be established. Choose an update strategy and retry.",
+	updateIssueFailed: "Source verification failed. Review the details, resolve the issue and retry.",
+	protectedManageHint: "Host packages and Top100 itself cannot be changed here. Use your existing DSH installation method: the app update controls for Desktop, or the launching environment and matching Profile for CLI installations.",
+	localManageHint: "Manage link/file plugins in their original source directory. Pull changes and rebuild there, then restart DSH using your current launch method.",
+	maintenanceGuide: "Installation and maintenance guide",
+	reviewSkillInstall: "Install / update Skill",
+	browseSkillUpdates: "Check updates in Skills",
+	skillReinstallHint: "Find the original project in Skills and choose Install / update Skill to review its source. The complete existing directory is backed up before replacement.",
+	skillBackupSaved: "Original Skill content backed up",
+	skillBackupSavedHint: "Local edits are included. Recover files from the directories below. Skills are shared by every Profile.",
+	retryFailedChecks: "Retry failed checks",
+	noUpdatesPrepared: "No updates are ready to confirm. Review the results for each item.",
+	updateTarget: "Update source",
+	sourceLatestVersion: "Target version in current source",
+	sourceMigrationTitle: "Legacy channel dependencies need migration",
+	sourceMigrationHint: "This Profile uses moving tags such as beta/latest directly. The package manager may update unselected plugins. Pin the currently installed versions and preserve their channels before installing, updating or removing bundles.",
+	sourceMigrationAction: "Pin current versions and keep channels",
+	sourceMigrationWorking: "Checking and migrating…",
+	sourceMigrationConfirm: "Pin these dependencies to their currently installed versions, synchronize the lockfile, and record the original channels for future update checks. This does not download, upgrade, or run install scripts. Apply these changes?",
+	sourceMigrationComplete: "Current versions are pinned and original channels are saved. You can check for updates again.",
+	sourceMigrationFailed: "Migration success could not be confirmed. The current state has been refreshed; review the details before retrying. Complex workspaces require their original maintenance workflow.",
+	globalSkill: "Global Skill · shared by all Profiles",
+	skillModification_unchanged: "Matches the installed content record",
+	skillModification_modified: "Local changes detected; a complete backup will be kept",
+	skillModification_unknown: "No matching record; a complete backup will be kept",
+	descriptionLocale: "en",
 	updateAvailable: "Update available",
 	uninstall: "Uninstall",
 	enable: "Enable",
@@ -5140,7 +5784,7 @@ const en = {
 	manageComplete: "Operation complete.",
 	manageFailed: "Some operations failed. Check the affected plugins for errors and recovery results.",
 	manageCancelled: "Operations were cancelled. Check the affected plugins for recovery results.",
-	confirmRemoveSkill: "Uninstall this Skill?",
+	confirmRemoveSkill: "This Skill is shared by every Profile. Removal affects all Profiles. Its entire directory and local changes will be kept in DSH_HOME/skill-backups; the result will show the backup path. Uninstall it?",
 	confirmRemovePlugin: "Uninstall this plugin?",
 	browseOnly: "No install source identified",
 	browseOnlyHint: "No matching install source has been identified; this does not mean installation is impossible. Check GitHub for instructions.",
@@ -5293,7 +5937,7 @@ const en = {
 	"risk_repository-identity_summary": "The npm package could not be linked to the catalog repository",
 	"risk_repository-identity_detail": "The package does not declare a recognizable GitHub repository. The exact version is pinned, but publisher identity still needs manual review.",
 	"risk_skill-content_summary": "A Skill is active content that can influence model behavior",
-	"risk_skill-content_detail": "SKILL.md, scripts, templates, and resources from this commit will be copied. The installer rejects symbolic links, but structural validation is not a security review.",
+	"risk_skill-content_detail": "Content from this commit is installed into global Skills shared by every Profile. Changed content with the same name replaces the existing directory only after a complete backup, including local changes, is kept in DSH_HOME/skill-backups. Recovery is attempted on failure. Symbolic links are rejected; structural validation is not a security review.",
 	"risk_restart-required_summary": "Restart and runtime verification are still required after files are written",
 	"risk_restart-required_detail": "The post-install check only proves that the Profile composes; it does not prove that the plugin is running in the current DSH process.",
 	trust_indexed: "Listed; structure unconfirmed",

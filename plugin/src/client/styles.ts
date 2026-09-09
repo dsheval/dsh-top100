@@ -927,6 +927,12 @@ export const css = `
   grid-row: 1;
   min-width: 0;
 }
+.dsh-top100 .managed-page .toolbar { flex-wrap: wrap; align-items: center; }
+.dsh-top100 .managed-page .toolbar > input { flex: 1 1 180px; min-width: 0; }
+.dsh-top100 .managed-page .toolbar > button { flex-shrink: 0; white-space: nowrap; }
+.dsh-top100 .managed-page .toolbar > label { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 100%; }
+.dsh-top100 .managed-page .toolbar select { max-width: 100%; }
+.dsh-top100 .managed-page code, .dsh-top100 .banner code { overflow-wrap: anywhere; }
 .dsh-top100 .managed-list .row-actions {
   grid-column: 2;
   grid-row: 2;

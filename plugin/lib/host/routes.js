@@ -12,18 +12,43 @@ import { allowPackageBuild } from "../install/allow-builds.js";
 import { withPnpmRecovery } from "../install/pnpm-compat.js";
 import { dropFromManifest, INBOX_BUNDLES, isDshProfileName, profileDir, readInstalled, readInstalledManifest, readProfileManifestSnapshot, restoreProfileManifest, } from "./profile.js";
 import { buildDiagnosticReport } from "./diagnose.js";
-import { cleanupAfterUninstall, listManagedPlugins, resolveUpdateTarget, uninstallSkill } from "./manage.js";
+import { cleanupAfterUninstall, listManagedPlugins } from "./manage.js";
+import { backupSkill, inspectSkill, withSkillMutationLock } from "./skill-management.js";
+import { preflightSourceMigration, applySourceMigration } from "./source-migration.js";
+import { parseNpmSelector } from "../install/npm-selector.js";
 import { isProtectedPackage, parseDshPatchText, rowIdsForPackage, setPackageEnabled, userPatchPackageReferences, userPatchPath, } from "./patch-toggle.js";
-import { installSkill } from "../install/skill-install.js";
+import { installSkill, rollbackInstalledSkill } from "../install/skill-install.js";
 import { consumeInstallApproval, createInstallPreflight, validateInstallApprovals } from "./install-preflight.js";
-import { createUpdatePreflight, validateUpdateApprovals, assertUpdateUnchanged, discardUpdateApprovals } from "./update-preflight.js";
-import { assertProvenanceLedgerReadable, recordInstallProvenance } from "./provenance.js";
+import { createUpdatePreflight, validateUpdateApprovals, assertUpdateUnchanged, discardUpdateApprovals, UpdateNotAvailableError, startUpdatePreflightSession, finalizeUpdatePreflightSession, discardUpdatePreflightSession } from "./update-preflight.js";
+import { assertProvenanceLedgerReadable, recordInstallProvenance, readSkillProvenance } from "./provenance.js";
+import { MAX_UPDATE_BATCH_SIZE } from "../shared/types.js";
 import { isPluginCategoryId } from "../shared/categories.js";
 const MAX_BATCH_SIZE = 20;
 // Twenty scoped npm names plus their approval records can exceed the small-route default.
 const MAX_BATCH_BODY_BYTES = 32 * 1024;
+const MAX_UPDATE_BODY_BYTES = 128 * 1024;
 const MAX_SKILL_CONCURRENCY = 3;
 const TERMINAL_PHASES = ["installed", "failed", "cancelled"];
+function hasLegacyTagSources(config) {
+    const path = join(profileDir(config.profile, config.profileDirectory), "package.json");
+    if (!existsSync(path))
+        return false;
+    let manifest;
+    try {
+        manifest = JSON.parse(readFileSync(path, "utf8"));
+    }
+    catch {
+        throw new Error("Profile package.json 不可读取，请先修复配置");
+    }
+    return ["dependencies", "devDependencies", "optionalDependencies"].some((field) => {
+        const entries = manifest[field];
+        return entries !== null && typeof entries === "object" && Object.values(entries).some((spec) => typeof spec === "string" && parseNpmSelector(spec)?.kind === "tag");
+    });
+}
+function assertFixedDependencySources(config) {
+    if (hasLegacyTagSources(config))
+        throw Object.assign(new Error("检测到旧版可变频道依赖；pnpm 可能顺带更新其他插件。请先到“已安装”页确认“固定当前版本并保留频道”，再重新操作。"), { code: "source-migration-required" });
+}
 class SubmissionError extends Error {
     status = 409;
 }
@@ -144,6 +169,7 @@ function id(prefix) {
     return `${prefix}-${Date.now().toString(36)}-${nextId.toString(36)}`;
 }
 function publicJob(job) {
+    const skillBackups = job.skillBackups?.filter((backup) => existsSync(backup.path));
     return {
         id: job.id,
         batchId: job.batchId,
@@ -153,6 +179,7 @@ function publicJob(job) {
         kind: job.kind,
         phase: job.phase,
         lastLine: job.lastLine,
+        ...(skillBackups?.length ? { skillBackups } : {}),
         error: job.error,
         message: job.message,
         requiresRestart: job.requiresRestart,
@@ -216,6 +243,7 @@ async function runApprovedUpdate(job, config, approval, commandRuntime) {
     let before = null;
     let mutationStarted = false;
     try {
+        assertFixedDependencySources(config);
         assertUpdateUnchanged(approval, config.profile, config.profileDirectory);
         assertProvenanceLedgerReadable(config);
         updateJob(job, "validating", { lastLine: "正在检查更新前的 DSH 配置" });
@@ -228,6 +256,7 @@ async function runApprovedUpdate(job, config, approval, commandRuntime) {
         job.controller.signal.throwIfAborted();
         assertUpdateUnchanged(approval, config.profile, config.profileDirectory);
         before = dependencySnapshot(config, approval.name);
+        assertFixedDependencySources(config);
         mutationStarted = true;
         if (approval.bundleTarget.needsBuildApproval) {
             if (approval.bundleTarget.buildApprovalKeys.length === 0)
@@ -285,8 +314,8 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
                 if (action !== "uninstall")
                     throw new Error("Skill 不支持从排行页更新");
                 updateJob(job, "installing", { lastLine: "正在移除 Skill" });
-                uninstallSkill(name);
-                updateJob(job, "installed", { message: "uninstalled", requiresRestart: false, activationState: "not-applicable", lastLine: "已卸载" });
+                const removed = await withSkillMutationLock(() => backupSkill(name), job.controller.signal);
+                updateJob(job, "installed", { message: "uninstalled", requiresRestart: false, activationState: "not-applicable", skillBackups: [{ name, path: removed.backupPath }], lastLine: `已从所有 Profile 移除；完整内容已保留在 ${removed.backupPath}` });
             }
             catch (error) {
                 failJob(job, error);
@@ -316,6 +345,7 @@ function enqueueManageJob(batch, config, action, name, kind, commandRuntime, all
         timer.unref?.();
         try {
             const spec = readInstalled(config.profile, config.profileDirectory)[name];
+            assertFixedDependencySources(config);
             if (!spec)
                 throw new Error("plugin is not installed");
             if (isProtectedPackage(name))
@@ -480,7 +510,7 @@ async function prepareJob(job, config, commandRuntime) {
         const entry = approval.entry;
         if (entry.type?.toLowerCase() === "skill") {
             updateJob(job, "queued", { lastLine: "等待 Skill 下载队列" });
-            enqueueSkill(async () => {
+            enqueueSkill(async () => withSkillMutationLock(async () => {
                 if (job.cancelRequested) {
                     updateJob(job, "cancelled");
                     return;
@@ -490,8 +520,20 @@ async function prepareJob(job, config, commandRuntime) {
                     const commit = approval.skillSource?.commit;
                     if (!commit)
                         throw new Error("Skill 安装确认缺少不可变 commit");
-                    const skills = await installSkill(entry.fullName, { signal: job.controller.signal, commit });
+                    const skills = await installSkill(entry.fullName, { signal: job.controller.signal, commit, replaceExisting: true });
+                    job.skillBackups = skills.filter((item) => item.backupPath).map((item) => ({ name: item.name, path: item.backupPath }));
                     if (job.cancelRequested) {
+                        const recoveryErrors = [];
+                        for (const skill of skills.filter((item) => !item.alreadyInstalled).reverse()) {
+                            try {
+                                rollbackInstalledSkill(skill);
+                            }
+                            catch (error) {
+                                recoveryErrors.push(error instanceof Error ? error.message : String(error));
+                            }
+                        }
+                        if (recoveryErrors.length)
+                            throw new Error(`Skill 取消后部分内容未能恢复：${recoveryErrors.join("；")}`);
                         updateJob(job, "cancelled");
                         return;
                     }
@@ -500,16 +542,16 @@ async function prepareJob(job, config, commandRuntime) {
                     }
                     catch (error) {
                         const cleanupErrors = [];
-                        for (const skill of skills.filter((item) => !item.alreadyInstalled)) {
+                        for (const skill of skills.filter((item) => !item.alreadyInstalled).reverse()) {
                             try {
-                                uninstallSkill(skill.name);
+                                rollbackInstalledSkill(skill);
                             }
                             catch (cleanupError) {
                                 cleanupErrors.push(cleanupError instanceof Error ? cleanupError.message : String(cleanupError));
                             }
                         }
                         throw new Error([
-                            `Skill 来源台账写入失败，已撤销本次新增内容：${error instanceof Error ? error.message : String(error)}`,
+                            `Skill 来源台账写入失败，已尝试恢复本次变更：${error instanceof Error ? error.message : String(error)}`,
                             cleanupErrors.length > 0 ? `清理失败：${cleanupErrors.join("；")}` : "",
                         ].filter(Boolean).join("；"));
                     }
@@ -518,15 +560,16 @@ async function prepareJob(job, config, commandRuntime) {
                         requiresRestart: false,
                         activationState: entry.install?.needsConfig ? "configuration-required" : "not-applicable",
                         provenance: approval.preflight.provenance,
-                        lastLine: entry.install?.needsConfig
+                        lastLine: (entry.install?.needsConfig
                             ? "Skill 已复制并记录来源；完成作者要求的配置后，在后续 Agent 会话中验证可见性"
-                            : "Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性",
+                            : "全局 Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性")
+                            + skills.filter((item) => item.backupPath).map((item) => `；原内容备份：${item.backupPath}`).join(""),
                     });
                 }
                 catch (error) {
                     failJob(job, error);
                 }
-            });
+            }, job.controller.signal).catch((error) => failJob(job, error)));
             return;
         }
         const resolvedTarget = approval.bundleTarget;
@@ -575,6 +618,7 @@ async function prepareJob(job, config, commandRuntime) {
                     });
                     return;
                 }
+                assertFixedDependencySources(config);
                 before = dependencySnapshot(config, resolvedTarget.packageName);
                 if (buildApprovalKeys.length > 0)
                     allowPackageBuild(config.profile, buildApprovalKeys, config.profileDirectory);
@@ -1046,10 +1090,21 @@ export function mountRoutes(host, config, commandRuntime) {
                     const document = await loadCachedRankings(dataUrl);
                     // Populate or refresh the full catalog for later searches without delaying local management.
                     void safeLoad(config).catch(() => undefined);
-                    const items = (await listManagedPlugins(config.profile, document, config.profileDirectory)).filter((item) => {
+                    const items = (await listManagedPlugins(config.profile, document, config.profileDirectory, queryOf(request).get("refresh") === "1")).map((item) => {
+                        if (item.kind !== "skill")
+                            return { ...item, scope: "profile" };
+                        try {
+                            const evidence = readSkillProvenance(item.name, config.profile, config.profileDirectory);
+                            const inspected = inspectSkill(item.name, evidence ?? undefined);
+                            return { ...item, scope: "global", modificationState: inspected.modificationState };
+                        }
+                        catch {
+                            return { ...item, scope: "global", modificationState: "unknown" };
+                        }
+                    }).filter((item) => {
                         return !q || `${item.name} ${item.description} ${item.descriptionZh} ${item.fullName ?? ""}`.toLowerCase().includes(q);
                     });
-                    sendJson(response, 200, { profile: config.profile, query: q, total: items.length, items });
+                    sendJson(response, 200, { profile: config.profile, query: q, total: items.length, items, sourceMigrationRequired: hasLegacyTagSources(config) });
                 }
                 catch (error) {
                     sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) });
@@ -1086,6 +1141,67 @@ export function mountRoutes(host, config, commandRuntime) {
         }),
         host.webServer.register({
             kind: "exact",
+            path: "/dsh-top100/source-migration",
+            async handler(request, response) {
+                if (request.method !== "POST" || !sameOrigin(request)) {
+                    sendJson(response, 403, { error: "same-origin POST required" });
+                    return;
+                }
+                try {
+                    const body = readBodyRecord(await readJsonBody(request));
+                    if (body.action === "preflight") {
+                        sendJson(response, 200, preflightSourceMigration(config.profile, config.profileDirectory));
+                        return;
+                    }
+                    if (body.action !== "apply" || typeof body.approvalToken !== "string" || !body.approvalToken) {
+                        sendJson(response, 400, { error: "valid action and approvalToken are required" });
+                        return;
+                    }
+                    if ([...jobs.values()].some((job) => job.profile === config.profile && !TERMINAL_PHASES.includes(job.phase))) {
+                        sendJson(response, 409, { error: "当前 Profile 有安装任务，请等待完成后重新确认迁移" });
+                        return;
+                    }
+                    // Applying is synchronous, so a queued package operation cannot interleave file writes.
+                    sendJson(response, 200, applySourceMigration(body.approvalToken, config.profile, config.profileDirectory));
+                }
+                catch (error) {
+                    sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
+                }
+            },
+        }),
+        host.webServer.register({
+            kind: "exact",
+            path: "/dsh-top100/update-preflight-session",
+            async handler(request, response) {
+                if (request.method !== "POST" || !sameOrigin(request)) {
+                    sendJson(response, 403, { error: "same-origin POST required" });
+                    return;
+                }
+                try {
+                    const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
+                    if (body.action === "start") {
+                        sendJson(response, 200, startUpdatePreflightSession(config.profile, config.profileDirectory));
+                        return;
+                    }
+                    if (typeof body.sessionToken !== "string" || !body.sessionToken || !["finalize", "cancel"].includes(String(body.action))) {
+                        sendJson(response, 400, { error: "valid action and sessionToken are required" });
+                        return;
+                    }
+                    if (body.action === "cancel") {
+                        discardUpdatePreflightSession(body.sessionToken, config.profile, config.profileDirectory);
+                        sendJson(response, 200, { cancelled: true });
+                    }
+                    else {
+                        sendJson(response, 200, { items: finalizeUpdatePreflightSession(body.sessionToken, config.profile, config.profileDirectory) });
+                    }
+                }
+                catch (error) {
+                    sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
+                }
+            },
+        }),
+        host.webServer.register({
+            kind: "exact",
             path: "/dsh-top100/update-preflight",
             async handler(request, response) {
                 if (request.method !== "POST" || !sameOrigin(request)) {
@@ -1101,6 +1217,16 @@ export function mountRoutes(host, config, commandRuntime) {
                 try {
                     const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
                     const names = body.names;
+                    assertFixedDependencySources(config);
+                    const strategy = body.strategy ?? "preserve";
+                    if (strategy !== "preserve" && strategy !== "latest") {
+                        sendJson(response, 400, { error: "invalid update strategy" });
+                        return;
+                    }
+                    if (body.sessionToken !== undefined && (typeof body.sessionToken !== "string" || !body.sessionToken)) {
+                        sendJson(response, 400, { error: "invalid update session" });
+                        return;
+                    }
                     if (!Array.isArray(names) || names.length === 0 || names.length > MAX_BATCH_SIZE
                         || names.some((name) => typeof name !== "string" || !name.trim() || name.trim().length > 214)
                         || new Set(names.map((name) => name.trim())).size !== names.length) {
@@ -1108,19 +1234,34 @@ export function mountRoutes(host, config, commandRuntime) {
                         return;
                     }
                     const items = [];
+                    const issues = [];
                     for (const name of names) {
                         controller.signal.throwIfAborted();
-                        const approval = await createUpdatePreflight(name.trim(), config.profile, config.profileDirectory, controller.signal);
-                        issuedTokens.push(approval.preflight.approvalToken);
-                        items.push({ name: approval.name, currentVersion: approval.currentVersion, preflight: approval.preflight });
+                        try {
+                            const approval = await createUpdatePreflight(name.trim(), config.profile, config.profileDirectory, controller.signal, strategy, body.sessionToken);
+                            issuedTokens.push(approval.preflight.approvalToken);
+                            items.push({ name: approval.name, currentVersion: approval.currentVersion, preflight: approval.preflight });
+                        }
+                        catch (error) {
+                            controller.signal.throwIfAborted();
+                            if (body.partial !== true)
+                                throw error;
+                            issues.push({ name: name.trim(), status: error instanceof UpdateNotAvailableError ? "current" : "failed",
+                                message: error instanceof Error ? error.message : String(error),
+                                ...(error instanceof Error && "code" in error && typeof error.code === "string" ? { code: error.code } : {}),
+                            });
+                        }
                     }
                     controller.signal.throwIfAborted();
-                    sendJson(response, 200, { items });
+                    sendJson(response, 200, { items, ...(body.partial === true ? { issues } : {}) });
                     delivered = true;
                 }
                 catch (error) {
                     if (!controller.signal.aborted)
-                        sendJson(response, 422, { error: error instanceof Error ? error.message : String(error) });
+                        sendJson(response, 422, {
+                            error: error instanceof Error ? error.message : String(error),
+                            ...(error instanceof Error && "code" in error && typeof error.code === "string" ? { code: error.code } : {}),
+                        });
                 }
                 finally {
                     response.off("close", onClose);
@@ -1138,23 +1279,26 @@ export function mountRoutes(host, config, commandRuntime) {
                     return;
                 }
                 try {
-                    const body = readBodyRecord(await readJsonBody(request, MAX_BATCH_BODY_BYTES));
+                    const body = readBodyRecord(await readJsonBody(request, MAX_UPDATE_BODY_BYTES));
                     const submission = prepareSubmission(config, "/dsh-top100/manage", body);
                     if (submission?.replay) {
                         sendJson(response, 202, submission.replay);
                         return;
                     }
                     const action = body.action === "update" || body.action === "uninstall" ? body.action : null;
+                    const maximum = action === "update" ? MAX_UPDATE_BATCH_SIZE : MAX_BATCH_SIZE;
+                    if (action !== "update" && Buffer.byteLength(JSON.stringify(body)) > MAX_BATCH_BODY_BYTES)
+                        throw new Error("request body too large");
                     const names = Array.isArray(body.names)
                         ? body.names.filter((value) => typeof value === "string").map((value) => value.trim()).filter(Boolean)
                         : typeof body.name === "string" && body.name.trim() ? [body.name.trim()] : [];
                     const unique = [...new Set(names)];
                     const kind = body.kind === "skill" ? "skill" : "bundle";
                     const forceUnreadablePatch = body.force === true;
-                    if (!action || unique.length === 0 || unique.length > MAX_BATCH_SIZE
-                        || (Array.isArray(body.names) && (body.names.length > MAX_BATCH_SIZE || body.names.some((name) => typeof name !== "string" || !name.trim())))
+                    if (!action || unique.length === 0 || unique.length > maximum
+                        || (Array.isArray(body.names) && (body.names.length > maximum || body.names.some((name) => typeof name !== "string" || !name.trim())))
                         || (kind === "bundle" && unique.some((name) => name.length > 214))) {
-                        sendJson(response, 400, { error: `action and 1-${MAX_BATCH_SIZE} names are required` });
+                        sendJson(response, 400, { error: `action and 1-${maximum} names are required` });
                         return;
                     }
                     if (kind === "skill" && action !== "uninstall") {
@@ -1171,10 +1315,6 @@ export function mountRoutes(host, config, commandRuntime) {
                             }
                             if (isProtectedPackage(name)) {
                                 sendJson(response, 403, { error: "该插件属于宿主或本排行插件，不能在这里管理" });
-                                return;
-                            }
-                            if (action === "update" && !resolveUpdateTarget(name, spec)) {
-                                sendJson(response, 400, { error: "本地 link/file 插件请在源码目录更新" });
                                 return;
                             }
                             if (action === "uninstall") {

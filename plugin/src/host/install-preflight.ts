@@ -121,7 +121,7 @@ export async function createInstallPreflight(entry: RankingEntry, profile: strin
         code: "skill-content",
         severity: "warning",
         summary: "Skill 是会影响模型行为的主动内容",
-        detail: "将复制该 commit 中的 SKILL.md、脚本、模板和资源；安装器拒绝符号链接，但不把结构验证表述为安全审核。",
+        detail: "将复制该 commit 的内容到所有 Profile 共用的全局 Skills。若同名内容变化，会先完整备份原目录与本地修改到 DSH_HOME/skill-backups，再替换；失败时尝试恢复。安装器拒绝符号链接，结构验证不等于安全审核。",
       }],
       requiresExplicitApproval: true,
       activationExpectation: entry.install?.needsConfig ? "configuration-required" : "not-applicable",

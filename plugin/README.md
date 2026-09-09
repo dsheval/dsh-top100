@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.2"><img alt="正式版本 v1.3.2" src="https://img.shields.io/badge/release-v1.3.2-2f6f68?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.3"><img alt="正式版本 v1.3.3" src="https://img.shields.io/badge/release-v1.3.3-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
   <a href="https://www.dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="https://github.com/dsheval/dsh-top100/blob/main/CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
@@ -49,7 +49,7 @@ Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现�
 需要 **Node.js 22.13+** 和 **DSH Web 0.1.0-rc.6+**。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
+npx @deepseek-ai/dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.3
 npx @deepseek-ai/dsh web
 ```
 
@@ -60,7 +60,7 @@ npx @deepseek-ai/dsh web
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@dsheval/dsh-top100-plugin@1.3.2'
+  - '@dsheval/dsh-top100-plugin@1.3.3'
 ```
 
 默认文件位于用户主目录下的 `.dsh/profiles/web/pnpm-workspace.yaml`；设置了 `DSH_HOME` 时使用该目录下的 `profiles/web/pnpm-workspace.yaml`。首次安装命令会准备 Profile；尚未创建 Profile 时，可先运行 `npx @deepseek-ai/dsh plugin --profile web list`。若 Profile 已存在但缺少 `pnpm-workspace.yaml`，请在该 Profile 目录中创建此文件，再加入上述配置。全局或源码用户需沿用各自的命令前缀。
@@ -68,7 +68,7 @@ minimumReleaseAgeExclude:
 保存后，用同一种方式重新安装：
 
 ```sh
-npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.2
+npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.3
 ```
 
 该例外只放行这个版本，其他依赖仍遵守原等待期；如果报错指向其他包，应单独核对该包。后续升级须使用新版安装指引，不要沿用旧版本例外。
@@ -106,6 +106,16 @@ npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.
 
 </details>
 
+## 更新插件与保留 Skill 修改
+
+“已安装”页默认沿用原版本范围、npm 频道或 GitHub 分支。通过 Top100 安装时会保存精确版本及原来源记录；没有来源记录的精确 npm 版本按兼容范围检查（`1.x` 及以上保留主要版本，`0.x` 保留次要版本）。只有明确选择“切换到最新版”才改用 npm `latest` 或 GitHub 默认分支。无法确认原分支的 GitHub SHA 安装需要明确选择更新方式。
+
+当前版本已最新时不会重复安装，也不会把降级当成更新。列表区分版本检查失败和暂无更新，可主动刷新。批量检查每组最多 20 项，单次最多 200 项；失败和无需更新的项目单独列出，可更新项统一确认后按 Profile 串行执行。检查会话最长 1 小时，全部核验结束后有 10 分钟确认时间；过期需重新核验。
+
+旧安装若直接使用 `beta/latest` 等频道名，pnpm 可能在操作其他包时顺带更新它。“已安装”页会要求先确认“固定当前版本并保留频道”：只把当前版本写成精确依赖、同步锁文件，并保存原频道；不下载、不升级、不执行脚本。该整理支持独立 Profile 的 pnpm v9 锁文件，复杂 workspace、自定义 hook 或范围外依赖会明确停止，需按原工作区方式维护。来源记录注明其依据是既有安装与本地锁文件，后续更新仍重新核验远端目标。
+
+Skills 由所有 Profile 共用。在 Skills 目录点击“安装 / 更新 Skill”即可核对来源并替换原内容；替换或卸载前会将整个原目录移到 `$DSH_HOME/skill-backups/`（未设置 `DSH_HOME` 时为 `~/.dsh/skill-backups/`）。备份包括用户新增文件和本地修改，操作结果会显示路径。失败或取消会尝试恢复原目录；遇到操作期间的外部修改时保留现场和备份，并提示处理。需要恢复时先核对当前目录中的新修改，再从备份目录取回所需文件。
+
 ## 在对话中获取推荐
 
 安装插件后，可以在 DSH 对话中直接询问：
@@ -130,7 +140,7 @@ npx @deepseek-ai/dsh plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.
 
 ```sh
 cd /path/to/deepseek-harness
-pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
+pnpm dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.3
 pnpm dsh web
 ```
 
@@ -139,7 +149,7 @@ pnpm dsh web
 如果 `dsh --version` 可以正常返回，也可以直接使用：
 
 ```sh
-dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.2
+dsh plugin --profile web add @dsheval/dsh-top100-plugin@1.3.3
 dsh web
 ```
 

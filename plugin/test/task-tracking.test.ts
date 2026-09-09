@@ -36,7 +36,8 @@ function draw() {
   const managed = child ? host.run("managed", () => ManagedPage(child.props)) : null;
   if (!child) host.drop("managed");
   const reviewElement = elements(managed).find((e) => e.type === UpdateReview);
-  const review = reviewElement ? UpdateReview(reviewElement.props) : null;
+  const review = reviewElement ? host.run("review", () => UpdateReview(reviewElement.props)) : null;
+  if (!reviewElement) host.drop("review");
   const statusElement = elements(root).find((e) => e.type === TaskStatus)!;
   const status = TaskStatus(statusElement.props);
   host.flush();
@@ -83,6 +84,12 @@ beforeEach(() => {
     if (url.includes("rankings?")) return Promise.resolve(json({ items: [], total: 0, categories: [], generatedAt: "snapshot", cache: { ageMs: null }, scopeCounts: { plugins: 0, skills: 0 } }));
     if (url.includes("managed?")) return Promise.resolve(json({ items: [{ name: "demo", kind: "bundle", descriptionZh: "演示", version: "1.0.0", enabled: true, activationState: "live", updateAvailable: true, local: false, protected: false }], total: 1, profile: "web" }));
     if (url === "/dsh-top100/update-preflight") return Promise.resolve(json({ items: [reviewItem] }));
+    if (url === "/dsh-top100/update-preflight-session") {
+      const { action } = JSON.parse(init!.body as string);
+      return Promise.resolve(json(action === "start" ? { sessionToken: "test-session", expiresAt: Date.now() + 3_600_000 }
+        : action === "finalize" ? { items: [{ ...reviewItem, preflight: { ...reviewItem.preflight, expiresAt: Date.now() + 600_000 } }] }
+        : { cancelled: true }));
+    }
     if (url === "/dsh-top100/manage") {
       const id = JSON.parse(init!.body as string).submissionId as string;
       if (tombstones.has(id)) return Promise.resolve(new Response(JSON.stringify({ error: "Submission cancelled" }), { status: 409 }));

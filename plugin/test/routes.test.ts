@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { tmpdir } from "node:os";
@@ -14,6 +14,8 @@ import { clearInstallApprovals, createInstallPreflight } from "../src/host/insta
 import { clearInstallVerificationCache } from "../src/install/install-verify.js";
 import type { InstallResult, RankingEntry } from "../src/shared/types.js";
 import type { PluginCommandRuntime } from "../src/install/dsh-cli.js";
+import * as skillInstaller from "../src/install/skill-install.js";
+import { backupSkill, inspectSkill } from "../src/host/skill-management.js";
 
 type Handler = (request: IncomingMessage, response: ServerResponse) => void | Promise<void>;
 const temporaryProfiles: string[] = [];
@@ -26,6 +28,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   invalidateCatalog();
   clearInstallApprovals();
   clearUpdateApprovals();
@@ -105,7 +108,7 @@ async function updateApproval(harness: ReturnType<typeof routeHarness>, director
     name: "demo", version: "2.0.0", dsh: { bundle: { patch: "./cordis.patch.yml" } },
     dist: { integrity: "sha512-demo-test" }, repository: "https://github.com/acme/demo",
   }))));
-  const result = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: ["demo"] } });
+  const result = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: ["demo"], strategy: "latest" } });
   expect(result.status).toBe(200);
   const items = result.body.items as Array<{ name: string; preflight: { approvalToken: string } }>;
   return items.map((item) => ({ name: item.name, approvalToken: item.preflight.approvalToken, risksAccepted: true }));
@@ -127,6 +130,32 @@ async function freshInstallApproval(profile = "web") {
   return { fullName: "acme/fresh", approvalToken: approval.preflight.approvalToken, risksAccepted: true };
 }
 
+async function skillInstallApproval(profile = "web") {
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify(
+    url.includes("/commits/") ? { sha: "a".repeat(40) } : { default_branch: "main" },
+  ))));
+  const approval = await createInstallPreflight({
+    rank: 1, fullName: "acme/skills", name: "skills", owner: "acme",
+    description: "Skills", descriptionZh: "技能", stars: 1, dailyStars: 0, weeklyStars: 0,
+    hotScore: 0, forks: 0, openIssues: 0, language: null, homepage: null, license: null,
+    topics: [], tags: [], type: "skill", sources: [], url: "https://github.com/acme/skills",
+    pushedAt: "", createdAt: "", updatedAt: "",
+  } satisfies RankingEntry, profile);
+  return { fullName: "acme/skills", approvalToken: approval.preflight.approvalToken, risksAccepted: true };
+}
+
+function stageSkillReplacement(home: string, name: string): skillInstaller.InstalledSkill {
+  const target = join(home, "skills", name);
+  mkdirSync(target, { recursive: true });
+  writeFileSync(join(target, "SKILL.md"), `original ${name}`);
+  writeFileSync(join(target, "notes.txt"), `local edits ${name}`);
+  const backup = backupSkill(name);
+  mkdirSync(target);
+  writeFileSync(join(target, "SKILL.md"), `replacement ${name}`);
+  const inspection = inspectSkill(name);
+  return { name, alreadyInstalled: false, commit: "a".repeat(40), digest: inspection.digest!, files: inspection.files, backupPath: backup.backupPath };
+}
+
 async function waitForBatch(
   request: ReturnType<typeof routeHarness>["request"],
   batchId: string,
@@ -141,6 +170,192 @@ async function waitForBatch(
 }
 
 describe("plugin lifecycle routes", () => {
+  it.each(["dependencies", "optionalDependencies"])("blocks package mutations while %s contains an unmigrated channel", async (section) => {
+    const directory = profileFixture("legacy-channel");
+    const path = join(directory, "package.json");
+    const manifest = JSON.parse(readFileSync(path, "utf8"));
+    manifest[section] = { ...manifest[section], demo: "beta" };
+    writeFileSync(path, JSON.stringify(manifest));
+    const original = readFileSync(path, "utf8");
+    const harness = routeHarness();
+    const runPlugin = vi.fn(async () => ok());
+    mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" }, { runPlugin, checkProfile: async () => ok(), cancelActive: () => false });
+    const preflight = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: ["demo"], strategy: "latest" } });
+    expect(preflight.status).toBe(422);
+    expect(preflight.body.code).toBe("source-migration-required");
+    const accepted = await harness.request("/dsh-top100/manage", { method: "POST", body: { action: "uninstall", name: "demo", kind: "bundle" } });
+    expect(accepted.status).toBe(202);
+    const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+    expect(job.phase).toBe("failed");
+    expect(job.error).toContain("固定当前版本并保留频道");
+    expect(runPlugin).not.toHaveBeenCalled();
+    expect(readFileSync(path, "utf8")).toBe(original);
+  });
+  it("reviews groups separately and runs more than twenty approved updates while excluding failed and current checks", async () => {
+    const directory = profileFixture("bulk-update");
+    const names = Array.from({ length: 25 }, (_, index) => `bulk-${index}`);
+    writeFileSync(join(directory, "package.json"), JSON.stringify({ dependencies: Object.fromEntries(names.map((name) => [name, "1.0.0"])) }));
+    for (const name of names) {
+      mkdirSync(join(directory, "node_modules", name));
+      writeFileSync(join(directory, "node_modules", name, "package.json"), JSON.stringify({ name, version: "1.0.0", dsh: { bundle: { patch: "./cordis.patch.yml" } } }));
+    }
+    vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+      const name = decodeURIComponent(new URL(url).pathname.split("/")[1]);
+      if (name === "bulk-1") return new Response("{}", { status: 404 });
+      return new Response(JSON.stringify({ name, version: name === "bulk-0" ? "1.0.0" : "1.1.0", dist: { integrity: "sha512-test" }, dsh: { bundle: { patch: "./cordis.patch.yml" } } }));
+    }));
+    const harness = routeHarness();
+    const runPlugin = vi.fn(async (_profile: string, args: string[]) => {
+      const name = args[1].slice(0, args[1].lastIndexOf("@"));
+      writeFileSync(join(directory, "node_modules", name, "package.json"), JSON.stringify({ name, version: "1.1.0" }));
+      return ok();
+    });
+    mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" }, { runPlugin, checkProfile: async () => ok(), cancelActive: () => false });
+    const first = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: names.slice(0, 20), partial: true, strategy: "latest" } });
+    const second = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: names.slice(20), partial: true, strategy: "latest" } });
+    expect(first.status).toBe(200); expect(second.status).toBe(200);
+    expect(first.body.issues).toMatchObject([{ name: "bulk-0", status: "current" }, { name: "bulk-1", status: "failed" }]);
+    const items = [...first.body.items as any[], ...second.body.items as any[]];
+    expect(items).toHaveLength(23);
+    const accepted = await harness.request("/dsh-top100/manage", { method: "POST", body: {
+      action: "update", names: items.map((item) => item.name), approvals: items.map((item) => ({ name: item.name, approvalToken: item.preflight.approvalToken, risksAccepted: true })),
+    } });
+    expect(accepted.status).toBe(202);
+    await vi.waitFor(async () => {
+      const batch = await harness.request(`/dsh-top100/install-jobs?batchId=${accepted.body.batchId}`);
+      expect(batch.body.completed).toBe(23);
+      expect((batch.body.jobs as any[]).every((job) => job.phase === "installed")).toBe(true);
+    });
+    expect(runPlugin).toHaveBeenCalledTimes(23);
+  });
+
+  it("keeps the entire global Skill directory when removing it through the management route", async () => {
+    const home = mkdtempSync(join(tmpdir(), "top100-skill-removal-route-")); temporaryProfiles.push(home);
+    vi.stubEnv("DSH_HOME", home);
+    mkdirSync(join(home, "skills", "my-skill"), { recursive: true });
+    writeFileSync(join(home, "skills", "my-skill", "SKILL.md"), "skill content");
+    writeFileSync(join(home, "skills", "my-skill", "my-notes.txt"), "user edits");
+    const harness = routeHarness();
+    mountRoutes(harness, { profile: "web", dataUrl: "https://unused.invalid/data" });
+    const accepted = await harness.request("/dsh-top100/manage", { method: "POST", body: { action: "uninstall", kind: "skill", names: ["my-skill"] } });
+    expect(accepted.status).toBe(202);
+    await vi.waitFor(async () => {
+      const batch = await harness.request(`/dsh-top100/install-jobs?batchId=${accepted.body.batchId}`);
+      expect(batch.body.completed).toBe(1);
+      const job = (batch.body.jobs as any[])[0];
+      expect(job.phase).toBe("installed");
+      expect(job.skillBackups).toHaveLength(1);
+      expect(job.skillBackups[0]).toMatchObject({ name: "my-skill", path: expect.any(String) });
+      const backupPath = job.skillBackups[0].path;
+      expect(job.lastLine).toContain(backupPath);
+      expect(readFileSync(join(backupPath, "my-notes.txt"), "utf8")).toBe("user edits");
+      expect(existsSync(join(home, "skills", "my-skill"))).toBe(false);
+    });
+  });
+
+  it("reports the same Skill as global in multiple Profiles and removal affects both inventories", async () => {
+    const home = mkdtempSync(join(tmpdir(), "top100-global-skill-profiles-")); temporaryProfiles.push(home);
+    vi.stubEnv("DSH_HOME", home);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 503 })));
+    mkdirSync(join(home, "skills", "shared-skill"), { recursive: true });
+    writeFileSync(join(home, "skills", "shared-skill", "SKILL.md"), "global content");
+    const web = routeHarness(); const other = routeHarness();
+    for (const [name, harness] of [["web", web], ["other", other]] as const) {
+      const directory = join(home, name); mkdirSync(directory);
+      writeFileSync(join(directory, "package.json"), JSON.stringify({ dependencies: {} }));
+      mountRoutes(harness, { profile: name, profileDirectory: directory, dataUrl: "https://unused.invalid/global-skills" });
+      const inventory = await harness.request("/dsh-top100/managed");
+      expect(inventory.status).toBe(200);
+      expect(inventory.body.items).toContainEqual(expect.objectContaining({ name: "shared-skill", kind: "skill", scope: "global", modificationState: "unknown" }));
+    }
+    const accepted = await web.request("/dsh-top100/manage", { method: "POST", body: { action: "uninstall", kind: "skill", names: ["shared-skill"] } });
+    const finished = await waitForBatch(web.request, String(accepted.body.batchId));
+    expect(finished.phase).toBe("installed");
+    const otherInventory = await other.request("/dsh-top100/managed");
+    expect(otherInventory.body.items).toEqual([]);
+    const backups = finished.skillBackups as Array<{ name: string; path: string }>;
+    expect(readFileSync(join(backups[0]!.path, "SKILL.md"), "utf8")).toBe("global content");
+  });
+
+  it("publishes replacement backup paths in the successful Skill job snapshot", async () => {
+    const directory = profileFixture("skill-replacement-route");
+    const home = join(directory, "home"); vi.stubEnv("DSH_HOME", home);
+    const approval = await skillInstallApproval();
+    let replacement: skillInstaller.InstalledSkill | undefined;
+    const install = vi.spyOn(skillInstaller, "installSkill").mockImplementation(async () => {
+      replacement = stageSkillReplacement(home, "saved-skill");
+      return [replacement];
+    });
+    const harness = routeHarness();
+    mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" });
+    const accepted = await harness.request("/dsh-top100/install-batch", { method: "POST", body: { approvals: [approval] } });
+    expect(accepted.status).toBe(202);
+    const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+    expect(job.phase).toBe("installed");
+    expect(install).toHaveBeenCalledWith("acme/skills", expect.objectContaining({ replaceExisting: true }));
+    expect(job.skillBackups).toEqual([{ name: "saved-skill", path: replacement!.backupPath }]);
+    expect(readFileSync(join(replacement!.backupPath!, "notes.txt"), "utf8")).toBe("local edits saved-skill");
+    const ledger = JSON.parse(readFileSync(join(directory, ".dsh-top100", "provenance.json"), "utf8"));
+    expect(ledger.records["skill:saved-skill"].skills[0].digest).toBe(replacement!.digest);
+  });
+
+  it("continues cancellation rollback after one changed Skill refuses recovery and exposes its retained backup", async () => {
+    const directory = profileFixture("skill-cancellation-route");
+    const home = join(directory, "home"); vi.stubEnv("DSH_HOME", home);
+    const approval = await skillInstallApproval();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let replacements: skillInstaller.InstalledSkill[] = [];
+    const install = vi.spyOn(skillInstaller, "installSkill").mockImplementation(async () => {
+      replacements = [stageSkillReplacement(home, "first"), stageSkillReplacement(home, "second")];
+      await gate;
+      return replacements;
+    });
+    const harness = routeHarness();
+    mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" });
+    try {
+      const accepted = await harness.request("/dsh-top100/install-batch", { method: "POST", body: { approvals: [approval] } });
+      expect(accepted.status).toBe(202);
+      await vi.waitFor(() => expect(install).toHaveBeenCalledOnce());
+      const snapshot = await harness.request(`/dsh-top100/install-jobs?batchId=${accepted.body.batchId}`);
+      const jobId = (snapshot.body.jobs as Array<{ id: string }>)[0]!.id;
+      writeFileSync(join(home, "skills", "second", "SKILL.md"), "new edits after installation");
+      const cancelled = await harness.request("/dsh-top100/cancel", { method: "POST", body: { jobId } });
+      expect(cancelled.body.cancelled).toBe(true);
+      release();
+      const job = await waitForBatch(harness.request, String(accepted.body.batchId));
+      expect(job.phase).toBe("cancelled");
+      expect(job.error).toContain("second");
+      expect(job.error).toContain("部分内容未能恢复");
+      expect(readFileSync(join(home, "skills", "first", "notes.txt"), "utf8")).toBe("local edits first");
+      expect(readFileSync(join(home, "skills", "first", "SKILL.md"), "utf8")).toBe("original first");
+      expect(existsSync(replacements[0]!.backupPath!)).toBe(false);
+      expect(readFileSync(join(home, "skills", "second", "SKILL.md"), "utf8")).toBe("new edits after installation");
+      expect(readFileSync(join(replacements[1]!.backupPath!, "notes.txt"), "utf8")).toBe("local edits second");
+      expect(job.skillBackups).toEqual([{ name: "second", path: replacements[1]!.backupPath }]);
+    } finally { release(); }
+  });
+
+  it.each(["2.0.0", "3.0.0-beta.1"])("does not create an update job when the installed version is %s and latest is 2.0.0", async (version) => {
+    const directory = profileFixture("no-update");
+    writeFileSync(join(directory, "package.json"), JSON.stringify({ dependencies: { demo: version } }));
+    writeDemoVersion(directory, version);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      name: "demo", version: "2.0.0", dsh: { bundle: { patch: "./cordis.patch.yml" } },
+      dist: { integrity: "sha512-demo-test" },
+    }))));
+    const harness = routeHarness();
+    const runPlugin = vi.fn(async () => ok());
+    mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" }, {
+      runPlugin, checkProfile: async () => ok(), cancelActive: () => false,
+    });
+    const result = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names: ["demo"], strategy: "latest" } });
+    expect(result).toMatchObject({ status: 422, body: { code: "no-update" } });
+    expect(result.body.items).toBeUndefined();
+    expect(runPlugin).not.toHaveBeenCalled();
+    expect(JSON.parse(readFileSync(join(directory, "package.json"), "utf8")).dependencies.demo).toBe(version);
+  });
+
   it.each([true, false])("checks existing installations only after the prior transaction finishes (first fails=%s)", async (firstFails) => {
     const directory = profileFixture("queued-install");
     const harness = routeHarness();
@@ -426,7 +641,7 @@ describe("plugin lifecycle routes", () => {
     mountRoutes(harness, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/data" }, {
       runPlugin, checkProfile: async () => ok(), cancelActive: () => false,
     });
-    const preflight = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names } });
+    const preflight = await harness.request("/dsh-top100/update-preflight", { method: "POST", body: { names, strategy: "latest" } });
     expect(preflight.status).toBe(200);
     const approvals = (preflight.body.items as Array<{ name: string; preflight: { approvalToken: string } }>).map((item) => ({
       name: item.name, approvalToken: item.preflight.approvalToken, risksAccepted: true,
@@ -440,7 +655,7 @@ describe("plugin lifecycle routes", () => {
       expect((batch.body.jobs as Array<{ phase: string }>).map((job) => job.phase)).toEqual(names.map(() => "installed"));
     });
     expect(runPlugin).toHaveBeenCalledTimes(20);
-    const oversized = await harness.request("/dsh-top100/manage", { method: "POST", body: { ...body, padding: "x".repeat(32768) } });
+    const oversized = await harness.request("/dsh-top100/manage", { method: "POST", body: { ...body, padding: "x".repeat(128 * 1024) } });
     expect(oversized.status).toBe(400);
     expect(oversized.body.error).toContain("body too large");
   });

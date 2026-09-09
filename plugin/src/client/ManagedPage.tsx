@@ -4,17 +4,23 @@ import { LatestRequest } from "./latest-request.js";
 import type { TaskTracker } from "./use-task-tracker.js";
 import { UpdateReview } from "./UpdateReview.js";
 import type { Translate } from "./locales.js";
+import { parseSemver } from "../host/semver.js";
+import { MAX_UPDATE_BATCH_SIZE, type UpdatePreflightIssue, type UpdateStrategy } from "../shared/types.js";
+import { prepareUpdateBatch } from "./update-batch.js";
+import { SkillBackupList } from "./SkillBackupList.js";
+import { UpdateCheckResults } from "./UpdateCheckResults.js";
 
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
-  const body = (await response.json()) as T & { error?: string };
-  if (!response.ok) throw new Error(body.error || `${response.status} ${response.statusText}`);
+  const body = (await response.json()) as T & { error?: string; code?: string };
+  if (!response.ok) throw Object.assign(new Error(body.error || `${response.status} ${response.statusText}`), { code: body.code });
   return body;
 }
 
-export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "" }: {
+export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "", onBrowseSkills }: {
   t: Translate; tracking: TaskTracker; initialQuery?: string;
   retryUpdate?: { id: number; names: string[] } | null; onRetryConsumed?: () => void;
+  onBrowseSkills?: () => void;
 }) {
   const [draft, setDraft] = useState(initialQuery);
   const [query, setQuery] = useState(initialQuery);
@@ -32,15 +38,22 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
   const [review, setReview] = useState<UpdatePreflightItem[] | null>(null);
   const [accepted, setAccepted] = useState(false);
   const [retryNames, setRetryNames] = useState<string[] | null>(null);
+  const [updateStrategy, setUpdateStrategy] = useState<UpdateStrategy>("preserve");
+  const [issues, setIssues] = useState<UpdatePreflightIssue[]>([]);
+  const [checkedCount, setCheckedCount] = useState(0);
+  const [checkingTotal, setCheckingTotal] = useState(0);
+  const [migrating, setMigrating] = useState(false);
+  const migrationLock = useRef(false);
   const submissionLock = useRef(false);
+  const updateInvoker = useRef<HTMLElement | null>(null);
   useEffect(() => () => updateRequest.current.cancel(), []);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (refreshUpdates = false) => {
     const requestId = ++loadSequence.current;
     setLoading(true);
     setError(null);
     try {
-      const payload = await readJson<ManagedListResponse>(`/dsh-top100/managed?q=${encodeURIComponent(query)}`);
+      const payload = await readJson<ManagedListResponse>(`/dsh-top100/managed?q=${encodeURIComponent(query)}${refreshUpdates ? "&refresh=1" : ""}`);
       if (requestId === loadSequence.current) setData(payload);
     } catch (cause) {
       if (requestId === loadSequence.current) { setRetryNames(null); setError(cause instanceof Error ? cause.message : String(cause)); }
@@ -80,30 +93,35 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
 
   async function prepareUpdates(names: string[]): Promise<void> {
     if (!names.length || submitting || busy || !tracking.ready) return;
-    const requestedNames = [...new Set(names)];
+    updateInvoker.current = document.activeElement as HTMLElement | null;
+    const requestedNames = [...new Set(names)].slice(0, MAX_UPDATE_BATCH_SIZE);
     const request = updateRequest.current.start();
-    setPreparing(true); setReview(null); setAccepted(false); setRetryNames(null); setError(null); setNotice(null);
+    setPreparing(true); setReview(null); setIssues([]); setCheckedCount(0); setCheckingTotal(requestedNames.length);
+    setAccepted(false); setRetryNames(null); setError(null); setNotice(null);
     try {
-      const response = await readJson<{ items: UpdatePreflightItem[] }>("/dsh-top100/update-preflight", {
-        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ names: requestedNames }), signal: request.signal,
+      const response = await prepareUpdateBatch(requestedNames, updateStrategy, {
+        signal: request.signal,
+        onProgress: (checked) => { if (request.isCurrent()) setCheckedCount(checked); },
       });
       if (!request.isCurrent()) return;
-      const byName = new Map(response.items.map((item) => [item.name, item]));
-      if (response.items.length !== requestedNames.length || byName.size !== requestedNames.length || requestedNames.some((name) => {
-        const item = byName.get(name);
-        return !item || item.preflight.kind !== "bundle" || !item.preflight.approvalToken || !item.preflight.provenance.resolvedTarget;
-      })) throw new Error(t("updatePreflightIncomplete"));
-      const ordered = requestedNames.map((name) => byName.get(name)!);
-      setReview(ordered);
-      setAccepted(!ordered.some((item) => item.preflight.requiresExplicitApproval));
+      setIssues(response.issues);
+      setReview(response.items.length ? response.items : null);
+      setAccepted(!response.items.some((item) => item.preflight.requiresExplicitApproval));
+      if (!response.items.length) setNotice(t("noUpdatesPrepared"));
+      if (response.issues.some((issue) => issue.status === "current")) void load(true);
     } catch (cause) {
       if (!request.isCurrent()) return;
-      setRetryNames(requestedNames); setError(cause instanceof Error ? cause.message : String(cause));
+      if (cause instanceof Error && "code" in cause && cause.code === "no-update") {
+        setNotice(cause.message);
+        void load(true);
+        return;
+      }
+      setRetryNames(requestedNames); setError(cause instanceof Error ? cause.message === "updatePreflightIncomplete" ? t(cause.message) : cause.message : String(cause));
     } finally { if (request.isCurrent()) setPreparing(false); }
   }
 
   function cancelUpdateReview(): void {
-    updateRequest.current.cancel(); setPreparing(false); setReview(null); setRetryNames(null); setAccepted(false);
+    updateRequest.current.cancel(); setPreparing(false); setReview(null); setRetryNames(null); setAccepted(false); setIssues([]);
     setNotice(t("updatePreflightCancelled"));
   }
 
@@ -132,10 +150,32 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
   }
 
-  const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || review !== null;
-  const updates = data?.items.filter((item) => item.kind === "bundle" && item.updateAvailable && !item.protected && !item.local) ?? [];
+  async function migrateSources(): Promise<void> {
+    if (migrationLock.current || busy || !tracking.ready) return;
+    migrationLock.current = true; setMigrating(true); setError(null); setNotice(null);
+    try {
+      const preflight = await readJson<{ approvalToken: string; items: Array<{ name: string; from: string; version: string }> }>("/dsh-top100/source-migration", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "preflight" }),
+      });
+      if (preflight.items.length === 0) { await load(true); return; }
+      const changes = preflight.items.map((item) => `${item.name}: ${item.from} → ${item.version}`).join("\n");
+      if (!window.confirm(`${t("sourceMigrationConfirm")}\n\n${changes}`)) return;
+      await readJson("/dsh-top100/source-migration", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "apply", approvalToken: preflight.approvalToken }),
+      });
+      await load(true); setNotice(t("sourceMigrationComplete"));
+    } catch (cause) {
+      await load(true);
+      setError(`${t("sourceMigrationFailed")} ${cause instanceof Error ? cause.message : String(cause)}`);
+    } finally { migrationLock.current = false; setMigrating(false); }
+  }
+
+  const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || migrating || review !== null;
+  const updates = data?.items.filter((item) => item.kind === "bundle" && !item.protected && !item.local
+    && (updateStrategy === "latest" || item.updateAvailable || !item.latest)) ?? [];
 
   function descriptionFor(item: ManagedPlugin): string {
+    if (t("descriptionLocale") === "en") return item.description.trim() || `${t(item.kind === "skill" ? "installedSkillFallback" : "installedPluginFallback")}: ${item.name}.`;
     const supplied = item.descriptionZh.trim();
     if (supplied) return supplied;
     return item.kind === "skill"
@@ -150,18 +190,33 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
         <p className="lede">{t("installedManagerHint")}</p>
       </div>
       <div className="toolbar">
-        <input type="search" value={draft} placeholder={t("searchInstalled")} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") setQuery(draft.trim()); }} />
+        <input type="search" aria-label={t("searchInstalled")} value={draft} placeholder={t("searchInstalled")} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") setQuery(draft.trim()); }} />
         <button type="button" className="primary" onClick={() => setQuery(draft.trim())}>{t("search")}</button>
-        <button type="button" disabled={updates.length === 0 || operationBlocked} onClick={() => void prepareUpdates(updates.map((item) => item.name))}>
-          {t("updateAll")} ({updates.length})
+        <button type="button" disabled={loading || operationBlocked} onClick={() => void load(true)}>{t("refreshInstalled")}</button>
+        <label>{t("updateStrategy")} <select aria-label={t("updateStrategy")} value={updateStrategy} disabled={operationBlocked}
+          onChange={(event) => { setUpdateStrategy(event.target.value as UpdateStrategy); setIssues([]); setNotice(null); }}>
+          <option value="preserve">{t("updatePreserve")}</option><option value="latest">{t("updateLatest")}</option>
+        </select></label>
+        <button type="button" disabled={updates.length === 0 || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates(updates.map((item) => item.name))}>
+          {t("updateAll")} ({Math.min(updates.length, MAX_UPDATE_BATCH_SIZE)})
         </button>
       </div>
+      <p className="lede">{t(updateStrategy === "latest" ? "updateLatestHint" : "updatePreserveHint")}</p>
+      {data?.sourceMigrationRequired ? <div className="banner"><strong>{t("sourceMigrationTitle")}</strong><p>{t("sourceMigrationHint")}</p>
+        <button type="button" disabled={operationBlocked} onClick={() => void migrateSources()}>{t(migrating ? "sourceMigrationWorking" : "sourceMigrationAction")}</button>
+      </div> : null}
+      {updates.length > MAX_UPDATE_BATCH_SIZE ? <p className="banner">{t("updateBatchLimit")} {MAX_UPDATE_BATCH_SIZE} / {updates.length}</p> : null}
       {data ? <p className="lede">{t("profile")}: {data.profile} · {data.total} {t("managedItems")}</p> : null}
       {notice ? <div className="banner">{notice}</div> : null}
-      {error ? <div className="error">{error} <button type="button" disabled={operationBlocked} onClick={() => void (retryNames ? prepareUpdates(retryNames) : load())}>{t("retry")}</button></div> : null}
-      {preparing ? <div className="install-activity-banner is-active" role="status"><div><strong>{t("preflighting")}</strong><span>{t("updatePreflightWait")}</span></div><button type="button" onClick={cancelUpdateReview}>{t("cancel")}</button></div> : null}
+      {batch ? <SkillBackupList jobs={batch.jobs} t={t} /> : null}
+      {error ? <div className="error">{error} <button type="button" disabled={operationBlocked} onClick={() => void (retryNames ? prepareUpdates(retryNames) : load(true))}>{t(retryNames ? "retry" : "refreshInstalled")}</button></div> : null}
+      {issues.length ? <div className="banner" role="status"><strong>{t("updateCheckResults")}</strong>
+        <UpdateCheckResults issues={issues} t={t} />
+        {issues.some((issue) => issue.status === "failed") ? <button type="button" disabled={operationBlocked} onClick={() => void prepareUpdates(issues.filter((issue) => issue.status === "failed").map((issue) => issue.name))}>{t("retryFailedChecks")}</button> : null}
+      </div> : null}
+      {preparing ? <div className="install-activity-banner is-active" role="status"><div><strong>{t("preflighting")} {checkedCount}/{checkingTotal}</strong><span>{t("updatePreflightWait")}</span></div><button type="button" onClick={cancelUpdateReview}>{t("cancel")}</button></div> : null}
       {submitting ? <div className="banner" role="status">{t("updateSubmitting")}</div> : null}
-      {review ? <UpdateReview items={review} accepted={accepted} onAccepted={setAccepted} onCancel={cancelUpdateReview} onConfirm={() => void confirmUpdates()} t={t} /> : null}
+      {review ? <UpdateReview items={review} issues={issues} strategy={updateStrategy} accepted={accepted} onAccepted={setAccepted} onCancel={cancelUpdateReview} onConfirm={() => void confirmUpdates()} t={t} restoreFocusTo={updateInvoker.current} /> : null}
       {busy && batch ? <div className="banner" role="status">{t("batchProgress")} {batch.completed}/{batch.total}
         {batch.jobs.filter((job) => !["installed", "failed", "cancelled"].includes(job.phase)).map((job) => <div key={job.id}>
           <span>{job.fullName} · {t(`phase_${job.phase}`)}</span>{" "}
@@ -172,6 +227,9 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
       <div className="list managed-list">
         {(data?.items ?? []).map((item) => {
           const job = jobByName.get(item.name);
+          const versionsKnown = Boolean(item.version && item.latest
+            && parseSemver(item.version.replace(/^v/, "")) && parseSemver(item.latest.replace(/^v/, "")));
+          const noUpdate = updateStrategy === "preserve" && versionsKnown && !item.updateAvailable;
           return (
             <article key={`${item.kind}-${item.name}`}>
               <div className="status-cell"><span className={`dot${item.enabled ? "" : " off"}`} aria-hidden="true" /></div>
@@ -183,19 +241,30 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
                   <span className={`badge${item.enabled ? "" : " muted"}`}>{t(item.enabled ? "enabled" : "disabled")}</span>
                   <span className={`badge activation-${item.activationState}`}>{t(`activation_${item.activationState}`)}</span>
                   <span>{t("version")}: {item.version ?? "—"}</span>
-                  {item.latest ? <span>{t("latest")}: {item.latest}</span> : null}
+                  {item.latest ? <span>{t("sourceLatestVersion")}: {item.latest}</span> : null}
+                  {item.updateTarget ? <span>{t("updateTarget")}: <code>{item.updateTarget}</code></span> : null}
+                  {item.updateStatus && item.updateStatus !== "not-supported" ? <span>{t(`updateStatus_${item.updateStatus}`)}</span> : null}
+                  {item.updateCheckedAt ? <span>{t("updateCheckedAt")}: <time dateTime={new Date(item.updateCheckedAt).toISOString()}>{new Date(item.updateCheckedAt).toLocaleString(t("descriptionLocale") === "en" ? "en-US" : "zh-CN")}</time></span> : null}
+                  {item.updateError ? <details><summary>{t("updateCheckDetails")}</summary><p>{item.updateError}</p></details> : null}
+                  {item.kind === "skill" ? <span className="badge">{t("globalSkill")}</span> : null}
+                  {item.modificationState ? <span>{t(`skillModification_${item.modificationState}`)}</span> : null}
                   {item.fullName && item.fullName !== item.name ? <span>{t("project")}: {item.fullName}</span> : null}
                   {item.local ? <span className="badge">{t("localLink")}</span> : null}
                   {item.protected ? <span className="badge">{t("protected")}</span> : null}
                   {item.updateAvailable ? <span className="badge warn">{t("updateAvailable")}</span> : null}
                 </div>
+                {item.kind === "bundle" && (item.protected || item.local) ? <p className="lede">{t(item.protected ? "protectedManageHint" : "localManageHint")}
+                  {item.protected ? <> <a href="https://www.dsheval.ai/top100/?page=dsh#dsh" target="_blank" rel="noreferrer">{t("maintenanceGuide")}</a></> : null}
+                </p> : null}
+                {item.kind === "skill" ? <p className="lede">{t("skillReinstallHint")}</p> : null}
               </div>
               <div className="actions row-actions">
                 {job ? <span className="job">{t(`phase_${job.phase}`)}<small>{job.error ?? job.message ?? job.lastLine}</small></span> : null}
                 {job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? <button type="button" disabled={item.protected || item.local || operationBlocked} onClick={() => void prepareUpdates([item.name])}>{t("retry")}</button> : null}
                 {item.kind === "bundle" ? <button type="button" disabled={item.protected || operationBlocked} onClick={() => void toggle(item)}>{item.enabled ? t("disable") : t("enable")}</button> : null}
-                {item.kind === "bundle" ? <button type="button" disabled={item.protected || item.local || operationBlocked} onClick={() => void prepareUpdates([item.name])}>{t("update")}</button> : null}
-                <button type="button" className="danger" disabled={item.protected || operationBlocked} onClick={() => void manage("uninstall", [item.name], item.kind)}>{t("uninstall")}</button>
+                {item.kind === "bundle" ? <button type="button" disabled={item.protected || item.local || noUpdate || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates([item.name])}>{t(noUpdate ? "noUpdateAvailable" : item.updateAvailable ? "update" : "checkUpdates")}</button> : null}
+                {item.kind === "skill" && onBrowseSkills ? <button type="button" disabled={operationBlocked} onClick={onBrowseSkills}>{t("browseSkillUpdates")}</button> : null}
+                <button type="button" className="danger" disabled={item.protected || operationBlocked || (item.kind === "bundle" && data?.sourceMigrationRequired === true)} onClick={() => void manage("uninstall", [item.name], item.kind)}>{t("uninstall")}</button>
               </div>
             </article>
           );
