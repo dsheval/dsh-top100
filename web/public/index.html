@@ -4494,7 +4494,7 @@
           loadMore.hidden = currentView !== "all" || (searchActive
             ? shown.length >= matched.length
             : manifest
-              ? categoryPageLoaded >= (category?.pageCount ?? 0)
+              ? shown.length >= matched.length && categoryPageLoaded >= (category?.pageCount ?? 0)
               : shown.length >= matched.length);
           if (!loadMore.hidden) {
             const remaining = Math.max(
@@ -4520,7 +4520,7 @@
             searchActive
               ? shown.length >= matched.length
               : manifest
-                ? totalPageLoaded >= manifest.datasets.total.pageCount
+                ? shown.length >= matched.length && totalPageLoaded >= manifest.datasets.total.pageCount
                 : shown.length >= matched.length
           );
           if (!loadMore.hidden) {
@@ -4716,6 +4716,7 @@
           const requestedCategory = activeCategory;
           const requestedSearchGeneration = searchGenerations[requestedRankingView];
           const state = viewState[requestedRankingView];
+          const requestedVisible = state.visible;
           const searchActive = tokenizeSearchQuery(state.query).length > 0;
           const requestedQuery = normalizeSearchText(state.query);
           const isSameSearchState = () =>
@@ -4730,13 +4731,17 @@
           loadMore.textContent = "正在加载…";
           try {
             if (!requiresSearchIndex(requestedRankingView, state.query, installableOnly) && manifest) {
-              if (requestedCategory) await loadNextCategoryPage();
-              else await loadNextTotalPage();
+              const cachedEntryCount = requestedCategory ? categoryEntries.length : rankedEntries.length;
+              if (requestedVisible >= cachedEntryCount) {
+                if (requestedCategory) await loadNextCategoryPage();
+                else await loadNextTotalPage();
+              }
               const categoryStillMatches = activeCategory === requestedCategory;
               if (categoryStillMatches) {
-                state.unfilteredVisible = requestedCategory
-                  ? categoryEntries.length
-                  : rankedEntries.length;
+                state.unfilteredVisible = Math.min(
+                  requestedVisible + PAGE_SIZE,
+                  requestedCategory ? categoryEntries.length : rankedEntries.length
+                );
                 if (isSameSearchState()) state.visible = state.unfilteredVisible;
               }
             } else {
@@ -4746,6 +4751,7 @@
             if (isCurrentLoadMoreRequest()) renderRanking();
           } catch (error) {
             if (isCurrentLoadMoreRequest()) {
+              renderRanking();
               showFeedback("下一页暂时无法加载，请重试。");
             }
             console.error(error);

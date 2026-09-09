@@ -3,7 +3,7 @@
   display: grid;
   min-height: 44px;
   padding: 0 18px;
-  grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
+  grid-template-columns: 64px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
   align-items: center;
   gap: 16px;
   border: 1px solid var(--line);
@@ -11,6 +11,10 @@
   background: color-mix(in srgb, var(--section-strong) 55%, var(--card));
   font: 700 13px/1.4 var(--sans);
   letter-spacing: normal;
+}
+
+:is(.list-head, .skill-list-head) span:first-child {
+  white-space: nowrap;
 }
 
 :is(.list-head, .skill-list-head) span:last-child {
@@ -29,7 +33,7 @@
 :is(.plugin-list.is-top100-list .plugin, .skill-card) {
   min-height: 104px;
   padding: 13px 18px;
-  grid-template-columns: 50px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
+  grid-template-columns: 64px minmax(160px, 0.78fr) minmax(180px, 1.18fr) 320px 100px;
   grid-template-rows: auto;
   align-content: center;
   align-items: center;
@@ -108,7 +112,7 @@
 .skill-meta .meta-updated, .skill-meta .growth-period { white-space: nowrap; }
 .skill-meta .meta-growth:not([hidden]) { display: inline-flex; gap: 12px; }
 
-@media (max-width: 960px) {
+@media (max-width: 980px) {
   :is(.list-head, .skill-list-head), :is(.plugin-list.is-top100-list .plugin, .skill-card) { grid-template-columns: 54px minmax(190px, .78fr) minmax(220px, 1fr) 118px; gap: 16px; }
   :is(.list-head, .skill-list-head) .signal-head { display: none; }
   :is(.plugin-list.is-top100-list .plugin-meta, .skill-meta) { grid-column: 2 / -1; grid-row: 2; }
@@ -185,7 +189,7 @@
     align-self: center;
   }
 }
-@media (min-width: 721px) and (max-width: 960px) {
+@media (min-width: 721px) and (max-width: 980px) {
   .plugin-list.is-top100-list .plugin:not(.featured-plugin) .plugin-description,
   .skill-card:not(.featured-skill) .skill-details {
     grid-row: 1 / 3;
