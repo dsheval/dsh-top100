@@ -1,3 +1,4 @@
+import { discoveryNeedsReview } from "./install-assessment.js";
 /** Conservative, explainable catalog classification. It never claims a security review. */
 import { isCordisEntry, resolveInstallSpec } from "../install/install-spec.js";
 const THEME_RE = /(?:^|[-_\s])(theme|skin|appearance|retro|dark|light)(?:$|[-_\s])/i;
@@ -18,6 +19,8 @@ export function classifyFormFactor(entry, profile = "web") {
     const text = evidenceText(entry);
     if (type === "skill")
         return /dsh|deepseek harness/i.test(text) ? "dsh-skill" : "agent-skill";
+    if (discoveryNeedsReview(entry))
+        return "ecosystem-project";
     if (isCordisEntry(entry) && resolveInstallSpec(entry, profile))
         return THEME_RE.test(text) ? "theme" : "dsh-bundle";
     if (DESKTOP_RE.test(text))
@@ -37,7 +40,7 @@ export function catalogEvidence(entry, profile = "web") {
     const installSpec = resolveInstallSpec(entry, profile);
     const cordisStructure = isCordisEntry(entry);
     const skillStructure = entry.type?.toLowerCase() === "skill";
-    const structured = cordisStructure || skillStructure;
+    const structured = (cordisStructure || skillStructure) && !discoveryNeedsReview(entry);
     const signalCodes = ["indexed"];
     const signals = ["已进入 DSHEval 索引"];
     if (structured) {

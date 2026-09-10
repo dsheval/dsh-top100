@@ -24,3 +24,7 @@ data/tag-alias.json
 .vscode/
 
 data/description-jobs.json
+data/category-jobs.json
+
+data/install-assessments.json
+data/discovery-review.json

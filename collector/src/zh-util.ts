@@ -12,6 +12,8 @@ export interface ZhEntry {
   categories?: PluginCategoryAssignment[];
   /** 上次翻译时的 README 摘要指纹——README 实质大改才重翻 */
   summaryKey?: string;
+  /** Full source, selected package/type and policy identity; legacy entries cannot establish it. */
+  sourceHash?: string;
 }
 
 /** 摘要相似度：bigram Dice 系数（对 200-400 字符的摘要足够快足够准） */

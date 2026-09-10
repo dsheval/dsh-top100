@@ -1,3 +1,4 @@
+import { canRequestModel, requestModel, type ModelRequestControl } from "./model-requests.js";
 /**
  * 标签归一化：合并同义/近义标签，删除宽泛标签
  * - 调 DeepSeek 给出同义词合并映射（只合并，不发明新标签）
@@ -50,8 +51,9 @@ ${lines}
 
 export async function normalizeTags(
   plugins: DshPlugin[],
-  opts: { apiKey: string; baseURL: string; model: string }
+  opts: { apiKey: string; baseURL: string; model: string } & ModelRequestControl
 ): Promise<NormalizeResult> {
+  if (!canRequestModel(opts)) return { alias: {}, removedGeneric: 0, mergedCount: 0 };
   const counts = aggregateZhTags(plugins);
   const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
   // 只给 LLM 出现 ≥2 次或同义风险高的（单次标签数量太多，全给会超长；给 top 120）
@@ -62,7 +64,7 @@ export async function normalizeTags(
   let alias: Record<string, string> = {};
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const res = await fetch(`${opts.baseURL}/chat/completions`, {
+      const res = await requestModel(opts, `${opts.baseURL}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${opts.apiKey}` },
         body: JSON.stringify({

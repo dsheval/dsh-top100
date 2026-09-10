@@ -71,20 +71,41 @@ function DescriptionPreview({ text, t }) {
 
 //#endregion
 //#region src/shared/description-rules.ts
+/** Full and compact catalogs must identify the same reviewed package. */
+function matchesReviewedIdentity(entry, sourceInstall, sourceType) {
+	if (sourceType !== void 0 && sourceType !== (entry.type ?? null)) return false;
+	const packageName = entry.install?.packageName ?? entry.installPackageName ?? null;
+	const repositoryPath = entry.install?.repositoryPath ?? entry.installRepositoryPath ?? null;
+	if (!sourceInstall) return packageName === null && repositoryPath === null;
+	return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath;
+}
+const PENDING_DESCRIPTION_ZH = "中文简介待生成。";
+/** Allow product names, but a few Chinese words must not validate an English paragraph. */
+function isChineseDescription(value) {
+	const hanCount = (value.match(/[\u4e00-\u9fff]/g) || []).length;
+	const latinCount = (value.match(/[a-z]/gi) || []).length;
+	return hanCount >= 6 && hanCount / (hanCount + latinCount) >= .2;
+}
 /** Shared display rules; raw repository text is always rendered via textContent. */
 function cleanDescription(value) {
 	return String(value ?? "").replace(/```[\s\S]*?```/g, " ").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/&nbsp;|&#160;/gi, " ").replace(/&amp;/gi, "&").replace(/[`*_~>#]/g, " ").replace(/\s+/g, " ").trim();
 }
 function isPlaceholder(value) {
-	return !value || /^(?:版本更新提示[：:]|本次版本变化较大|较早的.+宿主请使用|[-\s🚨【]*国内用户核心前置)/u.test(value) || /资料不足|暂无.*简介|简介正在生成|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
+	return !value || /^(?:版本更新提示[：:]|本次版本变化较大|较早的.+宿主请使用|[-\s🚨【]*国内用户核心前置)/u.test(value) || /资料不足|暂无.*简介|简介(?:正在生成|待生成)|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
 }
 function descriptionFor(entry, reviewed = {}, context = {}) {
 	const review = reviewed[String(entry.fullName || "").toLowerCase()];
-	if (review && review.sourceDescription === (entry.description || "") && (review.sourceReadme === (entry.readmeSummary || "") || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) return review.descriptionZh;
+	if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (review.sourceReadme === (entry.readmeSummary || "") || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
+		if (review.suspended) return PENDING_DESCRIPTION_ZH;
+		const chinese$1 = cleanDescription(review.descriptionZh);
+		if (!isPlaceholder(chinese$1) && isChineseDescription(chinese$1)) return chinese$1;
+	}
 	const chinese = cleanDescription(entry.descriptionZh);
-	if (!isPlaceholder(chinese) && /[\u4e00-\u9fff]/.test(chinese)) return chinese;
+	if (chinese === PENDING_DESCRIPTION_ZH) return PENDING_DESCRIPTION_ZH;
+	if (!isPlaceholder(chinese) && isChineseDescription(chinese)) return chinese;
+	if (entry.install?.repositoryPath || entry.installRepositoryPath) return PENDING_DESCRIPTION_ZH;
 	const original = cleanDescription(entry.description);
-	return isPlaceholder(original) ? "暂无简介" : original;
+	return !isPlaceholder(original) && isChineseDescription(original) ? original : PENDING_DESCRIPTION_ZH;
 }
 
 //#endregion
@@ -609,6 +630,236 @@ function installStage(job) {
 }
 
 //#endregion
+//#region src/shared/github-source.ts
+const REPOSITORY = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})\/(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
+const PORTS = {
+	"https:": "443",
+	"http:": "80",
+	"ssh:": "22",
+	"git:": "9418"
+};
+function parseGitHubSource(value, purpose = "install") {
+	if (typeof value !== "string") return null;
+	let source = value.trim().replace(/^git\+/i, "");
+	if (!source || source.length > 2048 || /[\\\s]/.test(source)) return null;
+	let repository;
+	let selector = "";
+	if (/^github:/i.test(source) || REPOSITORY.test(source.split("#")[0].replace(/\.git$/i, ""))) {
+		const parts = source.replace(/^github:/i, "").split("#");
+		if (parts.length > 2) return null;
+		repository = parts[0].replace(/\.git$/i, "");
+		selector = parts[1] ?? "";
+	} else {
+		source = source.replace(/^git@github\.com:/i, "ssh://git@github.com/");
+		let url;
+		try {
+			url = new URL(source);
+		} catch {
+			return null;
+		}
+		if (!Object.hasOwn(PORTS, url.protocol) || url.hostname.toLowerCase() !== "github.com") return null;
+		if (url.port && url.port !== PORTS[url.protocol] || url.search || url.password) return null;
+		if (url.username && !(url.protocol === "ssh:" && url.username === "git")) return null;
+		if (source.replace(/^[^:]+:\/\/[^/]+/, "").split("#")[0].split("/").some((part) => part === "." || part === ".." || /%/i.test(part))) return null;
+		const match = /^\/([^/]+)\/([^/]+?)(?:\.git)?(\/.*)?$/i.exec(url.pathname);
+		if (!match) return null;
+		if (purpose === "install" && match[3] && match[3] !== "/") return null;
+		repository = `${match[1]}/${match[2]}`;
+		selector = url.hash.slice(1);
+	}
+	if (!REPOSITORY.test(repository)) return null;
+	if (purpose === "repository") return {
+		repository: repository.toLowerCase(),
+		ref: null,
+		path: null
+	};
+	let ref = null;
+	let path = null;
+	for (const parameter$1 of selector ? selector.split("&") : []) if (parameter$1.startsWith("path:")) {
+		if (path !== null) return null;
+		path = parameter$1.slice(5).replace(/^\/+|\/+$/g, "");
+		if (!path || !/^[A-Za-z0-9@._/-]+$/.test(path) || path.split("/").some((segment) => !segment || segment === "." || segment === "..")) return null;
+	} else {
+		if (ref !== null || !/^[A-Za-z0-9._~+/:=-]+$/.test(parameter$1)) return null;
+		ref = parameter$1;
+	}
+	return {
+		repository: repository.toLowerCase(),
+		ref,
+		path
+	};
+}
+function githubInstallTarget(source) {
+	const selector = [source.ref, source.path ? `path:/${source.path}` : null].filter(Boolean).join("&");
+	return `github:${source.repository}${selector ? `#${selector}` : ""}`;
+}
+
+//#endregion
+//#region src/shared/install-source.ts
+/** Pure, allow-listed source recognition. Never execute README commands or forward their flags. */
+const NPM_NAME = "(?:@[a-z0-9-~][a-z0-9-._~]*\\/)?[a-z0-9-~][a-z0-9-._~]*";
+const NPM_SPEC_RE = new RegExp(`^(${NPM_NAME})(?:@([a-z0-9][a-z0-9._+-]*))?$`, "i");
+const OWNER = "[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})";
+const REPO = "(?!\\.{1,2}(?:$|[#/]))[A-Za-z0-9._-]{1,100}";
+const REF = "[A-Za-z0-9._~+/:=-]+";
+const FULL_NAME_RE = /* @__PURE__ */ new RegExp(`^${OWNER}/${REPO}$`);
+const GITHUB_SPEC_RE = new RegExp(`^github:(${OWNER})/(${REPO})(?:#(${REF}))?$`, "i");
+const UNSAFE = /[\s|&;<>()$`\\'"!*?]/;
+function normalizeInstallTarget(value) {
+	if (typeof value !== "string" || value.length > 2048) return null;
+	let token = value.trim();
+	if (token.startsWith("\"") && token.endsWith("\"") || token.startsWith("'") && token.endsWith("'")) token = token.slice(1, -1);
+	if (!token || token.startsWith("-") || UNSAFE.test(token)) return null;
+	const github = parseGitHubSource(token);
+	if (github) return githubInstallTarget(github);
+	if (token.startsWith("npm:")) token = token.slice(4);
+	return !token.startsWith("-") && NPM_SPEC_RE.test(token) ? token : null;
+}
+/** A # inside a ref or a quoted token is not a shell comment. */
+function stripInstallComment(command) {
+	let quote = "";
+	for (let i = 0; i < command.length; i++) {
+		const char = command[i];
+		if (char === quote) quote = "";
+		else if (!quote && (char === "'" || char === "\"")) quote = char;
+		else if (!quote && char === "#" && (i === 0 || /\s/.test(command[i - 1]))) return command.slice(0, i).trim();
+	}
+	return command.trim();
+}
+function commandTokens(value) {
+	if (value.length > 8192 || /[\r\n]/.test(value)) return null;
+	const command = stripInstallComment(value.trim().replace(/^[$>]\s+/, ""));
+	const tokens = [];
+	const pattern = /"([^"\r\n]*)"|'([^'\r\n]*)'|([^\s'"\r\n]+)/gy;
+	let offset = 0;
+	while (offset < command.length) {
+		pattern.lastIndex = offset;
+		const match = pattern.exec(command);
+		if (!match) return null;
+		const token = match[1] ?? match[2] ?? match[3];
+		if (!token || UNSAFE.test(token)) return null;
+		tokens.push(token);
+		offset = pattern.lastIndex;
+		if (offset < command.length && !/\s/.test(command[offset])) return null;
+		while (/\s/.test(command[offset] ?? "") && offset < command.length) offset++;
+	}
+	return tokens;
+}
+function parseDshInstallCommandDetails(value) {
+	if (typeof value !== "string") return null;
+	const tokens = commandTokens(value);
+	if (!tokens?.length) return null;
+	let offset = 1;
+	if (tokens[0] === "npx") {
+		if (tokens[offset] === "--yes" || tokens[offset] === "-y") offset++;
+		if (tokens[offset]?.match(NPM_SPEC_RE)?.[1] !== "@deepseek-ai/dsh") return null;
+		offset++;
+		if (tokens[offset] === "--") offset++;
+	} else if (tokens[0] === "pnpm" || tokens[0] === "corepack") {
+		if (tokens[0] === "corepack" && tokens[offset++] !== "pnpm") return null;
+		if (tokens[offset] === "exec") offset++;
+		if (tokens[offset++] !== "dsh") return null;
+	} else if (tokens[0] !== "dsh") return null;
+	const args = [];
+	let profile = null;
+	let registry = null;
+	let saveExact = false;
+	let workspace = false;
+	let literal = false;
+	for (; offset < tokens.length; offset++) {
+		const token = tokens[offset];
+		if (!literal && token === "--") {
+			if (args.length !== 2 || args[0] !== "plugin" || args[1] !== "add") return null;
+			literal = true;
+		} else if (!literal && (token === "--profile" || token.startsWith("--profile="))) {
+			const value$1 = token === "--profile" ? tokens[++offset] : token.slice(10);
+			if (profile !== null || !value$1 || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value$1)) return null;
+			profile = value$1;
+		} else if (!literal && (token === "--save-exact" || token === "-w")) {
+			if (args[0] !== "plugin" || args[1] !== "add") return null;
+			if (token === "--save-exact") {
+				if (saveExact) return null;
+				saveExact = true;
+			} else {
+				if (workspace) return null;
+				workspace = true;
+			}
+		} else if (!literal && (token === "--registry" || token.startsWith("--registry="))) {
+			if (registry !== null || args[0] !== "plugin" || args[1] !== "add") return null;
+			const value$1 = token === "--registry" ? tokens[++offset] : token.slice(11);
+			if (!value$1) return null;
+			try {
+				const url = new URL(value$1);
+				if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
+				registry = url.href;
+			} catch {
+				return null;
+			}
+		} else args.push(token);
+	}
+	if (args.length !== 3 || args[0] !== "plugin" || args[1] !== "add") return null;
+	const target = normalizeInstallTarget(args[2]);
+	return target ? {
+		target,
+		profile,
+		registry,
+		saveExact,
+		workspace
+	} : null;
+}
+/** Public npm is supported; an explicit author Profile must match the requested destination. */
+function isDshInstallCommandCompatible(command, options = {}) {
+	return (command.profile === null || command.profile === (options.profile ?? "web")) && (command.registry === null || command.registry === "https://registry.npmjs.org/");
+}
+function resolveCatalogInstallTarget(entry, options = {}) {
+	if (!FULL_NAME_RE.test(entry.fullName)) return null;
+	const candidates = entry.install?.commands?.length ? [] : [normalizeInstallTarget(entry.installTarget)];
+	const unsupported = [];
+	for (const value of entry.install?.commands ?? []) {
+		const command = parseDshInstallCommandDetails(value);
+		if (command) (isDshInstallCommandCompatible(command, options) ? candidates : unsupported).push(command.target);
+	}
+	const packageName = entry.install?.packageName ?? entry.installPackageName;
+	if (typeof packageName === "string") {
+		const npm = candidates.find((target) => target?.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase());
+		if (npm) return npm;
+	}
+	const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
+	if (github) return github;
+	if (unsupported.some((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase() || typeof packageName === "string" && target.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase())) return null;
+	return entry.type?.toLowerCase() === "skill" ? `github:${entry.fullName}` : null;
+}
+
+//#endregion
+//#region src/shared/install-assessment.ts
+const SOURCE_ASSESSMENT_TTL_MS = 10080 * 60 * 1e3;
+/** Bind evidence to source + selected subpackage, not merely the repository name. */
+function installSourceKey(entry, profile = "web") {
+	return JSON.stringify([
+		entry.fullName.toLowerCase(),
+		resolveCatalogInstallTarget(entry, { profile }),
+		entry.install?.packageName ?? entry.installPackageName ?? null,
+		entry.install?.repositoryPath ?? entry.installRepositoryPath ?? null
+	]);
+}
+function catalogSourceStatus(entry, profile = "web", now = Date.now()) {
+	if (!resolveCatalogInstallTarget(entry, { profile })) return "unidentified";
+	const assessment = entry.install?.assessment ?? entry.installAssessment;
+	if (!assessment || assessment.sourceKey !== installSourceKey(entry, profile)) return "identified";
+	const checkedAt = Date.parse(assessment.checkedAt);
+	if (!Number.isFinite(checkedAt) || checkedAt > now || now - checkedAt > SOURCE_ASSESSMENT_TTL_MS) return "stale";
+	if (assessment.status === "verified" && (!assessment.resolvedTarget || !assessment.integrity)) return "identified";
+	return [
+		"verified",
+		"invalid",
+		"unavailable"
+	].includes(assessment.status) ? assessment.status : "identified";
+}
+function discoveryNeedsReview(entry) {
+	return (entry.install?.discovery ?? entry.discovery)?.status === "review-required";
+}
+
+//#endregion
 //#region src/client/install-capability.ts
 /** Explain the next user-visible step without conflating structure, trust, and installability. */
 function presentInstallCapability(item) {
@@ -617,10 +868,26 @@ function presentInstallCapability(item) {
 		labelKey: "capabilityInstalled",
 		reasonKey: "capabilityInstalledReason"
 	};
+	if (discoveryNeedsReview(item)) return {
+		kind: "browse",
+		labelKey: "capabilityReview",
+		reasonKey: "capabilityReviewReason"
+	};
+	const sourceStatus = catalogSourceStatus(item);
+	if (sourceStatus === "invalid" || sourceStatus === "unavailable" || sourceStatus === "stale") return {
+		kind: "manual",
+		labelKey: `capabilitySource_${sourceStatus}`,
+		reasonKey: `capabilitySource_${sourceStatus}Reason`
+	};
 	if (item.installable && item.install?.needsConfig) return {
 		kind: "manual",
 		labelKey: "capabilityManual",
 		reasonKey: "capabilityManualReason"
+	};
+	if (sourceStatus === "verified") return {
+		kind: "ready",
+		labelKey: "capabilitySource_verified",
+		reasonKey: "capabilitySource_verifiedReason"
 	};
 	if (item.installable) return {
 		kind: "ready",
@@ -5301,7 +5568,7 @@ const zh = {
 	starsBrowsing: "按 Stars 浏览",
 	allCategories: "全部分类",
 	categoryRanking: "分类筛选结果",
-	hot: "综合热度",
+	hot: "Top100",
 	rising: "新锐榜",
 	total: "总榜",
 	category: "分类筛选",
@@ -5435,6 +5702,16 @@ const zh = {
 	confirmRemovePlugin: "确定卸载这个插件？",
 	browseOnly: "未识别安装源",
 	browseOnlyHint: "暂未识别到匹配当前项目的安装源，不代表无法安装；请前往 GitHub 查看说明。",
+	capabilityReview: "收录依据待复核",
+	capabilityReviewReason: "仓库结构尚未重新确认，历史收录不代表当前可安装",
+	capabilitySource_verified: "来源已预检",
+	capabilitySource_verifiedReason: "已核对清单元数据中的来源、Bundle 声明及版本；发布归档、安装、宿主兼容及功能仍需验证",
+	capabilitySource_invalid: "来源预检未通过",
+	capabilitySource_invalidReason: "来源结构或身份检查未通过，可重新预检或查看作者说明",
+	capabilitySource_unavailable: "来源暂未确认",
+	capabilitySource_unavailableReason: "本次未能完成来源检查，可能为网络或限流；不代表无法安装",
+	capabilitySource_stale: "来源需重新预检",
+	capabilitySource_staleReason: "历史来源检查已过期，安装前会重新核对当前版本",
 	capabilityReady: "已识别安装源",
 	capabilityReadyReason: "点击后核对精确来源与脚本；识别到安装源不保证安装成功或通过安全审核",
 	capabilityManual: "安装后需配置",
@@ -5711,7 +5988,7 @@ const en = {
 	starsBrowsing: "Browse by Stars",
 	allCategories: "All categories",
 	categoryRanking: "Category ranking",
-	hot: "Trending",
+	hot: "Top100",
 	rising: "Rising",
 	total: "All",
 	category: "Category filter",
@@ -5845,6 +6122,16 @@ const en = {
 	confirmRemovePlugin: "Uninstall this plugin?",
 	browseOnly: "No install source identified",
 	browseOnlyHint: "No matching install source has been identified; this does not mean installation is impossible. Check GitHub for instructions.",
+	capabilityReview: "Catalog evidence needs review",
+	capabilityReviewReason: "Repository structure has not been reconfirmed; past indexing does not prove installability",
+	capabilitySource_verified: "Source preflight passed",
+	capabilitySource_verifiedReason: "Manifest metadata checked for identity, Bundle declaration and version; release archives, installation, host compatibility and functionality remain unverified",
+	capabilitySource_invalid: "Source preflight failed",
+	capabilitySource_invalidReason: "Source structure or identity check failed; retry preflight or read the author instructions",
+	capabilitySource_unavailable: "Source not yet confirmed",
+	capabilitySource_unavailableReason: "Source check could not finish, possibly due to network or rate limits; this does not mean installation is impossible",
+	capabilitySource_stale: "Source needs a fresh check",
+	capabilitySource_staleReason: "Historical source check expired; installation will recheck the current version",
 	capabilityReady: "Install source identified",
 	capabilityReadyReason: "Review exact source and scripts after click; source recognition does not guarantee installation or security",
 	capabilityManual: "Configure after install",

@@ -739,18 +739,21 @@ export function parseSkillDirectoryDocument(raw: string): RankingsDocument {
 
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
-  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown; needsConfig?: unknown };
+  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown; installRepositoryPath?: string; discovery?: import("../shared/types.js").DiscoveryEvidence; installAssessment?: import("../shared/types.js").InstallSourceAssessment; needsConfig?: unknown };
   if (typeof entry.fullName !== "string") return null;
   const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
   const parsedTarget = typeof entry.installTarget === "string"
     ? parseInstallSpec(entry.installTarget)
     : null;
-  const install = entry.install ?? (parsedTarget ? {
+  const install = entry.install ?? (parsedTarget || entry.discovery ? {
     method: "manifest-v2",
     packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
-    target: parsedTarget.spec,
+    target: parsedTarget?.spec,
+    repositoryPath: entry.installRepositoryPath,
+    discovery: entry.discovery,
+    assessment: entry.installAssessment,
     ...(typeof entry.needsConfig === "boolean" ? { needsConfig: entry.needsConfig } : {}),
-    commands: [`dsh plugin add ${parsedTarget.spec}`],
+    commands: parsedTarget ? [`dsh plugin add ${parsedTarget.spec}`] : [],
     commandSource: "manifest-v2",
   } : undefined);
   return {

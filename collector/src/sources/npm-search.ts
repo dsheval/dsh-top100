@@ -1,4 +1,5 @@
 /** npm registry discovery for packages that link back to GitHub DSH repositories. */
+import { SearchPartialError } from "./github-partitioned-search.js";
 
 export interface NpmSearchPackage {
   name: string;
@@ -47,27 +48,33 @@ export async function searchNpmRepositories(
   let packages = 0;
   let total = 0;
 
-  for (let page = 0; page < maxPages; page++) {
-    const params = new URLSearchParams({
-      text: query,
-      size: String(pageSize),
-      from: String(page * pageSize),
-    });
-    requests++;
-    const response = await fetchImpl(`https://registry.npmjs.org/-/v1/search?${params}`, {
-      headers: { "User-Agent": "dsh-market-collector" },
-    });
-    if (!response.ok) throw new Error(`npm search returned ${response.status}`);
-    const body = (await response.json()) as NpmSearchResponse;
-    total = body.total;
-    packages += body.objects.length;
-    for (const item of body.objects) {
-      const fullName = githubRepositoryFromNpmLink(item.package.links?.repository);
-      if (fullName && !repositories.has(fullName.toLowerCase())) {
-        repositories.set(fullName.toLowerCase(), fullName);
+  try {
+    for (let page = 0; page < maxPages; page++) {
+      const params = new URLSearchParams({
+        text: query,
+        size: String(pageSize),
+        from: String(page * pageSize),
+      });
+      requests++;
+      const response = await fetchImpl(`https://registry.npmjs.org/-/v1/search?${params}`, {
+        headers: { "User-Agent": "dsh-market-collector" },
+      });
+      if (!response.ok) throw new Error(`npm search returned ${response.status}`);
+      const body = (await response.json()) as NpmSearchResponse;
+      total = body.total;
+      packages += body.objects.length;
+      for (const item of body.objects) {
+        const fullName = githubRepositoryFromNpmLink(item.package.links?.repository);
+        if (fullName && !repositories.has(fullName.toLowerCase())) {
+          repositories.set(fullName.toLowerCase(), fullName);
+        }
       }
+      if (packages >= total || body.objects.length < pageSize) break;
     }
-    if (packages >= total || body.objects.length < pageSize) break;
+  } catch (error) {
+    throw new SearchPartialError<NpmSearchResult>("npm Search request failed", {
+      repositories: [...repositories.values()], packages, requests, complete: false,
+    }, { cause: error });
   }
 
   return {

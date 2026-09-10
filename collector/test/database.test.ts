@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DshPlugin, MarketData } from "@dsh-top100/schema";
-import { importMarketData, openDatabase } from "../src/database.js";
+import { importMarketData, openDatabase, readActiveRepositories } from "../src/database.js";
 import { buildRankings } from "../src/rankings.js";
 
 const temporaryDirectories: string[] = [];
@@ -58,6 +58,59 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
+  it("clears stored categories when a later classification plan explicitly supplies an empty array", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-category-withdrawal-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      const source = { ...plugin("acme/desktop-client", 100), description: "A desktop client for DeepSeek Harness." };
+      // Older callers without a classification field retain the compatibility fallback.
+      importMarketData(database, market([source]), { snapshotDate: "2026-08-20" });
+      expect(readActiveRepositories(database)[0].categories.map(({ id }) => id)).toEqual(["appearance"]);
+
+      const withdrawn = { ...source, categories: [] };
+      importMarketData(database, market([withdrawn]), { snapshotDate: "2026-08-21" });
+      expect(withdrawn.categories).toEqual([]);
+      expect(database.prepare("SELECT category FROM repository_categories").all()).toEqual([]);
+      const repository = readActiveRepositories(database)[0];
+      expect(repository.categories).toEqual([]);
+      expect(repository.raw.categories).toEqual([]);
+      const rankings = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
+      for (const entries of Object.values(rankings.rankings)) {
+        for (const entry of entries) expect(entry.categories).toEqual([]);
+      }
+      expect(rankings.categories.every(({ count }) => count === 0)).toBe(true);
+    } finally {
+      database.close();
+    }
+  });
+
+  it("publishes Chinese descriptions for every ranking and the Skills directory", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-chinese-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      const sources = [
+        { ...plugin("a/english", 100), descriptionZh: null },
+        { ...plugin("a/mixed", 90), descriptionZh: "用于自动化：Browser automation for agents with persistent sessions." },
+        { ...plugin("a/chinese", 80), descriptionZh: null, description: "搜索网页并整理资料。" },
+        { ...plugin("a/readme", 70), descriptionZh: "暂无简介", readmeSummary: "# Usage\n搜索网页并整理资料。" },
+        { ...plugin("a/skill", 60, "skill"), descriptionZh: "A useful extension" },
+      ];
+      importMarketData(database, market(sources), { snapshotDate: "2026-08-21" });
+      const result = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
+      for (const entries of Object.values(result.rankings)) {
+        for (const entry of entries) {
+          expect(entry.descriptionZh).toBe(["a/chinese", "a/readme"].includes(entry.fullName) ? "搜索网页并整理资料。" : "中文简介待生成。");
+          expect(entry.description).toBe(sources.find(source => source.fullName === entry.fullName)!.description);
+        }
+      }
+      expect(result.directories.skills[0].descriptionZh).toBe("中文简介待生成。");
+    } finally {
+      database.close();
+    }
+  });
+
   it("ranks rising repositories by daily growth instead of weekly growth or total stars", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-db-"));
     temporaryDirectories.push(directory);

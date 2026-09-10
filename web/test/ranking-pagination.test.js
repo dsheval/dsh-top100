@@ -73,6 +73,7 @@ function createPage(category = null) {
       categories: [{ id: "tools", count: 250, pageCount: pages.length, pages }],
     },
     categoryLabels: { tools: "工具" }, categoryPageLoadPromises: new Map(),
+    categoryDescription: { hidden: true },
     totalPageLoadPromise: null, excludedHotSkillCount: 0, revealObserver: null,
     searchSortButtons: [],
     requiresSearchIndex, filterDiscoveryEntries, normalizeSearchText, tokenizeSearchQuery,
@@ -84,7 +85,7 @@ function createPage(category = null) {
       return { rankings: entries.slice(index * 100, (index + 1) * 100) };
     },
     formatStars: (value) => String(Number(value) || 0),
-    entryMatchesCategory: (entry, id) => entry.plugin.categories.includes(id),
+    entryMatchesCategory: (entry, id) => !id || entry.plugin.categories.includes(id),
     showFeaturedPlugin: () => false,
     enhanceDescriptions() {}, observeReveal() {}, track() {}, showFeedback() {},
     showCategoryDescription() {}, hideCategoryDescription() {},
@@ -102,6 +103,7 @@ function createPage(category = null) {
   page.categoryButtons = [allCategoryButton];
   const context = vm.createContext(page);
   vm.runInContext([
+    sourceBetween("      function updateCategoryCounts()", "      function showCategoryDescription(button)"),
     sourceBetween("      async function loadNextTotalPage()", "      async function loadSearchEntries()"),
     sourceBetween("      function renderRanking()", "      function showFeedback(message)"),
     sourceBetween('      installableToggle.addEventListener("click",', '\n      try {\n        initialDataPromise'),
@@ -210,4 +212,39 @@ test("a pending page does not overwrite a newer search result", async () => {
   assert.deepEqual(renderedRanks(page), searchRanks);
   assert.equal(page.viewState.all.visible, 100);
   assert.equal(page.loadMore.disabled, false);
+});
+
+for (const [view, label, ranks] of [
+  ["top100", "热度榜排名", [10, 26, 32]],
+  ["rising", "新锐榜排名", [7, 28, 61]],
+]) {
+  test(`${view} category and installation filters retain original view ranks, not Stars ranks or fresh numbering`, () => {
+    const { page } = createPage("tools");
+    const rows = page.rankedEntries.slice(0, 3).map((entry, index) => ({
+      ...entry, rank: ranks[index],
+      plugin: { ...entry.plugin, rank: ranks[index], totalRank: [58, 23, 2][index],
+        categories: [index === 1 ? "coding" : "tools"],
+        installTarget: index === 2 ? undefined : entry.plugin.installTarget },
+    }));
+    page.currentView = view;
+    page.hotEntries = rows;
+    page.risingEntries = rows;
+    page.renderRanking();
+    assert.equal(page.rankHead.textContent, label);
+    assert.deepEqual(renderedRanks(page), ranks.filter((_, index) => index !== 1).map(rank => `#${String(rank).padStart(3, "0")}`));
+    page.installableOnly = true;
+    page.renderRanking();
+    assert.deepEqual(renderedRanks(page), [`#${String(ranks[0]).padStart(3, "0")}`]);
+    assert.deepEqual(rows.map(row => row.plugin.totalRank), [58, 23, 2], "display does not mutate the source Stars ranking");
+  });
+}
+
+test("total and global search keep Stars ranks even when entered from a hot ranking tab", () => {
+  const { page } = createPage("tools");
+  assert.equal(page.rankHead.textContent, "Stars 排名");
+  page.currentView = "top100";
+  page.viewState.top100.query = "plugin-250";
+  page.renderRanking();
+  assert.equal(page.rankHead.textContent, "Stars 排名");
+  assert.ok(renderedRanks(page).includes("#250"));
 });

@@ -6,7 +6,7 @@ import {
   type GithubCodeRepository,
   type GithubCodeSearchResult,
 } from "../github.js";
-import { RepositorySearchIncompleteError } from "./github-partitioned-search.js";
+import { RepositorySearchIncompleteError, SearchPartialError } from "./github-partitioned-search.js";
 
 export interface CodeSearchRequest {
   (query: string, page: number, perPage: number): Promise<GithubCodeSearchResult>;
@@ -67,11 +67,17 @@ export async function searchCodeRepositories(
   const retries = options.semanticRetries ?? 2;
   const retryDelayMs = options.retryDelayMs ?? 1_000;
   let requests = 0;
+  let matches = 0;
+  let totalMatches = 0;
+  const repositories = new Map<string, GithubCodeRepository>();
+  const observed = new Map<string, GithubCodeRepository>();
 
   const stableRequest = async (page: number, size: number): Promise<GithubCodeSearchResult> => {
     for (let attempt = 0; attempt <= retries; attempt++) {
       requests++;
       const response = await request(query, page, size);
+      totalMatches = response.total_count;
+      for (const item of response.items) observed.set(identity(item.repository), item.repository);
       if (!response.incomplete_results) return response;
       if (attempt < retries && retryDelayMs > 0) await sleep(retryDelayMs);
     }
@@ -80,25 +86,26 @@ export async function searchCodeRepositories(
     );
   };
 
-  const probe = await stableRequest(1, 1);
-  const targetMatches = Math.min(probe.total_count, maxItems);
-
-  const repositories = new Map<string, GithubCodeRepository>();
-  let matches = 0;
-  for (let page = 1; page <= Math.ceil(targetMatches / perPage); page++) {
-    const response = await stableRequest(page, perPage);
-    const remaining = targetMatches - matches;
-    const items = response.items.slice(0, remaining);
-    matches += items.length;
-    for (const item of items) {
-      repositories.set(identity(item.repository), item.repository);
+  try {
+    const probe = await stableRequest(1, 1);
+    const targetMatches = Math.min(probe.total_count, maxItems);
+    for (let page = 1; page <= Math.ceil(targetMatches / perPage); page++) {
+      const response = await stableRequest(page, perPage);
+      const remaining = targetMatches - matches;
+      const items = response.items.slice(0, remaining);
+      matches += items.length;
+      for (const item of items) repositories.set(identity(item.repository), item.repository);
     }
+    return {
+      repositories: [...repositories.values()], requests, matches,
+      totalMatches: probe.total_count,
+      complete: probe.total_count <= maxItems && matches >= targetMatches,
+    };
+  } catch (error) {
+    throw new SearchPartialError<CodeSearchResult>(
+      error instanceof RepositorySearchIncompleteError ? error.message : "Code Search request failed",
+      { repositories: [...observed.values()], requests, matches, totalMatches, complete: false },
+      { cause: error },
+    );
   }
-  return {
-    repositories: [...repositories.values()],
-    requests,
-    matches,
-    totalMatches: probe.total_count,
-    complete: probe.total_count <= maxItems && matches >= targetMatches,
-  };
 }

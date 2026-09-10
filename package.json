@@ -1,6 +1,6 @@
 {
   "name": "dsh-top100",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "private": true,
   "type": "module",
   "description": "DSH-Eval plugin and Skills discovery with daily GitHub rankings",
@@ -31,7 +31,10 @@
     "plugin:build": "npm run build -w @dsheval/dsh-top100-plugin",
     "plugin:check": "npm run typecheck -w @dsheval/dsh-top100-plugin && npm run test -w @dsheval/dsh-top100-plugin",
     "search:build": "esbuild plugin/src/shared/search.ts --bundle --platform=browser --format=esm --outfile=web/public/search-engine.js && esbuild plugin/src/shared/featured.ts --bundle --platform=browser --format=esm --outfile=web/public/featured-plugin.js && esbuild plugin/src/shared/install-source.ts --bundle --platform=browser --format=esm --outfile=web/public/install-source.js && npm run descriptions:build",
-    "descriptions:build": "node scripts/sync-descriptions.mjs"
+    "descriptions:build": "node scripts/sync-descriptions.mjs",
+    "catalog:repair": "node --use-env-proxy --import tsx collector/src/repair-catalog.ts",
+    "catalog:enrich": "node --use-env-proxy --import tsx collector/src/enrich-catalog.ts",
+    "catalog:merge": "node --import tsx collector/src/merge-catalog-content.ts"
   },
   "engines": {
     "node": ">=22.13"

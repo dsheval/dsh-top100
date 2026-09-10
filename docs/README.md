@@ -1,5 +1,8 @@
 # dsh-Top100 文档
 
+- [目录质量与来源状态](./catalog-quality.md)：分类、中文简介、发现证据、来源预检与迁移操作。
+- [v1.3.4 发布说明](./release-1.3.4.md)：中文与分类修订、来源预检、榜单范围计数，以及模型补齐暂停。
+
 - [v1.3.3 正式版](https://github.com/dsheval/dsh-top100/releases/tag/v1.3.3)：阻止同版本重复更新，完善批量更新、原频道保留与 Skill 完整备份；[npm 下载](https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.3)、[安装指南](https://www.dsheval.ai/top100/?page=dsh#dsh)、[验收与使用边界](./release-1.3.3.md)。
 - [v1.3.2 更新说明](../CHANGELOG.md#132---2026-09-07)：安装与更新来源核验、任务恢复和配置保护。
 - [v1.3.1 更新说明](../CHANGELOG.md#131---2026-09-05)：统一插件榜与 Skills 榜的布局、简介与安装信息。

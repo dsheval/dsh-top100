@@ -19,6 +19,16 @@ describe('description queue', () => {
     expect(missing.ready).toHaveLength(0);
     expect(missing.jobs[source.id].status).toBe('missing-source');
   });
+  it('requeues placeholder and mostly English summaries even if previously marked complete', () => {
+    const complete = planDescriptionJobs([{ ...source, descriptionZh: '搜索学术论文并整理引用来源。' }], {}, new Set(), now);
+    for (const descriptionZh of ['中文简介待生成。', '用于自动化：Browser automation for agents with persistent browser sessions.']) {
+      const pending = planDescriptionJobs([{ ...source, descriptionZh }], complete.jobs, new Set(), now);
+      expect(pending.ready).toHaveLength(1);
+      expect(pending.jobs[source.id].status).toBe('pending');
+      recordDescriptionAttempt(pending.jobs[source.id], false, now);
+      expect(pending.jobs[source.id].status).toBe('retry');
+    }
+  });
   it('prioritizes visible lists and avoids repeats for completed Chinese', () => {
     const other = { ...source, id: 'owner/big', stars: 10000 };
     const plan = planDescriptionJobs([other, source], {}, new Set([source.id]), now);

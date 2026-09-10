@@ -1,3 +1,4 @@
+import { catalogSourceStatus, discoveryNeedsReview } from "../shared/install-assessment.js";
 import type { CatalogItem } from "../shared/types.js";
 
 export type InstallCapabilityKind = "installed" | "ready" | "manual" | "browse";
@@ -13,9 +14,15 @@ export function presentInstallCapability(item: CatalogItem): InstallCapabilityPr
   if (item.installed) {
     return { kind: "installed", labelKey: "capabilityInstalled", reasonKey: "capabilityInstalledReason" };
   }
+  if (discoveryNeedsReview(item)) return { kind: "browse", labelKey: "capabilityReview", reasonKey: "capabilityReviewReason" };
+  const sourceStatus = catalogSourceStatus(item);
+  if (sourceStatus === "invalid" || sourceStatus === "unavailable" || sourceStatus === "stale") {
+    return { kind: "manual", labelKey: `capabilitySource_${sourceStatus}`, reasonKey: `capabilitySource_${sourceStatus}Reason` };
+  }
   if (item.installable && item.install?.needsConfig) {
     return { kind: "manual", labelKey: "capabilityManual", reasonKey: "capabilityManualReason" };
   }
+  if (sourceStatus === "verified") return { kind: "ready", labelKey: "capabilitySource_verified", reasonKey: "capabilitySource_verifiedReason" };
   if (item.installable) {
     return { kind: "ready", labelKey: "capabilityReady", reasonKey: "capabilityReadyReason" };
   }

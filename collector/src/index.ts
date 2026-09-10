@@ -1,3 +1,4 @@
+import { modelRequestsEnabled } from "./model-requests.js";
 /**
  * collector 主流程（v2：并发 + 缓存）
  * 扫描 → 去重合并 → 特征检测 → 元数据+README → 实用五维评分 → 输出 data/plugins.json
@@ -6,7 +7,7 @@
  * 输出：data/plugins.json（市场数据）、data/report.json（统计报告）
  */
 
-import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, renameSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DshPlugin, DshPack, MarketData } from "@dsh-top100/schema";
@@ -14,7 +15,8 @@ import "./env.js"; // 加载仓库根 .env（GITHUB_TOKEN）
 import {
   githubFetch,
   fetchRepoRoot,
-  fetchRawFile,
+  rejectPrivateRepository,
+  redactPrivateRejections,
   type GithubRepo,
 } from "./github.js";
 import { fetchRepositoryUpdates } from "./github-batch.js";
@@ -22,10 +24,12 @@ import { fetchAwesomeEntries } from "./sources/awesome.js";
 import { scanOrg } from "./sources/github-search.js";
 import { discoverRepositories, type DiscoveryMode } from "./sources/discovery.js";
 import { fetchSubmissionRepos, fetchPackSubmissionRepos } from "./sources/issues.js";
-import { detectPlugin, detectNeedsConfig, type Detection } from "./detect.js";
+import { detectPlugin, detectNeedsConfig, DISCOVERY_POLICY_VERSION, type Detection } from "./detect.js";
+import { canRestorePrevious, restoredDiscovery, canReuseDetectionCache } from "./discovery-policy.js";
+import { loadSelectedReadme, getCachedSelectedReadme, loadSelectedSkill, SOURCE_DOCUMENT_CACHE_VERSION } from "./selected-readme.js";
 import { computePracticalScore, computeP99Stars } from "./scoring.js";
 import { cached, cacheGet, cacheSet } from "./cache.js";
-import { runPool } from "./pool.js";
+import { runPool, collectionConcurrency } from "./pool.js";
 import {
   fallbackDescriptionZh,
   isGenericDescriptionZh,
@@ -33,14 +37,16 @@ import {
 } from "./llm.js";
 import { INSTALL_PARSER_VERSION, parseInstallCommands } from "./install-parse.js";
 import { normalizeTags } from "./tag-normalize.js";
-import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
+import { type DescriptionJob } from "./description-jobs.js";
 import { summarizeReadme } from "./summary.js";
 import { collectPacks } from "./packs.js";
 
 /** 检测结果缓存（增量核心：repo 未变化时复用，跳过重复检测网络调用） */
 interface DetectCache {
-  schemaVersion: 3;
+  schemaVersion: number;
+  checkedAt: string;
   installParserVersion?: number;
+  sourceDocumentVersion?: number;
   pushedAt: string;
   detection: Detection;
   isCordis: boolean;
@@ -54,7 +60,6 @@ interface DetectCache {
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = join(__dirname, "../../data");
-const CONCURRENCY = 10;
 const EXCLUDED_REPOS = new Set([
   "deepseek-ai/deepseek-harness", // 官方本体，非插件
   "deepseek-ai/awesome-deepseek-harness",
@@ -80,24 +85,9 @@ interface Detected {
   hasSkillMd: boolean;
 }
 
-/** 读取上次生成的中文数据（增量：只翻译缺失的插件） */
-function loadPreviousZh(): Map<string, { descriptionZh: string | null; tagsZh: string[] }> {
-  try {
-    const raw = readFileSync(join(DATA_DIR, "plugins.json"), "utf-8");
-    const prev = JSON.parse(raw) as MarketData;
-    return new Map(
-      prev.plugins.map((p) => [
-        p.id,
-        { descriptionZh: p.descriptionZh ?? null, tagsZh: (p.tags ?? []).filter((t) => /[\u4e00-\u9fff]/.test(t)) },
-      ])
-    );
-  } catch {
-    return new Map();
-  }
-}
-
-/* ===== A：持久化中文翻译缓存（跨天累积，波动回归的插件复用旧翻译，不重复翻译）===== */
-import { shouldRetranslate, type ZhEntry } from "./zh-util.js";
+import { type ZhEntry } from "./zh-util.js";
+import { carryForwardDailyCategories } from "./daily-categories.js";
+import { prepareDailyDescriptions, runDailyDescriptions, updateDailyDescriptionCache } from "./daily-descriptions.js";
 
 interface ZhCache {
   updatedAt: string;
@@ -135,6 +125,7 @@ function loadPreviousPlugins(): Map<string, DshPlugin> {
 }
 
 async function main() {
+  const concurrency = collectionConcurrency();
   if (!process.env.GITHUB_TOKEN) {
     console.error("缺少 GITHUB_TOKEN 环境变量");
     process.exit(1);
@@ -229,9 +220,12 @@ async function main() {
   const all = [...candidates.values()];
   console.log(`  candidates: ${all.length}`);
 
-  console.log("[2/5] 特征检测 + 元数据抓取（并发 10，带缓存）...");
+  console.log(`[2/5] 特征检测 + 元数据抓取（并发 ${concurrency}，带缓存）...`);
   const detected: Detected[] = [];
   const rejected: { fullName: string; reason: string }[] = [];
+  const definitiveRejections = new Set<string>();
+  const knownPrivateIds = new Set<string>();
+  let checkedCandidates = 0;
 
   await runPool(all, async (candidate) => {
     try {
@@ -241,10 +235,17 @@ async function main() {
         repo = await cached<GithubRepo>("repos", candidate.fullName, () =>
           githubFetch<GithubRepo>(`/repos/${candidate.fullName}`)
         );
-        if (repo.fork || repo.archived) {
-          rejected.push({ fullName: candidate.fullName, reason: "fork/archived" });
-          return;
-        }
+      }
+      const privateRejection = rejectPrivateRepository(repo, candidate.fullName, definitiveRejections, knownPrivateIds);
+      if (privateRejection) {
+        rejected.push(privateRejection);
+        return;
+      }
+      if (repo.fork || repo.archived) {
+        definitiveRejections.add(candidate.fullName.toLowerCase());
+        definitiveRejections.add(repo.full_name.toLowerCase());
+        rejected.push({ fullName: candidate.fullName, reason: "fork/archived" });
+        return;
       }
 
       // ===== 检测结果缓存（增量核心）：repo 未变化则复用，跳过全部检测网络调用 =====
@@ -258,8 +259,10 @@ async function main() {
       let hasSkillMd: boolean;
       let readmeContent: string | null;
       let subdir: string | null = null;
+      let checkedAt = new Date().toISOString();
 
-      if (cachedDetect?.schemaVersion === 3 && cachedDetect.installParserVersion === INSTALL_PARSER_VERSION && cachedDetect.pushedAt === repo.pushed_at) {
+      if (cachedDetect && canReuseDetectionCache(cachedDetect, repo.pushed_at, INSTALL_PARSER_VERSION)) {
+        checkedAt = cachedDetect.checkedAt;
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
         detection = cachedDetect.detection;
         isCordis = cachedDetect.isCordis;
@@ -270,6 +273,8 @@ async function main() {
         subdir = cachedDetect.subdir ?? null;
         readmeContent = null; // 评分用：下面从 readmes 缓存取（24h 内必有）
         if (!detection.isPlugin) {
+          definitiveRejections.add(candidate.fullName.toLowerCase());
+          definitiveRejections.add(repo.full_name.toLowerCase());
           rejected.push({ fullName: candidate.fullName, reason: "no plugin markers (cached)" });
           return;
         }
@@ -278,48 +283,28 @@ async function main() {
         // 根目录文件列表（缓存 24h）
         const rootItems = await cached(
           "roots",
-          candidate.fullName,
+          `${candidate.fullName}:${repo.pushed_at}`,
           () => fetchRepoRoot(repo!.full_name, repo!.default_branch)
         );
 
         // 特征检测（只基于文件列表）
-        detection = await detectPlugin(candidate.fullName, rootItems, repo!.default_branch);
+        detection = await detectPlugin(candidate.fullName, rootItems, repo!.default_branch, { primaryOnly: true });
         if (!detection.isPlugin) {
+          definitiveRejections.add(candidate.fullName.toLowerCase());
+          definitiveRejections.add(repo.full_name.toLowerCase());
           rejected.push({ fullName: candidate.fullName, reason: "no validated plugin package" });
           return;
         }
         subdir = detection.pluginPath;
         isCordis = detection.type === "cordis-plugin";
 
-        // README（缓存 24h）：monorepo 优先读取被选中插件目录，失败再回退仓库根目录。
-        const readmePath = subdir ? `${subdir}/README.md` : "README.md";
-        const readmeCacheKey = subdir ? `${candidate.fullName}:${subdir}` : candidate.fullName;
-        readmeContent = await cached<string | null>(
-          "readmes",
-          readmeCacheKey,
-          () => fetchRawFile(candidate.fullName, readmePath, repo!.default_branch)
-        );
-        if (readmeContent === null && subdir) {
-          readmeContent = await cached<string | null>(
-            "readmes",
-            candidate.fullName,
-            () => fetchRawFile(candidate.fullName, "README.md", repo!.default_branch)
-          );
-        }
+        // 所选子包缺少文档时保留未知，不把根产品 README 当作子包功能或安装证据。
+        readmeContent = await loadSelectedReadme(candidate.fullName, subdir, repo.pushed_at, repo!.default_branch);
 
         // skill 型：抓 SKILL.md 做摘要
         let skillMd: string | null = null;
         if (detection.skillFiles.length > 0) {
-          skillMd = await cached<string | null>(
-            "skills",
-            `${candidate.fullName}:${detection.skillFiles[0]}`,
-            () =>
-              fetchRawFile(
-                candidate.fullName,
-                detection.skillFiles[0],
-                repo!.default_branch
-              )
-          );
+          skillMd = await loadSelectedSkill(candidate.fullName, detection.skillFiles[0], repo.pushed_at, repo.default_branch);
         }
 
         needsConfig = detectNeedsConfig(readmeContent);
@@ -331,8 +316,10 @@ async function main() {
 
         // 写入检测缓存（含派生产物）
         cacheSet<DetectCache>("detect", candidate.fullName, {
-          schemaVersion: 3,
+          schemaVersion: DISCOVERY_POLICY_VERSION,
+          checkedAt,
           installParserVersion: INSTALL_PARSER_VERSION,
+          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION,
           pushedAt: repo.pushed_at,
           detection,
           isCordis,
@@ -344,13 +331,9 @@ async function main() {
         });
       }
 
-      // 评分用的 readmeContent：检测缓存命中时从 readmes 缓存补取（不重新抓取）
+      // 检测缓存命中时只补取同一个所选目录的文档，不跨回仓库根目录。
       if (readmeContent === null) {
-        const readmeCacheKey = subdir ? `${candidate.fullName}:${subdir}` : candidate.fullName;
-        readmeContent = cacheGet<string | null>("readmes", readmeCacheKey, 24 * 3600_000);
-        if (readmeContent === null && subdir) {
-          readmeContent = cacheGet<string | null>("readmes", candidate.fullName, 24 * 3600_000);
-        }
+        readmeContent = getCachedSelectedReadme(candidate.fullName, subdir, repo.pushed_at, repo.default_branch);
       }
 
       const installCommands =
@@ -383,6 +366,14 @@ async function main() {
         submissionIssue: candidate.issueNumbers?.[0],
         install: {
           method: installMethod,
+          discovery: {
+            status: "verified",
+            kind: detection.kind!,
+            evidence: detection.evidence,
+            checkedAt,
+            policyVersion: DISCOVERY_POLICY_VERSION,
+            sourceRevision: repo.pushed_at,
+          },
           target: detection.type === "skill" ? "~/.agents/skills" : undefined,
           repositoryPath: detection.pluginPath ?? undefined,
           packageName: detection.packageName ?? undefined,
@@ -392,7 +383,7 @@ async function main() {
         },
         score: undefined as unknown as DshPlugin["score"],
         sources: candidate.sources,
-        lastCheckedAt: new Date().toISOString(),
+        lastCheckedAt: checkedAt,
       };
       detected.push({
         candidate,
@@ -406,8 +397,13 @@ async function main() {
         fullName: candidate.fullName,
         reason: `error: ${(err as Error).message.slice(0, 80)}`,
       });
+    } finally {
+      checkedCandidates++;
+      if (checkedCandidates % 250 === 0 || checkedCandidates === all.length) {
+        console.log(`  checked: ${checkedCandidates}/${all.length}, detected: ${detected.length}, rejected: ${rejected.length}`);
+      }
     }
-  });
+  }, concurrency);
 
   console.log(`  detected: ${detected.length}, rejected: ${rejected.length}`);
 
@@ -433,10 +429,10 @@ async function main() {
   }
 
   // [B2] 已收录延续性：上次收录但本次未扫描到的仓库，repos API 单独确认后补回
-  // （防「三路前 1000」边界抖动导致已收录插件消失；404 确认真删除才移除）
+  // 明确拒绝不恢复；网络失败或未扫描保留旧记录并标记待复核，不伪造验证时间。
   const prevPlugins = loadPreviousPlugins();
   const currentIds = new Set(detected.map((d) => d.plugin.id.toLowerCase()));
-  const missing = [...prevPlugins.keys()].filter((id) => !currentIds.has(id));
+  const missing = [...prevPlugins.keys()].filter((id) => !currentIds.has(id) && canRestorePrevious(id, definitiveRejections));
   let restored = 0;
   let filteredOut = 0;
   let unresolved = 0;
@@ -455,6 +451,12 @@ async function main() {
     for (const id of missing) {
       const prev = prevPlugins.get(id)!;
       const update = updates.get(id);
+      const privateRejection = update && rejectPrivateRepository(update, id, definitiveRejections, knownPrivateIds);
+      if (privateRejection) {
+        rejected.push(privateRejection);
+        filteredOut++;
+        continue;
+      }
       if (update?.fork || update?.archived) {
         filteredOut++;
         continue;
@@ -462,6 +464,7 @@ async function main() {
       if (!update) unresolved++;
       const canonicalFullName = update?.fullName ?? prev.fullName;
       const canonicalId = canonicalFullName.toLowerCase();
+      if (!canRestorePrevious(canonicalId, definitiveRejections)) { filteredOut++; continue; }
       if (canonicalId !== id && currentIds.has(canonicalId)) {
         continue;
       }
@@ -499,7 +502,8 @@ async function main() {
           openIssues: update?.openIssues ?? prev.openIssues,
           pushedAt: update?.pushedAt ?? prev.pushedAt,
           updatedAt: update?.updatedAt ?? prev.updatedAt,
-          lastCheckedAt: new Date().toISOString(),
+          lastCheckedAt: prev.lastCheckedAt,
+          install: { ...prev.install, discovery: restoredDiscovery(prev) },
         },
         repo,
         readmeContent: null,
@@ -508,7 +512,7 @@ async function main() {
       currentIds.add(canonicalId);
       restored++;
     }
-    console.log(`  [B2] 补回 ${restored}，过滤 fork/归档 ${filteredOut}，刷新失败保留 ${unresolved}`);
+    console.log(`  [B2] 补回 ${restored}，过滤私有/fork/归档 ${filteredOut}，刷新失败保留 ${unresolved}`);
   }
 
   console.log("[3/5] 实用五维评分...");
@@ -535,25 +539,13 @@ async function main() {
   console.log(`  p99 stars = ${p99}`);
 
   console.log("[3.5/5] 中文化（DeepSeek 增量翻译）...");
-  const prevZh = loadPreviousZh();
-  // A：持久化翻译缓存——跨天累积；首次/缺 cache 时从上次 plugins.json 播种
   const zhCache = loadZhCache();
-  for (const [id, v] of prevZh) {
-    if (!zhCache.has(id) && v.descriptionZh && !isGenericDescriptionZh(v.descriptionZh)) {
-      zhCache.set(id, { descriptionZh: v.descriptionZh, tagsZh: v.tagsZh });
-    }
-  }
-  for (const d of detected) {
-    if (isGenericDescriptionZh(d.plugin.descriptionZh)) d.plugin.descriptionZh = null;
-    const cached = zhCache.get(d.plugin.id);
-    if (cached && isGenericDescriptionZh(cached.descriptionZh)) zhCache.delete(d.plugin.id);
-  }
   const jobsPath = join(DATA_DIR, "description-jobs.json");
   let previousJobs: Record<string, DescriptionJob> = {};
-  try { previousJobs = JSON.parse(readFileSync(jobsPath, "utf-8")).jobs ?? {}; } catch { /* first run */ }
-  type Reviewed = { descriptionZh: string; sourceDescription: string; sourceReadme: string };
-  let reviewed: Record<string, Reviewed> = {};
-  try { reviewed = JSON.parse(readFileSync(join(__dirname, "../../plugin/src/shared/reviewed-descriptions.json"), "utf-8")); } catch { /* optional editorial seed */ }
+  try {
+    previousJobs = JSON.parse(readFileSync(jobsPath, "utf-8")).jobs;
+    if (!previousJobs || typeof previousJobs !== "object" || Array.isArray(previousJobs)) throw new Error("Invalid daily description job state");
+  } catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
   const priority = new Set<string>();
   // Prioritize the first 100 entries from both the plugin Stars and Skills lists.
   for (const type of ["cordis-plugin", "skill"]) {
@@ -567,57 +559,39 @@ async function main() {
       for (const entry of (list ?? []).slice(0, 100)) priority.add(String(entry.fullName).toLowerCase());
     }
   } catch { /* first publication has no growth history */ }
-  for (const d of detected) {
-    const p = d.plugin;
-    const review = reviewed[p.fullName.toLowerCase()];
-    const cached = zhCache.get(p.id);
-    const previousJob = previousJobs[p.id];
-    const changed = previousJob && previousJob.sourceHash !== descriptionSourceHash(p);
-    if (review && review.sourceDescription === p.description && review.sourceReadme === (p.readmeSummary || "")) {
-      p.descriptionZh = review.descriptionZh;
-    } else if (cached && hasChineseDescription(cached.descriptionZh) && !changed && !shouldRetranslate(p.readmeSummary, cached.summaryKey)) {
-      p.descriptionZh = cached.descriptionZh;
-      for (const tag of cached.tagsZh) if (!p.tags.includes(tag)) p.tags.push(tag);
-    } else if (changed || !hasChineseDescription(p.descriptionZh)) {
-      p.descriptionZh = null;
-    }
-  }
   const now = Date.now();
-  const { jobs, ready } = planDescriptionJobs(detected.map(d => d.plugin), previousJobs, priority, now);
+  carryForwardDailyCategories(detected.map(d => d.plugin), prevPlugins);
+  const { jobs, ready } = prepareDailyDescriptions(detected.map(d => d.plugin), prevPlugins, zhCache, previousJobs, priority, now);
+  const saveDescriptionJobs = () => {
+    mkdirSync(DATA_DIR, { recursive: true });
+    const temporary = `${jobsPath}.${process.pid}.tmp`;
+    writeFileSync(temporary, JSON.stringify({ updatedAt: new Date().toISOString(), jobs }));
+    renameSync(temporary, jobsPath);
+  };
+  saveDescriptionJobs();
   const apiKey = process.env.DEEPSEEK_API_KEY;
+  const modelsEnabled = modelRequestsEnabled() && !!apiKey;
+  if (!modelsEnabled) console.log("  模型请求已暂停；保留同源已有内容并继续更新目录");
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
   const summaryBatchSize = Number(process.env.DEEPSEEK_SUMMARY_BATCH_SIZE ?? "300");
   const summaryConcurrency = Number(process.env.DEEPSEEK_SUMMARY_CONCURRENCY ?? "3");
   if (!Number.isInteger(summaryBatchSize) || summaryBatchSize < 0 || summaryBatchSize > 3000) throw new Error("DEEPSEEK_SUMMARY_BATCH_SIZE must be an integer from 0 to 3000");
   if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
   const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);
-  const byId = new Map(detected.map(d => [d.plugin.id, d.plugin]));
-  const pending = apiKey ? ready.slice(0, summaryBatchSize) : [];
-  await runPool(pending, async (source) => {
-    const p = byId.get(source.id)!;
-    const result = await translateWithDeepSeek({ name: p.name, type: p.type, description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags }, { apiKey: apiKey!, baseURL, model });
-    recordDescriptionAttempt(jobs[p.id], Boolean(result), Date.now());
-    if (result) {
-      p.descriptionZh = result.descriptionZh;
-      for (const tag of result.tagsZh) if (!p.tags.includes(tag)) p.tags.push(tag);
-    }
-  }, summaryConcurrency);
-  for (const { plugin: p } of detected) {
-    if (!hasChineseDescription(p.descriptionZh)) p.descriptionZh = fallbackDescriptionZh(p);
-    if (hasChineseDescription(p.descriptionZh)) {
-      jobs[p.id].status = "complete";
-      delete jobs[p.id].nextAttemptAt;
-      zhCache.set(p.id, { descriptionZh: p.descriptionZh!, tagsZh: p.tags.filter(t => /[\u4e00-\u9fff]/.test(t)), summaryKey: p.readmeSummary ?? undefined });
-    } else zhCache.delete(p.id);
-  }
+  const summaryResult = await runDailyDescriptions(detected.map(d => d.plugin), { jobs, ready }, {
+    limit: modelsEnabled ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
+    worker: p => translateWithDeepSeek({ name: p.fullName, type: p.type, packageName: p.install?.packageName, repositoryPath: p.install?.repositoryPath,
+      description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags },
+      { apiKey: apiKey!, baseURL, model, maxAttempts: 1, retryDelayMs: 0, timeoutMs: 45_000, thinking: "disabled" }),
+  });
+  updateDailyDescriptionCache(detected.map(d => d.plugin), zhCache);
   saveZhCache(zhCache);
-  mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(jobsPath, JSON.stringify({ updatedAt: new Date().toISOString(), jobs }));
-  console.log(`  summaries: ${pending.length} attempted, ${ready.length - pending.length} deferred; retry state saved`);
+  saveDescriptionJobs();
+  console.log(`  summaries: ${summaryResult.attempted} attempted, ${ready.length - summaryResult.attempted} deferred; retry state saved`);
 
   console.log("[3.6/5] 标签归一化（合并同义词 + 移除宽泛标签）...");
-  if (apiKey) {
+  if (modelsEnabled) {
     // 读取历史 alias（持久化复用，避免 LLM 输出波动导致合并丢失）
     let prevAlias: Record<string, string> = {};
     try {
@@ -642,7 +616,7 @@ async function main() {
       p.tags = next;
     }
     // 2) 再跑 LLM 归一化（针对剩余标签，含宽泛移除）
-    const norm = await normalizeTags(allPlugins, { apiKey, baseURL, model });
+    const norm = await normalizeTags(allPlugins, { apiKey: apiKey!, baseURL, model });
     const aliasEntries = Object.entries(norm.alias);
     console.log(
       `  历史 alias 应用 ${histMerged} 处 · 新 LLM 合并 ${aliasEntries.length} 组（${norm.mergedCount} 处）· 移除宽泛标签 ${norm.removedGeneric} 处`
@@ -655,7 +629,7 @@ async function main() {
       "utf-8"
     );
   } else {
-    console.log("  跳过（无 API key）");
+    console.log("  跳过（模型请求已暂停或未配置 API key）");
   }
 
   console.log("[3.7/5] 整合包收集...");
@@ -679,7 +653,7 @@ async function main() {
     console.log("  整合包扫描暂缓（设 DSH_PACK_SCAN=1 启用；收到人工提交时见 data/packs.json 手工通道）");
   }
   // 整合包中文化（增量：复用上次结果，packs 少直接顺序翻译）
-  if (apiKey && packs.length > 0) {
+  if (packs.length > 0) {
     let prevPacks: DshPack[] = [];
     try {
       prevPacks = JSON.parse(readFileSync(join(DATA_DIR, "packs.json"), "utf-8")).packs ?? [];
@@ -697,7 +671,7 @@ async function main() {
         pack.descriptionZh = prev;
         continue;
       }
-      const result = await translateWithDeepSeek(
+      const result = modelsEnabled ? await translateWithDeepSeek(
         {
           name: pack.name,
           description: pack.description,
@@ -705,8 +679,8 @@ async function main() {
           topics: pack.tags,
           knownTags: knownPackTags,
         },
-        { apiKey, baseURL, model }
-      );
+        { apiKey: apiKey!, baseURL, model }
+      ) : null;
       if (result) {
         pack.descriptionZh = result.descriptionZh;
         for (const t of result.tagsZh) {
@@ -746,6 +720,13 @@ async function main() {
   } else {
     console.log("  保留人工 data/packs.json（扫描关闭，不覆盖人工收录的整合包）");
   }
+  const publicRejections = redactPrivateRejections(rejected, knownPrivateIds);
+  writeFileSync(join(DATA_DIR, "discovery-review.json"), JSON.stringify({
+    generatedAt: market.generatedAt,
+    rejected: publicRejections.map(entry => ({ ...entry, status: entry.reason === "private repository" || definitiveRejections.has(entry.fullName.toLowerCase()) ? "rejected" : "review-required" })),
+    retained: market.plugins.filter(plugin => plugin.install.discovery?.status === "review-required")
+      .map(plugin => ({ fullName: plugin.fullName, discovery: plugin.install.discovery })),
+  }, null, 2));
   writeFileSync(
     join(DATA_DIR, "report.json"),
     JSON.stringify(
@@ -781,7 +762,7 @@ async function main() {
             explanation: p.score.explanation,
           })),
         rejectedCount: rejected.length,
-        rejected: rejected.slice(0, 30),
+        rejected: publicRejections.slice(0, 30),
       },
       null,
       2

@@ -22,6 +22,41 @@ describe("Chinese summary validation", () => {
     ).toBeNull();
   });
 
+  it("accepts descriptions over 60 total characters when Chinese stays within 60 and preserves brand spacing", () => {
+    const descriptionZh = "为 DeepSeek Harness 提供代码审查工具，帮助整理文件变更及检查测试结果并详细记录问题，方便开发者及时逐项核对和处理。";
+    expect([...descriptionZh]).toHaveLength(66);
+    expect(descriptionZh.match(/[\u4e00-\u9fff]/g)).toHaveLength(45);
+    expect(extractJson(JSON.stringify({ descriptionZh, tagsZh: ["代码审查"] })))
+      .toEqual({ descriptionZh, tagsZh: ["代码审查"] });
+    // Existing reviewed description for ayase34/gal-view includes two spaced product names.
+    const reviewed = "把 DeepSeek Harness 会话界面变成 Galgame 游戏视窗，支持立绘、对话框和场景编辑，让聊天更有代入感。";
+    expect([...reviewed].length).toBeGreaterThan(60);
+    expect(extractJson(JSON.stringify({ descriptionZh: reviewed }))?.descriptionZh).toBe(reviewed);
+  });
+
+  it("accepts exactly 60 Chinese characters and rejects 61 even below the total character limit", () => {
+    const descriptionZh = "提供代码审查工具，帮助开发者检查文件变更和测试结果，按照问题类型整理修复建议，并记录每次审查发现的问题，方便团队成员核对项目修改。";
+    expect(descriptionZh.match(/[\u4e00-\u9fff]/g)).toHaveLength(60);
+    expect(extractJson(JSON.stringify({ descriptionZh }))?.descriptionZh).toBe(descriptionZh);
+    const tooManyChinese = descriptionZh.replace("核对项目", "核对该项目");
+    expect(tooManyChinese.match(/[\u4e00-\u9fff]/g)).toHaveLength(61);
+    expect([...tooManyChinese].length).toBeLessThan(160);
+    expect(extractJson(JSON.stringify({ descriptionZh: tooManyChinese }))).toBeNull();
+  });
+
+  it("enforces the independent 160-character total limit for summaries containing long product names", () => {
+    const base = "为 DeepSeek Harness 提供代码审查工具，帮助整理文件变更及检查测试结果并详细记录问题，方便开发者及时逐项核对和处理。";
+    // Artificial name padding isolates the total-length limit without increasing the Chinese count.
+    const exactLimit = base.replace("DeepSeek Harness", `DeepSeek Harness ${"A".repeat(93)}`);
+    expect([...exactLimit]).toHaveLength(160);
+    expect(exactLimit.match(/[\u4e00-\u9fff]/g)).toHaveLength(45);
+    expect(extractJson(JSON.stringify({ descriptionZh: exactLimit }))?.descriptionZh).toBe(exactLimit);
+    const overLimit = exactLimit.replace("DeepSeek Harness", "DeepSeek HarnessA");
+    expect([...overLimit]).toHaveLength(161);
+    expect(overLimit.match(/[\u4e00-\u9fff]/g)).toHaveLength(45);
+    expect(extractJson(JSON.stringify({ descriptionZh: overLimit }))).toBeNull();
+  });
+
   it("accepts controlled multi-category output and removes unknown categories", () => {
     const categories = extractCategoriesJson(JSON.stringify({
       categories: [
@@ -31,13 +66,13 @@ describe("Chinese summary validation", () => {
         { id: "made-up", confidence: 1, evidence: "不存在的分类" },
       ],
     }));
-    expect(categories.map(({ id }) => id)).toEqual(["coding", "tools", "security"]);
+    expect(categories.map(({ id }) => id)).toEqual(["coding", "tools"]);
   });
 
   it("uses Chinese source text or a conservative fallback", () => {
     expect(fallbackDescriptionZh("用于管理插件的中文工具")).toBe("用于管理插件的中文工具");
-    expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toBe("An English-only plugin");
-    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toBe("Desktop client");
+    expect(fallbackDescriptionZh("An English-only plugin", "demo-plugin")).toBe("中文简介待生成。");
+    expect(fallbackDescriptionZh("Desktop client", "dsh-desktop")).toBe("中文简介待生成。");
   });
 
   it("builds a repository-specific fallback from README and leaves it retryable", () => {
@@ -47,7 +82,7 @@ describe("Chinese summary validation", () => {
       readmeSummary: "Enterprise multi-agent orchestration with hierarchical swarms and coordinated workflows.",
       topics: ["multi-agent", "orchestration"],
     });
-    expect(fallback).toBe("暂无简介");
+    expect(fallback).toBe("中文简介待生成。");
     expect(fallback).not.toContain("请查看项目 README");
     expect(fallback).not.toContain("DSH 插件");
     expect(isGenericDescriptionZh(fallback)).toBe(true);
@@ -70,6 +105,9 @@ describe("Chinese summary validation", () => {
       "纯 Node 实现，无网络依赖",
       "中文 | English 组件入口 | 组件 | 说明 | |---|---|",
       "中文简介：请参考项目文档了解具体功能",
+      "中文简介待生成。",
+      "中文简介：Browser automation for agents with persistent sessions.",
+      "用于自动化：Browser automation for agents with persistent sessions.",
     ]) {
       expect(isGenericDescriptionZh(summary)).toBe(true);
       expect(extractJson(JSON.stringify({ descriptionZh: summary, tagsZh: [] }))).toBeNull();
@@ -79,7 +117,12 @@ describe("Chinese summary validation", () => {
   it("does not infer search or security capabilities from incidental keywords", () => {
     const summary = fallbackDescriptionZh({ name: "BrowserSkill", description: "Let AI agents use your logged-in browser.", readmeSummary: null, topics: ["browser", "security"] });
     expect(summary).not.toMatch(/知识检索|安全检查|无需/);
-    expect(summary).toBe("Let AI agents use your logged-in browser.");
+    expect(summary).toBe("中文简介待生成。");
+  });
+
+  it("does not mistake an English source with a Chinese prefix for a translation", () => {
+    expect(fallbackDescriptionZh("用于自动化：Browser automation for agents with persistent sessions.")).toBe("中文简介待生成。");
+    expect(fallbackDescriptionZh("版本更新提示：本次版本变化较大，老用户请更新至最新版本。")).toBe("中文简介待生成。");
   });
 
   it("uses complete source sentences without deleting English word boundaries", () => {
@@ -120,6 +163,8 @@ describe("Chinese summary validation", () => {
         topics: ["multi-agent"],
       },
       {
+        requestMode: "offline-test",
+        offlineTransport: fetchMock,
         apiKey: "test-key",
         baseURL: "https://example.test/",
         model: "test-model",
@@ -132,4 +177,10 @@ describe("Chinese summary validation", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(result?.descriptionZh).toContain("智能体协同");
   });
+});
+
+// Selected package summaries must not borrow the parent product's capabilities.
+it("does not use a Chinese root description as a subpackage fallback", () => {
+  expect(fallbackDescriptionZh({ name: "bridge", description: "自动生成研究报告并管理企业知识库。", readmeSummary: null, topics: [], install: { repositoryPath: "packages/bridge" } })).toBe("中文简介待生成。");
+  expect(fallbackDescriptionZh({ name: "bridge", description: "自动生成研究报告并管理企业知识库。", readmeSummary: "在编辑器中展示项目文件与变更记录。", topics: [], install: { repositoryPath: "packages/bridge" } })).toBe("在编辑器中展示项目文件与变更记录。");
 });

@@ -78,3 +78,40 @@ describe("searchCodeRepositories", () => {
     expect(result.complete).toBe(false);
   });
 });
+
+describe("Code Search partial recovery", () => {
+  const one = { id: 1, node_id: "R_1", full_name: "one/plugin" };
+  const two = { id: 2, node_id: "R_2", full_name: "two/plugin" };
+
+  it("retains earlier matches and counts a later failed page", async () => {
+    const request = vi.fn(async (_query: string, page: number, perPage: number) => {
+      if (page === 2) throw new Error("timeout");
+      return response(3, [one, two].slice(0, perPage));
+    });
+    await expect(searchCodeRepositories("filename:SKILL.md", {
+      request, perPage: 2, semanticRetries: 0,
+    })).rejects.toMatchObject({
+      name: "SearchPartialError",
+      partial: { repositories: [one, two], requests: 3, matches: 2, totalMatches: 3, complete: false },
+    });
+  });
+
+  it("retains candidates from semantic retries without claiming complete coverage", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce(response(2, [one], true))
+      .mockResolvedValueOnce(response(2, [two], true));
+    await expect(searchCodeRepositories("filename:SKILL.md", {
+      request, semanticRetries: 1, retryDelayMs: 0,
+    })).rejects.toMatchObject({
+      partial: { repositories: [one, two], requests: 2, matches: 0, totalMatches: 2, complete: false },
+    });
+  });
+
+  it("reports an empty partial result and attempted request on initial failure", async () => {
+    await expect(searchCodeRepositories("filename:SKILL.md", {
+      request: async () => { throw new Error("network"); },
+    })).rejects.toMatchObject({
+      partial: { repositories: [], requests: 1, matches: 0, totalMatches: 0, complete: false },
+    });
+  });
+});

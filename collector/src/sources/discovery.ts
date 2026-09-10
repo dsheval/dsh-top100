@@ -5,6 +5,7 @@ import type { GithubRepo } from "../github.js";
 import {
   partitionedRepositorySearch,
   requestGithubRepositories,
+  SearchPartialError,
   type PartitionedSearchOptions,
   type PartitionedSearchResult,
 } from "./github-partitioned-search.js";
@@ -30,23 +31,24 @@ async function fastRepositorySearch(
   }
   const repositories = new Map<string, GithubRepo>();
   let requests = 0;
-  for (let page = 1; page <= pageLimit; page++) {
-    const response = await requestGithubRepositories(query, page, perPage);
-    requests++;
-    for (const repository of response.items) {
-      repositories.set(repository.node_id ?? String(repository.id), repository);
-    }
-    if (response.items.length < perPage) break;
-  }
-  return {
+  const snapshot = (): PartitionedSearchResult => ({
     repositories: [...repositories.values()],
-    audit: {
-      query,
-      requests,
-      shards: 1,
-      repositories: repositories.size,
-    },
-  };
+    audit: { query, requests, shards: 1, repositories: repositories.size },
+  });
+  const request = options.request ?? requestGithubRepositories;
+  try {
+    for (let page = 1; page <= pageLimit; page++) {
+      requests++;
+      const response = await request(query, page, perPage);
+      for (const repository of response.items) {
+        repositories.set(repository.node_id ?? String(repository.id), repository);
+      }
+      if (response.items.length < perPage) break;
+    }
+    return snapshot();
+  } catch (error) {
+    throw new SearchPartialError("Incremental Repository Search request failed", snapshot(), { cause: error });
+  }
 }
 
 export type DiscoveryMode = "full" | "incremental";
@@ -165,25 +167,44 @@ export async function discoverRepositories(
 
   for (const source of config.repositoryQueries) {
     const query = incrementalQuery(source.query, mode, since);
-    const result = await repositorySearch(query, options.partitionOptions);
     const sourceId = `github-repository:${source.id}`;
-    for (const repo of result.repositories) {
-      entries.push({ fullName: repo.full_name, repo, source: sourceId });
+    try {
+      const result = await repositorySearch(query, options.partitionOptions);
+      for (const repo of result.repositories) {
+        entries.push({ fullName: repo.full_name, repo, source: sourceId });
+      }
+      sources.push({
+        id: sourceId,
+        kind: "repository",
+        status: usesFastRepositoryWindow ? "partial" : "complete",
+        candidates: result.repositories.length,
+        requests: result.audit.requests,
+        shards: result.audit.shards,
+        message: usesFastRepositoryWindow
+          ? "Daily mode collected the first Star-sorted repository window"
+          : undefined,
+      });
+      console.log(
+        `  ${sourceId} -> ${result.repositories.length} repos, ${result.audit.shards} shards`
+      );
+    } catch (error) {
+      const partial = error instanceof SearchPartialError
+        ? error.partial as PartitionedSearchResult | undefined
+        : undefined;
+      for (const repo of partial?.repositories ?? []) {
+        entries.push({ fullName: repo.full_name, repo, source: sourceId });
+      }
+      sources.push({
+        id: sourceId,
+        kind: "repository",
+        status: partial?.repositories.length ? "partial" : "failed",
+        candidates: partial?.repositories.length ?? 0,
+        requests: partial?.audit.requests ?? 0,
+        shards: partial?.audit.shards,
+        message: error instanceof SearchPartialError ? error.message : "Repository Search failed",
+      });
+      console.warn(`  ${sourceId} incomplete; retained ${partial?.repositories.length ?? 0} repositories`);
     }
-    sources.push({
-      id: sourceId,
-      kind: "repository",
-      status: usesFastRepositoryWindow ? "partial" : "complete",
-      candidates: result.repositories.length,
-      requests: result.audit.requests,
-      shards: result.audit.shards,
-      message: usesFastRepositoryWindow
-        ? "Daily mode collected the first Star-sorted repository window"
-        : undefined,
-    });
-    console.log(
-      `  ${sourceId} -> ${result.repositories.length} repos, ${result.audit.shards} shards`
-    );
   }
 
   for (const source of config.codeQueries) {
@@ -211,15 +232,21 @@ export async function discoverRepositories(
         `  ${sourceId} -> ${result.repositories.length} repos from ${result.matches}/${result.totalMatches} matches${result.complete ? "" : " (partial)"}`
       );
     } catch (error) {
+      const partial = error instanceof SearchPartialError
+        ? error.partial as CodeSearchResult | undefined
+        : undefined;
+      for (const repo of partial?.repositories ?? []) {
+        entries.push({ fullName: repo.full_name, repo: null, source: sourceId });
+      }
       sources.push({
         id: sourceId,
         kind: "code",
-        status: "failed",
-        candidates: 0,
-        requests: 0,
-        message: (error as Error).message,
+        status: partial?.repositories.length ? "partial" : "failed",
+        candidates: partial?.repositories.length ?? 0,
+        requests: partial?.requests ?? 0,
+        message: error instanceof SearchPartialError ? error.message : "Code Search failed",
       });
-      console.warn(`  ${sourceId} failed: ${(error as Error).message}`);
+      console.warn(`  ${sourceId} incomplete; retained ${partial?.repositories.length ?? 0} repositories`);
     }
   }
 
@@ -248,15 +275,21 @@ export async function discoverRepositories(
         `  ${sourceId} -> ${result.repositories.length} repos${result.complete ? "" : " (partial)"}`
       );
     } catch (error) {
+      const partial = error instanceof SearchPartialError
+        ? error.partial as NpmSearchResult | undefined
+        : undefined;
+      for (const fullName of partial?.repositories ?? []) {
+        entries.push({ fullName, repo: null, source: sourceId });
+      }
       sources.push({
         id: sourceId,
         kind: "npm",
-        status: "failed",
-        candidates: 0,
-        requests: 0,
-        message: (error as Error).message,
+        status: partial?.repositories.length ? "partial" : "failed",
+        candidates: partial?.repositories.length ?? 0,
+        requests: partial?.requests ?? 0,
+        message: error instanceof SearchPartialError ? error.message : "npm Search failed",
       });
-      console.warn(`  ${sourceId} failed: ${(error as Error).message}`);
+      console.warn(`  ${sourceId} incomplete; retained ${partial?.repositories.length ?? 0} repositories`);
     }
   }
 
@@ -265,9 +298,7 @@ export async function discoverRepositories(
     candidates,
     audit: {
       mode,
-      complete: sources
-        .filter((source) => source.kind !== "npm")
-        .every((source) => source.status === "complete"),
+      complete: sources.every((source) => source.status === "complete"),
       startedAt,
       completedAt: new Date().toISOString(),
       candidates: candidates.length,

@@ -8,10 +8,7 @@
 - A GitHub token with public repository metadata and contents read access.
 - Optional DeepSeek API credentials for new Chinese summaries.
 
-Chinese-summary requests retry empty, malformed and generic model responses. The collector prioritizes
-high-Star repositories within `DEEPSEEK_SUMMARY_BATCH_SIZE`; tune
-`DEEPSEEK_SUMMARY_ATTEMPTS`, `DEEPSEEK_SUMMARY_TIMEOUT_MS` and
-`DEEPSEEK_SUMMARY_CONCURRENCY` for the API quota available on the deployment.
+Model enrichment is paused in 1.3.4 until shared monetary budget protection is implemented and verified. GitHub collection, local ranking calculations and valid existing content reuse continue without model requests. Do not restore paid generation merely by providing an API key or increasing request limits.
 
 ## CI checks
 
@@ -124,6 +121,11 @@ proxying to this repository's `web:80`. Nginx continues to serve files from its
 root, so direct container smoke checks at `http://127.0.0.1:8080/` remain valid.
 Use `npm run serve` and `http://127.0.0.1:4173/top100/` for the browser preview.
 
+To preview a locally published snapshot, set `DSH_LOCAL_DATA_DIR` to its absolute
+directory containing `manifest.json`, then run `npm run serve`. The preview serves
+all `/data/` assets from that directory without falling back to production. This
+starts only the loopback web server; it does not start collection or model jobs.
+
 The gateway must keep `/data/*` and `/api/events` routed to Top100. Released
 plugins continue to use `https://www.dsheval.ai/data`; keep that endpoint working
 without a redirect to a different host. Manifest snapshot URLs are absolute
@@ -138,7 +140,7 @@ gateway/browser. Root query/hash links are handled by the DSH-Eval landing page.
 Repository About and npm public metadata should use:
 - Website: `https://www.dsheval.ai/top100/`
 - Repository description: `DSH-Eval 旗下的插件与 Skills 发现栏目，按公开 GitHub 信号持续更新。`
-- This release targets `@dsheval/dsh-top100-plugin@1.3.3`; verify the registry's `latest` tag after publishing.
+- This release targets `@dsheval/dsh-top100-plugin@1.3.4`; verify the registry's `latest` tag after publishing.
   Public metadata and README are published from `plugin/package.json` and `plugin/README.md`.
 
 Updating repository About, publishing npm, and deploying the gateway are separate

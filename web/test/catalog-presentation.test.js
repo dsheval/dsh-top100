@@ -8,6 +8,15 @@ import {
   resolveInstallTarget,
 } from "../public/catalog-presentation.js";
 
+test("marks retained historical entries for review without claiming Bundle structure", () => {
+  const entry = { fullName: "acme/demo", type: "cordis-plugin", install: {
+    discovery: { status: "review-required", kind: "bundle", checkedAt: "2026-09-01T00:00:00Z", policyVersion: 0, evidence: [] },
+  } };
+  assert.equal(catalogPresentation(entry).formFactor, "生态项目");
+  assert.equal(catalogPresentation(entry).trustLevel, "indexed");
+  assert.equal(catalogInstallCapability(entry).label, "收录依据待复核");
+});
+
 test("does not equate an install source with zero configuration or safety", () => {
   const entry = { fullName: "acme/demo", installTarget: "github:acme/demo" };
   assert.equal(catalogInstallCapability(entry).label, "已识别安装源");

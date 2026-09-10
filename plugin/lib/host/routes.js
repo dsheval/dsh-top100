@@ -818,7 +818,7 @@ export function mountRoutes(host, config, commandRuntime) {
                         catch { /* Unreadable historical evidence must not imply an installed catalog identity. */ }
                         return [name, { manifest: readInstalledManifest(config.profile, name, config.profileDirectory), provenance }];
                     }));
-                    const { total, excludedSkillCount, items } = filterCatalog(document, {
+                    const filterOptions = {
                         profile: config.profile,
                         view,
                         category,
@@ -831,14 +831,21 @@ export function mountRoutes(host, config, commandRuntime) {
                         compatibleOnly,
                         catalogScope,
                         installAvailability,
-                    });
+                    };
+                    const { total, excludedSkillCount, items } = filterCatalog(document, filterOptions);
+                    // Count the complete view/search and availability scope before category
+                    // selection or pagination, so other categories remain useful targets.
+                    const categoryEntries = filterCatalog(document, {
+                        ...filterOptions, category: null, offset: 0, limit: Number.MAX_SAFE_INTEGER,
+                    }).items;
+                    const categories = filteredCatalogCategories({
+                        ...document, rankings: { ...document.rankings, total: categoryEntries },
+                    }, { excludeSkills, compatibleOnly, catalogScope });
                     const cache = await catalogCacheStatus(dataUrl, catalogScope === "skills" ? "skill-directory" : usesViewShard ? "view-shard" : "search-index", usesViewShard ? view : undefined);
                     sendJson(response, 200, {
                         view,
                         category,
-                        categories: catalogScope === "plugins"
-                            ? metadata.pluginCategories.map((definition) => ({ ...definition, excludedSkillCount: 0 }))
-                            : filteredCatalogCategories(document, { excludeSkills, compatibleOnly, catalogScope }),
+                        categories,
                         generatedAt: document.generatedAt,
                         snapshotDate: document.snapshotDate,
                         dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),

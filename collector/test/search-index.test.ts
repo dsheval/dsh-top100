@@ -1,3 +1,4 @@
+import { catalogSourceStatus, installSourceKey } from "../../plugin/src/shared/install-assessment.js";
 import { describe, expect, it } from "vitest";
 import {
   buildSearchIndex,
@@ -93,6 +94,16 @@ describe("compact search index", () => {
     expect(snapshot).not.toHaveProperty("install");
   });
 
+  it("preserves GitHub subpackage verification through compact search publication", () => {
+    const entry = { rank: 1, fullName: "acme/demo", name: "demo", type: "cordis-plugin", description: "Demo", tags: [], categories: [],
+      install: { method: "pnpm-profile", needsConfig: false, packageName: "@acme/demo", repositoryPath: "plugin", commands: ["dsh plugin add github:acme/demo"] }
+    } as RankingsDocument["rankings"]["total"][number];
+    entry.install.assessment = { sourceKey: installSourceKey(entry), checkedAt: new Date().toISOString(), status: "verified", resolvedTarget: "github:acme/demo#" + "a".repeat(40), integrity: "git-sha1-" + "a".repeat(40), reason: "manifest metadata" };
+    const compact = toSnapshotSearchEntry(entry);
+    expect(installSourceKey(compact)).toBe(installSourceKey(entry));
+    expect(catalogSourceStatus(compact)).toBe("verified");
+    expect(catalogSourceStatus({ ...compact, installRepositoryPath: "other" })).toBe("identified");
+  });
   it("rejects unsafe install targets before publishing the compact index", () => {
     const base = {
       fullName: "acme/demo",

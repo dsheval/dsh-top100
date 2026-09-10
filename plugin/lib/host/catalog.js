@@ -631,12 +631,15 @@ function normalizeSearchEntry(value, index) {
     const parsedTarget = typeof entry.installTarget === "string"
         ? parseInstallSpec(entry.installTarget)
         : null;
-    const install = entry.install ?? (parsedTarget ? {
+    const install = entry.install ?? (parsedTarget || entry.discovery ? {
         method: "manifest-v2",
         packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
-        target: parsedTarget.spec,
+        target: parsedTarget?.spec,
+        repositoryPath: entry.installRepositoryPath,
+        discovery: entry.discovery,
+        assessment: entry.installAssessment,
         ...(typeof entry.needsConfig === "boolean" ? { needsConfig: entry.needsConfig } : {}),
-        commands: [`dsh plugin add ${parsedTarget.spec}`],
+        commands: parsedTarget ? [`dsh plugin add ${parsedTarget.spec}`] : [],
         commandSource: "manifest-v2",
     } : undefined);
     return {

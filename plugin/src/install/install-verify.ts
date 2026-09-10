@@ -12,12 +12,15 @@ const VERIFICATION_CACHE_MS = 10 * 60 * 1000;
 export class InstallVerificationError extends Error {
   fatal: boolean;
   status: number | null;
+  /** A definite manifest failure is separate from installation confirmation policy. */
+  reason?: "invalid-manifest";
 
-  constructor(message: string, fatal = false, status: number | null = null) {
+  constructor(message: string, fatal = false, status: number | null = null, reason?: "invalid-manifest") {
     super(message);
     this.name = "InstallVerificationError";
     this.fatal = fatal;
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -228,6 +231,7 @@ async function fetchJson(url: string, signal?: AbortSignal): Promise<unknown> {
       throw new InstallVerificationError(
         "GitHub 安装源验证额度已用尽，请稍后重试；配置 GITHUB_TOKEN 或 GH_TOKEN 可提高额度",
         true,
+        response.status,
       );
     }
     throw new InstallVerificationError(
@@ -278,7 +282,7 @@ async function verifyNpm(spec: string, options: VerifyInstallOptions): Promise<V
   const selector = parseNpmSelector(parsed.selector ?? "latest")!;
   const manifest = await fetchNpmManifest(parsed.name, selector.value, options.signal);
   if (!isBundleManifest(manifest)) {
-    throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
+    throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装", false, null, "invalid-manifest");
   }
   assertExpectedPackage(manifest as PackageManifest, options);
   const manifestName = (manifest as PackageManifest).name;

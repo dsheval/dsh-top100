@@ -69,12 +69,15 @@ export function toSnapshotSearchEntry(
     tags: entry.tags,
     categories: entry.categories.map(({ id }) => id),
     type: entry.type,
+    ...(entry.install.discovery ? { discovery: entry.install.discovery } : {}),
+    ...(entry.install.assessment ? { installAssessment: entry.install.assessment } : {}),
+    ...(entry.install.repositoryPath ? { installRepositoryPath: entry.install.repositoryPath } : {}),
     ...(installTarget ? {
       installTarget,
       ...(typeof entry.install.needsConfig === "boolean" ? { needsConfig: entry.install.needsConfig } : {}),
       // Compact consumers must retain the selected package identity. A legacy
       // installTarget alone only proves syntax, not which project it installs.
-      ...(NPM_SPEC_RE.test(installTarget) ? { installPackageName: entry.install.packageName } : {}),
+      ...(entry.install.packageName ? { installPackageName: entry.install.packageName } : {}),
     } : {}),
   };
 }

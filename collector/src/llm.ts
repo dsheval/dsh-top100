@@ -1,9 +1,11 @@
+import { canRequestModel, requestModel, type ModelRequestControl } from "./model-requests.js";
 /**
  * M3 中文化与智能分类：用 DeepSeek API 读取 README，生成中文简介、标签与受控分类
  * 只处理 descriptionZh 为空的插件（增量，控制成本）；失败跳过可重试
  */
 
 import { CATEGORY_DEFINITIONS, normalizeCategorySuggestions, type CategorySuggestion } from "./categories.js";
+import { isChineseDescription, isPlaceholder, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 export interface ZhResult {
   descriptionZh: string;
@@ -16,11 +18,13 @@ export interface LlmRepositoryInput {
   description: string;
   readmeSummary: string | null;
   topics: string[];
+  packageName?: string;
+  repositoryPath?: string;
   /** 已存在的细分标签清单（约束生成：优先复用，抑制同义异名） */
   knownTags?: string[];
 }
 
-export interface DeepSeekRequestOptions {
+export interface DeepSeekRequestOptions extends ModelRequestControl {
   apiKey: string;
   baseURL: string;
   model: string;
@@ -28,6 +32,16 @@ export interface DeepSeekRequestOptions {
   maxAttempts?: number;
   retryDelayMs?: number;
   timeoutMs?: number;
+  thinking?: "enabled" | "disabled";
+}
+
+/** Only these locally generated codes may reach logs; provider bodies may echo secrets. */
+class ModelRequestError extends Error {}
+function safeRequestFailure(error: unknown): string {
+  if (error instanceof ModelRequestError) return error.message;
+  if (error instanceof Error && error.name === "TimeoutError") return "timeout";
+  if (error instanceof Error && error.name === "AbortError") return "aborted";
+  return "network-or-response-failure";
 }
 
 function sanitizeUntrustedText(value: string, maxLength: number): string {
@@ -47,7 +61,7 @@ function categoryPromptRules(): string {
   const definitions = CATEGORY_DEFINITIONS.map(
     ({ id, label, description }) => `- ${id}（${label}）：${description}`
   ).join("\n");
-  return `categories：选择 2-3 个分类：第 1 个是主分类，再选择 1-2 个 README 明确证明存在的独立核心能力作为相关分类。不要把实现技术、示例、依赖、安装步骤或偶然出现的关键词当成功能；不要因为它是 AI 插件就一律选择 ai，也不要把 tools 当默认兜底。每项给出 0-1 置信度和不超过 40 字的简短依据，并按置信度从高到低排列。\n${definitions}`;
+  return `categories：只选择 1 个最能表达主要用户用途的分类，不添加辅助分类；资料不足或收录对象不明确时返回空数组。先判断用户用这个包完成什么业务任务，再选分类。业务使用 Agent 不等于增强 Agent：投研/论文与文献研究属于 knowledge，小说/视频/图片创作、办公、通知、安装管理属于 tools，软件开发/部署属于 coding，渗透测试/安全审计属于 security。ai 仅用于通用模型接入、推理控制、记忆/上下文管理或跨领域多 Agent 协作机制本身。appearance 用于主题、皮肤、桌宠、通用界面布局与独立桌面外壳；余额/费用面板、用量统计、任务管理面板属于 tools。注册/加载技能、调用模型、依赖框架或提供设置页不能作为 ai/appearance 的依据。以当前收录包的作者 README 为准，仓库根产品、依赖和兄弟子包的能力不得归给它。插件市场搜索不属于知识检索，浏览器自动化属于 tools。边界优先规则：QQ/Telegram/Slack 等消息通道连接器一律按 tools，不因转发 AI 聊天而归 ai；定时创建/运行 Agent 任务是 tools，不因任务能写代码而归 coding；模型/思考档位滑块等选择器若只改交互而未提供新推理机制则为 appearance；独立 Electron/Windows/桌面客户端的主要产品是桌面外壳，归 appearance，捆绑运行时、托盘、通知与安装包不使其归 tools。每项至少达到 0.75 置信度，给出 0-1 置信度和不超过 40 字的具体功能依据；依据不准只说“增强体验/能力”。\n${definitions}`;
 }
 
 function buildPrompt(input: LlmRepositoryInput): string {
@@ -57,12 +71,13 @@ function buildPrompt(input: LlmRepositoryInput): string {
   return `你是项目目录的中文编辑。为下面这个${input.type === "skill" ? "Agent Skill 项目" : "DSH 插件项目"}生成中文简介和中文功能标签。
 
 插件名：${input.name}
-英文描述：${sanitizeUntrustedText(input.description || "", 200) || "（无）"}
+收录包：${sanitizeUntrustedText(input.packageName || "", 160) || "未单独声明"}；仓库子目录：${sanitizeUntrustedText(input.repositoryPath || "", 160) || "根目录"}
+作者描述：${sanitizeUntrustedText(input.repositoryPath ? "" : input.description || "", 200) || "（无）"}
 README 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 1200) || "（无）"}
 GitHub topics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}
 ${known}
 要求：
-1. descriptionZh：一句完整中文简介（建议 30–60 字，不超过 60 字），写出该插件独有的用途；资料明确时说明使用条件。只描述 README 或描述中有依据的能力，不把示例、依赖或 topics 推断成产品功能，不宣称免配置、跨平台或安全已验证。资料不足时返回空字符串。禁止导航、表格、半截句子及“扩展能力”“请查看 README”等套话；保留英文名称中的空格
+1. descriptionZh：一句完整中文简介（建议 30–60 个汉字，英文产品名不计入汉字数，总长不超过 160 个字符），写出该插件独有的用途；资料明确时说明使用条件。只描述当前收录包的 README 或描述中有依据的能力，仓库根产品、依赖与兄弟子包的能力不得归给它；不把示例或 topics 推断成产品功能，不宣称免配置、跨平台或安全已验证。收录类型标签不作为已验证插件身份或可安装性证据。若当前包是 core/runtime/vendor 子包而摘要仅描述整个桌面产品或框架，无法确认子包自身用途时返回空字符串，不照搬根产品能力。Skill说明如何使用独立软件时应写“指导使用”，不称为自身直接执行该软件全部功能；资料中的数量/版本冲突时省略争议数字，模型范围必须保留作者限定的平台。资料不足时返回空字符串。禁止导航、表格、半截句子及“扩展能力”“请查看 README”等套话；保留英文名称中的空格
 2. tagsZh：3-5 个中文功能标签，用于分类筛选${known ? "，**优先复用上面已存在的标签**（用词一致），只有新功能类型才创建新标签" : ""}
 只输出 JSON，不要任何其他文字：
 {"descriptionZh": "...", "tagsZh": ["...", "..."]}`;
@@ -86,8 +101,9 @@ export function extractJson(raw: string): ZhResult | null {
     const descriptionLength = [...descriptionZh].length;
     if (
       descriptionLength < 8 ||
-      descriptionLength > 60 ||
-      !/[\u4e00-\u9fff]/.test(descriptionZh) ||
+      descriptionLength > 160 ||
+      (descriptionZh.match(/[\u4e00-\u9fff]/g)?.length ?? 0) > 60 ||
+      !isChineseDescription(descriptionZh) ||
       /[`#<>\r\n]/.test(descriptionZh) ||
       isGenericDescriptionZh(descriptionZh)
     ) {
@@ -116,6 +132,7 @@ export async function translateWithDeepSeek(
     throw new Error("DEEPSEEK_SUMMARY_TIMEOUT_MS must be an integer from 1000 to 120000");
   }
   const retryDelayMs = opts.retryDelayMs ?? 2000;
+  if (!canRequestModel(opts)) return null;
   const body = {
     model: opts.model,
     messages: [
@@ -128,11 +145,12 @@ export async function translateWithDeepSeek(
     ],
     temperature: 0.3,
     max_tokens: maxTokens,
+    thinking: { type: opts.thinking ?? "disabled" },
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const res = await fetch(`${opts.baseURL.replace(/\/$/, "")}/chat/completions`, {
+      const res = await requestModel(opts, `${opts.baseURL.replace(/\/$/, "")}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -142,26 +160,24 @@ export async function translateWithDeepSeek(
         signal: AbortSignal.timeout(timeoutMs),
       });
       if (!res.ok) {
-        const err = (await res.text()).slice(0, 200);
         // 429/5xx 重试；4xx 其他不重试
         if (res.status !== 429 && res.status < 500) {
-          console.warn(`    [llm] HTTP ${res.status}: ${err}`);
+          console.warn(`    [llm] HTTP ${res.status}`);
           return null;
         }
-        throw new Error(`HTTP ${res.status}: ${err}`);
+        throw new ModelRequestError(`HTTP ${res.status}`);
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new Error("empty model response");
+      if (!content) throw new ModelRequestError("empty-response");
       const result = extractJson(content);
       if (!result) {
-        console.warn(`    [llm] bad JSON for ${input.name}: ${content.slice(0, 120)}`);
-        throw new Error("invalid or generic summary response");
+        throw new ModelRequestError("invalid-summary-response");
       }
       return result;
     } catch (err) {
       if (attempt === maxAttempts) {
-        console.warn(`    [llm] ${input.name} failed after retries: ${(err as Error).message.slice(0, 100)}`);
+        console.warn(`    [llm] request failed: ${safeRequestFailure(err)}`);
         return null;
       }
       const jitter = retryDelayMs > 0 ? Math.floor(Math.random() * 300) : 0;
@@ -187,9 +203,15 @@ export function extractCategoriesJson(raw: string): CategorySuggestion[] {
 /** 为已有中文缓存、但尚无智能分类的存量仓库单独补分类。 */
 export async function classifyWithDeepSeek(
   input: LlmRepositoryInput,
-  opts: { apiKey: string; baseURL: string; model: string; maxTokens?: number }
+  opts: DeepSeekRequestOptions
 ): Promise<CategorySuggestion[]> {
-  const maxTokens = opts.maxTokens ?? 700;
+  const maxTokens = opts.maxTokens ?? 4096;
+  const maxAttempts = opts.maxAttempts ?? 3;
+  const timeoutMs = opts.timeoutMs ?? 45_000;
+  const retryDelayMs = opts.retryDelayMs ?? 2000;
+  if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) throw new Error("Classification maxAttempts must be from 1 to 5");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120_000) throw new Error("Classification timeoutMs must be from 1000 to 120000");
+  if (!canRequestModel(opts)) return [];
   const body = {
     model: opts.model,
     messages: [
@@ -200,36 +222,40 @@ export async function classifyWithDeepSeek(
       },
       {
         role: "user",
-        content: `请根据仓库 README 为插件做多标签分类。\n\n仓库：${sanitizeUntrustedText(input.name, 120)}\n描述：${sanitizeUntrustedText(input.description || "", 240) || "（无）"}\nREADME 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 420) || "（无）"}\ntopics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}\n\n${categoryPromptRules()}\n\n只输出 JSON：{"categories":[{"id":"knowledge","confidence":0.91,"evidence":"README 提到联网检索"}]}`,
+        content: `请根据当前收录包的 README 选择一个主要用途分类。\n\n仓库：${sanitizeUntrustedText(input.name, 120)}\n收录包：${sanitizeUntrustedText(input.packageName || "", 160) || "未单独声明"}；仓库子目录：${sanitizeUntrustedText(input.repositoryPath || "", 160) || "根目录"}\n描述：${sanitizeUntrustedText(input.repositoryPath ? "" : input.description || "", 240) || "（无）"}\nREADME 摘要：${sanitizeUntrustedText(input.readmeSummary || "", 1200) || "（无）"}\ntopics：${input.topics.map((topic) => sanitizeUntrustedText(topic, 40)).join(", ") || "（无）"}\n\n${categoryPromptRules()}\n\n只输出 JSON，格式为 categories 数组，最多一项，字段为 id（上述分类 ID）、confidence（数值）、evidence（当前包的具体功能依据）。资料不足输出 {"categories":[]}。`,
       },
     ],
     temperature: 0.1,
     max_tokens: maxTokens,
+    thinking: { type: opts.thinking ?? "enabled" },
   };
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const response = await fetch(`${opts.baseURL}/chat/completions`, {
+      const response = await requestModel(opts, `${opts.baseURL}/chat/completions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${opts.apiKey}`,
         },
         body: JSON.stringify(body),
+        signal: AbortSignal.timeout(timeoutMs),
       });
       if (!response.ok) {
-        const detail = (await response.text()).slice(0, 200);
-        if (response.status !== 429 && response.status < 500) return [];
-        throw new Error(`HTTP ${response.status}: ${detail}`);
+        if (response.status !== 429 && response.status < 500) {
+          console.warn(`    [classification] HTTP ${response.status}`);
+          return [];
+        }
+        throw new ModelRequestError(`HTTP ${response.status}`);
       }
       const data = await response.json();
-      return extractCategoriesJson(data.choices?.[0]?.message?.content ?? "");
+      return extractCategoriesJson(data.choices?.[0]?.message?.content ?? "").slice(0, 1);
     } catch (error) {
-      if (attempt === 3) {
-        console.warn(`    [classification] ${input.name} failed: ${(error as Error).message.slice(0, 100)}`);
+      if (attempt === maxAttempts) {
+        console.warn(`    [classification] request failed: ${safeRequestFailure(error)}`);
         return [];
       }
-      await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs * attempt));
     }
   }
   return [];
@@ -259,7 +285,7 @@ const INSUFFICIENT_SOURCE_SUMMARY =
 
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;
-  return /暂无.*简介|求\s*Star|留颗\s*Star|顺手.*Star|---\s*name:/i.test(value) || value === LEGACY_GENERIC_DESCRIPTION ||
+  return !isChineseDescription(value) || isPlaceholder(value) || /---\s*name:/i.test(value) || value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
     /中文简介正在生成中|请(?:查看|参考).*(?:README|项目文档|项目说明).*功能/i.test(value) ||
     /\|.*\||\|\s*:?-{2,}|```|<\/?(?:h[1-6]|div|p|img)\b/i.test(value) ||
@@ -272,27 +298,25 @@ export function isGenericDescriptionZh(value: string | null | undefined): boolea
 
 /** Produce an honest, repository-specific fallback when model output is unavailable or invalid. */
 export function fallbackDescriptionZh(
-  source: string | Pick<LlmRepositoryInput, "name" | "description" | "readmeSummary" | "topics">,
+  source: string | (Pick<LlmRepositoryInput, "name" | "description" | "readmeSummary" | "topics" | "repositoryPath"> & { install?: { repositoryPath?: string } }),
   legacyName = "该插件"
 ): string {
   const input = typeof source === "string"
     ? { name: legacyName, description: source, readmeSummary: null, topics: [] as string[] }
     : source;
-  for (const source of [input.description, input.readmeSummary ?? ""]) {
+  const isSubpackage = typeof source !== "string" && Boolean(source.repositoryPath || source.install?.repositoryPath);
+  for (const source of [isSubpackage ? "" : input.description, input.readmeSummary ?? ""]) {
     // Split before whitespace normalization; headings/tables are not descriptions.
     const text = source.replace(/```[\s\S]*?```/g, " ").replace(/^\s*#{1,6}\s+.*$/gm, "");
     const sentences = text.match(/[^。！？!?；;\n]+[。！？!?；;]?/g) ?? [];
     for (const raw of sentences) {
       const sentence = sanitizeUntrustedText(raw, 4000).replace(/[*`]/g, "").trim();
-      const hanCount = (sentence.match(/[\u4e00-\u9fff]/g) ?? []).length;
-      if (hanCount < 6 || [...sentence].length > 60 || isGenericDescriptionZh(sentence)) continue;
+      if (!isChineseDescription(sentence) || [...sentence].length > 60 || isGenericDescriptionZh(sentence)) continue;
       if (/欢迎|快速跳转|组件入口|安装步骤|安装方法|徽章|^English|^中文\s*\|/i.test(sentence)) continue;
       return sentence;
     }
   }
   // Keyword-based templates overclaimed capabilities (e.g. browser => knowledge
   // retrieval). Keep missing evidence explicit and retryable instead.
-  const original = sanitizeUntrustedText(input.description, 1000);
-  const unusable = /资料不足|暂无.*简介|简介正在生成|求\s*Star|留颗\s*Star|顺手.*Star|\|.*\||^(?:English|中文|简体中文)\s*[·|]/i.test(original);
-  return original && !unusable && original !== LEGACY_GENERIC_DESCRIPTION ? original : "暂无简介";
+  return PENDING_DESCRIPTION_ZH;
 }
