@@ -1,4 +1,5 @@
 /** Minimal host contracts shared by the plugin entry point and HTTP adapters. */
+import type { HostRuntimeStatus, RuntimeBundle } from "./runtime-status.js";
 import type { IncomingMessage, ServerResponse } from "node:http";
 export interface WebServerService {
     register(route: {
@@ -9,6 +10,7 @@ export interface WebServerService {
 }
 export interface PluginHost {
     webServer: WebServerService;
+    readRuntime?: (bundles: readonly RuntimeBundle[]) => Record<string, HostRuntimeStatus>;
 }
 export interface PluginResolvedConfig {
     dataUrl: string;

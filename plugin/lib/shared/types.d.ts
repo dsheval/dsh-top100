@@ -1,3 +1,4 @@
+import type { HostRuntimeStatus } from "../host/runtime-status.js";
 /** Shared shapes for the published rankings JSON and the plugin HTTP API. */
 export interface RankingInstall {
     method?: string;
@@ -257,6 +258,7 @@ export interface InstallResult {
 }
 export type ManagedKind = "bundle" | "skill";
 export interface ManagedPlugin {
+    runtime?: HostRuntimeStatus;
     name: string;
     spec: string;
     version: string | null;
@@ -297,6 +299,7 @@ export interface DiagnosticFinding {
     parameters?: Record<string, string | number | string[]>;
 }
 export interface DiagnosticBundle {
+    runtime?: HostRuntimeStatus;
     name: string;
     spec: string;
     version: string | null;

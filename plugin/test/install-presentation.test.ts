@@ -62,6 +62,14 @@ describe("install progress presentation", () => {
     expect(presentInstallError("unexpected failure").kind).toBe("generic");
   });
 
+  it("uses the final classified failure instead of earlier retry output", () => {
+    const detail = "[prepare-failed] 构建失败\nERR_PNPM_META_FETCH_FAIL network\n[Top100 retry]\nERR_PNPM_PREPARE_PACKAGE";
+    expect(presentInstallError(detail)).toMatchObject({ kind: "build", detail });
+    expect(presentInstallError("[peer-dependency] ERR_PNPM_PEER_DEP_ISSUES").kind).toBe("peer");
+    expect(presentInstallError("[release-age] minimumReleaseAge").kind).toBe("policy");
+    expect(presentInstallError("UND_ERR_CONNECT_TIMEOUT").kind).toBe("timeout");
+  });
+
   it("keeps the Chinese and English presentation dictionaries in sync", () => {
     expect(Object.keys(zh).sort()).toEqual(Object.keys(en).sort());
   });

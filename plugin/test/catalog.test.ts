@@ -24,7 +24,7 @@ import {
   parseRankingManifest,
   parseRankingsDocument,
 } from "../src/host/catalog.js";
-import type { RankingEntry, RankingsDocument } from "../src/shared/types.js";
+import type { InstallProvenance, RankingEntry, RankingsDocument } from "../src/shared/types.js";
 
 function entry(fullName: string, extra: Partial<RankingEntry> = {}): RankingEntry {
   return {
@@ -183,6 +183,23 @@ afterEach(async () => {
 });
 
 describe("catalog filter", () => {
+  it("shows a compact Git source as installed after a verified npm installation of that catalog entry", () => {
+    const plugin = entry("acme/theme-repo", { type: "cordis-plugin", install: { commands: ["dsh plugin add github:acme/theme-repo"] } });
+    const provenance: InstallProvenance = { source: "npm", requestedTarget: "@acme/theme", resolvedTarget: "@acme/theme@0.5.0", packageName: "@acme/theme", version: "0.5.0", commit: null, integrity: "sha512-test", verifiedAt: 1, repositoryIdentity: "matched", repositoryUrl: "https://github.com/acme/theme-repo" };
+    const scoped = { ...document, rankings: { total: [plugin], hot: [plugin], rising: [] } };
+    const result = filterCatalog(scoped, { view: "total", category: null, query: "", offset: 0, limit: 10, installed: { "@acme/theme": "0.5.0" }, installedEvidence: { "@acme/theme": { manifest: { name: "@acme/theme", version: "0.5.0", repository: provenance.repositoryUrl }, provenance } } });
+    expect(result.items[0].installed).toBe(true);
+  });
+  it("keeps availability, source evidence and annotations consistent with the actual Profile", () => {
+    const plugin = entry("acme/demo", { type: "cordis-plugin", install: { packageName: "demo", commands: ["dsh plugin --profile research add demo"] } });
+    const scoped = { ...document, rankings: { total: [plugin], hot: [plugin], rising: [] } };
+    const options = { view: "total" as const, category: null, query: "", offset: 0, limit: 10, installed: { demo: "1.0.0" }, installAvailability: "installable" as const };
+    expect(filterCatalog(scoped, options).total).toBe(0);
+    const result = filterCatalog(scoped, { ...options, profile: "research" });
+    expect(result.total).toBe(1);
+    expect(result.items[0]).toMatchObject({ installable: true, installed: true, installSpec: { kind: "npm", spec: "demo" } });
+    expect(result.items[0].evidence?.signalCodes).toContain("install-source");
+  });
   it("returns the selected view when there is no query", () => {
     const result = filterCatalog(document, {
       view: "hot",

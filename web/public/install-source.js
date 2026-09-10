@@ -70,7 +70,8 @@ function normalizeInstallTarget(value) {
   if (!token || token.startsWith("-") || UNSAFE.test(token)) return null;
   const github = parseGitHubSource(token);
   if (github) return githubInstallTarget(github);
-  return NPM_SPEC_RE.test(token) ? token : null;
+  if (token.startsWith("npm:")) token = token.slice(4);
+  return !token.startsWith("-") && NPM_SPEC_RE.test(token) ? token : null;
 }
 function stripInstallComment(command) {
   let quote = "";
@@ -101,7 +102,7 @@ function commandTokens(value) {
   }
   return tokens;
 }
-function parseDshInstallCommand(value) {
+function parseDshInstallCommandDetails(value) {
   if (typeof value !== "string") return null;
   const tokens = commandTokens(value);
   if (!tokens?.length) return null;
@@ -111,9 +112,16 @@ function parseDshInstallCommand(value) {
     if (tokens[offset]?.match(NPM_SPEC_RE)?.[1] !== "@deepseek-ai/dsh") return null;
     offset++;
     if (tokens[offset] === "--") offset++;
+  } else if (tokens[0] === "pnpm" || tokens[0] === "corepack") {
+    if (tokens[0] === "corepack" && tokens[offset++] !== "pnpm") return null;
+    if (tokens[offset] === "exec") offset++;
+    if (tokens[offset++] !== "dsh") return null;
   } else if (tokens[0] !== "dsh") return null;
   const args = [];
-  let hasProfile = false;
+  let profile = null;
+  let registry = null;
+  let saveExact = false;
+  let workspace = false;
   let literal = false;
   for (; offset < tokens.length; offset++) {
     const token = tokens[offset];
@@ -121,35 +129,69 @@ function parseDshInstallCommand(value) {
       if (args.length !== 2 || args[0] !== "plugin" || args[1] !== "add") return null;
       literal = true;
     } else if (!literal && (token === "--profile" || token.startsWith("--profile="))) {
-      const profile = token === "--profile" ? tokens[++offset] : token.slice(10);
-      if (hasProfile || !profile || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(profile)) return null;
-      hasProfile = true;
+      const value2 = token === "--profile" ? tokens[++offset] : token.slice(10);
+      if (profile !== null || !value2 || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value2)) return null;
+      profile = value2;
+    } else if (!literal && (token === "--save-exact" || token === "-w")) {
+      if (args[0] !== "plugin" || args[1] !== "add") return null;
+      if (token === "--save-exact") {
+        if (saveExact) return null;
+        saveExact = true;
+      } else {
+        if (workspace) return null;
+        workspace = true;
+      }
+    } else if (!literal && (token === "--registry" || token.startsWith("--registry="))) {
+      if (registry !== null || args[0] !== "plugin" || args[1] !== "add") return null;
+      const value2 = token === "--registry" ? tokens[++offset] : token.slice(11);
+      if (!value2) return null;
+      try {
+        const url = new URL(value2);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
+        registry = url.href;
+      } catch {
+        return null;
+      }
     } else {
       args.push(token);
     }
   }
   if (args.length !== 3 || args[0] !== "plugin" || args[1] !== "add") return null;
-  return normalizeInstallTarget(args[2]);
+  const target = normalizeInstallTarget(args[2]);
+  return target ? { target, profile, registry, saveExact, workspace } : null;
 }
-function resolveCatalogInstallTarget(entry) {
+function isDshInstallCommandCompatible(command, options = {}) {
+  return (command.profile === null || command.profile === (options.profile ?? "web")) && (command.registry === null || command.registry === "https://registry.npmjs.org/");
+}
+function parseDshInstallCommand(value) {
+  return parseDshInstallCommandDetails(value)?.target ?? null;
+}
+function resolveCatalogInstallTarget(entry, options = {}) {
   if (!FULL_NAME_RE.test(entry.fullName)) return null;
-  const candidates = [normalizeInstallTarget(entry.installTarget)];
-  for (const command of entry.install?.commands ?? []) candidates.push(parseDshInstallCommand(command));
-  const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
-  if (github) return github;
+  const candidates = entry.install?.commands?.length ? [] : [normalizeInstallTarget(entry.installTarget)];
+  const unsupported = [];
+  for (const value of entry.install?.commands ?? []) {
+    const command = parseDshInstallCommandDetails(value);
+    if (command) (isDshInstallCommandCompatible(command, options) ? candidates : unsupported).push(command.target);
+  }
   const packageName = entry.install?.packageName ?? entry.installPackageName;
   if (typeof packageName === "string") {
     const npm = candidates.find((target) => target?.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase());
     if (npm) return npm;
   }
+  const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
+  if (github) return github;
+  if (unsupported.some((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase() || typeof packageName === "string" && target.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase())) return null;
   return entry.type?.toLowerCase() === "skill" ? `github:${entry.fullName}` : null;
 }
 export {
   FULL_NAME_RE,
   GITHUB_SPEC_RE,
   NPM_SPEC_RE,
+  isDshInstallCommandCompatible,
   normalizeInstallTarget,
   parseDshInstallCommand,
+  parseDshInstallCommandDetails,
   resolveCatalogInstallTarget,
   stripInstallComment
 };

@@ -1,6 +1,6 @@
 /** Derive a safe `dsh plugin add` target from a ranking entry. Never execute README commands. */
 import { NPM_SPEC_RE, GITHUB_SPEC_RE, FULL_NAME_RE, normalizeInstallTarget, resolveCatalogInstallTarget } from "../shared/install-source.js";
-import { parseGitHubSource, githubInstallTarget } from "../shared/github-source.js";
+import { parseGitHubSource, githubInstallTarget, githubRepositoryIdentity } from "../shared/github-source.js";
 import { parseNpmSelector } from "./npm-selector.js";
 export { NPM_SPEC_RE, GITHUB_SPEC_RE, FULL_NAME_RE };
 // Only generated, commit-pinned sources may use &path:. Raw README targets cannot.
@@ -40,16 +40,29 @@ export function npmPackageSpec(spec) {
     const selector = parseNpmSelector(value.slice(separator + 1));
     return selector ? { name, selector: selector.value } : null;
 }
-export function resolveInstallSpec(entry) {
-    const target = resolveCatalogInstallTarget(entry);
+export function resolveInstallSpec(entry, profile = "web") {
+    const target = resolveCatalogInstallTarget(entry, { profile });
     return target ? parseInstallSpec(target) : null;
 }
 /** Recognize only registry versions/ranges/tags, never URLs, aliases or other protocols. */
 export function isNpmRegistrySpecifier(value) {
     return parseNpmSelector(value) !== null;
 }
-export function isInstalledEntry(entry, installed) {
-    const spec = resolveInstallSpec(entry);
+/** Bind historical verification to the exact package still on disk and in this Profile. */
+function verifiedInstalledRepository(name, value, evidence) {
+    const provenance = evidence?.provenance;
+    const manifest = evidence?.manifest;
+    if (!provenance || !manifest || provenance.source !== "npm" || provenance.repositoryIdentity !== "matched"
+        || provenance.packageName !== name || manifest.name !== name || !provenance.version
+        || value !== provenance.version || manifest.version !== provenance.version
+        || provenance.resolvedTarget !== `${name}@${provenance.version}`
+        || !provenance.integrity || !Number.isFinite(provenance.verifiedAt))
+        return null;
+    const repository = githubRepositoryIdentity(provenance.repositoryUrl);
+    return repository && repository === githubRepositoryIdentity(manifest.repository) ? repository : null;
+}
+export function isInstalledEntry(entry, installed, profile = "web", evidence = {}) {
+    const spec = resolveInstallSpec(entry, profile);
     const expectedSource = spec?.kind === "github" ? parseGitHubSource(spec.spec) : null;
     const expectedPackage = entry.install?.packageName ?? (spec?.kind === "npm" ? npmPackageSpec(spec.spec)?.name : null);
     const expectedPath = entry.install?.repositoryPath?.replace(/^\.\//, "").replace(/^\/+|\/+$/g, "") ?? expectedSource?.path;
@@ -61,8 +74,14 @@ export function isInstalledEntry(entry, installed) {
             if (source.repository === entry.fullName.toLowerCase() && (!expectedPath || source.path === expectedPath))
                 return true;
         }
-        else if (expectedPackage && isNpmRegistrySpecifier(value)) {
-            return true;
+        else if (isNpmRegistrySpecifier(value)) {
+            if (expectedPackage)
+                return true;
+            // Compact indexes can omit package identity. Require exact durable evidence,
+            // and never infer a subpackage or Skill from its repository alone.
+            if (!expectedPath && entry.type?.toLowerCase() !== "skill"
+                && verifiedInstalledRepository(name, value, evidence[name]) === entry.fullName.toLowerCase())
+                return true;
         }
     }
     return false;

@@ -8,6 +8,7 @@ import z from "@deepseek-ai/schemastery";
 import { DEFAULT_DATA_URL, normalizeDataUrl } from "./host/catalog.js";
 import type { PluginResolvedConfig } from "./host/contracts.js";
 import { resolveActiveProfile } from "./host/profile.js";
+import { readRuntimeStatus } from "./host/runtime-status.js";
 import { mountRoutes } from "./host/routes.js";
 import { installRecommendationCapabilities } from "./host/recommendations.js";
 import { createDesktopPluginRuntime, type DesktopPnpmLike } from "./install/dsh-cli.js";
@@ -56,7 +57,7 @@ export function apply(ctx: Context, config: Config = { dataUrl: DEFAULT_DATA_URL
         profile: resolveActiveProfile(config.profile),
       };
       installShared(resolved);
-      host.effect(() => mountRoutes(host, resolved), "dsh-top100: http routes");
+      host.effect(() => mountRoutes({ webServer: host.webServer, readRuntime: (bundles) => readRuntimeStatus(hostCtx, { isCurrentProfile: resolved.profile === resolveActiveProfile(), bundles }) }, resolved), "dsh-top100: http routes");
       return;
     }
     hostCtx.inject(["desktopPnpm"], (desktopCtx: Context) => {
@@ -73,7 +74,7 @@ export function apply(ctx: Context, config: Config = { dataUrl: DEFAULT_DATA_URL
       );
       const desktopHost = desktopCtx as unknown as typeof host;
       desktopHost.effect(() => {
-        const disposeRoutes = mountRoutes(desktopHost, desktopResolved, runtime);
+        const disposeRoutes = mountRoutes({ webServer: desktopHost.webServer, readRuntime: (bundles) => readRuntimeStatus(desktopCtx, { isCurrentProfile: desktopProfiles.current.dir === active.dir, bundles }) }, desktopResolved, runtime);
         return async () => {
           disposeRoutes();
           await runtime.dispose?.();

@@ -13,12 +13,12 @@ function evidenceText(entry) {
         ...(entry.topics ?? []),
     ].join(" ");
 }
-export function classifyFormFactor(entry) {
+export function classifyFormFactor(entry, profile = "web") {
     const type = entry.type?.toLowerCase() ?? "";
     const text = evidenceText(entry);
     if (type === "skill")
         return /dsh|deepseek harness/i.test(text) ? "dsh-skill" : "agent-skill";
-    if (isCordisEntry(entry) && resolveInstallSpec(entry))
+    if (isCordisEntry(entry) && resolveInstallSpec(entry, profile))
         return THEME_RE.test(text) ? "theme" : "dsh-bundle";
     if (DESKTOP_RE.test(text))
         return "desktop-app";
@@ -32,9 +32,9 @@ export function classifyFormFactor(entry) {
         return "ecosystem-project";
     return "candidate";
 }
-export function catalogEvidence(entry) {
-    const formFactor = classifyFormFactor(entry);
-    const installSpec = resolveInstallSpec(entry);
+export function catalogEvidence(entry, profile = "web") {
+    const formFactor = classifyFormFactor(entry, profile);
+    const installSpec = resolveInstallSpec(entry, profile);
     const cordisStructure = isCordisEntry(entry);
     const skillStructure = entry.type?.toLowerCase() === "skill";
     const structured = cordisStructure || skillStructure;

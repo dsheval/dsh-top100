@@ -1,4 +1,5 @@
 /** Fetch and filter the published rankings document. */
+import { type InstalledEntryEvidence } from "../install/install-spec.js";
 import type { CatalogCacheStatus, CatalogCategoryDefinition, CatalogItem, CatalogScope, CatalogScopeCounts, InstallAvailability, PluginCategoryDefinition, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
 export declare const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 export interface CatalogCache {
@@ -60,6 +61,8 @@ export declare function filterCatalog(document: RankingsDocument, options: {
     offset: number;
     limit: number;
     installed: Record<string, string>;
+    installedEvidence?: Record<string, InstalledEntryEvidence>;
+    profile?: string;
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
     catalogScope?: CatalogScope;

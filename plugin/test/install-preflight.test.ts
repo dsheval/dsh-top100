@@ -46,6 +46,37 @@ afterEach(() => {
 });
 
 describe("install preflight approval", () => {
+  it("uses the actual destination Profile and rejects mismatches before source lookup", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({
+      name: "demo", version: "1.4.2", repository: "https://github.com/acme/demo.git",
+      dist: { integrity: "sha512-example" }, dsh: { bundle: { patch: "./cordis.patch.yml" } },
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const plugin = entry({ install: { packageName: "demo", commands: ["corepack pnpm dsh plugin --profile research add demo@latest"] } });
+    await expect(createInstallPreflight(plugin, "web")).rejects.toThrow("no trusted DSH install source");
+    expect(fetchMock).not.toHaveBeenCalled();
+    const approval = await createInstallPreflight(plugin, "research");
+    expect(approval.preflight.profile).toBe("research");
+    expect(approval.bundleTarget?.target).toBe("demo@1.4.2");
+  });
+
+  it("does not verify against public npm when the author explicitly requires another registry", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(createInstallPreflight(entry({ install: { packageName: "demo", commands: ["dsh plugin --profile web add demo --registry=https://mirror.example/"] } }), "web"))
+      .rejects.toThrow("no trusted DSH install source");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it.each([
+    "dsh plugin --profile research add github:acme/demo",
+    "dsh plugin add github:acme/demo --registry=https://mirror.example/",
+  ])("rejects an incompatible Skill command before source lookup: %s", async (command) => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(createInstallPreflight(entry({ type: "skill", install: { commands: [command] } }), "web"))
+      .rejects.toThrow("no trusted DSH install source");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
   it("preflights the sidebar repository without resolving its prerequisite marketplace", async () => {
     const fullName = "e2mcc/dsh-popout-sidebar";
     const sha = "c".repeat(40);

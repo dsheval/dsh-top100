@@ -17,6 +17,15 @@ export interface CatalogInstallSource {
   install?: { packageName?: unknown; commands?: readonly unknown[] };
 }
 
+/** Recognized author intent, not arguments to pass to a shell or package manager. */
+export interface DshInstallCommandDetails {
+  target: string;
+  profile: string | null;
+  registry: string | null;
+  saveExact: boolean;
+  workspace: boolean;
+}
+
 export function normalizeInstallTarget(value: unknown): string | null {
   if (typeof value !== "string" || value.length > 2048) return null;
   let token = value.trim();
@@ -26,7 +35,9 @@ export function normalizeInstallTarget(value: unknown): string | null {
   if (!token || token.startsWith("-") || UNSAFE.test(token)) return null;
   const github = parseGitHubSource(token);
   if (github) return githubInstallTarget(github);
-  return NPM_SPEC_RE.test(token) ? token : null;
+  // npm:pkg is an explicit registry source. npm aliases and other protocols stay rejected.
+  if (token.startsWith("npm:")) token = token.slice(4);
+  return !token.startsWith("-") && NPM_SPEC_RE.test(token) ? token : null;
 }
 
 /** A # inside a ref or a quoted token is not a shell comment. */
@@ -62,7 +73,7 @@ function commandTokens(value: string): string[] | null {
   return tokens;
 }
 
-export function parseDshInstallCommand(value: unknown): string | null {
+export function parseDshInstallCommandDetails(value: unknown): DshInstallCommandDetails | null {
   if (typeof value !== "string") return null;
   const tokens = commandTokens(value);
   if (!tokens?.length) return null;
@@ -72,10 +83,17 @@ export function parseDshInstallCommand(value: unknown): string | null {
     if (tokens[offset]?.match(NPM_SPEC_RE)?.[1] !== "@deepseek-ai/dsh") return null;
     offset++;
     if (tokens[offset] === "--") offset++;
+  } else if (tokens[0] === "pnpm" || tokens[0] === "corepack") {
+    if (tokens[0] === "corepack" && tokens[offset++] !== "pnpm") return null;
+    if (tokens[offset] === "exec") offset++;
+    if (tokens[offset++] !== "dsh") return null;
   } else if (tokens[0] !== "dsh") return null;
 
   const args: string[] = [];
-  let hasProfile = false;
+  let profile: string | null = null;
+  let registry: string | null = null;
+  let saveExact = false;
+  let workspace = false;
   let literal = false;
   for (; offset < tokens.length; offset++) {
     const token = tokens[offset];
@@ -83,27 +101,67 @@ export function parseDshInstallCommand(value: unknown): string | null {
       if (args.length !== 2 || args[0] !== "plugin" || args[1] !== "add") return null;
       literal = true;
     } else if (!literal && (token === "--profile" || token.startsWith("--profile="))) {
-      const profile = token === "--profile" ? tokens[++offset] : token.slice(10);
-      if (hasProfile || !profile || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(profile)) return null;
-      hasProfile = true;
+      const value = token === "--profile" ? tokens[++offset] : token.slice(10);
+      if (profile !== null || !value || !/^[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value)) return null;
+      profile = value;
+    } else if (!literal && (token === "--save-exact" || token === "-w")) {
+      if (args[0] !== "plugin" || args[1] !== "add") return null;
+      if (token === "--save-exact") {
+        if (saveExact) return null;
+        saveExact = true;
+      } else {
+        if (workspace) return null;
+        workspace = true;
+      }
+    } else if (!literal && (token === "--registry" || token.startsWith("--registry="))) {
+      if (registry !== null || args[0] !== "plugin" || args[1] !== "add") return null;
+      const value = token === "--registry" ? tokens[++offset] : token.slice(11);
+      if (!value) return null;
+      try {
+        const url = new URL(value);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password || url.search || url.hash) return null;
+        registry = url.href;
+      } catch { return null; }
     } else {
       args.push(token);
     }
   }
   if (args.length !== 3 || args[0] !== "plugin" || args[1] !== "add") return null;
-  return normalizeInstallTarget(args[2]);
+  const target = normalizeInstallTarget(args[2]);
+  return target ? { target, profile, registry, saveExact, workspace } : null;
 }
 
-export function resolveCatalogInstallTarget(entry: CatalogInstallSource): string | null {
+/** Public npm is supported; an explicit author Profile must match the requested destination. */
+export function isDshInstallCommandCompatible(command: DshInstallCommandDetails, options: { profile?: string } = {}): boolean {
+  return (command.profile === null || command.profile === (options.profile ?? "web"))
+    && (command.registry === null || command.registry === "https://registry.npmjs.org/");
+}
+
+/** Syntax-only convenience. Installation must use the contextual catalog resolver below. */
+export function parseDshInstallCommand(value: unknown): string | null {
+  return parseDshInstallCommandDetails(value)?.target ?? null;
+}
+
+export function resolveCatalogInstallTarget(entry: CatalogInstallSource, options: { profile?: string } = {}): string | null {
   if (!FULL_NAME_RE.test(entry.fullName)) return null;
-  const candidates = [normalizeInstallTarget(entry.installTarget)];
-  for (const command of entry.install?.commands ?? []) candidates.push(parseDshInstallCommand(command));
-  const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
-  if (github) return github;
+  // Compact indexes retain a vetted target; full entries must re-evaluate author conditions.
+  const candidates = entry.install?.commands?.length ? [] : [normalizeInstallTarget(entry.installTarget)];
+  const unsupported: string[] = [];
+  for (const value of entry.install?.commands ?? []) {
+    const command = parseDshInstallCommandDetails(value);
+    if (command) (isDshInstallCommandCompatible(command, options) ? candidates : unsupported).push(command.target);
+  }
+  // Prefer an author-provided registry release matching the catalog identity.
+  // A bare packageName is not an installation instruction; server preflight still verifies the artifact.
   const packageName = entry.install?.packageName ?? entry.installPackageName;
   if (typeof packageName === "string") {
     const npm = candidates.find((target) => target?.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase());
     if (npm) return npm;
   }
+  const github = candidates.find((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase());
+  if (github) return github;
+  // A skill fallback must not sidestep the same project's explicit environment requirements.
+  if (unsupported.some((target) => parseGitHubSource(target)?.repository === entry.fullName.toLowerCase()
+    || (typeof packageName === "string" && target.match(NPM_SPEC_RE)?.[1].toLowerCase() === packageName.trim().toLowerCase()))) return null;
   return entry.type?.toLowerCase() === "skill" ? `github:${entry.fullName}` : null;
 }

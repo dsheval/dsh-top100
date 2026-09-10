@@ -1,9 +1,9 @@
 /** Derive a safe `dsh plugin add` target from a ranking entry. Never execute README commands. */
 
-import type { InstallSpec, RankingEntry } from "../shared/types.js";
+import type { InstallProvenance, InstallSpec, RankingEntry } from "../shared/types.js";
 
 import { NPM_SPEC_RE, GITHUB_SPEC_RE, FULL_NAME_RE, normalizeInstallTarget, resolveCatalogInstallTarget } from "../shared/install-source.js";
-import { parseGitHubSource, githubInstallTarget } from "../shared/github-source.js";
+import { parseGitHubSource, githubInstallTarget, githubRepositoryIdentity } from "../shared/github-source.js";
 import { parseNpmSelector } from "./npm-selector.js";
 export { NPM_SPEC_RE, GITHUB_SPEC_RE, FULL_NAME_RE };
 // Only generated, commit-pinned sources may use &path:. Raw README targets cannot.
@@ -43,8 +43,8 @@ export function npmPackageSpec(spec: string): { name: string; selector: string |
   return selector ? { name, selector: selector.value } : null;
 }
 
-export function resolveInstallSpec(entry: RankingEntry): InstallSpec | null {
-  const target = resolveCatalogInstallTarget(entry);
+export function resolveInstallSpec(entry: RankingEntry, profile = "web"): InstallSpec | null {
+  const target = resolveCatalogInstallTarget(entry, { profile });
   return target ? parseInstallSpec(target) : null;
 }
 
@@ -53,8 +53,26 @@ export function isNpmRegistrySpecifier(value: string): boolean {
   return parseNpmSelector(value) !== null;
 }
 
-export function isInstalledEntry(entry: RankingEntry, installed: Record<string, string>): boolean {
-  const spec = resolveInstallSpec(entry);
+export interface InstalledEntryEvidence {
+  manifest: { name?: unknown; version?: unknown; repository?: unknown } | null;
+  provenance: InstallProvenance | null;
+}
+
+/** Bind historical verification to the exact package still on disk and in this Profile. */
+function verifiedInstalledRepository(name: string, value: string, evidence?: InstalledEntryEvidence): string | null {
+  const provenance = evidence?.provenance;
+  const manifest = evidence?.manifest;
+  if (!provenance || !manifest || provenance.source !== "npm" || provenance.repositoryIdentity !== "matched"
+    || provenance.packageName !== name || manifest.name !== name || !provenance.version
+    || value !== provenance.version || manifest.version !== provenance.version
+    || provenance.resolvedTarget !== `${name}@${provenance.version}`
+    || !provenance.integrity || !Number.isFinite(provenance.verifiedAt)) return null;
+  const repository = githubRepositoryIdentity(provenance.repositoryUrl);
+  return repository && repository === githubRepositoryIdentity(manifest.repository) ? repository : null;
+}
+
+export function isInstalledEntry(entry: RankingEntry, installed: Record<string, string>, profile = "web", evidence: Record<string, InstalledEntryEvidence> = {}): boolean {
+  const spec = resolveInstallSpec(entry, profile);
   const expectedSource = spec?.kind === "github" ? parseGitHubSource(spec.spec) : null;
   const expectedPackage = entry.install?.packageName ?? (spec?.kind === "npm" ? npmPackageSpec(spec.spec)?.name : null);
   const expectedPath = entry.install?.repositoryPath?.replace(/^\.\//, "").replace(/^\/+|\/+$/g, "") ?? expectedSource?.path;
@@ -63,8 +81,12 @@ export function isInstalledEntry(entry: RankingEntry, installed: Record<string, 
     const source = parseGitHubSource(value);
     if (source) {
       if (source.repository === entry.fullName.toLowerCase() && (!expectedPath || source.path === expectedPath)) return true;
-    } else if (expectedPackage && isNpmRegistrySpecifier(value)) {
-      return true;
+    } else if (isNpmRegistrySpecifier(value)) {
+      if (expectedPackage) return true;
+      // Compact indexes can omit package identity. Require exact durable evidence,
+      // and never infer a subpackage or Skill from its repository alone.
+      if (!expectedPath && entry.type?.toLowerCase() !== "skill"
+        && verifiedInstalledRepository(name, value, evidence[name]) === entry.fullName.toLowerCase()) return true;
     }
   }
   return false;

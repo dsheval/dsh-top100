@@ -38,7 +38,6 @@ interface RankingsPageProps {
 }
 
 const SORT_VIEWS: RankingView[] = ["hot", "rising", "total"];
-const CATALOG_SCOPES: CatalogScope[] = ["plugins", "skills"];
 const DSHEVAL_SITE = "https://www.dsheval.ai/top100/";
 type PageSection = "rankings" | "installed" | "diagnostics";
 const GITHUB_ICON = (
@@ -124,6 +123,9 @@ const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => (
 
 const ERROR_LOCALE_KEYS: Record<InstallErrorKind, string> = {
   "ignored-builds": "ignoredBuilds",
+  peer: "peer",
+  build: "build",
+  policy: "policy",
   network: "network",
   timeout: "timeout",
   permission: "permission",
@@ -146,12 +148,7 @@ async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
-function cacheAgeLabel(ageMs: number | null, t: Translate): string {
-  if (ageMs === null) return t("cacheAgeUnknown");
-  const minutes = Math.max(0, Math.round(ageMs / 60_000));
-  if (minutes < 60) return `${minutes} ${t("minutesAgo")}`;
-  return `${Math.round(minutes / 60)} ${t("hoursAgo")}`;
-}
+
 
 export function RankingsPage({ t }: RankingsPageProps) {
   const [section, setSection] = useState<PageSection>("rankings");
@@ -294,7 +291,9 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   function switchCatalogScope(nextScope: CatalogScope): void {
+    if (nextScope === catalogScope) { selectSection("rankings"); return; }
     resetPreflight();
+    setSection("rankings");
     setCatalogScope(nextScope);
     setView(nextScope === "plugins" ? "hot" : "total");
     setInstallAvailability("all");
@@ -513,49 +512,23 @@ export function RankingsPage({ t }: RankingsPageProps) {
             <h2>{t("title")}</h2>
             <a className="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="dsh-top100 GitHub" title="dsh-top100 GitHub" target="_blank" rel="noopener noreferrer">{GITHUB_ICON}</a>
           </div>
-          <p className="lede">{t("subtitle")}</p>
-          {data ? (
-            <div className="meta">
-              <span>
-                {t("updated")} {data.snapshotDate}
-              </span>
-              <span>
-                {t("source")} <a className="data-source" href={DSHEVAL_SITE} target="_blank" rel="noreferrer" title={data.dataUrl}>DSH-Eval Top100</a>
-              </span>
-              <span>{data.total} {t("entries")}</span>
-              <span title={data.cache.fetchedAt ? new Date(data.cache.fetchedAt).toLocaleString() : undefined}>
-                {data.cache.stale ? t("cachedStale") : t("cachedFresh")} · {cacheAgeLabel(data.cache.ageMs, t)}
-              </span>
-              {data.cache.reason ? <span className="cache-warning">{t("cacheFallback")}: {data.cache.reason}</span> : null}
-            </div>
-          ) : null}
+          {data ? <div className="meta">
+            <a className="data-source" href={DSHEVAL_SITE} target="_blank" rel="noreferrer">DSH-Eval Top100</a>
+            <span>{data.snapshotDate}</span>
+          </div> : null}
         </div>
       </header>
 
       <nav className="page-tabs" aria-label={t("nav")}>
-        <button type="button" aria-selected={section === "rankings"} onClick={() => selectSection("rankings")}>{t("rankings")}</button>
+        <button type="button" aria-selected={section === "rankings" && catalogScope === "plugins"} onClick={() => switchCatalogScope("plugins")}>{t("rankings")}</button>
+        <button type="button" aria-selected={section === "rankings" && catalogScope === "skills"} onClick={() => switchCatalogScope("skills")}>{t("skillsMarket")}</button>
         <button type="button" aria-selected={section === "installed"} onClick={() => selectSection("installed")}>{t("installedPage")}</button>
         <button type="button" aria-selected={section === "diagnostics"} onClick={() => selectSection("diagnostics")}>{t("diagnostics")}</button>
       </nav>
       <TaskStatus tracking={tracking} t={t} />
 
       {section === "rankings" ? <>
-
-      <div className="catalog-navigation" role="group" aria-label={t("catalogScope")}>
-        {CATALOG_SCOPES.map((scope) => (
-          <button
-            type="button"
-            className="catalog-tab"
-            key={scope}
-            aria-pressed={catalogScope === scope}
-            title={t(`catalogScopeHint_${scope}`)}
-            onClick={() => switchCatalogScope(scope)}
-          >
-            <span>{t(`catalogScope_${scope}`)}</span>
-            {data?.scopeCounts ? <span className="catalog-count">{data.scopeCounts[scope].toLocaleString("en-US")}</span> : null}
-          </button>
-        ))}
-      </div>
+        {data?.cache.stale ? <p className="cache-warning" title={data.cache.reason ?? undefined}>{t("cachedStale")}</p> : null}
 
       <div className="toolbar ranking-toolbar">
         <div className="search-cluster">
@@ -774,7 +747,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                       disabled={!tracking.ready || busy !== null || preparing !== null}
                       onClick={() => void prepareInstall(item)}
                     >
-                      {preparing === item.fullName ? t("preflighting") : t(item.type?.toLowerCase() === "skill" ? "reviewSkillInstall" : "reviewInstall")}
+                      {preparing === item.fullName ? t("preflighting") : t("reviewInstall")}
                     </button>
                   ) : (
                     <a className="project-link" href={item.url || `https://github.com/${item.fullName}`} target="_blank" rel="noreferrer">
@@ -898,7 +871,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           </div>
         </div>
       ) : null}
-      </> : section === "installed" ? <ManagedPage t={t} tracking={tracking} retryUpdate={updateRetry} onRetryConsumed={() => setUpdateRetry(null)} onBrowseSkills={() => { resetPreflight(); setCatalogScope("skills"); setCategory(null); setQuery(""); setDraft(""); setSection("rankings"); }} /> : <DiagnosticsPage t={t} />}
+      </> : section === "installed" ? <ManagedPage t={t} tracking={tracking} retryUpdate={updateRetry} onRetryConsumed={() => setUpdateRetry(null)} onBrowseSkills={() => { resetPreflight(); setCatalogScope("skills"); setView("total"); setInstallAvailability("all"); setCategory(null); setQuery(""); setDraft(""); setSection("rankings"); }} /> : <DiagnosticsPage t={t} />}
 
       {batch && installActivityOpen ? (
         <div className="install-activity-mask">

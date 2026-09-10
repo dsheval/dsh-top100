@@ -168,14 +168,14 @@ export function isInstallAvailability(value) {
 export function matchesQuery(entry, query) {
     return matchesSearchQuery(withReviewedDescription(entry), query);
 }
-function annotate(entry, installed) {
-    const installSpec = resolveInstallSpec(entry);
+function annotate(entry, installed, profile = "web", evidence) {
+    const installSpec = resolveInstallSpec(entry, profile);
     return {
         ...entry,
         installSpec,
         installable: installSpec !== null,
-        installed: isInstalledEntry(entry, installed),
-        evidence: catalogEvidence(entry),
+        installed: isInstalledEntry(entry, installed, profile, evidence),
+        evidence: catalogEvidence(entry, profile),
     };
 }
 function entryMatchesCatalogScope(entry, scope) {
@@ -267,7 +267,7 @@ export function filterCatalog(document, options) {
         .filter((entry) => {
         if (!options.installAvailability || options.installAvailability === "all")
             return true;
-        const installable = resolveInstallSpec(entry) !== null;
+        const installable = resolveInstallSpec(entry, options.profile) !== null;
         return options.installAvailability === "installable" ? installable : !installable;
     })
         .map((entry) => ({ entry, score: scoreEntry(entry) }))
@@ -281,7 +281,7 @@ export function filterCatalog(document, options) {
     if (hasQuery) {
         visible.sort((left, right) => right.score - left.score || left.entry.rank - right.entry.rank);
     }
-    const matched = visible.map(({ entry }) => annotate(entry, options.installed));
+    const matched = visible.map(({ entry }) => annotate(entry, options.installed, options.profile, options.installedEvidence));
     return {
         total: matched.length,
         excludedSkillCount,

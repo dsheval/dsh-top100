@@ -7,6 +7,7 @@ import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebServerService } from "../src/host/contracts.js";
+import { readRuntimeStatus } from "../src/host/runtime-status.js";
 import { mountRoutes } from "../src/host/routes.js";
 import { invalidateCatalog } from "../src/host/catalog.js";
 import { clearUpdateApprovals } from "../src/host/update-preflight.js";
@@ -251,6 +252,26 @@ describe("plugin lifecycle routes", () => {
       expect(readFileSync(join(backupPath, "my-notes.txt"), "utf8")).toBe("user edits");
       expect(existsSync(join(home, "skills", "my-skill"))).toBe(false);
     });
+  });
+
+  it("reports host evidence and keeps changed configurations pending until restart", async () => {
+    const directory = profileFixture("runtime");
+    writeFileSync(join(directory, "cordis.patch.yml"), "[]\n");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 503 })));
+    const harness = routeHarness();
+    const readRuntime = vi.fn((bundles) => readRuntimeStatus({ get: () => ({ entries: () => [
+      { id: "custom-loader-id", options: { name: "demo" }, fiber: { state: 2 } },
+    ] }) }, { isCurrentProfile: true, bundles }));
+    mountRoutes({ webServer: harness.webServer, readRuntime }, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/runtime" });
+    const before = await harness.request("/dsh-top100/managed");
+    expect(before.body.items).toContainEqual(expect.objectContaining({ name: "demo", activationState: "live", runtime: { state: "loaded", reason: "root-active" } }));
+    const toggle = await harness.request("/dsh-top100/toggle", { method: "POST", body: { name: "demo", enabled: false } });
+    expect(toggle.status).toBe(200);
+    const after = await harness.request("/dsh-top100/managed");
+    expect(after.body.items).toContainEqual(expect.objectContaining({ name: "demo", enabled: false, activationState: "restart-required", runtime: { state: "restart-required", reason: "configuration-changed" } }));
+    expect(readRuntime).toHaveBeenLastCalledWith([expect.objectContaining({ name: "demo", entryIds: ["custom-loader-id"], requiresRestart: true })]);
+    const diagnose = await harness.request("/dsh-top100/diagnose");
+    expect(diagnose.body.findings).toContainEqual(expect.objectContaining({ code: "runtime-restart-required", subject: "demo" }));
   });
 
   it("reports the same Skill as global in multiple Profiles and removal affects both inventories", async () => {

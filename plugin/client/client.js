@@ -213,6 +213,15 @@ function presentDiagnosticFinding(finding, report, language) {
 	const bundle = report.bundles.find((item) => item.name === finding.subject);
 	let message;
 	switch (finding.code) {
+		case "runtime-missing-services":
+			message = en$1 ? `Required host services are missing: ${(listParameter(finding, "services") ?? []).join(", ")}. Check the author’s configuration and companion plugins.` : `宿主入口缺少必需服务：${(listParameter(finding, "services") ?? []).join("、")}。请检查作者要求的配置或配套插件。`;
+			break;
+		case "runtime-failed":
+			message = en$1 ? "The host entry failed to load. Check DSH logs for the cause." : "宿主入口加载失败，请查看 DSH 日志中的具体原因。";
+			break;
+		case "runtime-restart-required":
+			message = en$1 ? "Configuration changed. Restart DSH, then refresh to verify." : "配置已改变，重启 DSH 后刷新验证。";
+			break;
 		case "profile-missing":
 			message = en$1 ? "The Profile directory or package.json could not be read." : "Profile 目录或 package.json 不可读取。";
 			break;
@@ -382,184 +391,174 @@ function DiagnosticsPage({ t }) {
 		children: [
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "diag-summary",
-				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", {
-						className: report.summary.ok ? "diag-ok" : "diag-error",
-						children: report.summary.ok ? t("diagOk") : t("diagIssues")
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						t("diagErrors"),
-						": ",
-						report.summary.errors
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						t("diagWarnings"),
-						": ",
-						report.summary.warnings
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						t("diagConflicts"),
-						": ",
-						report.summary.conflicts
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-						t("diagDeps"),
-						": ",
-						report.summary.dependencies
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						disabled: loading,
-						onClick: () => void load(),
-						children: t("diagRefresh")
-					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						disabled: loading,
-						onClick: exportSummary,
-						children: t("diagExport")
-					})
-				]
-			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-				className: "lede",
-				children: t("diagExportHint")
-			}),
-			exportError ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-				className: "error",
-				role: "alert",
-				children: t("diagExportFailed")
-			}) : null,
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "diag-grid",
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("diagCatalogTitle") }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: report.catalog.dataUrl }) }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
-						t("updated"),
-						": ",
-						report.catalog.snapshotDate ?? "—",
-						" · ",
-						report.catalog.counts.total,
-						" ",
-						t("entries")
-					] })
-				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("diagInventory") }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
-						t("diagOfficial"),
-						": ",
-						report.inventory.official,
-						" · ",
-						t("diagCommunity"),
-						": ",
-						report.inventory.community,
-						" · ",
-						t("skillKind"),
-						": ",
-						report.inventory.skills
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
-						t("enabled"),
-						": ",
-						report.inventory.enabled,
-						" · ",
-						t("disabled"),
-						": ",
-						report.inventory.disabled
-					] })
-				] })]
-			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
-				open: errors.length > 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
-					t("diagErrors"),
-					" (",
-					errors.length,
-					")"
-				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
-					items: errors,
-					report,
-					language
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", {
+					className: errors.length ? "diag-error" : warnings.length ? "diag-warning" : "diag-ok",
+					children: loading ? t("diagLoading") : errors.length || warnings.length ? t("diagIssues") : t("diagOk")
+				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					className: "lede",
+					children: t("diagScopeShort")
+				})] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+					type: "button",
+					disabled: loading,
+					onClick: () => void load(),
+					children: t("diagRefresh")
 				})]
 			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
-				open: warnings.length > 0,
-				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
-					t("diagWarnings"),
-					" (",
-					warnings.length,
-					")"
-				] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
-					items: warnings,
-					report,
-					language
-				})]
-			}),
-			infos.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
-				diagnosticLabels(language).information,
-				" (",
-				infos.length,
-				")"
-			] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
-				items: infos,
+			errors.length || warnings.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
+				items: [...errors, ...warnings],
 				report,
 				language
-			})] }) : null,
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
-				t("diagBundles"),
-				" (",
-				report.bundles.length,
-				")"
-			] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: "diag-list",
-				children: report.bundles.map((item) => {
-					const error$1 = presentDiagnosticBundleError(item, language);
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
-						" · ",
-						item.version ?? "—",
-						" · ",
-						item.enabled ? t("enabled") : t("disabled"),
-						error$1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", {
-							className: "diag-error",
-							children: error$1.message
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TechnicalDetails, {
-							text: error$1.technicalDetails,
-							language
-						})] }) : null
-					] }, item.name);
-				})
-			})] }),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
-				t("diagSkills"),
-				" (",
-				report.skills.length,
-				")"
-			] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-				className: "diag-list",
-				children: report.skills.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
-					" · ",
-					item.hasManifest ? "SKILL.md ✓" : "SKILL.md ✕"
-				] }, item.name))
-			})] }),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("diagPatch") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-				className: "diag-list",
+			}) : null,
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+				className: "diag-details",
 				children: [
-					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: report.patch.path }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-						t("disabled"),
-						": ",
-						report.patch.disables.join(", ") || "—"
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
-						t("diagOrphans"),
-						": ",
-						report.patch.orphans.join(", ") || "—"
-					] })
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("diagDetails") }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+						className: "lede",
+						children: t("runtimeScope")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "diag-grid",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("diagCatalogTitle") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: report.catalog.dataUrl }) }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+								t("updated"),
+								": ",
+								report.catalog.snapshotDate ?? "—",
+								" · ",
+								report.catalog.counts.total,
+								" ",
+								t("entries")
+							] })
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("diagInventory") }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+								t("profile"),
+								": ",
+								report.profile
+							] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+								t("diagOfficial"),
+								": ",
+								report.inventory.official,
+								" · ",
+								t("diagCommunity"),
+								": ",
+								report.inventory.community,
+								" · ",
+								t("skillKind"),
+								": ",
+								report.inventory.skills
+							] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", { children: [
+								t("enabled"),
+								": ",
+								report.inventory.enabled,
+								" · ",
+								t("disabled"),
+								": ",
+								report.inventory.disabled
+							] })
+						] })]
+					}),
+					infos.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: "diag-section",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("h3", { children: [
+							diagnosticLabels(language).information,
+							" (",
+							infos.length,
+							")"
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(FindingList, {
+							items: infos,
+							report,
+							language
+						})]
+					}) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: "diag-section",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("h3", { children: [
+							t("diagBundles"),
+							" (",
+							report.bundles.length,
+							")"
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: "diag-list",
+							children: report.bundles.map((item) => {
+								const error$1 = presentDiagnosticBundleError(item, language);
+								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
+									" · ",
+									item.version ?? "—",
+									" · ",
+									item.enabled ? t("enabled") : t("disabled"),
+									" ",
+									item.runtime ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [" · ", t(`runtime_${item.runtime.state}`)] }) : null,
+									error$1 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", {
+										className: "diag-error",
+										children: error$1.message
+									}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TechnicalDetails, {
+										text: error$1.technicalDetails,
+										language
+									})] }) : null
+								] }, item.name);
+							})
+						})]
+					}),
+					report.skills.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("section", {
+						className: "diag-section",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("h3", { children: [
+							t("diagSkills"),
+							" (",
+							report.skills.length,
+							")"
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: "diag-list",
+							children: report.skills.map((item) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: item.name }),
+								" · ",
+								item.hasManifest ? "SKILL.md ✓" : "SKILL.md ✕"
+							] }, item.name))
+						})]
+					}) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("diagPatch") }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "diag-list",
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: report.patch.path }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+								t("disabled"),
+								": ",
+								report.patch.disables.join(", ") || "—"
+							] }),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [
+								t("diagOrphans"),
+								": ",
+								report.patch.orphans.join(", ") || "—"
+							] })
+						]
+					})] }),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "diag-export",
+						children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								disabled: loading,
+								onClick: exportSummary,
+								children: t("diagExport")
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								className: "lede",
+								children: t("diagExportHint")
+							}),
+							exportError ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								className: "error",
+								role: "alert",
+								children: t("diagExportFailed")
+							}) : null
+						]
+					})
 				]
-			})] })
+			})
 		]
 	});
 }
@@ -687,6 +686,35 @@ function ignoredBuildPackages(raw) {
 /** Turn raw pnpm/DSH output into an error category while preserving details. */
 function presentInstallError(raw) {
 	const detail = raw.trim() || "install failed";
+	const code = /^\[([a-z-]+)\]/.exec(detail)?.[1];
+	const kinds = {
+		"ignored-builds": "ignored-builds",
+		"peer-dependency": "peer",
+		"host-peer": "peer",
+		"prepare-failed": "build",
+		"lifecycle-failed": "build",
+		"release-age": "policy",
+		"hoist-drift": "lockfile",
+		"git-network": "network",
+		"transient-network": "network",
+		"fetch-timeout": "timeout",
+		"install-timeout": "timeout"
+	};
+	if (code && kinds[code]) return {
+		kind: kinds[code],
+		packages: code === "ignored-builds" ? ignoredBuildPackages(detail) : [],
+		detail
+	};
+	if (/ERR_PNPM_PEER_DEP_ISSUES/.test(detail)) return {
+		kind: "peer",
+		packages: [],
+		detail
+	};
+	if (/ERR_PNPM_PREPARE_PACKAGE|ELIFECYCLE/.test(detail)) return {
+		kind: "build",
+		packages: [],
+		detail
+	};
 	if (/ERR_PNPM_IGNORED_BUILDS|Ignored build scripts/i.test(detail)) return {
 		kind: "ignored-builds",
 		packages: ignoredBuildPackages(detail),
@@ -697,7 +725,7 @@ function presentInstallError(raw) {
 		packages: [],
 		detail
 	};
-	if (/TimeoutError|ETIMEDOUT|timed?\s*out|超时/i.test(detail)) return {
+	if (/TimeoutError|UND_ERR_CONNECT_TIMEOUT|ETIMEDOUT|timed?\s*out|超时/i.test(detail)) return {
 		kind: "timeout",
 		packages: [],
 		detail
@@ -1577,6 +1605,15 @@ function SkillBackupList({ jobs, t }) {
 
 //#endregion
 //#region src/client/ManagedPage.tsx
+function Chevron() {
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
+		className: "managed-chevron",
+		viewBox: "0 0 16 16",
+		"aria-hidden": "true",
+		focusable: "false",
+		children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("path", { d: "m5.5 3.5 4.5 4.5-4.5 4.5" })
+	});
+}
 async function readJson$1(url, init) {
 	const response = await fetch(url, init);
 	const body = await response.json();
@@ -1585,6 +1622,7 @@ async function readJson$1(url, init) {
 }
 function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery = "", onBrowseSkills }) {
 	const [draft, setDraft] = (0, react.useState)(initialQuery);
+	const [optionsOpen, setOptionsOpen] = (0, react.useState)(false);
 	const [query, setQuery] = (0, react.useState)(initialQuery);
 	const [data, setData] = (0, react.useState)(null);
 	const [error, setError] = (0, react.useState)(null);
@@ -1798,8 +1836,10 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 		}
 	}
 	const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || migrating || review !== null;
+	const hasUpdateSettings = data?.items.some((item) => item.kind === "bundle" && !item.protected && !item.local) ?? false;
 	const updates = data?.items.filter((item) => item.kind === "bundle" && !item.protected && !item.local && (updateStrategy === "latest" || item.updateAvailable || !item.latest)) ?? [];
 	function descriptionFor$1(item) {
+		if (item.name === "@dsheval/dsh-top100-plugin") return t("managedSelfDescription");
 		if (t("descriptionLocale") === "en") return item.description.trim() || `${t(item.kind === "skill" ? "installedSkillFallback" : "installedPluginFallback")}: ${item.name}.`;
 		const supplied = item.descriptionZh.trim();
 		if (supplied) return supplied;
@@ -1808,10 +1848,6 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 		className: "managed-page",
 		children: [
-			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: t("installedManagerTitle") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-				className: "lede",
-				children: t("installedManagerHint")
-			})] }),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "toolbar",
 				children: [
@@ -1837,43 +1873,13 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 						onClick: () => void load(true),
 						children: t("refreshInstalled")
 					}),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("label", { children: [
-						t("updateStrategy"),
-						" ",
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
-							"aria-label": t("updateStrategy"),
-							value: updateStrategy,
-							disabled: operationBlocked,
-							onChange: (event) => {
-								setUpdateStrategy(event.target.value);
-								setIssues([]);
-								setNotice(null);
-							},
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-								value: "preserve",
-								children: t("updatePreserve")
-							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
-								value: "latest",
-								children: t("updateLatest")
-							})]
-						})
-					] }),
-					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+					updates.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
-						disabled: updates.length === 0 || operationBlocked || data?.sourceMigrationRequired === true,
+						disabled: operationBlocked || data?.sourceMigrationRequired === true,
 						onClick: () => void prepareUpdates(updates.map((item) => item.name)),
-						children: [
-							t("updateAll"),
-							" (",
-							Math.min(updates.length, MAX_UPDATE_BATCH_SIZE),
-							")"
-						]
-					})
+						children: t("updateAll")
+					}) : null
 				]
-			}),
-			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-				className: "lede",
-				children: t(updateStrategy === "latest" ? "updateLatestHint" : "updatePreserveHint")
 			}),
 			data?.sourceMigrationRequired ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: "banner",
@@ -1898,18 +1904,54 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 					updates.length
 				]
 			}) : null,
-			data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-				className: "lede",
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "managed-context",
 				children: [
-					t("profile"),
-					": ",
-					data.profile,
-					" · ",
-					data.total,
-					" ",
-					t("managedItems")
+					data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+						className: "lede",
+						children: [
+							data.total,
+							" ",
+							t("managedItems")
+						]
+					}) : null,
+					hasUpdateSettings ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						type: "button",
+						className: "manage-options-trigger",
+						"aria-expanded": optionsOpen,
+						"aria-controls": "dsh-top100-management-options",
+						onClick: () => setOptionsOpen((open) => !open),
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)(Chevron, {}), t("manageOptions")]
+					}) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						id: "dsh-top100-management-options",
+						className: "manage-options-content",
+						hidden: !optionsOpen || !hasUpdateSettings,
+						children: data?.items.some((item) => item.kind === "bundle" && !item.protected && !item.local) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "managed-setting",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								className: "managed-strategies",
+								role: "group",
+								"aria-label": t("updateStrategy"),
+								children: ["preserve", "latest"].map((strategy) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									"aria-pressed": updateStrategy === strategy,
+									disabled: operationBlocked,
+									onClick: () => {
+										setUpdateStrategy(strategy);
+										setIssues([]);
+										setNotice(null);
+									},
+									children: t(strategy === "preserve" ? "updatePreserve" : "updateLatest")
+								}, strategy))
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+								className: "lede",
+								children: t(updateStrategy === "latest" ? "managedLatestHint" : "managedPreserveHint")
+							})]
+						}) : null
+					})
 				]
-			}) : null,
+			}),
 			notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: "banner",
 				children: notice
@@ -2017,149 +2059,145 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 				className: "list managed-list",
 				children: [(data?.items ?? []).map((item) => {
 					const job = jobByName.get(item.name);
+					const shortName = item.name.replace(/^@[^/]+\//, "");
+					const displayName = item.name === "@dsheval/dsh-top100-plugin" ? "dsh-top100" : data?.items.some((other) => other.name !== item.name && other.name.replace(/^@[^/]+\//, "") === shortName) ? item.name : shortName;
 					const versionsKnown = Boolean(item.version && item.latest && parseSemver(item.version.replace(/^v/, "")) && parseSemver(item.latest.replace(/^v/, "")));
 					const noUpdate = updateStrategy === "preserve" && versionsKnown && !item.updateAvailable;
-					return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", { children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							className: "status-cell",
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-								className: `dot${item.enabled ? "" : " off"}`,
-								"aria-hidden": "true"
+					return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("article", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+						className: "managed-details",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: "managed-title",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									className: `dot ${item.kind === "skill" ? "off" : item.activationState === "live" ? "live" : item.activationState === "broken" ? "broken" : item.activationState === "restart-required" ? "pending" : "off"}`,
+									"aria-hidden": "true"
+								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+									title: item.name,
+									children: displayName
+								})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: "managed-disclosure",
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(item.protected ? "viewDetails" : "manage") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(Chevron, {})]
+							}),
+							/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: "facts",
+								children: [
+									item.kind === "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "badge",
+										children: t("skillKind")
+									}) : null,
+									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: `badge activation-${item.activationState}`,
+										title: t("runtimeScope"),
+										children: t(item.kind === "skill" ? "installed" : item.runtime ? `runtime_${item.runtime.state}` : `activation_${item.activationState}`)
+									}),
+									item.version ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+										t("version"),
+										": ",
+										item.version
+									] }) : null,
+									item.updateAvailable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "badge warn",
+										children: t("updateAvailable")
+									}) : null,
+									item.updateError ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+										className: "badge warn",
+										children: t("updateStatus_failed")
+									}) : null
+								]
 							})
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "managed-copy",
+						] }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: "managed-body",
 							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h3", { children: item.url ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-									href: item.url,
-									target: "_blank",
-									rel: "noreferrer",
-									children: item.name
-								}) : item.name }),
 								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: "desc",
 									children: descriptionFor$1(item)
 								}),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-									className: "facts",
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "badge",
-											children: t(item.kind === "skill" ? "skillKind" : "bundleKind")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: `badge${item.enabled ? "" : " muted"}`,
-											children: t(item.enabled ? "enabled" : "disabled")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: `badge activation-${item.activationState}`,
-											children: t(`activation_${item.activationState}`)
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("version"),
-											": ",
-											item.version ?? "—"
-										] }),
-										item.latest ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("sourceLatestVersion"),
-											": ",
-											item.latest
-										] }) : null,
-										item.updateTarget ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("updateTarget"),
-											": ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: item.updateTarget })
-										] }) : null,
-										item.updateStatus && item.updateStatus !== "not-supported" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`updateStatus_${item.updateStatus}`) }) : null,
-										item.updateCheckedAt ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("updateCheckedAt"),
-											": ",
-											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("time", {
-												dateTime: new Date(item.updateCheckedAt).toISOString(),
-												children: new Date(item.updateCheckedAt).toLocaleString(t("descriptionLocale") === "en" ? "en-US" : "zh-CN")
-											})
-										] }) : null,
-										item.updateError ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("updateCheckDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: item.updateError })] }) : null,
-										item.kind === "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "badge",
-											children: t("globalSkill")
-										}) : null,
-										item.modificationState ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`skillModification_${item.modificationState}`) }) : null,
-										item.fullName && item.fullName !== item.name ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-											t("project"),
-											": ",
-											item.fullName
-										] }) : null,
-										item.local ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "badge",
-											children: t("localLink")
-										}) : null,
-										item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "badge",
-											children: t("protected")
-										}) : null,
-										item.updateAvailable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: "badge warn",
-											children: t("updateAvailable")
-										}) : null
-									]
-								}),
-								item.kind === "bundle" && (item.protected || item.local) ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+								item.updateAvailable && item.latest ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
 									className: "lede",
-									children: [t(item.protected ? "protectedManageHint" : "localManageHint"), item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [" ", /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-										href: "https://www.dsheval.ai/top100/?page=dsh#dsh",
-										target: "_blank",
-										rel: "noreferrer",
-										children: t("maintenanceGuide")
-									})] }) : null]
+									children: [
+										t("updateAvailable"),
+										": ",
+										item.latest
+									]
+								}) : null,
+								item.updateError ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("updateCheckDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "lede",
+									children: item.updateError
+								})] }) : null,
+								item.kind === "skill" && item.modificationState ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "lede",
+									children: t(`skillModification_${item.modificationState}`)
+								}) : null,
+								item.runtime?.missingServices?.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("runtimeDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: item.runtime.missingServices.join(", ") })] }) : null,
+								item.kind === "bundle" && (item.protected || item.local) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+									className: "lede",
+									children: t(item.protected ? "protectedManageHint" : "localManageHint")
 								}) : null,
 								item.kind === "skill" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: "lede",
 									children: t("skillReinstallHint")
-								}) : null
-							]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "actions row-actions",
-							children: [
-								job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: "job",
-									children: [t(`phase_${job.phase}`), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: job.error ?? job.message ?? job.lastLine })]
 								}) : null,
-								job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									disabled: item.protected || item.local || operationBlocked,
-									onClick: () => void prepareUpdates([item.name]),
-									children: t("retry")
-								}) : null,
-								item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									disabled: item.protected || operationBlocked,
-									onClick: () => void toggle(item),
-									children: item.enabled ? t("disable") : t("enable")
-								}) : null,
-								item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									disabled: item.protected || item.local || noUpdate || operationBlocked || data?.sourceMigrationRequired === true,
-									onClick: () => void prepareUpdates([item.name]),
-									children: t(noUpdate ? "noUpdateAvailable" : item.updateAvailable ? "update" : "checkUpdates")
-								}) : null,
-								item.kind === "skill" && onBrowseSkills ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									disabled: operationBlocked,
-									onClick: onBrowseSkills,
-									children: t("browseSkillUpdates")
-								}) : null,
-								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-									type: "button",
-									className: "danger",
-									disabled: item.protected || operationBlocked || item.kind === "bundle" && data?.sourceMigrationRequired === true,
-									onClick: () => void manage("uninstall", [item.name], item.kind),
-									children: t("uninstall")
+								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+									className: "managed-footer",
+									children: [!item.protected || job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: "actions row-actions",
+										children: [
+											job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+												className: "job",
+												children: [t(`phase_${job.phase}`), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: job.error ?? job.message ?? job.lastLine })]
+											}) : null,
+											job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												disabled: item.protected || item.local || operationBlocked,
+												onClick: () => void prepareUpdates([item.name]),
+												children: t("retry")
+											}) : null,
+											item.kind === "bundle" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												disabled: item.protected || operationBlocked,
+												onClick: () => void toggle(item),
+												children: item.enabled ? t("disable") : t("enable")
+											}) : null,
+											item.kind === "bundle" && !item.local && !noUpdate ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												disabled: item.protected || operationBlocked || data?.sourceMigrationRequired === true,
+												onClick: () => void prepareUpdates([item.name]),
+												children: t(item.updateAvailable ? "update" : "checkUpdates")
+											}) : null,
+											item.kind === "skill" && onBrowseSkills ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												disabled: operationBlocked,
+												onClick: onBrowseSkills,
+												children: t("browseSkillUpdates")
+											}) : null,
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+												type: "button",
+												className: "danger",
+												disabled: item.protected || operationBlocked || item.kind === "bundle" && data?.sourceMigrationRequired === true,
+												onClick: () => void manage("uninstall", [item.name], item.kind),
+												children: t("uninstall")
+											})
+										]
+									}) : null, /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+										className: "managed-links",
+										children: [item.url ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+											href: item.url,
+											target: "_blank",
+											rel: "noreferrer",
+											children: [t("viewProject"), " ↗"]
+										}) : null, item.protected ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
+											href: "https://www.dsheval.ai/top100/?page=dsh#dsh",
+											target: "_blank",
+											rel: "noreferrer",
+											children: [t("maintenanceGuide"), " ↗"]
+										}) : null]
+									})]
 								})
 							]
-						})
-					] }, `${item.kind}-${item.name}`);
+						})]
+					}) }, `${item.kind}-${item.name}`);
 				}), !loading && data?.items.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 					className: "lede",
 					children: t("emptyInstalled")
@@ -2196,7 +2234,6 @@ const SORT_VIEWS = [
 	"rising",
 	"total"
 ];
-const CATALOG_SCOPES = ["plugins", "skills"];
 const DSHEVAL_SITE = "https://www.dsheval.ai/top100/";
 const GITHUB_ICON = /* @__PURE__ */ (0, react_jsx_runtime.jsx)("svg", {
 	viewBox: "0 0 24 24",
@@ -2305,6 +2342,9 @@ const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => /* @__PURE__ */ (
 }, index));
 const ERROR_LOCALE_KEYS = {
 	"ignored-builds": "ignoredBuilds",
+	peer: "peer",
+	build: "build",
+	policy: "policy",
 	network: "network",
 	timeout: "timeout",
 	permission: "permission",
@@ -2325,12 +2365,6 @@ async function readJson(url, init) {
 	const body = await response.json();
 	if (!response.ok) throw new HttpError(body.error || body.message || `${response.status} ${response.statusText}`, response.status, body.code);
 	return body;
-}
-function cacheAgeLabel(ageMs, t) {
-	if (ageMs === null) return t("cacheAgeUnknown");
-	const minutes = Math.max(0, Math.round(ageMs / 6e4));
-	if (minutes < 60) return `${minutes} ${t("minutesAgo")}`;
-	return `${Math.round(minutes / 60)} ${t("hoursAgo")}`;
 }
 function RankingsPage({ t }) {
 	const [section, setSection] = (0, react.useState)("rankings");
@@ -2470,7 +2504,12 @@ function RankingsPage({ t }) {
 		setQuery(nextQuery);
 	}
 	function switchCatalogScope(nextScope) {
+		if (nextScope === catalogScope) {
+			selectSection("rankings");
+			return;
+		}
 		resetPreflight();
+		setSection("rankings");
 		setCatalogScope(nextScope);
 		setView(nextScope === "plugins" ? "hot" : "total");
 		setInstallAvailability("all");
@@ -2701,67 +2740,27 @@ function RankingsPage({ t }) {
 					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(RankTrustMark, {})
 				}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "head-copy",
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "market-title-row",
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: t("title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-								className: "github-link",
-								href: "https://github.com/dsheval/dsh-top100",
-								"aria-label": "dsh-top100 GitHub",
-								title: "dsh-top100 GitHub",
-								target: "_blank",
-								rel: "noopener noreferrer",
-								children: GITHUB_ICON
-							})]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-							className: "lede",
-							children: t("subtitle")
-						}),
-						data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: "meta",
-							children: [
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-									t("updated"),
-									" ",
-									data.snapshotDate
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-									t("source"),
-									" ",
-									/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
-										className: "data-source",
-										href: DSHEVAL_SITE,
-										target: "_blank",
-										rel: "noreferrer",
-										title: data.dataUrl,
-										children: "DSH-Eval Top100"
-									})
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
-									data.total,
-									" ",
-									t("entries")
-								] }),
-								/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									title: data.cache.fetchedAt ? new Date(data.cache.fetchedAt).toLocaleString() : void 0,
-									children: [
-										data.cache.stale ? t("cachedStale") : t("cachedFresh"),
-										" · ",
-										cacheAgeLabel(data.cache.ageMs, t)
-									]
-								}),
-								data.cache.reason ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-									className: "cache-warning",
-									children: [
-										t("cacheFallback"),
-										": ",
-										data.cache.reason
-									]
-								}) : null
-							]
-						}) : null
-					]
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "market-title-row",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("h2", { children: t("title") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+							className: "github-link",
+							href: "https://github.com/dsheval/dsh-top100",
+							"aria-label": "dsh-top100 GitHub",
+							title: "dsh-top100 GitHub",
+							target: "_blank",
+							rel: "noopener noreferrer",
+							children: GITHUB_ICON
+						})]
+					}), data ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: "meta",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+							className: "data-source",
+							href: DSHEVAL_SITE,
+							target: "_blank",
+							rel: "noreferrer",
+							children: "DSH-Eval Top100"
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: data.snapshotDate })]
+					}) : null]
 				})]
 			}),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("nav", {
@@ -2770,9 +2769,15 @@ function RankingsPage({ t }) {
 				children: [
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
-						"aria-selected": section === "rankings",
-						onClick: () => selectSection("rankings"),
+						"aria-selected": section === "rankings" && catalogScope === "plugins",
+						onClick: () => switchCatalogScope("plugins"),
 						children: t("rankings")
+					}),
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+						type: "button",
+						"aria-selected": section === "rankings" && catalogScope === "skills",
+						onClick: () => switchCatalogScope("skills"),
+						children: t("skillsMarket")
 					}),
 					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 						type: "button",
@@ -2793,22 +2798,11 @@ function RankingsPage({ t }) {
 				t
 			}),
 			section === "rankings" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
-				/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "catalog-navigation",
-					role: "group",
-					"aria-label": t("catalogScope"),
-					children: CATALOG_SCOPES.map((scope) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
-						type: "button",
-						className: "catalog-tab",
-						"aria-pressed": catalogScope === scope,
-						title: t(`catalogScopeHint_${scope}`),
-						onClick: () => switchCatalogScope(scope),
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t(`catalogScope_${scope}`) }), data?.scopeCounts ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: "catalog-count",
-							children: data.scopeCounts[scope].toLocaleString("en-US")
-						}) : null]
-					}, scope))
-				}),
+				data?.cache.stale ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+					className: "cache-warning",
+					title: data.cache.reason ?? void 0,
+					children: t("cachedStale")
+				}) : null,
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: "toolbar ranking-toolbar",
 					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3083,7 +3077,7 @@ function RankingsPage({ t }) {
 										className: "primary",
 										disabled: !tracking.ready || busy !== null || preparing !== null,
 										onClick: () => void prepareInstall(item),
-										children: preparing === item.fullName ? t("preflighting") : t(item.type?.toLowerCase() === "skill" ? "reviewSkillInstall" : "reviewInstall")
+										children: preparing === item.fullName ? t("preflighting") : t("reviewInstall")
 									}) : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("a", {
 										className: "project-link",
 										href: item.url || `https://github.com/${item.fullName}`,
@@ -3278,6 +3272,8 @@ function RankingsPage({ t }) {
 				onBrowseSkills: () => {
 					resetPreflight();
 					setCatalogScope("skills");
+					setView("total");
+					setInstallAvailability("all");
 					setCategory(null);
 					setQuery("");
 					setDraft("");
@@ -3358,6 +3354,8 @@ const css = `
   flex-direction: column;
   gap: 14px;
   min-height: 0;
+  min-width: 0;
+  max-width: 100%;
   color: var(--t100-ink);
   container-type: inline-size;
 }
@@ -3477,7 +3475,9 @@ const css = `
   border-bottom: 1px solid var(--t100-line);
 }
 .dsh-top100 .page-tabs button {
-  min-width: 76px;
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: nowrap;
   border: 0;
   border-bottom: 2px solid transparent;
   border-radius: 0;
@@ -3488,39 +3488,6 @@ const css = `
   color: var(--t100-accent);
   border-bottom-color: var(--t100-accent);
   background: transparent;
-}
-.dsh-top100 .catalog-navigation {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  min-height: 36px;
-  padding: 2px 1px 7px;
-  border-bottom: 1px solid var(--t100-line);
-}
-.dsh-top100 button.catalog-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border-color: transparent;
-  color: var(--t100-body);
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-}
-.dsh-top100 button.catalog-tab:hover { color: var(--t100-ink); }
-.dsh-top100 button.catalog-tab[aria-pressed="true"] {
-  color: var(--t100-accent);
-  background: var(--t100-accent-soft);
-}
-.dsh-top100 .catalog-count {
-  color: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums;
 }
 .dsh-top100 input[type="search"] {
   flex: 1 1 auto;
@@ -4244,30 +4211,49 @@ const css = `
 .dsh-top100 .row-actions {
   min-width: 104px;
 }
+.dsh-top100 .managed-list { gap: 0; padding: 0; overflow: visible; }
 .dsh-top100 .managed-list article {
-  position: relative;
+  min-width: 0;
+  border-bottom: 1px solid var(--t100-line);
+}
+.dsh-top100 .managed-context { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px 8px; }
+.dsh-top100 button.manage-options-trigger { display: inline-flex; align-items: center; gap: 5px; height: 32px; padding: 0 10px; border: 1px solid var(--t100-line); color: var(--t100-body); font-size: 13px; }
+.dsh-top100 .manage-options-trigger:hover { background: var(--t100-fill); }
+.dsh-top100 .manage-options-trigger[aria-expanded="true"] .managed-chevron { transform: rotate(90deg); }
+.dsh-top100 .managed-title { display: flex; align-items: baseline; gap: 10px; min-width: 0; color: var(--t100-ink); font-size: 15px; line-height: 22px; font-weight: 650; }
+.dsh-top100 .managed-title .dot { flex: 0 0 8px; }
+.dsh-top100 .managed-title > span:last-child { overflow-wrap: anywhere; }
+.dsh-top100 .managed-disclosure { display: inline-flex; align-items: center; gap: 4px; align-self: center; color: var(--t100-muted); font-size: 12px; line-height: 20px; font-weight: 400; white-space: nowrap; }
+.dsh-top100 .managed-chevron { display: block; flex: 0 0 14px; width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.dsh-top100 .managed-details[open] > summary .managed-chevron { transform: rotate(90deg); }
+.dsh-top100 .manage-options-content { grid-column: 1 / -1; display: grid; gap: 12px; padding: 4px 0 12px; }
+.dsh-top100 .manage-options-content[hidden] { display: none; }
+.dsh-top100 .managed-setting { display: grid; gap: 8px; }
+.dsh-top100 .managed-setting-label { color: var(--t100-body); font-size: 13px; }
+.dsh-top100 .managed-strategies { display: flex; flex-wrap: wrap; gap: 6px; }
+.dsh-top100 .managed-strategies button { height: auto; min-height: 34px; padding: 7px 12px; font-size: 13px; line-height: 18px; }
+.dsh-top100 .managed-strategies button[aria-pressed="true"] { color: var(--t100-accent); background: var(--t100-accent-soft); border-color: var(--t100-accent); }
+.dsh-top100 .managed-list .managed-details > summary {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: 10px 12px;
-  align-items: start;
-  min-width: 0;
-  padding: 14px;
-  border: 1px solid var(--t100-line);
-  border-radius: 12px;
-  background: var(--t100-surface);
-  box-shadow: 0 1px 2px color-mix(in srgb, #17211f 6%, transparent);
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 5px 12px;
+  padding: 14px 0;
+  list-style: none;
 }
-.dsh-top100 .managed-list .status-cell {
-  grid-column: 1;
-  grid-row: 1;
-  min-height: 20px;
-  padding-top: 1px;
-}
-.dsh-top100 .managed-list .managed-copy {
-  grid-column: 2;
-  grid-row: 1;
-  min-width: 0;
-}
+.dsh-top100 .managed-details > summary::-webkit-details-marker { display: none; }
+.dsh-top100 .managed-details > summary .facts { grid-column: 1 / -1; margin: 0 0 0 18px; font-weight: 400; }
+.dsh-top100 .managed-details > summary .badge { padding: 0; background: transparent; }
+.dsh-top100 .managed-details > summary .badge.warn { color: #9a6700; }
+.dsh-top100 .managed-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 0 0 14px 18px; }
+.dsh-top100 .managed-body .facts { margin: 0; }
+.dsh-top100 .managed-body > * { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+.dsh-top100 .managed-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.dsh-top100 .managed-links { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 12px; }
+.dsh-top100 .managed-links a { color: var(--t100-accent); text-decoration: none; }
+.dsh-top100 .managed-links a:hover { text-decoration: underline; }
+.dsh-top100 .managed-links a:focus-visible { outline: 2px solid var(--t100-accent); outline-offset: 3px; }
+.dsh-top100 .managed-footer .actions > button { min-width: 0; height: 32px; min-height: 32px; padding: 0 12px; font-size: 13px; font-weight: 500; }
 .dsh-top100 .managed-page .toolbar { flex-wrap: wrap; align-items: center; }
 .dsh-top100 .managed-page .toolbar > input { flex: 1 1 180px; min-width: 0; }
 .dsh-top100 .managed-page .toolbar > button { flex-shrink: 0; white-space: nowrap; }
@@ -4275,8 +4261,8 @@ const css = `
 .dsh-top100 .managed-page .toolbar select { max-width: 100%; }
 .dsh-top100 .managed-page code, .dsh-top100 .banner code { overflow-wrap: anywhere; }
 .dsh-top100 .managed-list .row-actions {
-  grid-column: 2;
-  grid-row: 2;
+  grid-column: auto;
+  grid-row: auto;
 }
 .dsh-top100 button.danger {
   color: #b42318;
@@ -4294,6 +4280,8 @@ const css = `
   border-radius: 50%;
   background: #16803c;
 }
+.dsh-top100 .dot.broken { background: #b42318; }
+.dsh-top100 .dot.pending { background: #9a6700; }
 .dsh-top100 .dot.off {
   background: #9b9b9b;
 }
@@ -4316,18 +4304,22 @@ const css = `
   display: grid;
   gap: 12px;
   min-height: 0;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr);
 }
 .dsh-top100 .diag-summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--t100-line);
-  border-radius: 10px;
-  background: var(--t100-fill);
-  font-size: 12px;
+  padding: 4px 0 16px;
+  border-bottom: 1px solid var(--t100-line);
+  font-size: 13px;
 }
+.dsh-top100 .diag-summary > div { flex: 1 1 200px; min-width: 0; }
+.dsh-top100 .diag-summary .lede { margin: 5px 0 0; }
+.dsh-top100 .diag-details > summary { cursor: pointer; }
+.dsh-top100 .diag-details > :not(summary) { margin-top: 12px; }
 .dsh-top100 .diag-summary button {
   margin-left: auto;
 }
@@ -4336,8 +4328,8 @@ const css = `
 .dsh-top100 .diag-warning { color: #9a6700; }
 .dsh-top100 .diag-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
 }
 .dsh-top100 .diag-grid section,
 .dsh-top100 details {
@@ -4348,6 +4340,7 @@ const css = `
 }
 .dsh-top100 .diag-grid h3,
 .dsh-top100 details summary {
+  color: var(--t100-muted);
   margin: 0;
   font-size: 13px;
   font-weight: 650;
@@ -4356,6 +4349,34 @@ const css = `
 .dsh-top100 .diag-grid p { margin: 6px 0 0; font-size: 12px; color: var(--t100-muted); }
 .dsh-top100 .diag-list { display: grid; gap: 6px; margin-top: 8px; font-size: 12px; }
 .dsh-top100 .diag-list small { display: block; color: var(--t100-muted); margin-top: 2px; }
+.dsh-top100 .managed-page details,
+.dsh-top100 .diag-page details,
+.dsh-top100 .diag-grid section {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.dsh-top100 .managed-page summary,
+.dsh-top100 .diag-page summary { padding: 4px 0; font-weight: 500; color: var(--t100-body); }
+.dsh-top100 .diag-page { overflow-wrap: anywhere; font-size: 13px; line-height: 20px; }
+.dsh-top100 .diag-page .lede,
+.dsh-top100 .diag-page .diag-grid p,
+.dsh-top100 .diag-page .diag-list,
+.dsh-top100 .diag-page .diag-list small,
+.dsh-top100 .diag-page button { font-family: inherit; font-size: 13px; line-height: 20px; font-weight: 400; }
+.dsh-top100 .diag-grid code { font: inherit; }
+.dsh-top100 .diag-page summary { line-height: 20px; }
+.dsh-top100 .diag-page * { min-width: 0; box-sizing: border-box; }
+.dsh-top100 .diag-page pre { max-width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.6; color: var(--t100-muted); }
+.dsh-top100 .diag-section { padding-top: 14px; border-top: 1px solid var(--t100-line); }
+.dsh-top100 .diag-page h3 { margin: 0; font-size: 13px; font-weight: 600; color: var(--t100-body); }
+.dsh-top100 .diag-list { line-height: 1.6; gap: 10px; }
+.dsh-top100 .diag-list strong { font-weight: 500; }
+.dsh-top100 .diag-list details { margin-top: 4px; }
+.dsh-top100 .diag-export { display: grid; justify-items: start; gap: 8px; padding-top: 14px; border-top: 1px solid var(--t100-line); }
+.dsh-top100 .managed-list .row-actions { flex-wrap: wrap; justify-content: flex-start; }
 .dsh-top100 .job {
   display: grid;
   gap: 9px;
@@ -5172,7 +5193,6 @@ const css = `
   .dsh-top100 .toolbar { flex-wrap: wrap; }
   .dsh-top100 .search-cluster { flex-basis: 100%; }
   .dsh-top100 .search-cluster > button.primary { flex: 0 0 auto; }
-  .dsh-top100 .catalog-navigation { gap: 4px; }
   .dsh-top100 .market-filter-row { width: 100%; flex-wrap: wrap; }
   .dsh-top100 .market-category-menu { flex: 1 1 150px; }
   .dsh-top100 .market-category-popover { width: min(330px, calc(100vw - 36px)); }
@@ -5231,6 +5251,18 @@ const zh = {
 	clientErrorTitle: "插件页面暂时无法显示",
 	clientErrorHint: "可重新打开页面。正在执行的安装不会因此取消，恢复后会重新读取安装状态。",
 	diagExport: "导出诊断摘要",
+	runtime_loaded: "宿主已加载",
+	"runtime_restart-required": "待重启验证",
+	"runtime_missing-services": "缺少必需服务",
+	runtime_failed: "宿主加载失败",
+	runtime_inactive: "未激活",
+	runtime_unknown: "未验证",
+	runtimeScope: "状态仅反映当前宿主加载情况；插件页面和实际功能需使用后确认。",
+	runtimeDetails: "加载详情",
+	manageOptions: "更新设置",
+	managedSelfDescription: "发现、安装和管理 DSH 插件与 Skills。",
+	managedPreserveHint: "沿用当前来源检查更新；没有来源记录时仅检查兼容版本。",
+	managedLatestHint: "切换至最新发布版本或默认分支，可能跨越主要版本；更新前会显示具体目标。",
 	diagExportHint: "仅导出版本、计数和问题代码，不包含路径、地址、插件清单或原始日志。",
 	diagExportFailed: "诊断摘要导出失败，请重试。",
 	expandDescription: "展开简介",
@@ -5239,6 +5271,7 @@ const zh = {
 	title: "dsh-top100",
 	subtitle: "发现、核对并安装 DSH 插件",
 	rankings: "插件市场",
+	skillsMarket: "Skill 市场",
 	installedPage: "已安装",
 	diagnostics: "诊断",
 	search: "搜索",
@@ -5341,7 +5374,7 @@ const zh = {
 	update: "更新",
 	checkUpdates: "检查更新",
 	noUpdateAvailable: "暂无更新",
-	refreshInstalled: "刷新列表与版本",
+	refreshInstalled: "刷新",
 	updateAll: "批量检查更新",
 	updateStrategy: "更新方式",
 	updatePreserve: "沿用原来源（推荐）",
@@ -5360,10 +5393,10 @@ const zh = {
 	updateIssueCurrent: "目标与当前版本相同或更旧，已跳过。",
 	updateIssueStrategy: "无法确认原更新分支，请明确选择更新方式后重试。",
 	updateIssueFailed: "来源未通过检查。请查看详情，修复后重新检查。",
-	protectedManageHint: "宿主核心包和 Top100 自身不能在此修改。请沿用当前 DSH 的安装方式：Desktop 使用应用的更新入口；命令行用户在启动 DSH 的环境中维护对应 Profile。",
-	localManageHint: "本地 link/file 插件由源码目录维护。请在原目录拉取修改并重新构建，再按当前 DSH 的启动方式重启。",
-	maintenanceGuide: "查看安装与维护说明",
-	reviewSkillInstall: "安装 / 更新 Skill",
+	protectedManageHint: "此插件不能在这里修改，请通过原安装方式维护。",
+	localManageHint: "本地插件请在源码目录更新并重新构建，然后重启 DSH。",
+	maintenanceGuide: "维护说明",
+	reviewSkillInstall: "安装",
 	browseSkillUpdates: "去 Skills 目录检查更新",
 	skillReinstallHint: "在 Skills 目录找到原项目后，点击“安装 / 更新 Skill”核对来源。替换前会备份完整原目录。",
 	skillBackupSaved: "Skill 原内容已备份",
@@ -5514,6 +5547,15 @@ const zh = {
 	installErrorNext: "建议操作",
 	installErrorDetails: "查看技术详情",
 	installErrorPackages: "涉及依赖",
+	installError_peer_title: "依赖版本不兼容",
+	installError_peer_summary: "当前宿主或 Profile 无法满足插件声明的依赖。",
+	installError_peer_hint: "核对作者支持的 DSH 版本及配套插件，再重试。",
+	installError_build_title: "插件构建失败",
+	installError_build_summary: "作者源码包或依赖的安装脚本执行失败。",
+	installError_build_hint: "检查作者要求的构建环境；若作者提供预构建包，可使用该安装来源。",
+	installError_policy_title: "安装受当前策略限制",
+	installError_policy_summary: "当前 Profile 的版本等待期或发布渠道策略阻止安装。",
+	installError_policy_hint: "等待策略允许，或自行调整当前 Profile 的策略后重试。",
 	installError_ignoredBuilds_title: "依赖构建被安全策略拦截",
 	installError_ignoredBuilds_summary: "pnpm 阻止了部分依赖运行安装脚本，因此插件没有安装完成。",
 	installError_ignoredBuilds_hint: "确认依赖来源可信后，在当前 Profile 目录运行 pnpm approve-builds，批准列出的依赖，再点击重试。",
@@ -5570,7 +5612,7 @@ const zh = {
 	"activation_configuration-required": "状态：已安装，完成作者要求的配置后再验证",
 	"activation_configuration-valid": "运行状态：配置可组合，当前进程尚未验证",
 	"activation_restart-required": "运行状态：需要重启后验证",
-	activation_live: "运行状态：正在运行",
+	activation_live: "运行状态：宿主已加载",
 	activation_inert: "运行状态：已写入但未激活",
 	activation_broken: "运行状态：安装或配置验证失败",
 	activation_unknown: "运行状态：尚未取得运行时证据",
@@ -5579,13 +5621,15 @@ const zh = {
 	cardHint: "Host 端从该地址读取 manifest 与不可变榜单快照；旧数据源会自动回退兼容文件。",
 	diagLoading: "正在扫描当前 DSH Profile…",
 	diagLoadFail: "诊断加载失败",
-	diagOk: "未发现严重问题",
+	diagOk: "已检查项目无错误",
 	diagIssues: "发现需要处理的问题",
 	diagErrors: "错误",
 	diagWarnings: "警告",
 	diagConflicts: "加载冲突",
 	diagDeps: "依赖问题",
-	diagRefresh: "重新扫描",
+	diagRefresh: "重新检查",
+	diagDetails: "检查详情",
+	diagScopeShort: "检查范围：配置与宿主加载",
 	diagCatalogTitle: "榜单数据源",
 	diagInventory: "安装概览",
 	diagOfficial: "官方 Bundle",
@@ -5617,6 +5661,18 @@ const en = {
 	clientErrorTitle: "The plugin page could not be displayed",
 	clientErrorHint: "Reopen this page to recover. Running installations are not cancelled; their status will be loaded again.",
 	diagExport: "Export diagnostic summary",
+	runtime_loaded: "Host loaded",
+	"runtime_restart-required": "Restart to verify",
+	"runtime_missing-services": "Required services missing",
+	runtime_failed: "Host load failed",
+	runtime_inactive: "Inactive",
+	runtime_unknown: "Unverified",
+	runtimeScope: "Status reflects current host loading only. Verify plugin pages and features by using them.",
+	runtimeDetails: "Loading details",
+	manageOptions: "Update settings",
+	managedSelfDescription: "Discover, install and manage DSH plugins and Skills.",
+	managedPreserveHint: "Check the current source for updates; without source records, check compatible versions only.",
+	managedLatestHint: "Use the latest release or default branch, which may cross major versions. Review the exact target before updating.",
 	diagExportHint: "Exports only the version, counts and issue codes; excludes paths, addresses, plugin inventories and raw logs.",
 	diagExportFailed: "Could not export the diagnostic summary. Please retry.",
 	expandDescription: "Show description",
@@ -5624,7 +5680,8 @@ const en = {
 	nav: "Rankings",
 	title: "dsh-top100",
 	subtitle: "Discover, review, and install DSH plugins",
-	rankings: "Marketplace",
+	rankings: "Plugin market",
+	skillsMarket: "Skill market",
 	installedPage: "Installed",
 	diagnostics: "Diagnostics",
 	search: "Search",
@@ -5727,7 +5784,7 @@ const en = {
 	update: "Update",
 	checkUpdates: "Check for updates",
 	noUpdateAvailable: "No update available",
-	refreshInstalled: "Refresh list and versions",
+	refreshInstalled: "Refresh",
 	updateAll: "Check updates in batch",
 	updateStrategy: "Update source",
 	updatePreserve: "Keep original source (recommended)",
@@ -5746,10 +5803,10 @@ const en = {
 	updateIssueCurrent: "The target is the same or older; this item was skipped.",
 	updateIssueStrategy: "The original branch could not be established. Choose an update strategy and retry.",
 	updateIssueFailed: "Source verification failed. Review the details, resolve the issue and retry.",
-	protectedManageHint: "Host packages and Top100 itself cannot be changed here. Use your existing DSH installation method: the app update controls for Desktop, or the launching environment and matching Profile for CLI installations.",
-	localManageHint: "Manage link/file plugins in their original source directory. Pull changes and rebuild there, then restart DSH using your current launch method.",
-	maintenanceGuide: "Installation and maintenance guide",
-	reviewSkillInstall: "Install / update Skill",
+	protectedManageHint: "This plugin cannot be changed here. Maintain it through its original installation method.",
+	localManageHint: "Update and rebuild local plugins in their source directory, then restart DSH.",
+	maintenanceGuide: "Maintenance guide",
+	reviewSkillInstall: "Install",
 	browseSkillUpdates: "Check updates in Skills",
 	skillReinstallHint: "Find the original project in Skills and choose Install / update Skill to review its source. The complete existing directory is backed up before replacement.",
 	skillBackupSaved: "Original Skill content backed up",
@@ -5900,6 +5957,15 @@ const en = {
 	installErrorNext: "What to do",
 	installErrorDetails: "View technical details",
 	installErrorPackages: "Affected dependencies",
+	installError_peer_title: "Dependency versions are incompatible",
+	installError_peer_summary: "The host or Profile cannot satisfy the plugin’s declared dependencies.",
+	installError_peer_hint: "Check the author’s supported DSH version and companion plugins, then retry.",
+	installError_build_title: "Plugin build failed",
+	installError_build_summary: "A source package or dependency install script failed.",
+	installError_build_hint: "Check the required build environment, or use the author’s prebuilt package if available.",
+	installError_policy_title: "Installation restricted by Profile policy",
+	installError_policy_summary: "A version waiting period or release channel policy prevented installation.",
+	installError_policy_hint: "Wait until the policy permits installation, or explicitly adjust your Profile policy before retrying.",
 	installError_ignoredBuilds_title: "Dependency build blocked by safety policy",
 	installError_ignoredBuilds_summary: "pnpm prevented some dependencies from running install scripts, so installation could not finish.",
 	installError_ignoredBuilds_hint: "After confirming the dependencies are trusted, run pnpm approve-builds in the current profile directory, approve the listed packages, and retry.",
@@ -5956,7 +6022,7 @@ const en = {
 	"activation_configuration-required": "Status: installed; complete the author's configuration before verification",
 	"activation_configuration-valid": "Runtime: profile composes; current process not verified",
 	"activation_restart-required": "Runtime: restart required before verification",
-	activation_live: "Runtime: live",
+	activation_live: "Runtime: host loaded",
 	activation_inert: "Runtime: written but inactive",
 	activation_broken: "Runtime: installation or configuration check failed",
 	activation_unknown: "Runtime: no authoritative evidence yet",
@@ -5965,13 +6031,15 @@ const en = {
 	cardHint: "The host reads the manifest and immutable ranking snapshots from this URL, with legacy fallback.",
 	diagLoading: "Scanning the current DSH profile…",
 	diagLoadFail: "Could not load diagnostics",
-	diagOk: "No critical issues",
+	diagOk: "No errors in checked items",
 	diagIssues: "Issues need attention",
 	diagErrors: "Errors",
 	diagWarnings: "Warnings",
 	diagConflicts: "Load conflicts",
 	diagDeps: "Dependency issues",
-	diagRefresh: "Scan again",
+	diagRefresh: "Check again",
+	diagDetails: "Check details",
+	diagScopeShort: "Checks configuration and host loading",
 	diagCatalogTitle: "Catalog source",
 	diagInventory: "Inventory",
 	diagOfficial: "Official bundles",
