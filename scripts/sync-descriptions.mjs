@@ -10,3 +10,5 @@ await build({
   bundle: true, platform: 'browser', format: 'esm',
   outfile: fileURLToPath(new URL('web/public/description-rules.js', root)),
 });
+
+await build({ entryPoints: [fileURLToPath(new URL("plugin/src/shared/install-assessment.ts", root))], bundle: true, platform: "browser", format: "esm", outfile: fileURLToPath(new URL("web/public/install-assessment.js", root)) });

@@ -3,7 +3,9 @@ import type { InstallSpec, LifecycleScriptEvidence } from "../shared/types.js";
 export declare class InstallVerificationError extends Error {
     fatal: boolean;
     status: number | null;
-    constructor(message: string, fatal?: boolean, status?: number | null);
+    /** A definite manifest failure is separate from installation confirmation policy. */
+    reason?: "invalid-manifest";
+    constructor(message: string, fatal?: boolean, status?: number | null, reason?: "invalid-manifest");
 }
 export interface VerifiedInstallTarget {
     requestedTarget: string;

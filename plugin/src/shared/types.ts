@@ -1,6 +1,28 @@
+import type { HostRuntimeStatus } from "../host/runtime-status.js";
 /** Shared shapes for the published rankings JSON and the plugin HTTP API. */
 
+export interface DiscoveryEvidence {
+  status: "verified" | "review-required";
+  kind: "bundle" | "client" | "host" | "skill";
+  evidence: string[];
+  checkedAt: string;
+  policyVersion: number;
+  sourceRevision?: string;
+}
+
+/** Source checks do not assert host compatibility, installation or runtime success. */
+export interface InstallSourceAssessment {
+  sourceKey: string;
+  status: "verified" | "invalid" | "unavailable";
+  checkedAt: string;
+  resolvedTarget?: string;
+  integrity?: string;
+  reason: string;
+}
+
 export interface RankingInstall {
+  discovery?: DiscoveryEvidence;
+  assessment?: InstallSourceAssessment;
   method?: string;
   target?: string;
   /** Collector-selected package path inside a monorepo. */
@@ -21,6 +43,8 @@ export interface PluginCategoryAssignment {
   source: "deepseek" | "rule-fallback" | "manual";
   model?: string;
   classifiedAt?: string;
+  sourceHash?: string;
+  policyVersion?: number;
 }
 
 export interface PluginCategoryDefinition {
@@ -317,6 +341,7 @@ export interface InstallResult {
 export type ManagedKind = "bundle" | "skill";
 
 export interface ManagedPlugin {
+  runtime?: HostRuntimeStatus;
   name: string;
   spec: string;
   version: string | null;
@@ -361,6 +386,7 @@ export interface DiagnosticFinding {
 }
 
 export interface DiagnosticBundle {
+  runtime?: HostRuntimeStatus;
   name: string;
   spec: string;
   version: string | null;

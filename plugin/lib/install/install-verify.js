@@ -8,11 +8,14 @@ const VERIFICATION_CACHE_MS = 10 * 60 * 1000;
 export class InstallVerificationError extends Error {
     fatal;
     status;
-    constructor(message, fatal = false, status = null) {
+    /** A definite manifest failure is separate from installation confirmation policy. */
+    reason;
+    constructor(message, fatal = false, status = null, reason) {
         super(message);
         this.name = "InstallVerificationError";
         this.fatal = fatal;
         this.status = status;
+        this.reason = reason;
     }
 }
 const verificationCache = new Map();
@@ -145,7 +148,7 @@ async function fetchJson(url, signal) {
     if (!response.ok) {
         const remaining = response.headers.get("x-ratelimit-remaining");
         if ((response.status === 403 || response.status === 429) && remaining === "0") {
-            throw new InstallVerificationError("GitHub 安装源验证额度已用尽，请稍后重试；配置 GITHUB_TOKEN 或 GH_TOKEN 可提高额度", true);
+            throw new InstallVerificationError("GitHub 安装源验证额度已用尽，请稍后重试；配置 GITHUB_TOKEN 或 GH_TOKEN 可提高额度", true, response.status);
         }
         throw new InstallVerificationError(`安装源验证失败：${response.status} ${response.statusText || "request failed"}`, response.status === 404, response.status);
     }
@@ -194,7 +197,7 @@ async function verifyNpm(spec, options) {
     const selector = parseNpmSelector(parsed.selector ?? "latest");
     const manifest = await fetchNpmManifest(parsed.name, selector.value, options.signal);
     if (!isBundleManifest(manifest)) {
-        throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装");
+        throw new InstallVerificationError("目标 npm 包没有声明 dsh.bundle，不能作为 DSH 插件安装", false, null, "invalid-manifest");
     }
     assertExpectedPackage(manifest, options);
     const manifestName = manifest.name;

@@ -10,9 +10,14 @@
  */
 
 import type { InstallMethod, PluginType } from "@dsh-top100/schema";
+import { load as loadYaml, JSON_SCHEMA } from "js-yaml";
 import { fetchRepoRoot, fetchFileViaApi, type RepoContentItem } from "./github.js";
 
+export const DISCOVERY_POLICY_VERSION = 6;
+export type DiscoveryKind = "bundle" | "client" | "host" | "skill";
+
 export interface Detection {
+  kind: DiscoveryKind | null;
   isPlugin: boolean;
   type: PluginType | null;
   installMethod: InstallMethod | null;
@@ -42,6 +47,7 @@ interface BundleCandidate {
   packageName: string | null;
   evidence: string;
   priority: number;
+  kind: DiscoveryKind;
 }
 
 function packageMetadata(content: string | null): PackageMetadata {
@@ -69,7 +75,9 @@ function safeWorkspacePath(value: string): string | null {
   const normalized = value.trim().replace(/^\.\//, "").replace(/\/+$/, "");
   if (!normalized || normalized.startsWith("/") || normalized.includes("..")) return null;
   if (!/^[A-Za-z0-9._/@*-]+$/.test(normalized)) return null;
-  if (normalized.includes("*") && !normalized.endsWith("/*")) return null;
+  const segments = normalized.split("/");
+  if (segments.length > 6 || segments.filter(part => part === "*").length > 2
+    || segments.some(part => !part || part.includes("*") && part !== "*")) return null;
   return normalized;
 }
 
@@ -89,7 +97,9 @@ async function readPackage(
     path === "." ? "package.json" : `${path}/package.json`,
     branch
   );
-  return file?.content ?? null;
+  // 调用方已看到 package.json；读取失败属于待复核，不能当作确定不是插件。
+  if (!file) throw new Error(`package metadata unavailable: ${fullName}/${path}`);
+  return file.content;
 }
 
 async function subdirCandidatePaths(
@@ -97,7 +107,7 @@ async function subdirCandidatePaths(
   rootItems: RepoContentItem[],
   branch: string | null | undefined,
   rootPackageContent: string | null
-): Promise<Array<{ path: string; priority: number }>> {
+): Promise<{ paths: Array<{ path: string; priority: number }>; truncated: boolean }> {
   const repoName = fullName.split("/")[1]?.toLowerCase() ?? "";
   const paths = new Map<string, number>();
   const add = (path: string, priority: number): void => {
@@ -120,17 +130,46 @@ async function subdirCandidatePaths(
   }
 
   const metadata = packageMetadata(rootPackageContent);
+  if (rootItems.some(item => item.type === "file" && item.name === "pnpm-workspace.yaml")) {
+    const file = await fetchFileViaApi(fullName, "pnpm-workspace.yaml", branch);
+    if (!file) throw new Error("Observed pnpm workspace could not be read");
+    try {
+      const workspace = record(loadYaml(file.content, { schema: JSON_SCHEMA }));
+      if (Array.isArray(workspace?.packages)) metadata.workspaces.push(...workspace.packages.filter((v): v is string => typeof v === "string"));
+    } catch { throw new Error("Observed pnpm workspace could not be parsed"); }
+  }
+  const directoryCache = new Map<string, RepoContentItem[]>();
+  const listDirectory = async (directory: string) => {
+    if (!directoryCache.has(directory)) {
+      if (directoryCache.size >= 24) throw new Error("Workspace discovery directory budget exhausted");
+      directoryCache.set(directory, await fetchRepoRoot(fullName, branch, directory));
+    }
+    return directoryCache.get(directory)!;
+  };
   const containerPaths = new Map<string, number>();
-  metadata.workspaces.forEach((workspace, index) => {
+  for (const [index, workspace] of metadata.workspaces.entries()) {
     const normalized = safeWorkspacePath(workspace);
-    if (!normalized) return;
-    if (normalized.endsWith("/*")) {
+    if (!normalized) continue;
+    if (normalized.includes("*") && (!normalized.endsWith("/*") || normalized.split("/").filter(part => part === "*").length === 2)) {
+      let prefixes = [""];
+      for (const segment of normalized.split("/")) {
+        if (segment === "*") {
+          const expanded: string[] = [];
+          for (const prefix of prefixes) {
+            const listing = prefix ? await listDirectory(prefix) : rootItems;
+            expanded.push(...listing.filter(item => item.type === "dir").map(item => item.path));
+          }
+          prefixes = expanded;
+        } else prefixes = prefixes.map(prefix => prefix ? `${prefix}/${segment}` : segment);
+      }
+      for (const prefix of prefixes) add(prefix, 30 + index);
+    } else if (normalized.endsWith("/*")) {
       const container = normalized.slice(0, -2);
       containerPaths.set(container, Math.min(containerPaths.get(container) ?? Number.POSITIVE_INFINITY, 30 + index));
     } else {
       add(normalized, 30 + index);
     }
-  });
+  }
 
   for (const common of ["plugin", "plugins", "packages"]) {
     const item = [...rootDirs.values()].find((candidate) => candidate.name.toLowerCase() === common);
@@ -140,42 +179,44 @@ async function subdirCandidatePaths(
   }
 
   for (const [container, priority] of containerPaths) {
-    const listing = await fetchRepoRoot(fullName, branch, container);
+    const listing = await listDirectory(container);
     for (const item of listing) {
       if (item.type === "dir") add(item.path, priority);
     }
   }
 
-  return [...paths]
+  const ordered = [...paths]
     .map(([path, priority]) => ({ path, priority }))
-    .sort((left, right) => left.priority - right.priority || left.path.localeCompare(right.path))
-    .slice(0, MAX_SUBDIR_CANDIDATES);
+    .sort((left, right) => left.priority - right.priority || left.path.localeCompare(right.path));
+  return { paths: ordered.slice(0, MAX_SUBDIR_CANDIDATES), truncated: ordered.length > MAX_SUBDIR_CANDIDATES };
 }
 
 async function detectBundleCandidates(
   fullName: string,
   rootItems: RepoContentItem[],
   branch?: string | null,
-  includeRoot = true
-): Promise<BundleCandidate[]> {
+  includeRoot = true,
+  primaryOnly = false,
+): Promise<{ candidates: BundleCandidate[]; truncated: boolean }> {
   const rootHasPackage = rootItems.some(
     (item) => item.type === "file" && item.name.toLowerCase() === "package.json"
   );
   const rootPackageContent = rootHasPackage ? await readPackage(fullName, ".", branch) : null;
   const candidates: BundleCandidate[] = [];
 
-  if (includeRoot && rootHasPackage && (hasCordisMarker(rootItems) || isCordisPackageJson(rootPackageContent))) {
-    candidates.push({
+  if (includeRoot && rootHasPackage) {
+    const kind = await validatePackage(fullName, ".", rootPackageContent, rootItems, branch);
+    if (kind) candidates.push({
       path: ".",
       packageName: packageMetadata(rootPackageContent).name,
-      evidence: hasCordisMarker(rootItems)
-        ? "root package.json + cordis marker"
-        : "root package.json contains DSH/Cordis declaration",
+      evidence: `root package.json validated ${kind} declaration and entry`,
       priority: -1,
+      kind,
     });
+    if (primaryOnly && candidates.length) return { candidates, truncated: false };
   }
 
-  const paths = await subdirCandidatePaths(fullName, rootItems, branch, rootPackageContent);
+  const { paths, truncated } = await subdirCandidatePaths(fullName, rootItems, branch, rootPackageContent);
   for (const candidate of paths) {
     const items = await fetchRepoRoot(fullName, branch, candidate.path);
     const hasPackage = items.some(
@@ -183,27 +224,47 @@ async function detectBundleCandidates(
     );
     if (!hasPackage) continue;
     const content = await readPackage(fullName, candidate.path, branch);
-    const marker = hasCordisMarker(items);
-    if (!marker && !isCordisPackageJson(content)) continue;
+    const kind = await validatePackage(fullName, candidate.path, content, items, branch);
+    if (!kind) continue;
     candidates.push({
       ...candidate,
+      kind,
       packageName: packageMetadata(content).name,
-      evidence: marker
-        ? `subdir ${candidate.path}/ (package.json + cordis marker)`
-        : `subdir ${candidate.path}/（package.json 含 DSH 依赖或声明）`,
+      evidence: `subdir ${candidate.path}/ validated ${kind} declaration and entry`,
     });
+    if (primaryOnly) return { candidates, truncated };
   }
-  return candidates;
+  return { candidates, truncated };
+}
+
+function bundleDetection(bundles: BundleCandidate[], evidence: string[]): Detection {
+  const selected = bundles[0];
+  evidence.push(...bundles.map(candidate => candidate.evidence));
+  if (bundles.length > 1) evidence.push(`selected ${selected.path}/ from ${bundles.length} validated plugin packages`);
+  return { isPlugin: true, kind: selected.kind, type: "cordis-plugin", installMethod: "pnpm-profile",
+    skillFiles: [], evidence, pluginPath: selected.path === "." ? null : selected.path,
+    packageName: selected.packageName, pluginPaths: bundles.map(candidate => candidate.path) };
 }
 
 export async function detectPlugin(
   fullName: string,
   rootItems: RepoContentItem[],
-  branch?: string | null
+  branch?: string | null,
+  options: { primaryOnly?: boolean } = {},
 ): Promise<Detection> {
   const evidence: string[] = [];
   const skillFiles: string[] = [];
-  const names = new Set(rootItems.map((i) => i.name.toLowerCase()));
+  let skillScanTruncated = false;
+  const names = new Set(rootItems.filter((i) => i.type === "file").map((i) => i.name.toLowerCase()));
+
+  // Collection consumes only the selected package. Its priority is already root
+  // then sorted subpackages, so unrelated skills need not be inspected first.
+  const primaryBundles = options.primaryOnly
+    ? await detectBundleCandidates(fullName, rootItems, branch, true, true) : undefined;
+  if (primaryBundles?.candidates.length) {
+    if (names.has("package.json")) evidence.push("has package.json");
+    return bundleDetection(primaryBundles.candidates, evidence);
+  }
 
   // 1. 根目录 SKILL.md
   if (names.has(SKILL_MARKER.toLowerCase())) {
@@ -221,10 +282,17 @@ export async function detectPlugin(
       const skillDocs = subItems.filter(
         (i) => i.type === "file" && i.name.toUpperCase() === "SKILL.MD"
       );
-      if (skillDocs.length > 0) {
-        evidence.push(`skills/ dir (${skillDocs.length} SKILL.md)`);
-        skillFiles.push(...skillDocs.map((d) => d.path));
+      skillFiles.push(...skillDocs.map((d) => d.path));
+      // 标准技能集合布局 skills/<name>/SKILL.md，限制目录数与深度。
+      const skillDirs = subItems.filter((i) => i.type === "dir");
+      skillScanTruncated = skillDirs.length > 24;
+      for (const dir of skillDirs.slice(0, 24)) {
+        if (options.primaryOnly && skillFiles.length) break;
+        const children = await fetchRepoRoot(fullName, branch, dir.path);
+        skillFiles.push(...children.filter((i) => i.type === "file" && i.name.toUpperCase() === "SKILL.MD").map((i) => i.path));
       }
+      if (options.primaryOnly && skillFiles.length > 1) skillFiles.splice(1);
+      if (skillFiles.length) evidence.push(`skills directory (${skillFiles.length} SKILL.md)`);
     }
   }
 
@@ -232,30 +300,20 @@ export async function detectPlugin(
   const hasPackageJson = names.has("package.json");
   if (hasPackageJson) evidence.push("has package.json");
 
-  const bundles = await detectBundleCandidates(fullName, rootItems, branch);
+  const { candidates: bundles, truncated: bundleScanTruncated } = primaryBundles
+    ?? await detectBundleCandidates(fullName, rootItems, branch);
   if (bundles.length > 0) {
-    const selected = bundles[0];
-    const pluginPaths = bundles.map((candidate) => candidate.path);
-    evidence.push(...bundles.map((candidate) => candidate.evidence));
-    if (bundles.length > 1) {
-      evidence.push(`selected ${selected.path}/ from ${bundles.length} validated plugin packages`);
-    }
-    return {
-      isPlugin: true,
-      type: "cordis-plugin",
-      installMethod: "pnpm-profile",
-      skillFiles: [],
-      evidence,
-      pluginPath: selected.path === "." ? null : selected.path,
-      packageName: selected.packageName,
-      pluginPaths,
-    };
+    return bundleDetection(bundles, evidence);
   }
 
   const isSkill = skillFiles.length > 0;
+  if (!isSkill && (bundleScanTruncated || skillScanTruncated)) {
+    throw new Error("Plugin discovery candidate budget exhausted before a conclusive result");
+  }
   if (!isSkill) {
     return {
       isPlugin: false,
+      kind: null,
       type: null,
       installMethod: null,
       skillFiles: [],
@@ -270,6 +328,7 @@ export async function detectPlugin(
   const installMethod: InstallMethod = "skills-add";
   return {
     isPlugin: true,
+    kind: "skill",
     type,
     installMethod,
     skillFiles,
@@ -288,8 +347,9 @@ export async function detectSubdirBundle(
   rootItems: RepoContentItem[],
   branch?: string | null
 ): Promise<{ subdir: string; evidence: string[]; packageName: string | null; pluginPaths: string[] } | null> {
-  const bundles = await detectBundleCandidates(fullName, rootItems, branch, false);
+  const { candidates: bundles, truncated } = await detectBundleCandidates(fullName, rootItems, branch, false);
   const selected = bundles[0];
+  if (!selected && truncated) throw new Error("Plugin discovery candidate budget exhausted before a conclusive result");
   if (!selected) return null;
   return {
     subdir: selected.path,
@@ -304,39 +364,81 @@ export async function detectSubdirBundle(
   };
 }
 
-const CORDIS_PKG_KEYWORDS = [
-  "cordis",
-  "@cordisjs/plugin",
-  "dsh-base",
-  "@deepseek-ai/dsh-",
-];
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown> : null;
+}
 
-/** package.json 内容是否为 cordis 插件：
- * 1. 依赖含 cordis 关键字（标准 cordis 插件）
- * 2. 有 dsh.bundle.patch 字段（DSH Bundle 结构，如 Code2Skill：cordis.patch.yml + skills）
- * 3. 有 dsh.client / dshClient 字段（纯 client 注入插件：无 host 代码，只声明 client 注入，
- *    如 dsh-read-history：dsh.client.platform + inject @deepseek-ai/dsh-client-*） */
+function localEntry(value: unknown): value is string {
+  if (typeof value !== "string" || !value.trim() || value !== value.trim()) return false;
+  const path = value.replace(/^\.\//, "");
+  return Boolean(path) && !path.startsWith("/") && !path.includes("\\") && !/[?#:*]/.test(path)
+    && !path.split("/").some((part) => !part || part === "." || part === "..");
+}
+
+function exportEntry(value: unknown): boolean {
+  if (typeof value === "string") return localEntry(value) && !/\.d\.[cm]?ts$/.test(value);
+  const entries = record(value);
+  return Boolean(entries && Object.entries(entries).some(([key, entry]) => key !== "types" && exportEntry(entry)));
+}
+
+function packageKind(pkg: Record<string, unknown>, marker = false): DiscoveryKind | null {
+  if (typeof pkg.name !== "string" || !pkg.name.trim()) return null;
+  const dsh = record(pkg.dsh);
+  const bundle = record(dsh?.bundle);
+  if (dsh && "bundle" in dsh) {
+    return bundle && localEntry(bundle.patch) && /\.ya?ml$/i.test(bundle.patch) ? "bundle" : null;
+  }
+  const exports = record(pkg.exports);
+  const client = record(dsh?.client) ?? record(pkg.dshClient);
+  if ((dsh && "client" in dsh) || "dshClient" in pkg) {
+    return client && typeof client.platform === "string" && client.platform.trim()
+      && (client.inject === undefined || Array.isArray(client.inject) && client.inject.every((v) => typeof v === "string" && v.trim()))
+      && exportEntry(exports?.["./client"]) ? "client" : null;
+  }
+  const hasEntry = exportEntry(pkg.main) || exportEntry(exports?.["."]) || typeof pkg.exports === "string" && exportEntry(pkg.exports);
+  // 开发依赖、关键词或包名相似只能作为发现线索。
+  const deps = { ...record(pkg.dependencies), ...record(pkg.peerDependencies) };
+  const allDeps = { ...deps, ...record(pkg.devDependencies) };
+  if (pkg.bin || allDeps.electron || allDeps["@tauri-apps/api"] || allDeps["@tauri-apps/cli"]) return null;
+  const ecosystem = Object.keys(deps).some((name) =>
+    /^(?:cordis|@cordisjs\/[^/]+|@deepseek-ai\/(?:cordis|dsh-[a-z0-9-]+)|dsh-base)$/.test(name));
+  if (hasEntry && (marker || ecosystem)) return marker ? "bundle" : "host";
+  return null;
+}
+
+/** 只验证声明结构；具体发布包能否安装仍由安装预检判断。 */
 export function isCordisPackageJson(content: string | null): boolean {
   if (!content) return false;
-  try {
-    const pkg = JSON.parse(content);
-    const deps = {
-      ...(pkg.dependencies ?? {}),
-      ...(pkg.devDependencies ?? {}),
-      ...(pkg.peerDependencies ?? {}),
-    };
-    if (Object.keys(deps).some((d) =>
-      CORDIS_PKG_KEYWORDS.some((k) => d.includes(k))
-    )) return true;
-    // DSH Bundle：package.json 的 dsh.bundle.patch 字段声明 cordis patch 文件
-    if (pkg.dsh && typeof pkg.dsh === "object" && pkg.dsh.bundle?.patch) return true;
-    // 纯 client 注入插件：dsh.client / dshClient 声明 client 注入（platform + inject）
-    if (pkg.dsh && typeof pkg.dsh === "object" && pkg.dsh.client) return true;
-    if (pkg.dshClient && typeof pkg.dshClient === "object") return true;
-    return false;
-  } catch {
-    return false;
+  try { const pkg = record(JSON.parse(content)); return Boolean(pkg && packageKind(pkg)); }
+  catch { return false; }
+}
+
+async function validatePackage(
+  fullName: string, path: string, content: string | null,
+  items: RepoContentItem[], branch?: string | null
+): Promise<DiscoveryKind | null> {
+  if (!content) return null;
+  let pkg: Record<string, unknown> | null;
+  try { pkg = record(JSON.parse(content)); } catch { return null; }
+  if (!pkg) return null;
+  const kind = packageKind(pkg, hasCordisMarker(items));
+  if (!kind) return null;
+  if (kind === "bundle") {
+    const patch = record(record(pkg.dsh)?.bundle)?.patch;
+    if (typeof patch === "string") {
+      const relative = patch.replace(/^\.\//, "");
+      if (!relative.includes("/")) {
+        if (!items.some((item) => item.type === "file" && item.name === relative)) return null;
+      } else {
+        const directory = relative.slice(0, relative.lastIndexOf("/"));
+        const name = relative.slice(relative.lastIndexOf("/") + 1);
+        const children = await fetchRepoRoot(fullName, branch, path === "." ? directory : `${path}/${directory}`);
+        if (!children.some((item) => item.type === "file" && item.name === name)) return null;
+      }
+    }
   }
+  return kind;
 }
 
 /** 检测 README/SKILL 内容中的"需要配置"信号（具体环境变量名） */

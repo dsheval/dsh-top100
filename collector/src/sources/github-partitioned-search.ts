@@ -53,8 +53,16 @@ interface SearchShard {
   size?: string;
 }
 
+/** A failed source still owns the candidates and request counts already observed. */
+export class SearchPartialError<T> extends Error {
+  constructor(message: string, public readonly partial?: T, options?: ErrorOptions) {
+    super(message, options);
+    this.name = new.target.name;
+  }
+}
+
 /** Raised when GitHub reports an incomplete or unsplittable result set. */
-export class RepositorySearchIncompleteError extends Error {}
+export class RepositorySearchIncompleteError extends SearchPartialError<PartitionedSearchResult> {}
 
 let lastRepositorySearchAt = 0;
 
@@ -116,6 +124,11 @@ export async function partitionedRepositorySearch(
   let requests = 0;
   let leafShards = 0;
   const repositories = new Map<string, GithubRepo>();
+  const observed = new Map<string, GithubRepo>();
+  const snapshot = (items: Map<string, GithubRepo>): PartitionedSearchResult => ({
+    repositories: [...items.values()],
+    audit: { query: baseQuery, requests, shards: leafShards, repositories: items.size },
+  });
 
   const stableRequest = async (
     query: string,
@@ -125,6 +138,7 @@ export async function partitionedRepositorySearch(
     for (let attempt = 0; attempt <= semanticRetries; attempt++) {
       requests++;
       const response = await request(query, page, requestedPerPage);
+      for (const repo of response.items) observed.set(repositoryIdentity(repo), repo);
       if (!response.incomplete_results) return response;
       if (attempt < semanticRetries && retryDelayMs > 0) await sleep(retryDelayMs);
     }
@@ -189,14 +203,13 @@ export async function partitionedRepositorySearch(
     );
   };
 
-  await visit({ from, to });
-  return {
-    repositories: [...repositories.values()],
-    audit: {
-      query: baseQuery,
-      requests,
-      shards: leafShards,
-      repositories: repositories.size,
-    },
-  };
+  try {
+    await visit({ from, to });
+    return snapshot(repositories);
+  } catch (error) {
+    if (error instanceof RepositorySearchIncompleteError) {
+      throw new RepositorySearchIncompleteError(error.message, snapshot(observed), { cause: error });
+    }
+    throw new SearchPartialError("Repository Search request failed", snapshot(observed), { cause: error });
+  }
 }

@@ -10,6 +10,10 @@ import { prepareUpdateBatch } from "./update-batch.js";
 import { SkillBackupList } from "./SkillBackupList.js";
 import { UpdateCheckResults } from "./UpdateCheckResults.js";
 
+function Chevron() {
+  return <svg className="managed-chevron" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="m5.5 3.5 4.5 4.5-4.5 4.5" /></svg>;
+}
+
 async function readJson<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, init);
   const body = (await response.json()) as T & { error?: string; code?: string };
@@ -23,6 +27,7 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
   onBrowseSkills?: () => void;
 }) {
   const [draft, setDraft] = useState(initialQuery);
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [query, setQuery] = useState(initialQuery);
   const [data, setData] = useState<ManagedListResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -171,10 +176,12 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
   }
 
   const operationBlocked = !tracking.ready || busy !== null || preparing || submitting || migrating || review !== null;
+  const hasUpdateSettings = data?.items.some((item) => item.kind === "bundle" && !item.protected && !item.local) ?? false;
   const updates = data?.items.filter((item) => item.kind === "bundle" && !item.protected && !item.local
     && (updateStrategy === "latest" || item.updateAvailable || !item.latest)) ?? [];
 
   function descriptionFor(item: ManagedPlugin): string {
+    if (item.name === "@dsheval/dsh-top100-plugin") return t("managedSelfDescription");
     if (t("descriptionLocale") === "en") return item.description.trim() || `${t(item.kind === "skill" ? "installedSkillFallback" : "installedPluginFallback")}: ${item.name}.`;
     const supplied = item.descriptionZh.trim();
     if (supplied) return supplied;
@@ -185,28 +192,33 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
 
   return (
     <div className="managed-page">
-      <div>
-        <h3>{t("installedManagerTitle")}</h3>
-        <p className="lede">{t("installedManagerHint")}</p>
-      </div>
       <div className="toolbar">
         <input type="search" aria-label={t("searchInstalled")} value={draft} placeholder={t("searchInstalled")} onChange={(event) => setDraft(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") setQuery(draft.trim()); }} />
         <button type="button" className="primary" onClick={() => setQuery(draft.trim())}>{t("search")}</button>
         <button type="button" disabled={loading || operationBlocked} onClick={() => void load(true)}>{t("refreshInstalled")}</button>
-        <label>{t("updateStrategy")} <select aria-label={t("updateStrategy")} value={updateStrategy} disabled={operationBlocked}
-          onChange={(event) => { setUpdateStrategy(event.target.value as UpdateStrategy); setIssues([]); setNotice(null); }}>
-          <option value="preserve">{t("updatePreserve")}</option><option value="latest">{t("updateLatest")}</option>
-        </select></label>
-        <button type="button" disabled={updates.length === 0 || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates(updates.map((item) => item.name))}>
-          {t("updateAll")} ({Math.min(updates.length, MAX_UPDATE_BATCH_SIZE)})
-        </button>
+        {updates.length > 0 ? <button type="button" disabled={operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates(updates.map((item) => item.name))}>
+          {t("updateAll")}
+        </button> : null}
       </div>
-      <p className="lede">{t(updateStrategy === "latest" ? "updateLatestHint" : "updatePreserveHint")}</p>
       {data?.sourceMigrationRequired ? <div className="banner"><strong>{t("sourceMigrationTitle")}</strong><p>{t("sourceMigrationHint")}</p>
         <button type="button" disabled={operationBlocked} onClick={() => void migrateSources()}>{t(migrating ? "sourceMigrationWorking" : "sourceMigrationAction")}</button>
       </div> : null}
       {updates.length > MAX_UPDATE_BATCH_SIZE ? <p className="banner">{t("updateBatchLimit")} {MAX_UPDATE_BATCH_SIZE} / {updates.length}</p> : null}
-      {data ? <p className="lede">{t("profile")}: {data.profile} · {data.total} {t("managedItems")}</p> : null}
+      <div className="managed-context">
+        {data ? <p className="lede">{data.total} {t("managedItems")}</p> : null}
+        {hasUpdateSettings ? <button type="button" className="manage-options-trigger" aria-expanded={optionsOpen} aria-controls="dsh-top100-management-options" onClick={() => setOptionsOpen((open) => !open)}>
+          <Chevron />{t("manageOptions")}
+        </button> : null}
+        <div id="dsh-top100-management-options" className="manage-options-content" hidden={!optionsOpen || !hasUpdateSettings}>
+        {data?.items.some((item) => item.kind === "bundle" && !item.protected && !item.local) ? <div className="managed-setting">
+          <div className="managed-strategies" role="group" aria-label={t("updateStrategy")}>
+            {(["preserve", "latest"] as const).map((strategy) => <button key={strategy} type="button" aria-pressed={updateStrategy === strategy} disabled={operationBlocked}
+              onClick={() => { setUpdateStrategy(strategy); setIssues([]); setNotice(null); }}>{t(strategy === "preserve" ? "updatePreserve" : "updateLatest")}</button>)}
+          </div>
+          <p className="lede">{t(updateStrategy === "latest" ? "managedLatestHint" : "managedPreserveHint")}</p>
+        </div> : null}
+        </div>
+      </div>
       {notice ? <div className="banner">{notice}</div> : null}
       {batch ? <SkillBackupList jobs={batch.jobs} t={t} /> : null}
       {error ? <div className="error">{error} <button type="button" disabled={operationBlocked} onClick={() => void (retryNames ? prepareUpdates(retryNames) : load(true))}>{t(retryNames ? "retry" : "refreshInstalled")}</button></div> : null}
@@ -227,45 +239,54 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
       <div className="list managed-list">
         {(data?.items ?? []).map((item) => {
           const job = jobByName.get(item.name);
+          const shortName = item.name.replace(/^@[^/]+\//, "");
+          const displayName = item.name === "@dsheval/dsh-top100-plugin" ? "dsh-top100"
+            : data?.items.some((other) => other.name !== item.name && other.name.replace(/^@[^/]+\//, "") === shortName) ? item.name : shortName;
           const versionsKnown = Boolean(item.version && item.latest
             && parseSemver(item.version.replace(/^v/, "")) && parseSemver(item.latest.replace(/^v/, "")));
           const noUpdate = updateStrategy === "preserve" && versionsKnown && !item.updateAvailable;
           return (
             <article key={`${item.kind}-${item.name}`}>
-              <div className="status-cell"><span className={`dot${item.enabled ? "" : " off"}`} aria-hidden="true" /></div>
-              <div className="managed-copy">
-                <h3>{item.url ? <a href={item.url} target="_blank" rel="noreferrer">{item.name}</a> : item.name}</h3>
-                <p className="desc">{descriptionFor(item)}</p>
+              <details className="managed-details">
+                <summary>
+                  <span className="managed-title">
+                    <span className={`dot ${item.kind === "skill" ? "off" : item.activationState === "live" ? "live" : item.activationState === "broken" ? "broken" : item.activationState === "restart-required" ? "pending" : "off"}`} aria-hidden="true" />
+                    <span title={item.name}>{displayName}</span>
+                  </span>
+                  <span className="managed-disclosure"><span>{t(item.protected ? "viewDetails" : "manage")}</span><Chevron /></span>
                 <div className="facts">
-                  <span className="badge">{t(item.kind === "skill" ? "skillKind" : "bundleKind")}</span>
-                  <span className={`badge${item.enabled ? "" : " muted"}`}>{t(item.enabled ? "enabled" : "disabled")}</span>
-                  <span className={`badge activation-${item.activationState}`}>{t(`activation_${item.activationState}`)}</span>
-                  <span>{t("version")}: {item.version ?? "—"}</span>
-                  {item.latest ? <span>{t("sourceLatestVersion")}: {item.latest}</span> : null}
-                  {item.updateTarget ? <span>{t("updateTarget")}: <code>{item.updateTarget}</code></span> : null}
-                  {item.updateStatus && item.updateStatus !== "not-supported" ? <span>{t(`updateStatus_${item.updateStatus}`)}</span> : null}
-                  {item.updateCheckedAt ? <span>{t("updateCheckedAt")}: <time dateTime={new Date(item.updateCheckedAt).toISOString()}>{new Date(item.updateCheckedAt).toLocaleString(t("descriptionLocale") === "en" ? "en-US" : "zh-CN")}</time></span> : null}
-                  {item.updateError ? <details><summary>{t("updateCheckDetails")}</summary><p>{item.updateError}</p></details> : null}
-                  {item.kind === "skill" ? <span className="badge">{t("globalSkill")}</span> : null}
-                  {item.modificationState ? <span>{t(`skillModification_${item.modificationState}`)}</span> : null}
-                  {item.fullName && item.fullName !== item.name ? <span>{t("project")}: {item.fullName}</span> : null}
-                  {item.local ? <span className="badge">{t("localLink")}</span> : null}
-                  {item.protected ? <span className="badge">{t("protected")}</span> : null}
+                  {item.kind === "skill" ? <span className="badge">{t("skillKind")}</span> : null}
+                  <span className={`badge activation-${item.activationState}`} title={t("runtimeScope")}>{t(item.kind === "skill" ? "installed" : item.runtime ? `runtime_${item.runtime.state}` : `activation_${item.activationState}`)}</span>
+                  {item.version ? <span>{t("version")}: {item.version}</span> : null}
                   {item.updateAvailable ? <span className="badge warn">{t("updateAvailable")}</span> : null}
+                  {item.updateError ? <span className="badge warn">{t("updateStatus_failed")}</span> : null}
                 </div>
+                </summary>
+                <div className="managed-body">
+                <p className="desc">{descriptionFor(item)}</p>
+                {item.updateAvailable && item.latest ? <p className="lede">{t("updateAvailable")}: {item.latest}</p> : null}
+                {item.updateError ? <details><summary>{t("updateCheckDetails")}</summary><p className="lede">{item.updateError}</p></details> : null}
+                {item.kind === "skill" && item.modificationState ? <p className="lede">{t(`skillModification_${item.modificationState}`)}</p> : null}
+                {item.runtime?.missingServices?.length ? <details><summary>{t("runtimeDetails")}</summary><code>{item.runtime.missingServices.join(", ")}</code></details> : null}
                 {item.kind === "bundle" && (item.protected || item.local) ? <p className="lede">{t(item.protected ? "protectedManageHint" : "localManageHint")}
-                  {item.protected ? <> <a href="https://www.dsheval.ai/top100/?page=dsh#dsh" target="_blank" rel="noreferrer">{t("maintenanceGuide")}</a></> : null}
                 </p> : null}
                 {item.kind === "skill" ? <p className="lede">{t("skillReinstallHint")}</p> : null}
-              </div>
-              <div className="actions row-actions">
+              <div className="managed-footer">
+              {!item.protected || job ? <div className="actions row-actions">
                 {job ? <span className="job">{t(`phase_${job.phase}`)}<small>{job.error ?? job.message ?? job.lastLine}</small></span> : null}
                 {job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? <button type="button" disabled={item.protected || item.local || operationBlocked} onClick={() => void prepareUpdates([item.name])}>{t("retry")}</button> : null}
                 {item.kind === "bundle" ? <button type="button" disabled={item.protected || operationBlocked} onClick={() => void toggle(item)}>{item.enabled ? t("disable") : t("enable")}</button> : null}
-                {item.kind === "bundle" ? <button type="button" disabled={item.protected || item.local || noUpdate || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates([item.name])}>{t(noUpdate ? "noUpdateAvailable" : item.updateAvailable ? "update" : "checkUpdates")}</button> : null}
+                {item.kind === "bundle" && !item.local && !noUpdate ? <button type="button" disabled={item.protected || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates([item.name])}>{t(item.updateAvailable ? "update" : "checkUpdates")}</button> : null}
                 {item.kind === "skill" && onBrowseSkills ? <button type="button" disabled={operationBlocked} onClick={onBrowseSkills}>{t("browseSkillUpdates")}</button> : null}
                 <button type="button" className="danger" disabled={item.protected || operationBlocked || (item.kind === "bundle" && data?.sourceMigrationRequired === true)} onClick={() => void manage("uninstall", [item.name], item.kind)}>{t("uninstall")}</button>
+              </div> : null}
+                <div className="managed-links">
+                  {item.url ? <a href={item.url} target="_blank" rel="noreferrer">{t("viewProject")} ↗</a> : null}
+                  {item.protected ? <a href="https://www.dsheval.ai/top100/?page=dsh#dsh" target="_blank" rel="noreferrer">{t("maintenanceGuide")} ↗</a> : null}
+                </div>
               </div>
+                </div>
+              </details>
             </article>
           );
         })}

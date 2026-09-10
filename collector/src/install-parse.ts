@@ -5,9 +5,9 @@
  * - 清洗 shell 提示符与注释
  */
 
-import { parseDshInstallCommand, stripInstallComment } from "../../plugin/src/shared/install-source.js";
+import { parseDshInstallCommandDetails, stripInstallComment } from "../../plugin/src/shared/install-source.js";
 
-export const INSTALL_PARSER_VERSION = 2;
+export const INSTALL_PARSER_VERSION = 3;
 
 /** 定位 README 中的安装章节（返回章节文本） */
 export function extractInstallSection(readme: string): string | null {
@@ -41,7 +41,7 @@ const INSTALL_CMD_RE =
 
 /** 判断是否为安装类命令 */
 function isInstallCmd(cmd: string): boolean {
-  return parseDshInstallCommand(cmd) !== null || INSTALL_CMD_RE.test(cmd);
+  return parseDshInstallCommandDetails(cmd) !== null || INSTALL_CMD_RE.test(cmd);
 }
 
 /** 清洗单行命令：去提示符/注释/无意义前缀 */
@@ -57,7 +57,7 @@ function cleanCmdLine(line: string): string {
 /** Bounded display evidence; retain DSH commands ahead of generic prerequisites. */
 function selectCommands(commands: string[]): string[] {
   return [...new Set(commands)].sort((a, b) =>
-    Number(parseDshInstallCommand(b) !== null) - Number(parseDshInstallCommand(a) !== null)
+    Number(parseDshInstallCommandDetails(b) !== null) - Number(parseDshInstallCommandDetails(a) !== null)
   ).slice(0, 32);
 }
 
@@ -89,7 +89,7 @@ export function parseInstallCommands(readme: string | null): { commands: string[
   const section = extractInstallSection(readme);
   if (section) {
     const cmds = extractInstallCommands(section);
-    const extras = extractInstallCommands(readme).filter((cmd) => parseDshInstallCommand(cmd) !== null && !cmds.includes(cmd));
+    const extras = extractInstallCommands(readme).filter((cmd) => parseDshInstallCommandDetails(cmd) !== null && !cmds.includes(cmd));
     if (cmds.length > 0) return { commands: selectCommands([...cmds, ...extras]), source: extras.length ? "README" : "README install section" };
   }
   // 兜底：全文找安装命令

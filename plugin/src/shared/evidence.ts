@@ -1,3 +1,4 @@
+import { discoveryNeedsReview } from "./install-assessment.js";
 /** Conservative, explainable catalog classification. It never claims a security review. */
 
 import { isCordisEntry, resolveInstallSpec } from "../install/install-spec.js";
@@ -23,11 +24,12 @@ function evidenceText(entry: RankingEntry): string {
   ].join(" ");
 }
 
-export function classifyFormFactor(entry: RankingEntry): CatalogFormFactor {
+export function classifyFormFactor(entry: RankingEntry, profile = "web"): CatalogFormFactor {
   const type = entry.type?.toLowerCase() ?? "";
   const text = evidenceText(entry);
   if (type === "skill") return /dsh|deepseek harness/i.test(text) ? "dsh-skill" : "agent-skill";
-  if (isCordisEntry(entry) && resolveInstallSpec(entry)) return THEME_RE.test(text) ? "theme" : "dsh-bundle";
+  if (discoveryNeedsReview(entry)) return "ecosystem-project";
+  if (isCordisEntry(entry) && resolveInstallSpec(entry, profile)) return THEME_RE.test(text) ? "theme" : "dsh-bundle";
   if (DESKTOP_RE.test(text)) return "desktop-app";
   if (isCordisEntry(entry)) return THEME_RE.test(text) ? "theme" : "dsh-bundle";
   if (THEME_RE.test(text)) return "theme";
@@ -36,12 +38,12 @@ export function classifyFormFactor(entry: RankingEntry): CatalogFormFactor {
   return "candidate";
 }
 
-export function catalogEvidence(entry: RankingEntry): CatalogEvidence {
-  const formFactor = classifyFormFactor(entry);
-  const installSpec = resolveInstallSpec(entry);
+export function catalogEvidence(entry: RankingEntry, profile = "web"): CatalogEvidence {
+  const formFactor = classifyFormFactor(entry, profile);
+  const installSpec = resolveInstallSpec(entry, profile);
   const cordisStructure = isCordisEntry(entry);
   const skillStructure = entry.type?.toLowerCase() === "skill";
-  const structured = cordisStructure || skillStructure;
+  const structured = (cordisStructure || skillStructure) && !discoveryNeedsReview(entry);
   const signalCodes: CatalogEvidenceSignalCode[] = ["indexed"];
   const signals = ["已进入 DSHEval 索引"];
   if (structured) {

@@ -12,6 +12,7 @@ export interface RepositoryRefresh {
   updatedAt: string;
   archived: boolean;
   fork: boolean;
+  private?: boolean;
 }
 
 interface GraphqlRepository {
@@ -23,6 +24,7 @@ interface GraphqlRepository {
   updatedAt: string;
   isArchived: boolean;
   isFork: boolean;
+  isPrivate?: boolean;
 }
 
 interface GraphqlResponse {
@@ -60,6 +62,7 @@ function repositoryField(alias: string, fullName: string): string {
     updatedAt
     isArchived
     isFork
+    isPrivate
   }`;
 }
 
@@ -98,6 +101,7 @@ export async function fetchRepositoryUpdates(
         updatedAt: repository.updatedAt,
         archived: repository.isArchived,
         fork: repository.isFork,
+        private: repository.isPrivate,
       });
     }
     options.onProgress?.(Math.min(offset + batch.length, fullNames.length), fullNames.length);

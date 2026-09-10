@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
+import { filterDiscoveryEntries, requiresSearchIndex } from '../public/discovery-filter.js';
 
 // Exercise the real count-update functions after a user has opened a tooltip
 // while the asynchronous catalog is still loading.
@@ -13,6 +14,8 @@ for (const [file, update] of [['index.html', 'updateCategoryCounts'], ['skills.h
     const button = { dataset: { category: 'security' }, querySelector: () => countNode, setAttribute() {} };
     const tooltip = { hidden: false, dataset: { category: 'security' }, title: '—' };
     const context = vm.createContext({
+      currentView: 'all', viewState: { all: { query: '' } }, installableOnly: false,
+      rankedEntries: [], filterDiscoveryEntries, requiresSearchIndex,
       categoryButtons: [button], categoryDescription: tooltip,
       categoryLabels: { security: '安全' }, activeCategory: 'security',
       entries: [{ categories: ['security'] }, { categories: ['security'] }],

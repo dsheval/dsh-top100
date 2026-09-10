@@ -1,0 +1,2531 @@
+{
+  "acryldev/acryl": {
+    "sourceDescription": "ACRYL - Agent Context Relay Yielding Lifecycles. One persistent workspace, one canonical context, any coding agent.",
+    "sourceReadme": "中文说明 DSH Community Market is the open plugin market built into DSH Desktop. It helps people discover community plugins and, on Desktop, install, manage, or remove npm packages that pass the Market Host's checks. > Current status: complete and built into DSH Desktop.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "dsh-community-market",
+      "packageName": "dsh-community-market",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/acryldev/acryl",
+    "reason": "仓库描述共享工作区，安装目标却为 dsh-community-market；须先确认介绍整体产品还是内置市场子包。"
+  },
+  "zju-real/polaris": {
+    "sourceDescription": "Toward Autonomous Scientific Discovery",
+    "sourceReadme": "The official Polaris seed plugin. It does one visible thing — expose a hello-panel service with a configurable greeting — and exists so that: - the marketplace always has at least one installable, end-to-end-tested entry; - third-party developers have a copyable template that already passes every rule the install engine enforces. To write your own plugin, copy this directory and work through the sections below.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/polaris-plugin-hello",
+      "packageName": "polaris-plugin-hello",
+      "needsConfig": false,
+      "commands": [
+        "npm install"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/ZJU-REAL/Polaris",
+    "reason": "仓库是自主科研产品，实际目标 polaris-plugin-hello 仅为问候面板与模板；须确认模板收录资格及展示对象。"
+  },
+  "drewnekota/cetus": {
+    "sourceDescription": "One macOS app for Claude Code, Codex, and every agent runtime you use — scheduled runs, global hotkey launcher, per-run git worktrees, one review board.",
+    "sourceReadme": "Cetus Official website · cetus.run Turn your favorite agent runtime into an always-on desktop assistant. Keep Codex, Claude Code, DeepSeek Harness, or the built-in runtime at the core. Cetus adds the desktop layer around it: summon it over any app, schedule work for later, and give it context from what has been on your screen.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "dsh-bridge",
+      "packageName": "@dsh-external/dsh-companion-bridge",
+      "needsConfig": true
+    },
+    "sourceUrl": "https://github.com/drewnekota/cetus",
+    "reason": "收录路径是 dsh-bridge，现有 README 却介绍完整 macOS 桌面应用；缺少桥接子包自己的能力与安装边界说明。"
+  },
+  "catlog22/pi-maestro-flow": {
+    "sourceDescription": "Maestro workflow tools as Pi extensions — pi-teammate + pi-maestro-agent",
+    "sourceReadme": "🎼 Pi 编码智能体的多智能体编排层 将一个编码智能体，变成一支协同工程团队。 中文 | English --- pi-maestro-flow 是 Pi 编码智能体 的多智能体编排插件。它让一个只能串行干活的智能体，变成一支能并行调度、自主长跑、先规划后动手、全程可视的工程团队——并自带跨会话的持久化知识系统。 它由三个插件组成（装一个即得全部）： > 简言之：flow 负责「编排与知识」，teammate 负责「并行执行」，cockpit 负责「看见」。 - 🔀 并行多智能体调度 — 一次派出多个子进程智能体并行工作，支持 DAG 依赖图与结构化输出 - 🖥️ pi-teammate-models CLI — 终端维护 .pi/teammate-backends.json：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "pi-maestro-flow",
+      "needsConfig": false,
+      "commands": [
+        "npm install -g --ignore-scripts @earendil-works/pi-coding-agent"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/catlog22/pi-maestro-flow",
+    "reason": "原始描述与 README 均定位为 Pi 扩展，当前条目却属于 DSH 原生插件目录；缺少 DSH 安装适配的直接说明。"
+  },
+  "singula-ai/alego": {
+    "sourceDescription": "Build AI Agents like playing LEGOs. Everything is a Plugin.",
+    "sourceReadme": "Cordis is a TypeScript plugin framework for applications that need explicit dependency injection, scoped services, lifecycle-managed cleanup, and optional configuration-driven loading. The core package is published as cordis; the official packages in this repository add a loader, config-file includes, HMR, console logging, timers, and project scaffolding. Cordis is ESM-first.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "vendor/cordis",
+      "packageName": "@singula-ai/cordis",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/singula-ai/alego",
+    "reason": "实际安装目标 vendor/cordis 是框架依赖，未获得项目自己的 DSH 插件能力证据，不将依赖包直接归类。"
+  },
+  "anbeime/skill": {
+    "sourceDescription": "收录最全、更新最快的技能Skills商店：精选原创技能包（涵盖文档处理、内容创作、编程开发、机器学习、自动化工作流），全部打包好可直接安装使用！同时自动抓取GitHub上万个Skills项目，按分类、更新时间、Star数量整理。The most comprehensive and frequently updated AI Agent skill library, featuring curated skill packs across document processing, content creation, programming, machine learning, automated workflows, and many more domains.",
+    "sourceReadme": "SKILL.md: --- name: xiaoyue-companion description: 小跃虚拟伴侣 - 使用智谱 AI 提供温暖的对话陪伴和静态图片分享 allowed-tools: Bash(node:) Bash(npm:) Bash(openclaw:) Bash(curl:) Read Write --- 为 OpenClaw 添加温暖的对话陪伴能力，让 AI 助手在执行任务时主动关心用户。 - 用户说\"有点累\"、\"好累\"、\"疲惫\" - 用户在等待任务完成时 - 用户询问\"在吗\"、\"你好\" - 用户需要鼓励或陪伴时 - 用户说\"发张照片\"、\"你在干嘛\" 1. 接收用户消息 2. 调用 glm-4.7-flash 生成温暖回应 3. （可选）发送静态图片 4. 通过 OpenClaw 发送消息 - work-start: 任务开始 - work-progress: 任务进行中 - work-tired: 工作疲惫 - work-done: 任务完成 - life-coffee: 咖啡时光 - life-gym: 健身运动 - life-weekend: 周末休闲 - mood-happy: 开心庆祝 - mood-tired: 疲惫休息 - mood-focus: 专注工作 OpenClaw 支持发送到： 将以下图片放入 assets/ 目录：… README: 收录最全、更新最快的AI Agent技能库，涵盖文档处理、内容创作、编程开发、机器学习、自动化工作流等多个领域的精选技能包。 > 🧠 知易智能基座 ：20+模型自由切换，知识永远留在你手里 —一个对话框调度所有模型，240+技能即插即用，四色卡片让AI真正记住你。 > 👉 申请体验 - 官方技能: 182 个（来自 awesome-agent-skills，自动爬取） - 本地技能: 63 个（27核心 + 30子技能 + 6系统内置） - 技能总数: 245 个（官方 + 本地） - 备份覆盖率: 100%（71个压缩包，完整备份） - 自动更新: 每24小时自动爬取最新技能 每24小时自动爬取 awesome-agent-skills 仓库，确保技能库始终保持最新状态。 - 官方技能：…",
+    "sourceInstall": {
+      "method": "skills-add",
+      "target": "~/.agents/skills",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/anbeime/skill.git",
+        "pip install -r requirements.txt"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/anbeime/skill",
+    "reason": "多领域技能集合与单个 xiaoyue-companion 的正文混合，缺少明确展示粒度；先确认是集合还是指定子技能。"
+  },
+  "github/gh-aw": {
+    "sourceDescription": "GitHub Agentic Workflows",
+    "sourceReadme": "# GitHub Agentic Workflows <details> <summary>Agent quick links</summary> Hello fellow agent! Welcome to GitHub Agentic Workflows = Actions + Agent + Safety. Here are some pointers to get you started in using this tool. - Create a new workflow: https://raw.githubusercontent.com/github/gh-aw/main/create.md - Install: https://raw.githubusercontent.com/github/gh-aw/main/install.md - Package a workflow repository:…",
+    "sourceInstall": {
+      "method": "skills-add",
+      "target": "~/.agents/skills",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/github/gh-aw",
+    "reason": "现有 README 只有 GitHub Agentic Workflows 总体介绍和安装链接，未见本条目作为 Skill 的独立正文或安装对象。"
+  },
+  "haoruilee/awesome-agent-native-services": {
+    "sourceDescription": "If you are an AI agent and want to discover services designed for you.",
+    "sourceReadme": "> A curated list of services designed from the ground up for AI agents — not adapted from human-facing products. Each service is either infrastructure an AI agent consumes directly or a narrowly qualified, purpose-built surface for operating concrete agent sessions — not a generic platform for humans to build agents with. Also on the web:…",
+    "sourceInstall": {
+      "method": "skills-add",
+      "target": "~/.agents/skills",
+      "needsConfig": true,
+      "commands": [
+        "git clone --depth=1 https://github.com/haoruilee/awesome-agent-native-services.git",
+        "pip install agentmail",
+        "npx skills add novuhq/skills",
+        "npm install -g @openmail/cli",
+        "npm install @outreachagent/sdk-ts",
+        "curl -fsSL \\\"https://raw.githubusercontent.com/Dicklesworthstone/mcp_agent_mail_rust/main/install.sh?$(date +%s)\\\" \\| bash",
+        "git clone https://github.com/agenticmail/agenticmail && docker compose up -d",
+        "npm install -g agent-browser",
+        "npx skills add browserbase/skills",
+        "npx skills add firecrawl/cli",
+        "npm install -g bb-browser",
+        "npm install -g @jackwener/opencli",
+        "pip install steel-sdk",
+        "pip install notte-sdk",
+        "pip install notte-mcp",
+        "pip install browser-use-sdk",
+        "npm install -g vessel-browser",
+        "npm install -g camofox-browser",
+        "brew install kernel/tap/kernel",
+        "npm install -g @onkernel/cli",
+        "pip install -r requirements.txt",
+        "npx skills add composiohq/skills",
+        "npm install -g toolhouse",
+        "pip install mcpgateway-sdk",
+        "uv tool install arcade-mcp",
+        "npx skills add 0xsline/OpenChatCut",
+        "npx skills add sandbaseai/cli --skill sandbase",
+        "git clone https://github.com/agentic-community/mcp-gateway-registry && ./build_and_run.sh --prebuilt",
+        "git clone https://github.com/metatool-ai/metamcp.git && docker compose up -d",
+        "pip install humanlayer",
+        "brew install --cask olegsotnikov/tap/sallyport",
+        "curl -fsSL https://preloop.ai/install/cli \\| sh"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/haoruilee/awesome-agent-native-services",
+    "reason": "作者资料明确为第三方服务清单，当前安装命令来自多个外部项目；尚未证明本仓库提供可安装的独立技能。"
+  },
+  "fwerkor/local-shell-mcp": {
+    "sourceDescription": "Enables LLM to use a cli environment. ",
+    "sourceReadme": "A ChatGPT-ready MCP control plane for shell, files, browser automation, file links, and remote machines. Documentation · Quickstart · Runtime choices · ChatGPT connector · DSH plugin · Tools · Releases --- local-shell-mcp gives ChatGPT Developer Mode and other MCP clients controlled access to a real execution environment.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "local-shell-mcp-dsh",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/fwerkor/local-shell-mcp.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/fwerkor/local-shell-mcp",
+    "reason": "当前选中 local-shell-mcp-dsh，但冻结 README 主要描述面向 ChatGPT/MCP 的总控制面，未明确 DSH 适配包实际暴露的工具；先核实包级能力范围，避免继承根项目全部功能。"
+  },
+  "zjunlp/lightrsi": {
+    "sourceDescription": "[EMNLP 2026] LightRSI is a modular runtime for lightly deploying recursive self-improvement loops in long-horizon LLM agents. ",
+    "sourceReadme": "A modular runtime for recursive improvement in long-running LLM agents --- LightRSI separates reusable improvement capabilities from shared runtime infrastructure and host-specific integration. TokenPilot is the first production preset; memory writeback, model adaptation, and agent-architecture evolution can build on the same runtime boundaries over time.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "components/adapters/deepseek-harness",
+      "packageName": "@lightrsi/deepseek-harness-adapter",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/zjunlp/LightRSI.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/zjunlp/LightRSI",
+    "reason": "当前选中 components/adapters/deepseek-harness 适配包，冻结 README 却是 LightRSI 根运行时介绍；不能据此将根运行时的递归自我改进能力直接归给适配子包，需补包级说明。"
+  },
+  "zexadev/dsh-tether": {
+    "sourceDescription": "Mobile client for the DeepSeek Harness — use the dsh on your dev machine from your Android or iOS phone, remotely across networks, peer-to-peer over iroh with no server to set up (falls back to a relay that only sees ciphertext)",
+    "sourceReadme": "DSH Tether DSH in your pocket: connect to your machine when you have one, run it on the phone when you don't. Remote: across networks, peer to peer, no server to set up, no shared Wi-Fi — if hole-punching fails it falls back to a relay that sees only ciphertext. Local (Android): the DeepSeek Harness runs on the phone itself — install and go, no Termux, no commands. An independent community project.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-plugin-tether",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add dsh-plugin-tether",
+        "git clone https://github.com/zexadev/dsh-tether && cd dsh-tether",
+        "dsh plugin --profile web add ."
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/zexadev/dsh-tether",
+    "reason": "当前选中 dsh-plugin-tether，冻结 README 描述手机客户端及 Android 本地运行 Harness；须先区分 DSH 端连接插件与手机应用的能力边界，避免给插件继承全部移动端功能。"
+  },
+  "superjj007/papermachine": {
+    "sourceDescription": "The AI analyst that shows its work. Runs Python and R on your own machine, and traces every chart back to the code behind it.",
+    "sourceReadme": "English | 中文 Trustworthy research, done with AI. PaperMachine is a desktop app for everyone whose work runs on data — researchers, business analysts, data analysts. You say what you want in one sentence and it runs Python and R on your own machine. The difference is that the result is not handed to you out of a black box: agent trace shows the code it ran and the output it got at every step;…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/SuperJJ007/papermachine.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/SuperJJ007/papermachine",
+    "reason": "@deepseek-ai/dsh-root，README 是 PaperMachine 桌面科研应用；未给 DSH 插件安装证据。"
+  },
+  "uniround-tec/hrack": {
+    "sourceDescription": "A terminal for the harness in your computer. ",
+    "sourceReadme": "简体中文 One rack for every coding agent Keep the native TUI. Stop babysitting terminal tabs. HRack — short for Harness Rack — is a desktop terminal for multi-agent coding workflows. It keeps every CLI's native TUI intact, then adds the layer that is usually missing around it: session status, attention cues, a floating monitor, quick launch, and a read-only workspace viewer.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "dsh-runtime",
+      "packageName": "hrack-dsh-runtime",
+      "needsConfig": false,
+      "commands": [
+        "git clone --recurse-submodules https://github.com/UniRound-Tec/hrack.git",
+        "npm install",
+        "git submodule update --init --recursive"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/UniRound-Tec/hrack",
+    "reason": "dsh-runtime 子包与桌面宿主摘要混用。"
+  },
+  "peiyuwang54/deepseek-harness-cli": {
+    "sourceDescription": "DeepSeek CLI",
+    "sourceReadme": "DeepSeek CLI is an open-source coding agent powered by DeepSeek that runs locally in your terminal. &#8203; English | 中文 9 interface languages · 6 theme palettes · Agentic coding from plan to execution --- Note: This is DeepSeek Harness CLI. We keep iterating in sync with the official DeepSeek Harness, and we look forward to your forks and stars. macOS or Linux:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": true,
+      "commands": [
+        "curl -fsSL https://raw.githubusercontent.com/peiyuwang54/deepseek-harness-cli/master/apps/cli/install/install.sh | sh"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/peiyuwang54/deepseek-harness-cli",
+    "reason": "@deepseek-ai/dsh-root，README 是独立编码 CLI 安装，不是 DSH 扩展接入证明。"
+  },
+  "xi-zhao/openquantum": {
+    "sourceDescription": "Open-source quantum Agent workspace with a desktop client, Web UI, messaging, Qiskit/MCP tools, and scientific validation",
+    "sourceReadme": "量子计算，就在指尖 Quantum computing, right at your fingertips. 面向量子研究者、实验室与技术团队的开源科研 Agent 工作台 把量子工具组织成工作流，把计算结果连接到可复核的证据 为什么 OpenQuantum · 快速开始 · 运行证据 · 模型选择 · 量子能力 · 扩展开发 · 架构 · 项目故事 · 参与贡献 OpenQuantum 是一个开源的量子科研 Agent 工作台，让研究者从自然语言提出任务，经由真实工具执行，走向有依据、可追溯的结果。 你可以从桌面、网页或配置好的微信、飞书入口使用它，也可以接入自己的模型、算法和科研工作流。 一项量子任务，往往要跨过 SDK 文档、计算脚本、运行环境和云端接口。得到一个数字之后，还要回答：用了什么输入和方法？工具是否真的执行？结果通过了哪些检查？ OpenQuantum 把这些环节组织在同一个工作台里：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "openquantum",
+      "needsConfig": true,
+      "commands": [
+        "git clone https://github.com/xi-zhao/openQuantum.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/xi-zhao/OpenQuantum",
+    "reason": "README 为独立 OpenQuantum 科研宿主，现有命令仅克隆仓库。"
+  },
+  "huiliyi37/oh-my-tianshu": {
+    "sourceDescription": "Oh My Tianshu 是一款在dsh harness 基础之上带Tdd工作流、跨会话记忆、验证门、agent 路由、语义 + 图谱代码检索、文件回滚和全屏终端 UI——全部以插件组合。它是 DeepSeek Harness的友好 MIT fork,保留上游一切皆插件的架构并与天枢harness的核心组件进行改造融合的独立发行版本。",
+    "sourceReadme": "Cordis is a TypeScript plugin framework for applications that need explicit dependency injection, scoped services, lifecycle-managed cleanup, and optional configuration-driven loading. The core package is published as cordis; the official packages in this repository add a loader, config-file includes, HMR, console logging, timers, and project scaffolding. Cordis is ESM-first.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "vendor/cordis",
+      "packageName": "@huiliyi37/cordis",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/huiliyi37/oh-my-tianshu",
+    "reason": "实际收录 vendor/cordis、@huiliyi37/cordis，README 为通用 Cordis 框架；不是 oh-my-tianshu 根产品插件。"
+  },
+  "nyasers/dsh-hanako": {
+    "sourceDescription": "DSHana: DeepSeek Harness as a subagent for HanaAgent",
+    "sourceReadme": "插件 id：dsh-hanako。把 DeepSeek Harness（DSH）接进 Hana，作为进程内内嵌 agent（runProfile 在宿主进程内 boot，无独立 DSH 子进程）。任务执行走 dshana profile（进程内 boot），DSH 官方 Web UI 以 DSHana 标签页内嵌在 Hana 顶部，可见全部任务会话；账本与 dsh-home 锁进插件数据目录，DSH 依赖装进插件 node_modules（版本随插件声明）。 1. 拖入 zip 包：把插件的 release zip（dsh-hanako-v .zip，从 GitHub Releases 下载）拖进 Hana 插件安装界面（或解压到插件目录），插件即完成装载 2. 全自动自举，无需手动：插件加载（onStartUp）即启动自动链——依赖幂等检查/安装（已装且与插件声明版本一致 → 秒过；…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-hanako",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/Nyasers/dsh-hanako",
+    "reason": "作者明确这是安装进 Hana 的插件，把 DSH 嵌入 Hana；不能据此当作装进 DSH 的插件。"
+  },
+  "kongfangxun/sofagent": {
+    "sourceDescription": "Commit-time agent governance harness: 24 deterministic audit rules over git diffs (secrets, out-of-scope edits, blind modifications, prompt-injection traces), HMAC-chained tamper-evident history, and a 9-plugin DSH family (audit / gate / rollback / inject / ontology / evolve / commons / daemon / fde) distributed via SkillHub.",
+    "sourceReadme": "sofagent 编排模块——多 Agent 协作、业务流调度、prompt 模板。任务拆解 + LangGraph StateGraph 四节点串行状态机（v1.2.0 从 deepagents 迁移至 createReactAgent）。 安装后获得 sofagent-orchestrator（编排 CLI，含 compose / compare 子命令）与 sofagent-orchestrator-compare 命令。Node.js 18+。 - composeWithDeepAgents() / compose() — 任务描述 → 编排方案 YAML + SubAgent 配置 - runDAG() — 编排执行器（当前串行，DAG 并行规划在 v1.3.1） - parseWorkflow() — YAML → SubAgent 映射（含环检测 / 悬空校验） - 依赖关系：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "engine/orchestrator",
+      "packageName": "@sofagent/orchestrator",
+      "needsConfig": false,
+      "commands": [
+        "npm install -g @sofagent/orchestrator"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/KongFangXun/sofagent",
+    "reason": "实际收录 engine/orchestrator 的编排 CLI，提供 npm 全局安装；需确认它与根仓库 9 个 DSH 插件中的具体关系。"
+  },
+  "tianzeyui/stardust": {
+    "sourceDescription": "Open-source AI Agent platform with React/TSX & HTML plugin dev modes. Built-in 60+ APIs, multi-project, MCP tools, sandbox engine. Official + community-driven, building an extensible agent ecosystem for everyone.",
+    "sourceReadme": "English | 中文 Open-source AI Agent Platform — Build, Extend, Automate. Stardust is a desktop AI agent platform that combines a powerful chat interface with an extensible plugin system. It integrates with 60+ AI models, supports MCP (Model Context Protocol) tools, sandboxed code execution, and multi-project management — all wrapped in a clean, modern UI.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "stardust-desktop",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/Tianzeyui/stardust.git",
+        "npm install",
+        "git clone https://github.com/Tianzeyui/stardust-community-plugins.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/Tianzeyui/stardust",
+    "reason": "stardust-desktop 是独立 Agent 宿主，现有作者说明未给 DSH 扩展身份。"
+  },
+  "code-dsh/deepseek-harness-code": {
+    "sourceDescription": "Community desktop packaging for DeepSeek Harness with an Electron host, integrated plugins, and an independent watchdog.",
+    "sourceReadme": "DeepSeek Harness Code Born for Code — The Code-Engineering Specialization of DeepSeek Harness A deep specialization of DeepSeek Harness for code generation, project refactoring, and engineering debugging. English · 简体中文 Specialized Agent · Integration Philosophy · Architecture · Why Not a Wrapper · Long-Running · Build > [!IMPORTANT] > DeepSeek Harness Code is a community project.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "deepseek-harness-code",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/Code-DSH/deepseek-harness-code.git",
+        "npm install -g",
+        "dsh plugin --profile web add"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/Code-DSH/deepseek-harness-code",
+    "reason": "README 是代码工程专用宿主/发行版，安装命令有不完整 dsh plugin 占位；不构成可安装扩展验证。"
+  },
+  "huangjunsen0406/mini-dsh": {
+    "sourceDescription": "A minimal handwritten runtime following DSH concepts",
+    "sourceReadme": "English | 中文 A minimal handwritten runtime following DSH concepts, built on @deepseek-ai/cordis. This is a minimal project for learning the core DSH design — not a full DSH product. It deliberately keeps five things: 1. Cordis Context / Plugin / Service 2. Session Event Log -> deriveMessages() 3. Tool Registry -> register / schemas / execute 4. LLM Provider Adapter 5.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "mini-dsh",
+      "needsConfig": true
+    },
+    "sourceUrl": "https://github.com/huangjunsen0406/mini-dsh",
+    "reason": "作者明确是用于学习 DSH 核心设计的最小运行时，不是完整 DSH 产品，也未证明是 DSH 插件。"
+  },
+  "oneworks-ai/shikitor": {
+    "sourceDescription": "Code editor base on shiki.",
+    "sourceReadme": "The core of Shikitor, a simple and lightweight editor by Shiki. A simple and lightweight editor based on Shiki, which extends your textarea elements, provides a series of configurable options and plugins, allows you to break free from the limitations of the browser's native API to achieve more functions, and even becomes a tool like Monaco. create() accepts either a container or an existing textarea:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/core",
+      "packageName": "@shikitor/core",
+      "needsConfig": false,
+      "commands": [
+        "npm install @shikitor/core"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/oneworks-ai/shikitor",
+    "reason": "当前收录 Shikitor 编辑器 core 库，摘要只说明扩展 textarea 的通用编辑器能力；未证明是 DSH 可安装扩展。"
+  },
+  "multica-ai/dsh-multica-runtime": {
+    "sourceDescription": "Support dsh runtime on Multica.",
+    "sourceReadme": "Private, out-of-tree runtime bridge between Multica and the public DeepSeek Harness. It exposes a versioned JSONL protocol over stdio and composes over @deepseek-ai/dsh-base. It does not require changes to DeepSeek Harness. - This repository contains only the Multica integration layer. It does not vendor or redistribute DeepSeek Harness source code.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@multica-ai/dsh-runtime",
+      "needsConfig": true,
+      "commands": [
+        "dsh plugin --profile multica add /absolute/path/to/multica-dsh-runtime"
+      ],
+      "commandSource": "README"
+    },
+    "reason": "摘要只证明JSONL运行时桥，缺乏当前包主用途及模型增强能力的依据。"
+  },
+  "laplaceyoung/oh-my-dsh": {
+    "sourceDescription": "oh-my-dsh：面向 DSH (DeepSeek Harness) 的插件生态——700+ 插件，只通过扩展接缝注册，不修改 agent-loop 骨架",
+    "sourceReadme": "oh-my-dsh Every capability the peer harnesses ship, as DSH plugins. A capability library for DeepSeek Harness (DSH) — open all the way down, never touching the agent loop. The capability surface for the DSH agent, ported from the harnesses that got it right. Every plugin registers through a documented extension seam — never a patch to the skeleton, never a hot-path tax.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "oh-my-dsh",
+      "needsConfig": true,
+      "commands": [
+        "git clone https://github.com/LaplaceYoung/oh-my-dsh.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "reason": "资料仅声明能力库与扩展接缝，缺少当前收录包的具体主要功能。"
+  },
+  "liucaimao2026/dsh-personal-directive": {
+    "sourceDescription": "harness 破甲插件安装即用",
+    "sourceReadme": "DeepSeek Harness 的「无限一代」二次开发版：保留原版仓库的系统提示词和工具行为，并增加位于顶部「完成提示」后方的运行时开关。 > 本项目是基于原项目的个人二次开发版本，不是原作者的官方发布版本。 打个推广 基元律动 白嫖68元 deepseek模型还是老价格 邀请好友限时活动继续延长，体验OpenSquilla新功能畅享免费token https://tokenrhythm.studio/i/rf_tr_4Xud9j0AXkmBFCOp6MMMzsXQ 不是土台子 原版项目： - GitHub：https://github.com/Minglink/dsh-infinite-gen-1 - 项目名称：dsh-infinite-gen-1 / 无限一代（Infinite Generation One） - 原作者：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-personal-directive",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add github:liucaimao2026/dsh-personal-directive",
+        "dsh plugin --profile web add link:\"C:/Users/Administrator/Desktop/DSH个人插件/dsh-personal-directive\"",
+        "dsh plugin --profile web remove dsh-personal-directive",
+        "dsh plugin --profile web update dsh-personal-directive"
+      ],
+      "commandSource": "README install section"
+    },
+    "reason": "资料以二次开发声明和原项目引用为主，不能证明当前包独立能力。"
+  },
+  "adwmc/helm-d": {
+    "sourceDescription": "DeepSeek Harness 破甲一体化安全分析插件：Android · Web · Native · Protocol · Malware · AI-Security 全领域聚合（9 bundle + 1 preset）",
+    "sourceReadme": "DeepSeek Harness 破甲一体化安全分析插件 一个 preset 挂载 · Android · Web · Native · Protocol · Malware · AI-Security 六大领域即开即用 English | 中文 > 仅供学习交流。使用者须遵守所在地法律法规，对使用本项目产生的后果自负。 > 维护者文档：发布流程、preset 单源同步、坑位表见 MAINTENANCE.md。 Android · Web · Native · Protocol · Malware · AI-Security 六大安全领域聚合在一个 preset 里。装一次，全领域工具就绪，不再逐领域拼装。 全部能力收敛进一个 @dsh-security/helmd 包。profile 只加载健康检查，preset 在 Agent 隔离上下文中加载 bootstrap、router、七大领域工具和 toolbox。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/bootstrap",
+      "packageName": "@dsh-security/bootstrap",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/ADWMC/helm-d",
+    "reason": "收录 packages/bootstrap（@dsh-security/bootstrap），README 介绍整个 helmd 聚合产品，且说明 bootstrap、router、七大工具是不同组成部分。security 方向合理，但“本包聚合六大安全工具”的具体依据超出已知本包职责；补 bootstrap README/manifest，勿把整套能力直接归给它。"
+  },
+  "futrime/webdsh": {
+    "sourceDescription": "Browser-only build of DeepSeek Harness",
+    "sourceReadme": "> DeepSeek Harness in a browser tab — the real agent, real Node, no server to run. DeepSeek Harness (dsh) is an agent harness where everything is a plugin. dsh web runs a Node host and serves a browser client to it. webdsh is that, as static files — the host runs inside the page, and the agent's commands run in WebContainers: Node itself, in the tab. - ⚡ Nothing to run.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "deepseek-web-harness",
+      "needsConfig": false,
+      "commands": [
+        "npm install",
+        "pip install"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/futrime/webdsh",
+    "reason": "webdsh 是将 DSH 宿主放进浏览器 WebContainers 的运行形态；当前 ai 依据仅为“运行 Agent 命令”，没有说明本包新增模型/记忆/推理/编排机制。需确认收录浏览器宿主、外壳还是运行时适配包，再选主类；不是据 runtime/agent 词强行判 ai。"
+  },
+  "kihara777/nixkits": {
+    "sourceDescription": "软件、补丁、NixOS 模块与 AI 编码助手的技能合集。",
+    "sourceReadme": "NixKits — 软件、补丁、NixOS 模块与 AI 编码助手的技能合集。 > 二进制缓存：flake 已通过 nixConfig 自动声明。直接使用 flake input 时 Nix 自动提示。手动：cachix use nixkits。 > 所有包默认跟随 nixpkgs 平台支持（lib.platforms.linux）。部分包的架构支持受上游影响，具体请查看各包文档中的构建徽章。 DeepSeek Harness（DSH）组件与软件独立展示（挂载方式见 docs/zh/dsh.md）： Agent 预设（随 dsh-nixos-shell 分发，经 nixkits.dsh.presets seed-once 写入 DSH）： 提供 nix develop 即用环境。首先添加 registry： 独立 overlay，不包含在 default 内：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-api-balance",
+      "packageName": "@kihara777/dsh-api-balance",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/Kihara777/NixKits",
+    "reason": "当前路径 packages/dsh-api-balance，摘要却是 NixKits 软件合集。模型直接以包名推断“API 余额与用量统计”；现有作者正文不支持这些具体功能，应空分类待补当前包 README。"
+  },
+  "loserfox/dsh-gal": {
+    "sourceDescription": "DSH Galgame 模式：前台 flash GM 即兴演出 + 后台 pro 真实干活的双 agent 视觉小说舞台（独立插件）",
+    "sourceReadme": "DSH 的 galgame mode：视觉小说式全屏舞台做 vibe coding。 - 前台 GM：deepseek-v4-flash（reasoningEffort=off，秒级响应），带「小菁」（海边咖啡馆老板娘）人格，即兴演出剧情，经 gal_stage 工具演出。 - 后台 agent：主会话 agent（pro）继续干真实活（写代码、修 bug、查资料），需要推进剧情时调 gal_gm 派前台演一段并抛选项。 - 客户端：会话里出现未结束的 gal-scene 节点即自动全屏开舞台（对话框点击推进 / 历史 LOG / 存档配置 / 选项 / 自由输入 / AUTO / SKIP / EXIT）。 负载只携带 id（charId / emotion / bg），绝不携带素材 URL，客户端把 id 映射到打包素材：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@loserfox/dsh-gal",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add link:/path/to/dsh-gal"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/LoserFox/dsh-gal",
+    "reason": "本包是视觉小说舞台与前台 GM，后台主会话继续承担编码、修 bug 或查资料。coding 依据借用了后台宿主能干的事；需要明确产品以界面演出还是独立互动叙事为主，再在 appearance/tools 中择主类，不能因后台可写代码归 coding。"
+  },
+  "xinyuquan985-coder/deepseek-harness-neon": {
+    "sourceDescription": "Cyberpunk multi-agent command center for DeepSeek Harness — Chinese-first conversation, code execution, VS debate and trajectory workbenches.",
+    "sourceReadme": "English | 中文 > Important: Neon Harness is an unofficial community fork of DeepSeek Harness. It is not affiliated with or endorsed by DeepSeek. Neon Harness is a cyberpunk multi-agent command center for DeepSeek Harness. It keeps the upstream plugin architecture and real agent workflows while adding a Chinese-first neon interface for conversation, code execution, debate, and trajectory inspection.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/xinyuquan985-coder/deepseek-harness-neon.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/xinyuquan985-coder/deepseek-harness-neon",
+    "reason": "作者描述保留上游 Agent 工作流、增加中文霓虹界面，未证明本包独立实现多 Agent 协作机制；需区分根 fork/界面与新增编排。"
+  },
+  "dorisgyl/dsh-cloud": {
+    "sourceDescription": "Cloud-hosted DeepSeek Harness on Cloudflare — sessions in Durable Objects, tools in sandboxes.",
+    "sourceReadme": "Run DeepSeek Harness on Cloudflare. Serverless, hibernates when idle, and keeps working after you close the tab. > Unofficial. Not affiliated with DeepSeek. This is a third-party port of > their open-source agent harness to Cloudflare Workers. Deploy it to your own Cloudflare account. You bring the account and the model key; nothing here asks you to sign up for anything of ours.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/cf-attachments-do",
+      "packageName": "cf-attachments-do",
+      "needsConfig": true,
+      "commands": [
+        "git clone <this repo> && cd dsh-cloud",
+        "git clone"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/dorisgyl/dsh-cloud",
+    "reason": "收录目标为 packages/cf-attachments-do 附件子包，生成结果却涵盖整个 Cloudflare 平台、会话与工具沙箱；缺少该子包独立能力证据。"
+  },
+  "qian-ning/prompt-skill-armory": {
+    "sourceDescription": "Managing prompts，, skills, MCP tools & wallpaper for DeepSeek Harness",
+    "sourceReadme": "> 面向 DeepSeek Harness 的社区插件 / 管理中枢 — 提示词、技能、MCP 工具服务器、Agent 预设、全局壁纸与特效，一站式管理面板。 包名 / 仓库：prompt-skill-armory · GitHub 中文 · English --- - 🚀 快速开始 - 🎯 适配目标 · Supported upstreams - ✨ 功能 - 🖥️ 平台支持 - 🔄 一键更新 - 🗑️ 卸载 - 🏗️ 架构 - 📦 包含的包 - 🗂️ 仓库结构 - 🛠️ 开发 - ❓ FAQ - 📚 文档 - 🤝 贡献 / 官方合入 - 📄 许可 - 🔗 友情链接 · Friends --- Armory 是 DeepSeek Harness 的插件，专为以下两个官方仓库构建与测试： > ⚠️ 请使用上述官方仓库的构建（或其保持兼容的派生版）。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/client-ui-switchblade",
+      "packageName": "@deepseek-ai/dsh-client-ui-switchblade",
+      "needsConfig": false,
+      "commands": [
+        "npm install <tarball>"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/Qian-Ning/prompt-skill-armory",
+    "reason": "收录目标为 packages/client-ui-switchblade，现有正文介绍整个 Armory 提示词与技能管理中枢；尚不能确认根产品功能均属于该子包。"
+  },
+  "lingyesoul/dsh-tavern": {
+    "sourceDescription": "",
+    "sourceReadme": "该目录是可安装的 DSH 官方 Web bundle。仓库根的 pnpm run build:plugin 会把五个 workspace 纯库和 Node half 打入单一 index.mjs。client closure 由 DSH profile 注入，不要求用户另行安装公共 @deepseek-ai/ 依赖。 安装后： - 侧边栏底部、紧挨设置按钮的 Tavern 按钮（rail 模式为圆形图标钮）打开「Tavern 管理面板」——与原生设置同构的模态面板（左侧导航 + 右侧内容），复用 DSH 的 Modal/Button/Input/Pill/StateDot 原语与 --dsw-alias- 设计 token。面板十个分区：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/plugin",
+      "packageName": "dsh-tavern",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add ./packages/plugin"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/LingyeSoul/dsh-tavern",
+    "reason": "子包摘要只说 Tavern 按钮、十区管理面板及 UI 技术；十区的实际业务能力被截断，tools 方向可能合理但当前依据只是“有面板”。"
+  },
+  "zhijunlstudio/searchvidgen": {
+    "sourceDescription": "基于AI的搜索意图到原生广告视频的智能生成系统。本项目通过深度理解搜索关键词和用户意图，自动生成高相关性、高吸引力的营销视频内容。",
+    "sourceReadme": "视频生成能力缝（Service Definition）：生成器/裁判注册表（ctx.video）、 capabilities 声明与按能力路由（fail-loud，逐候选原因）、评测结算协议 （computeVerdict，权重/阈值归消费者）。 三角色：SD=本包；Provider=@zhijunlstudio/dsh-video-provider； Consumer=@zhijunlstudio/dsh-video-tool。 新模型接入零代码：在 provider 包配置里加一行 remote/local 即可。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-video",
+      "packageName": "@zhijunlstudio/dsh-video",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/ZhijunLStudio/SearchVidGen",
+    "reason": "当前是 Service Definition（ctx.video 注册表/能力声明/结算协议），作者明确 Provider 与 Consumer 另属兄弟包。不得说本包“完成广告视频创作”；需确认纯接口库收录及主类，倾向开发基础设施。"
+  },
+  "badai147/dsh-global-rules": {
+    "sourceDescription": "在 DeepSeek Harness Web 设置面板中编辑 ~/.dsh/AGENTS.md 全局规则的插件",
+    "sourceReadme": "在 DeepSeek Harness Web 的设置面板中编辑 ~/.dsh/AGENTS.md（全局规则）的插件。 Edit your ~/.dsh/AGENTS.md (global rules) from the DeepSeek Harness web settings panel. - 设置页新增「全局规则」标签：打开即加载 ~/.dsh/AGENTS.md 当前内容 - 编辑保存，实时生效：新会话立即生效；当前会话在下次文件操作后感知新规则（由 DSH 内置的 dsh-agent-instructions 动态检测机制完成） - 文件不存在时保存会自动创建 - 零构建：Client 端为手写 __ModuleLoader__ bundle，Host 端为纯 Node ESM 从 GitHub 源安装（备选）： 重启 dsh web，然后打开 设置 → 全局规则。 1. 打开设置 → 全局规则 2.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-global-rules",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add dsh-global-rules",
+        "dsh plugin --profile web add github:badai147/dsh-global-rules"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/badai147/dsh-global-rules",
+    "reason": "本包仅编辑 ~/.dsh/AGENTS.md，动态生效由宿主 dsh-agent-instructions 完成。当前 ai 可能借用宿主机制；应按规则管理工具复核，勿因文件进入上下文自动判 AI 增强。"
+  },
+  "panzeyu2013/dsh-chamber": {
+    "sourceDescription": "",
+    "sourceReadme": "dsh（DeepSeek Harness）的桌面连接管理器：一个原生桌面应用，把本机与多台服务器上的 dsh 实例统一收进同一个窗口——本地打开即用，远程一键接入。 为什么选择 dsh-chamber？ - 原生桌面体验，打开即用 — 本地 dsh 实例自动托管（启动、守护、健康检查），无需命令行；单窗口内多个 dsh shell 并行（N-ctx），随时切换 - dsh 运行时版本管理 + 热重载 — 每个实例的 dsh 运行时独立管理：切换版本、更新插件即时生效，桌面应用无需重装、无需重启 - 桌面端多设备连接 — 一台电脑管理本机与任意多台服务器上的 dsh：SSH 隧道自动建立、远端 systemd 服务自动托管；也可经认证 Gateway 安全接入 - 更好的侧边栏与远程功能 — 本地与远程的 session/workspace 在同一个原生侧边栏内平等列出、按来源分组：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-api-gateway",
+      "packageName": "@deepseek-ai/dsh-api-gateway",
+      "needsConfig": false,
+      "commands": [
+        "curl -fsSL -o install-gateway.sh https://raw.githubusercontent.com/panzeyu2013/dsh-chamber/main/scripts/install-gateway.sh"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/panzeyu2013/dsh-chamber",
+    "reason": "当前 packages/dsh-api-gateway，摘要描述完整 dsh-chamber 桌面连接管理器，仅顺带提到 Gateway；需补网关子包认证/转发职责与安装边界。"
+  },
+  "zhou-tao/dsh-ui": {
+    "sourceDescription": "UI layer for deepseek-harness: Tauri desktop app + VS Code extension + Ink TUI, sharing one verified wire-protocol client (@dsh-ui/protocol)",
+    "sourceReadme": "English | 简体中文 为 DeepSeek Harness 打造的一套 UI 客户端 monorepo：桌面客户端（Tauri 2）+ 终端 TUI（Ink）+ 手机互联 H5 + VS Code 扩展，全部复用同一套实测过的 harness 协议。 > 桌面应用名：DeepSeek Harness UI（macOS / Windows） · TUI 包名：@dsh-ui/tui（npm） --- - 桌面端启动即后台拉起连接服务；点手机图标打开弹窗 → 自动生成二维码（无需任何操作）； - 手机与电脑连同一 Wi-Fi，扫码 → 浏览会话 / 发消息； - 状态圆点：手机 3 分钟内访问过桥接即显示绿色； - 公网（跨 IP）互联建设中（原 cloudflared 隧道方案国内网络不可靠，已标记占位）。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/dsh-deep-ui",
+      "packageName": "dsh-deep-ui",
+      "needsConfig": false,
+      "commands": [
+        "npm i -g @dsh-ui/tui"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/zhou-tao/dsh-ui",
+    "reason": "当前 plugins/dsh-deep-ui，摘要和模型依据却覆盖桌面/TUI/H5/VS Code 四种根产品；需查此子包实际实现，不能继承全部客户端。"
+  },
+  "creght-dev/skills": {
+    "sourceDescription": "Codex and agent skills for Cregh.",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "creght-skills",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/creght-dev/skills",
+    "reason": "只有“Codex and agent skills for Cregh.”，无 README。提供技能集合不等于技能管理工具；应空分类待补具体技能内容。"
+  },
+  "wzznne/dsh-cyberworkstation": {
+    "sourceDescription": "DSH CyberWorkStation — one-click DeepSeek Harness (dsh) bundle: cyberpunk desktop launcher, SillyTavern-grade Control Deck, 8 production plugins, AI skin studio & markets. Vendored core rc.8, run setup.cmd and go. 一键部署的 dsh 赛博工作站整合包。",
+    "sourceReadme": "中文 | English > A complete toolkit that turns DeepSeek Harness (dsh) from a CLI tool into a visual workstation: a cyberpunk desktop launcher + 8 production-grade plugins + 6 engineering skills + 1 in-dsh skill. > Zero core rewrites — every capability is delivered through official plugin extension points, so the upstream core stays independently upgradable at all times. More:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/dsh-control-deck",
+      "packageName": "dsh-control-deck",
+      "needsConfig": true,
+      "commands": [
+        "dsh plugin"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/WZZNNE/DSH-CyberWorkStation",
+    "reason": "当前 plugins/dsh-control-deck，摘要只是整套桌面启动器、8 插件、6 工程技能的根产品宣传；当前管理插件/技能/启动器的依据未被子包作者资料证实。"
+  },
+  "stvli/dsh-ros2": {
+    "sourceDescription": "The Deepseek Harness ROS 2 plugin can be used to efficiently diagnose issues and perform joint debugging.",
+    "sourceReadme": "Shared runtime for the dsh-ros2 plugin family — not a cordis bundle. - runner.ts — command runner (timeout / SIGKILL / ROS_LOG_DIR fallback / rosSetup), spawnJob - parse.ts — topic/graph/transform parsers - toolkit.ts — ToolDeps injection interface, result helpers, approval gate, /safety/state gate, profile loading (robot_profile.py via commonScriptPath), vision provider contract, ros2Tool adapter, makeRun - scripts/…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/common",
+      "packageName": "dsh-ros2-common",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/StvLi/dsh-ros2",
+    "reason": "当前 packages/common 明确写“not a cordis bundle”，是共享运行库；coding 语义可接受，但不应当作已确认可安装 DSH 插件。"
+  },
+  "nekroai/nekro-nxt": {
+    "sourceDescription": "NekroNXT：基于 DeepSeek Harness（DSH）的多平台群聊智能体系统｜A DSH-powered multi-platform group-chat agent system",
+    "sourceReadme": "所有 NekroNXT 业务包通过本包集中接触 DSH 公共 API。生产依赖只包含当前 Client facade 真实导入的纯 Slot Core；Client Runtime、Host、Bundle 和其他代表性 0.1.1-rc.2 包作为开发期兼容面精确锁定，不进入该 facade 的生产依赖声明。未来 Server 组合根必须自行声明并断言它实际装配的 Host package set。 本包提供代表性公开导出、React singleton、Session/Scope、动态 Cordis 工具、Client Slot 和 SQLite persistence 兼容测试。完整 Base/Web Bundle 只用于开发期组合验证，不能因为版本表而被误认为 NekroNXT 的生产 Runtime。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-compat",
+      "packageName": "@nekro-nxt/dsh-compat",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/NekroAI/nekro-nxt",
+    "reason": "当前 packages/dsh-compat 是纯兼容 facade 与兼容测试；coding 语义可接受，不能把 NekroNXT 根群聊产品作为其功能或插件身份。"
+  },
+  "githubxsy/nanodeepseekharness": {
+    "sourceDescription": "A dependency-free runtime, teaching-sized DeepSeek agent harness in TypeScript",
+    "sourceReadme": "一个不依赖 deepseek-ai/deepseek-harness 的最小 Agent Harness。 它只使用两个基础依赖： - Cordis：Context、插件加载、依赖注入和生命周期； - OpenAI SDK：调用 DeepSeek 的 OpenAI 兼容接口。 核心仍然只负责组合，模型、工具和 Agent Loop 都是 Cordis Plugin。 > 这是独立的教学实现，不是 deepseek-ai/deepseek-harness 的精简发行版。 核心实现集中在 src/nano-deepseek-harness.ts，文件按下面的顺序分成五段： 1. Tool / Model：插件之间的最小协议； 2. NanoRuntime：只保存能力的 Cordis Service； 3. deepSeekPlugin：OpenAI SDK 与 DeepSeek 的适配层； 4. agentLoopPlugin：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "nanodeepseekharness",
+      "needsConfig": true,
+      "commands": [
+        "npm install"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/GitHubxsy/nanodeepseekharness",
+    "reason": "作者明确为不依赖官方 DSH 的独立教学实现，不是 DSH 精简发行版；AI 运行时语义可接受，插件收录资格另核。"
+  },
+  "slapq/meldra": {
+    "sourceDescription": "A Pi-based Agent framework and launcher with Profiles, WorkSpaces, and external Agent Runtimes",
+    "sourceReadme": "中文 · English · 完整项目首页 · 使用教程 > [!IMPORTANT] > 当前仓库尚未配置正式 Meldra npm 发行源或自更新服务。本 package manifest 提供 meldra 命令， > 并保留 metapi 兼容别名；开发阶段应以可信源码 checkout 和构建结果为准。 - 保留 Pi 原生交互、工具、Session、Extension、Skill、Prompt 与 Theme。 - 用独立 Profile 隔离模型、设置、Package、Session 和外部 Runtime 状态。 - 提供 pi Compatibility Profile 访问原始 ~/.pi/agent。 - 支持 session-bound WorkSpace 和 Portable Profile import/export。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/coding-agent",
+      "packageName": "@earendil-works/pi-coding-agent",
+      "needsConfig": false,
+      "commands": [
+        "npm install --ignore-scripts"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/Slapq/Meldra",
+    "reason": "当前 packages/coding-agent 描述 Pi 原生运行时/启动器、开发期源码分发，没有证明是 DSH 扩展；ai 语义不等于插件资格。"
+  },
+  "jo32/deepdeck": {
+    "sourceDescription": "DeepDeck — an extensible desktop workspace for DeepSeek Harness.",
+    "sourceReadme": "DeepDeck A native-feeling desktop client for DeepSeek Harness. Available in DeepDeck v1.0.38 for Apple Silicon and Intel Macs. Browse a website and work with its Agent in the same window. Each site keeps its own conversation and workspace, so reopening it resumes your work. Use and Builder share that conversation: use available tools, or ask Builder to inspect the page and add the missing capabilities.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/agent-preset-sections",
+      "packageName": "@deepdeck/dsh-client-ui-agent-preset-sections",
+      "needsConfig": false,
+      "commands": [
+        "git submodule update --init --depth 1"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/jo32/DeepDeck",
+    "reason": "收录目标为 plugins/agent-preset-sections，现有正文介绍整个桌面应用；缺少所选预设分区插件的独立能力说明。"
+  },
+  "yuanqiyibiansheng/deepseek-harness-gui": {
+    "sourceDescription": "DeepSeek-Harness-GUI",
+    "sourceReadme": "# DeepSeek Harness GUI > **二创项目（Fork / Derivative work）** > 本项目基于 **DeepSeek Harness**（`dsh`）二次开发，原作者与项目归属 **DeepSeek AI 官方团队**（https://deepseek.ai / https://github.com/deepseek-ai/deepseek-harness）。 > 本仓库是在官方开源版基础上做**定制增强**的分支，仅代表本项目的定制部分；**底层架构、插件模型、核心能力均归属于官方 DeepSeek Harness 团队**。 [English](README.md) | 中文 ## 关于本源 - **上游项目**：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "needsConfig": false,
+      "commands": [
+        "git clone <本仓库地址>"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/yuanqiyibiansheng/DeepSeek-Harness-GUI",
+    "reason": "只有定制 fork 与上游归属说明，未说明新增功能。"
+  },
+  "cyber-ai-agent/dsh-cyber": {
+    "sourceDescription": "",
+    "sourceReadme": "本地优先的 AI 角色协作工作台 让角色拥有持续的身份与记忆，在可交互世界中交流、执行任务，并留下可查看的工作成果。 官网 · English · 贡献指南 DSH Cyber 基于 DeepSeek Harness 构建，把模型与工具执行能力组织成世界、角色、会话和工作成果。你可以建立个人助理空间、开发团队、内容工作室或叙事世界，为角色配置身份、模型和技能。 项目处于 Pre-Alpha，接口与功能仍在迭代。模型服务需要自行配置；功能效果取决于所选模型、工具授权与本地运行环境。 工作台示例：左侧会话、中间交流、右侧世界与结果入口。 示例文件通过实际登记与预览链路打开；截图使用隔离的演示数据。 会话负责交流，轨迹负责解释执行过程。产物必须对应真实文件；模型的自然语言声明不会被当成工具成功或任务完成。 角色不只是一次性的提示词。身份、私聊、模型策略、记忆、技能授权和工作经历都关联到稳定的角色标识。不同世界有独立的角色与数据边界。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/harness-adapter",
+      "packageName": "@dsh-cyber/harness-adapter",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/cyber-ai-agent/dsh-cyber.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/cyber-ai-agent/dsh-cyber",
+    "reason": "当前 packages/harness-adapter，摘要为 DSH Cyber 角色工作台根产品。"
+  },
+  "ccch713/deepddw": {
+    "sourceDescription": "Memory + KB + doc search for DSH on all your LAN devices (PC, phone, tablet) — not local-only.",
+    "sourceReadme": "> English · 简体中文 deepDDW gives DeepSeek Harness (DSH) the three pieces it's missing — memory, a knowledge base, and document search — and makes all of it reachable from any device on your LAN. No app install. No DSH source changes.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/ddw-teams-panel",
+      "packageName": "@deepddw/ddw-teams-panel",
+      "needsConfig": false,
+      "commands": [
+        "npm i -g @deepseek-ai/dsh",
+        "git clone https://github.com/ccch713/deepddw.git && cd deepddw",
+        "git clone https://github.com/ccch713/deepddw.git",
+        "dsh plugin --profile web add <npm-package>"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/ccch713/deepddw",
+    "reason": "当前 plugins/ddw-teams-panel，摘要仅根产品记忆/知识库/搜索能力。"
+  },
+  "justgenius-s/dsh-plugs": {
+    "sourceDescription": "DSH Plugins Cellection",
+    "sourceReadme": "DSH-Plugs A monorepo of plugins for DeepSeek Harness (DSH) — one folder = one plugin. The consolidated Codex shell: Codex-style message navigation, Cursor-style per-turn Worked for collapsing, a right-side side.panel host with a file tree / preview / diff view (VSCode Light+/Dark+ syntax themes), a Warp-style terminal panel backed by a real login-shell PTY, and a read-only git commit-graph panel. Optional:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/runtime",
+      "packageName": "@just-genius/dsh-plugin-runtime",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add ./plugins/dsh-codex",
+        "dsh plugin --profile web remove @just-genius/dsh-codex"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/JustGenius-s/DSH-Plugs",
+    "reason": "收录目标为 packages/runtime，根仓库汇集多个插件；当前材料不能将消息、文件、终端和提交图功能都归于运行时子包。"
+  },
+  "timwhitez/dsh-self-evolving": {
+    "sourceDescription": "Evidence-first, crash-resumable self-evolution engine for DSH: generates bounded Cordis plugin candidates, admits them through a one-shot real Loader, evaluates with Harbor, and journals an auditable lineage.",
+    "sourceReadme": "English | 简体中文 An evidence-first, crash-resumable self-evolution engine for DeepSeek Harness. It generates bounded Cordis plugin candidates, runs them through isolated real-Loader admission, evaluates them with Harbor, and preserves an auditable lineage. > [!IMPORTANT] > v0.2.0 verifies stable iteration and a measurable fixed-replay engineering effect.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/candidate-baseline",
+      "packageName": "@dsh-self-evolving/candidate-baseline",
+      "needsConfig": true,
+      "commands": [
+        "dsh plugin --profile headless add @dsh-self-evolving/core@0.2.3",
+        "git clone https://github.com/timwhitez/dsh-self-evolving.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/timwhitez/dsh-self-evolving",
+    "reason": "收录目标为 packages/candidate-baseline，根正文介绍完整的自演化插件引擎；不能据此将生成、准入、评估与谱系能力赋予候选基线包。"
+  },
+  "qw457812/dotfiles": {
+    "sourceDescription": "My dotfiles on macOS and Termux, managed with Chezmoi.",
+    "sourceReadme": "Hack my keyboard via Karabiner and maintain its config with Goku. > Head over to nikitavoloboev's personal wiki to learn more about karabiner and goku. Here are some settings (outdated, click to see) Using Glove80 keyboard. Using WhatPulse to track keyboard input. TODO: - [ ] Try kanata. - [ ] Try Glove80 Layout Editor. - [ ] Try ZMK or QMK. - qmk.nvim - keymap-editor My neovim config powered by LazyVim. TODO: 1.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "dsh-plugins",
+      "packageName": "@dotfiles/dsh-plugins",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/qw457812/dotfiles",
+    "reason": "根仓库为 Chezmoi 管理的个人 macOS 与 Termux 配置，目标为 dsh-plugins；缺少所选子包能力说明，不应从根资料推断为 Chezmoi 插件。"
+  },
+  "jabofish/deepseek-harness-vscode": {
+    "sourceDescription": "A native VS Code client for DeepSeek Harness (DSH) with sessions, streaming replies, tools, model controls, and workspace-aware workflows.",
+    "sourceReadme": "> Your DSH workspace, right beside your code. English | 简体中文 DeepSeek Harness Companion for VS Code is a native VS Code client for DeepSeek Harness (DSH), DeepSeek's local coding agent. It brings sessions, streaming replies, thinking, and tool progress into the side bar so you can stay in the editor and stay in flow. - Sessions & context — create, switch, resume, and archive sessions per workspace.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-adapter",
+      "packageName": "@dsh-vscode/dsh-adapter",
+      "needsConfig": false,
+      "commands": [
+        "npm install --global @deepseek-ai/dsh"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/Jabofish/deepseek-harness-vscode",
+    "reason": "收录目标为 packages/dsh-adapter，现有材料介绍整个 VS Code 侧边栏客户端；适配层与完整扩展功能范围尚未区分。"
+  },
+  "xing666173/dsh-vision-hub": {
+    "sourceDescription": "DeepSeek Harness EAC 视觉全家桶:15 个像素级视觉工具(增强版 dsh-tool-vision)+ 桥接内联预览 + 拖拽文件上传,单端点驱动,对话干净,EAC 原生设置适配",
+    "sourceReadme": "GitHub: Scorp1o117/dsh-tool-vision · npm: dsh-tool-vision Part of the DeepSeek Harness Enhancement Suite — Vision · Soul/Persona · Long-term Memory · Plugin Marketplace. External vision model for DeepSeek Harness. DeepSeek's own models are text-only, and the harness derives every model request strictly from the session log (llm/stream requests must equal the durable derivation — the agent-loop invariant).…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "tool-vision",
+      "packageName": "dsh-tool-vision",
+      "needsConfig": true,
+      "commands": [
+        "dsh plugin --profile web add dsh-tool-vision"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/xing666173/dsh-vision-hub",
+    "reason": "收录目标为 tool-vision，现有子包材料仅支持外部视觉能力；不能继承整个仓库的十五种工具、预览桥接与拖放功能。"
+  },
+  "justsuperhuman/bro-cli": {
+    "sourceDescription": "",
+    "sourceReadme": "Run your preferred coding harness against any model — Claude Code, omp, Pi, the Codex CLI, or DeepSeek Harness — with native, OpenAI-compatible, and Anthropic-compatible providers wired up for you. Pick a provider, pick a model, go. bro is the only package you install up front. Whichever harness you select is installed globally on first use if its command is missing;…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "dsh-plugin-profiles",
+      "packageName": "@bro-cli/dsh-profiles",
+      "needsConfig": true,
+      "commands": [
+        "npm install -g bro-claude"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/JustSuperHuman/bro-cli",
+    "reason": "收录目标为 dsh-plugin-profiles，但现有正文只说明根 CLI；尚无子包正文证明其具体配置管理能力。"
+  },
+  "aflydream/mineko-harness": {
+    "sourceDescription": "An everything-as-a-plugin AI harness for Windows, modified from deepseek-harness.",
+    "sourceReadme": "Cordis is a TypeScript plugin framework for applications that need explicit dependency injection, scoped services, lifecycle-managed cleanup, and optional configuration-driven loading. The core package is published as cordis; the official packages in this repository add a loader, config-file includes, HMR, console logging, timers, and project scaffolding. Cordis is ESM-first.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "vendor/cordis",
+      "packageName": "@deepseek-ai/cordis",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/Aflydream/Mineko-Harness",
+    "reason": "收录目标为 vendor/cordis，属于上游插件框架依赖；须复核其在 DSH 插件目录中的收录资格及项目自身适配能力。"
+  },
+  "rodrigobaron/dsh-pro": {
+    "sourceDescription": "",
+    "sourceReadme": "An opinionated coding agent built on top of DeepSeek Harness. DSH ships the runtime — sessions, agents, tools, a web GUI — and leaves the product decisions open. dsh-pro makes them: a file artifact panel, git review, web search that needs no API key, conversation rewind, scheduled routines, deep research.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/archived-sessions",
+      "packageName": "@dsh-pro/archived-sessions",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/rodrigobaron/dsh-pro"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/rodrigobaron/dsh-pro",
+    "reason": "收录目标为 plugins/archived-sessions，现有材料介绍整个编程产品；不能据此给归档会话子包生成具体功能。"
+  },
+  "asherat66/asherat-shouse": {
+    "sourceDescription": "",
+    "sourceReadme": "> DeepSeek Harness 桌面版：Electron 封装的 dsh Web UI，无需安装 Node.js（已内置独立运行时）。 1. 下载 dsh-installer.exe（来自 GitHub Releases 页面的资产） 2. 双击运行，安装器自动完成： - 环境检测（Windows x64 / 磁盘空间） - 下载发行包（带进度条：百分比 + 已下载量） - 解压 + 重建目录链接（约 3 分钟） - 初始化配置文件（自带全部插件与规则） - 自动启动 DeepSeek Harness 3. 首次使用：打开 设置 → 模型，填写你的 DeepSeek API Key（仅保存在本机 ~\\.dsh\\.credentials.yaml） 4. 完成，开始使用 > 自定义安装目录：dsh-installer.exe --dir D:\\DeepSeekHarness > 自定义下载源（如镜像）：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugins/dsh-autofix",
+      "packageName": "dsh-autofix",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add dshmarket",
+        "dsh plugin --profile web add dsh-file-upload",
+        "dsh plugin --profile web add dsh-cost-meter",
+        "dsh plugin --profile web add dsh-plugin-image-input",
+        "dsh plugin --profile web add @opendsh/dsh-plugin-setting-mcp",
+        "pnpm add"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/asherat66/asherat-shouse",
+    "reason": "收录目标为 plugins/dsh-autofix，现有材料描述桌面产品安装器；缺少自动修复子包的独立能力说明。"
+  },
+  "isaccanedo/deepseek-harness": {
+    "sourceDescription": "DeepSeek Harness: Everything is a Plugin",
+    "sourceReadme": "English | 中文 DeepSeek Harness (dsh) is an open-source agent harness developed by DeepSeek AI. It uses an architecture where everything is a plugin, and is powered by Cordis, whose design is described in _A Programming Paradigm for Spatiotemporal Composability_. DeepSeek Harness is currently in _developer preview_ and is iterating rapidly. THERE WILL BE COMPATIBILITY-BREAKING CHANGES. Install Node.js, then run:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/deepseek-ai/deepseek-harness.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/isaccanedo/deepseek-harness",
+    "reason": "安装包为 @deepseek-ai/dsh-root，现有材料描述宿主框架；须先复核宿主与插件的身份及收录资格。"
+  },
+  "lxyer/dsh-store": {
+    "sourceDescription": "Trusted app store, capability OS, and pack distribution protocol for DeepSeek Harness.",
+    "sourceReadme": "In-app DSH Store host. Published as @tech2077/dsh-store-plugin@0.1.1. Then restart dsh web. Settings → Plugins will show DSH Store / Installed / Gaps. Do not use latest or a git branch. Fallback: https://github.com/lxyer/dsh-store/releases/download/v0.1.1/dsh-store-plugin-0.1.1.tgz. - Registers settings.plugins.tab ids store / installed / gaps. - Does not register settings.section.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "plugin",
+      "packageName": "@dsh-store/plugin",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add @tech2077/dsh-store-plugin@0.1.1",
+        "dsh plugin add"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/lxyer/dsh-store",
+    "reason": "正文自称发布包 @tech2077/dsh-store-plugin@0.1.1，安装身份却为 @dsh-store/plugin。简介所述三个标签页有证据，但应暂停采用到该安装身份，先确认包改名或清单错误并重新预检；不把来源冲突计作模型捏造。"
+  },
+  "laowangyiyunle/ikun-ai": {
+    "sourceDescription": "Ikun AI agent harness",
+    "sourceReadme": "Cordis is a TypeScript plugin framework for applications that need explicit dependency injection, scoped services, lifecycle-managed cleanup, and optional configuration-driven loading. The core package is published as cordis; the official packages in this repository add a loader, config-file includes, HMR, console logging, timers, and project scaffolding. Cordis is ESM-first.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "vendor/cordis",
+      "packageName": "@ikun-ai/cordis",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/laowangyiyunle/ikun-ai",
+    "reason": "选中 vendor/cordis/@ikun-ai/cordis，正文和简介均为上游 TypeScript 插件框架。文字没有捏造，但框架依赖能否作为 DSH 插件收录未建立证据；先核收录身份。"
+  },
+  "gglin001/dsh-grok-tui": {
+    "sourceDescription": "",
+    "sourceReadme": "dsh-grok-tui is a Grok-style terminal frontend for DeepSeek Harness. It keeps DSH as the only agent runtime and durable session authority, while reusing the terminal, composer, Markdown, diff, and inline rendering primitives imported from grok-build. The project is implemented as two cooperating components: The bridge does not replace or fork the DSH agent loop.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "repositoryPath": "packages/dsh-tui-bridge",
+      "packageName": "@dsh-grok-tui/bridge",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile tui add ./packages/dsh-tui-bridge"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/gglin001/dsh-grok-tui",
+    "reason": "安装目标是 packages/dsh-tui-bridge；正文介绍由两个组件组成的整套 Grok 风格前端，只明确 bridge 不替换 agent loop。不能据此赋予桥接子包整套终端界面与渲染能力；须补桥接层具体接口职责。"
+  },
+  "zhyu-24/dsh-session-handover": {
+    "sourceDescription": "dsh Web GUI long-session handover plugin: derive a lightweight new session with a prefilled opening line, keeping the old session intact.",
+    "sourceReadme": "# dsh-session-handover English · [中文](./README.zh-CN.md) Long-session handover plugin for the **dsh** Web GUI: derive a lightweight new session without losing the old one. Instead of compressing context in place, it analyzes the current session, predicts a few \"new-session goals\" for you to pick, writes an editable `HANDOVER-*.md` doc into the session workspace, and jumps to a new blank session whose input box is pre…",
+    "sourceInstall": {
+      "method": "skills-add",
+      "target": "~/.agents/skills",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add git+https://github.com/zhyu-24/dsh-session-handover.git",
+        "dsh plugin --profile web add link:/path/to/dsh-session-handover"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/zhyu-24/dsh-session-handover",
+    "reason": "条目被识别为 Skill、install.method 为 skills-add，但冻结正文只有原生 Web GUI 插件 README，安装命令也是 dsh plugin add，未见 Skill 正文。功能本身有证据，先确认收录类型与安装方式。"
+  },
+  "uckkk/dsh-jupiter": {
+    "sourceDescription": "木星",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-jupiter",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-jupiter"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-jupiter",
+    "reason": "作者只写“木星”与“纯 Node 实现，无网络依赖”，无法判断是天体查询、计算还是演示。“接入木星相关功能”没有具体用途证据，应保持中文简介待生成。"
+  },
+  "uckkk/dsh-gallium": {
+    "sourceDescription": "镓元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-gallium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-gallium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-gallium",
+    "reason": "仅“镓元素”与运行方式，未说明查询、计算或展示行为；“相关能力”为空泛补写，应补作者功能资料后再生成。"
+  },
+  "uckkk/dsh-plutonium": {
+    "sourceDescription": "钚元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-plutonium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-plutonium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-plutonium",
+    "reason": "仅“钚元素”与运行方式，无法形成具体用途。文字大体复述但仍不满足功能简介，应保持待生成。"
+  },
+  "uckkk/dsh-copper": {
+    "sourceDescription": "铜元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-copper",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-copper"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-copper",
+    "reason": "仅“铜元素”与运行方式，未建立具体功能；“相关能力”不应被算作已完成。"
+  },
+  "uckkk/dsh-potassium": {
+    "sourceDescription": "钾元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-potassium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-potassium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-potassium",
+    "reason": "仅“钾元素”与运行方式，不能判断实际提供什么服务；不应以元素插件名称复述代替简介。"
+  },
+  "uckkk/dsh-bismuth": {
+    "sourceDescription": "铋元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bismuth",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bismuth"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bismuth",
+    "reason": "仅“铋元素”与运行方式，“相关功能”没有动作或结果证据，需补资料。"
+  },
+  "uckkk/dsh-palladium": {
+    "sourceDescription": "钯元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-palladium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-palladium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-palladium",
+    "reason": "仅“钯元素”与运行方式，没有具体用途可核，需补资料。"
+  },
+  "uckkk/dsh-antimony": {
+    "sourceDescription": "锑元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-antimony",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-antimony"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-antimony",
+    "reason": "仅“锑元素”与运行方式，“相关能力”属于泛化补写，需保持待生成。"
+  },
+  "bpc-oss/chrome-faithful": {
+    "sourceDescription": "Faithful control of your real, logged-in Chrome profiles: MCP server + MV3 extension + authenticated localhost bridge. No copied profiles, no debug profile, no remote-debugging port, no Edge.",
+    "sourceReadme": "Faithful control of your real, logged-in Chrome profiles. An MCP server + MV3 Chrome extension + authenticated localhost bridge that lets AI agents drive the Chrome that already holds your logins, extensions, and history. No copied profiles, no debug profile, no --remote-debugging-port, no Edge, no global mouse/keyboard automation. English · 简体中文 --- Browser-control tools optimize for different jobs:…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "chrome-faithful",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin --profile web add @bpc-oss/dsh-plugin-chrome-faithful@0.4.0"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/bpc-oss/chrome-faithful",
+    "reason": "根安装身份为 chrome-faithful，但 README 的 DSH 安装命令指定 @bpc-oss/dsh-plugin-chrome-faithful@0.4.0。简介对整个 MCP/扩展产品有证据，仍需确认所选包是哪个分发组件及其实际边界。"
+  },
+  "uckkk/dsh-actinium": {
+    "sourceDescription": "锕元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-actinium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-actinium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-actinium",
+    "reason": "冻结作者描述仅为元素名称“锕元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-afghanistan": {
+    "sourceDescription": "阿富汗国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-afghanistan",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-afghanistan"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-afghanistan",
+    "reason": "冻结作者描述仅为地名主题“阿富汗国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-aluminium": {
+    "sourceDescription": "铝元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-aluminium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-aluminium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-aluminium",
+    "reason": "冻结作者描述仅为元素名称“铝元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-americium": {
+    "sourceDescription": "镅元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-americium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-americium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-americium",
+    "reason": "冻结作者描述仅为元素名称“镅元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-angola": {
+    "sourceDescription": "安哥拉国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-angola",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-angola"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-angola",
+    "reason": "冻结作者描述仅为地名主题“安哥拉国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-bahamas": {
+    "sourceDescription": "巴哈马国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bahamas",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bahamas"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bahamas",
+    "reason": "冻结作者描述仅为地名主题“巴哈马国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-bohrium": {
+    "sourceDescription": "𬭛元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bohrium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bohrium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bohrium",
+    "reason": "冻结作者描述仅为元素名称“𬭛元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-bosnia": {
+    "sourceDescription": "波黑国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bosnia",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bosnia"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bosnia",
+    "reason": "冻结作者描述仅为地名主题“波黑国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-brazil": {
+    "sourceDescription": "巴西国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-brazil",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-brazil"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-brazil",
+    "reason": "冻结作者描述仅为地名主题“巴西国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-bromine": {
+    "sourceDescription": "溴元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bromine",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bromine"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bromine",
+    "reason": "冻结作者描述仅为元素名称“溴元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-brunei": {
+    "sourceDescription": "文莱国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-brunei",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-brunei"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-brunei",
+    "reason": "冻结作者描述仅为地名主题“文莱国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cobalt": {
+    "sourceDescription": "钴元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cobalt",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cobalt"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cobalt",
+    "reason": "冻结作者描述仅为元素名称“钴元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-copernicium": {
+    "sourceDescription": "鎶元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-copernicium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-copernicium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-copernicium",
+    "reason": "冻结作者描述仅为元素名称“鎶元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cuba": {
+    "sourceDescription": "古巴国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cuba",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cuba"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cuba",
+    "reason": "冻结作者描述仅为地名主题“古巴国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-curium": {
+    "sourceDescription": "锔元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-curium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-curium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-curium",
+    "reason": "冻结作者描述仅为元素名称“锔元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-czechia": {
+    "sourceDescription": "捷克国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-czechia",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-czechia"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-czechia",
+    "reason": "冻结作者描述仅为地名主题“捷克国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-darmstadtium": {
+    "sourceDescription": "𫟼元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-darmstadtium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-darmstadtium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-darmstadtium",
+    "reason": "冻结作者描述仅为元素名称“𫟼元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-denmark": {
+    "sourceDescription": "丹麦国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-denmark",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-denmark"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-denmark",
+    "reason": "冻结作者描述仅为地名主题“丹麦国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-krypton": {
+    "sourceDescription": "氪元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-krypton",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-krypton"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-krypton",
+    "reason": "冻结作者描述仅为元素名称“氪元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-kuwait": {
+    "sourceDescription": "科威特国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-kuwait",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-kuwait"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-kuwait",
+    "reason": "冻结作者描述仅为地名主题“科威特国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-libya": {
+    "sourceDescription": "利比亚国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-libya",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-libya"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-libya",
+    "reason": "冻结作者描述仅为地名主题“利比亚国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-lithuania": {
+    "sourceDescription": "立陶宛国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-lithuania",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-lithuania"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-lithuania",
+    "reason": "冻结作者描述仅为地名主题“立陶宛国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-argentina": {
+    "sourceDescription": "阿根廷国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-argentina",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-argentina"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-argentina",
+    "reason": "冻结作者描述仅为地名主题“阿根廷国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-argon": {
+    "sourceDescription": "氩元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-argon",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-argon"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-argon",
+    "reason": "冻结作者描述仅为元素名称“氩元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-arsenic": {
+    "sourceDescription": "砷元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-arsenic",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-arsenic"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-arsenic",
+    "reason": "冻结作者描述仅为元素名称“砷元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-astatine": {
+    "sourceDescription": "砹元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-astatine",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-astatine"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-astatine",
+    "reason": "冻结作者描述仅为元素名称“砹元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-austria": {
+    "sourceDescription": "奥地利国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-austria",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-austria"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-austria",
+    "reason": "冻结作者描述仅为地名主题“奥地利国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-barium": {
+    "sourceDescription": "钡元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-barium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-barium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-barium",
+    "reason": "冻结作者描述仅为元素名称“钡元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-belgium": {
+    "sourceDescription": "比利时国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-belgium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-belgium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-belgium",
+    "reason": "冻结作者描述仅为地名主题“比利时国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-belize": {
+    "sourceDescription": "伯利兹国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-belize",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-belize"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-belize",
+    "reason": "冻结作者描述仅为地名主题“伯利兹国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-berkelium": {
+    "sourceDescription": "锫元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-berkelium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-berkelium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-berkelium",
+    "reason": "冻结作者描述仅为元素名称“锫元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-bhutan": {
+    "sourceDescription": "不丹国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-bhutan",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-bhutan"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-bhutan",
+    "reason": "冻结作者描述仅为地名主题“不丹国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cadmium": {
+    "sourceDescription": "镉元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cadmium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cadmium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cadmium",
+    "reason": "冻结作者描述仅为元素名称“镉元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-caesium": {
+    "sourceDescription": "铯元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-caesium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-caesium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-caesium",
+    "reason": "冻结作者描述仅为元素名称“铯元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-calcium": {
+    "sourceDescription": "钙元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-calcium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-calcium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-calcium",
+    "reason": "冻结作者描述仅为元素名称“钙元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-californium": {
+    "sourceDescription": "锎元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-californium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-californium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-californium",
+    "reason": "冻结作者描述仅为元素名称“锎元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cambodia": {
+    "sourceDescription": "柬埔寨国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cambodia",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cambodia"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cambodia",
+    "reason": "冻结作者描述仅为地名主题“柬埔寨国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cameroon": {
+    "sourceDescription": "喀麦隆国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cameroon",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cameroon"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cameroon",
+    "reason": "冻结作者描述仅为地名主题“喀麦隆国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-canada": {
+    "sourceDescription": "加拿大国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-canada",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-canada"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-canada",
+    "reason": "冻结作者描述仅为地名主题“加拿大国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-cerium": {
+    "sourceDescription": "铈元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-cerium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-cerium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-cerium",
+    "reason": "冻结作者描述仅为元素名称“铈元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-chile": {
+    "sourceDescription": "智利国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-chile",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-chile"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-chile",
+    "reason": "冻结作者描述仅为地名主题“智利国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-chlorine": {
+    "sourceDescription": "氯元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-chlorine",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-chlorine"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-chlorine",
+    "reason": "冻结作者描述仅为元素名称“氯元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-chromium": {
+    "sourceDescription": "铬元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-chromium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-chromium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-chromium",
+    "reason": "冻结作者描述仅为元素名称“铬元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-gadolinium": {
+    "sourceDescription": "钆元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-gadolinium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-gadolinium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-gadolinium",
+    "reason": "冻结作者描述仅为元素名称“钆元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-germanium": {
+    "sourceDescription": "锗元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-germanium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-germanium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-germanium",
+    "reason": "冻结作者描述仅为元素名称“锗元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-germany": {
+    "sourceDescription": "德国国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-germany",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-germany"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-germany",
+    "reason": "冻结作者描述仅为地名主题“德国国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-ghana": {
+    "sourceDescription": "加纳国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-ghana",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-ghana"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-ghana",
+    "reason": "冻结作者描述仅为地名主题“加纳国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-gold": {
+    "sourceDescription": "金元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-gold",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-gold"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-gold",
+    "reason": "冻结作者描述仅为元素名称“金元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-greece": {
+    "sourceDescription": "希腊国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-greece",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-greece"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-greece",
+    "reason": "冻结作者描述仅为地名主题“希腊国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-guyana": {
+    "sourceDescription": "圭亚那国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-guyana",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-guyana"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-guyana",
+    "reason": "冻结作者描述仅为地名主题“圭亚那国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-hafnium": {
+    "sourceDescription": "铪元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-hafnium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-hafnium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-hafnium",
+    "reason": "冻结作者描述仅为元素名称“铪元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-haiti": {
+    "sourceDescription": "海地国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-haiti",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-haiti"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-haiti",
+    "reason": "冻结作者描述仅为地名主题“海地国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-hassium": {
+    "sourceDescription": "𬭶元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-hassium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-hassium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-hassium",
+    "reason": "冻结作者描述仅为元素名称“𬭶元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-holmium": {
+    "sourceDescription": "钬元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-holmium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-holmium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-holmium",
+    "reason": "冻结作者描述仅为元素名称“钬元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-hong-kong": {
+    "sourceDescription": "香港国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-hong-kong",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-hong-kong"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-hong-kong",
+    "reason": "冻结作者描述仅为地名主题“香港国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-hungary": {
+    "sourceDescription": "匈牙利国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-hungary",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-hungary"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-hungary",
+    "reason": "冻结作者描述仅为地名主题“匈牙利国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iceland": {
+    "sourceDescription": "冰岛国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iceland",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iceland"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iceland",
+    "reason": "冻结作者描述仅为地名主题“冰岛国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-indium": {
+    "sourceDescription": "铟元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-indium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-indium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-indium",
+    "reason": "冻结作者描述仅为元素名称“铟元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iodine": {
+    "sourceDescription": "碘元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iodine",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iodine"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iodine",
+    "reason": "冻结作者描述仅为元素名称“碘元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iran": {
+    "sourceDescription": "伊朗国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iran",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iran"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iran",
+    "reason": "冻结作者描述仅为地名主题“伊朗国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iraq": {
+    "sourceDescription": "伊拉克国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iraq",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iraq"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iraq",
+    "reason": "冻结作者描述仅为地名主题“伊拉克国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-ireland": {
+    "sourceDescription": "爱尔兰国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-ireland",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-ireland"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-ireland",
+    "reason": "冻结作者描述仅为地名主题“爱尔兰国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iridium": {
+    "sourceDescription": "铱元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iridium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iridium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iridium",
+    "reason": "冻结作者描述仅为元素名称“铱元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-iron": {
+    "sourceDescription": "铁元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-iron",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-iron"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-iron",
+    "reason": "冻结作者描述仅为元素名称“铁元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-israel": {
+    "sourceDescription": "以色列国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-israel",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-israel"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-israel",
+    "reason": "冻结作者描述仅为地名主题“以色列国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-italy": {
+    "sourceDescription": "意大利国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-italy",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-italy"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-italy",
+    "reason": "冻结作者描述仅为地名主题“意大利国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-jamaica": {
+    "sourceDescription": "牙买加国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-jamaica",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-jamaica"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-jamaica",
+    "reason": "冻结作者描述仅为地名主题“牙买加国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-jordan": {
+    "sourceDescription": "约旦国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-jordan",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-jordan"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-jordan",
+    "reason": "冻结作者描述仅为地名主题“约旦国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-lanthanum": {
+    "sourceDescription": "镧元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-lanthanum",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-lanthanum"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-lanthanum",
+    "reason": "冻结作者描述仅为元素名称“镧元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-laos": {
+    "sourceDescription": "老挝国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-laos",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-laos"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-laos",
+    "reason": "冻结作者描述仅为地名主题“老挝国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-lawrencium": {
+    "sourceDescription": "铹元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-lawrencium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-lawrencium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-lawrencium",
+    "reason": "冻结作者描述仅为元素名称“铹元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-lebanon": {
+    "sourceDescription": "黎巴嫩国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-lebanon",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-lebanon"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-lebanon",
+    "reason": "冻结作者描述仅为地名主题“黎巴嫩国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-livermorium": {
+    "sourceDescription": "鉝元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-livermorium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-livermorium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-livermorium",
+    "reason": "冻结作者描述仅为元素名称“鉝元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-panama": {
+    "sourceDescription": "巴拿马国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-panama",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-panama"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-panama",
+    "reason": "冻结作者描述仅为地名主题“巴拿马国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-paraguay": {
+    "sourceDescription": "巴拉圭国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-paraguay",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-paraguay"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-paraguay",
+    "reason": "冻结作者描述仅为地名主题“巴拉圭国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-peru": {
+    "sourceDescription": "秘鲁国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-peru",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-peru"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-peru",
+    "reason": "冻结作者描述仅为地名主题“秘鲁国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-philippines": {
+    "sourceDescription": "菲律宾国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-philippines",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-philippines"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-philippines",
+    "reason": "冻结作者描述仅为地名主题“菲律宾国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-phosphorus": {
+    "sourceDescription": "磷元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-phosphorus",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-phosphorus"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-phosphorus",
+    "reason": "冻结作者描述仅为元素名称“磷元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-platinum": {
+    "sourceDescription": "铂元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-platinum",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-platinum"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-platinum",
+    "reason": "冻结作者描述仅为元素名称“铂元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-pluto": {
+    "sourceDescription": "冥王星",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-pluto",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-pluto"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-pluto",
+    "reason": "冻结作者描述仅为天体名称“冥王星”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-poland": {
+    "sourceDescription": "波兰国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-poland",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-poland"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-poland",
+    "reason": "冻结作者描述仅为地名主题“波兰国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-polonium": {
+    "sourceDescription": "钋元素",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-polonium",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-polonium"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-polonium",
+    "reason": "冻结作者描述仅为元素名称“钋元素”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-portugal": {
+    "sourceDescription": "葡萄牙国家",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-portugal",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-portugal"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-portugal",
+    "reason": "冻结作者描述仅为地名主题“葡萄牙国家”，README 仅为固定模板“纯 Node 实现，无网络依赖。”；未说明查询、计算、展示等具体行为。应补充作者功能证据，不能用“相关功能/能力”视为简介已完成。"
+  },
+  "uckkk/dsh-permutation": {
+    "sourceDescription": "排列数",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-permutation",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-permutation"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-permutation",
+    "reason": "资料仅为“排列数”和“纯 Node 实现，无网络依赖”，未明确提供计算、生成还是讲解。与百分位数等同类条目一致，先补具体功能证据。"
+  },
+  "uckkk/dsh-fibonacci": {
+    "sourceDescription": "斐波那契",
+    "sourceReadme": "# dsh-fibonacci · 斐波那契 纯 Node 实现，无网络依赖。 ```bash dsh plugin add github:uckkk/dsh-fibonacci ``` ## 安装 ```bash dsh plugin add github:uckkk/dsh-fibonacci ``` ## 使用 安装后在会话中调用该插件注册的工具即可。 ## 许可 MIT",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-fibonacci"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-fibonacci",
+    "reason": "只给“斐波那契”名称与安装/通用调用模板，未说明是计算、展示还是知识讲解；不能用名称补出计算能力。"
+  },
+  "uckkk/dsh-percentile": {
+    "sourceDescription": "百分位数",
+    "sourceReadme": "纯 Node 实现，无网络依赖。",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-percentile",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-percentile"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-percentile",
+    "reason": "只有“百分位数”和“纯 Node 实现，无网络依赖”，未说明计算/查询行为，模型的统计处理能力没有足够资料支持。"
+  },
+  "uckkk/dsh-chengdu-city": {
+    "sourceDescription": "成都市",
+    "sourceReadme": "- city_info：返回 成都市（Chengdu）的undefined信息。 纯 Node 实现，无网络依赖。 安装后在会话中调用该插件注册的工具即可。 MIT",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-chengdu-city",
+      "needsConfig": false,
+      "commands": [
+        "dsh plugin add github:uckkk/dsh-chengdu-city"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/uckkk/dsh-chengdu-city",
+    "reason": "README 写“返回成都市的 undefined 信息”，输出内容字段残缺；知识方向可猜但不能列人工通过，应补作者资料。"
+  },
+  "koji-xiaoer/dsh-plugins": {
+    "sourceDescription": "DSH(DeepSeek Harness)插件仓库:增强主页、模型选择器增强、费用预估等插件与一键安装脚本",
+    "sourceReadme": "存放 DeepSeek Harness（DSH）会话中由 AI 助手创建的动态插件（Dynamic Cordis Plugin）源码的仓库。 DSH 的动态插件是临时运行在 DSH 进程中的 Cordis 插件，由会话中的助手通过 cordis_define 定义。插件定义不随进程重启保留，因此本仓库用于： - 持久化保存每个插件的 Host / Client 源码 - 记录插件的用途、运行状态与修复记录 - 需要时可通过源码在任何会话中重新创建（cordis_define + cordis_run） 归档规则：动态插件 → 插件类/；界面/主页增强 → 增强主页类/；其余 → 其他/。 新插件结构（插件类/ /）： 插件两种形态： 本仓库是公开仓库：任何密钥一旦提交即视为泄露，必须立即吊销。提交前强制遵守： 1. 每次提交前运行扫描：…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "dsh-mods-enhanced",
+      "needsConfig": true,
+      "commands": [
+        "dsh plugin --profile web add github:koji-xiaoer/dsh-plugins",
+        "git clone git@github.com:koji-xiaoer/dsh-plugins.git",
+        "git config core.hooksPath hooks"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/koji-xiaoer/dsh-plugins",
+    "reason": "README 描述动态插件源码归档集合，根描述混合主页、模型选择器、费用等；无法确定 dsh-mods-enhanced 当前单一收录包的主要用途，应先核对包与 README 对应关系。"
+  },
+  "whitelonng/dshcode": {
+    "sourceDescription": "Community desktop companion for DeepSeek Harness — one-click Electron app for macOS and Windows",
+    "sourceReadme": "English | 中文 DSHCode 是一款面向 macOS 和 Windows 的免费开源桌面 AI Agent 应用。它将 DeepSeek 官方开源项目 DeepSeek Harness 的 Web UI 与插件运行时打包成一个可直接安装的 Electron 应用——无需 Node.js、无需终端、无需命令行。 DSHCode 继承了 DeepSeek Harness 的完整能力，并加上了开箱即用的桌面体验。 Agent 核心 — 插件化框架，内置 bash、文件系统、网页搜索/抓取、终端、LSP 与子进程工具；支持沙箱隔离与逐操作审批提示。 交互式 UI — 内联渲染的 GenUI 卡片：图表、表格、测验、3D 场景、示意图、表单与进度视图。 Skills 技能 — 可安装的技能目录，为 Agent 提供专项工作流——研究、文档写作、视觉工具等。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/whitelonng/dshcode.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/whitelonng/dshcode",
+    "reason": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "sourceEvidenceUrl": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/package.json",
+    "sourceEvidenceCommit": "db823cece8666e8450708ee6fd044e6257ca473f",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/package.json",
+        "sha256": "1d8e9d6591bc9429f324e9edc6d90560e095b05312faaefdfd0c30e54965d7bb",
+        "path": "package.json"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/README.md",
+        "sha256": "e659565bfde97d9d497a5f1f60ccfff48ab5929fa6ff3ac55420f44913ce609f",
+        "path": "README.md"
+      }
+    ],
+    "reviewNotes": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "reviewScope": "production-package-followup",
+    "reviewedAt": "2026-09-10T07:54:45.301Z"
+  },
+  "fufankeji/deepseek-harness-studio": {
+    "sourceDescription": "DeepSeek Harness 零代码桌面端｜一键启动，支持 Windows 与 macOS；内置插件发现、热点插件推送、一键安装与管理、AI 智能推荐和视觉增强。",
+    "sourceReadme": "DeepSeek Harness Studio 官方网站 · 中文 · English 赋范空间出品 · DeepSeek Harness 的零代码桌面增强 视觉增强 + 本地模型 + 插件市场 + Preset 广场 · 0 代码一键部署和使用 自动发现并推送生态新插件，AI 智能推荐值得安装的能力；无需命令行即可完成搜索、校验、安装、启停与卸载。 下载 macOS arm64 开发预览版 · 下载 Windows x64 开发预览版 点击快速查看功能演示 https://github.com/user-attachments/assets/0717f7c7-a872-4d2b-acc2-3a1c4874c732 > 下表只列已经进入源码、桌面组合和用户操作链路的能力；远期设想不再与现有功能混排。 > 以下能力尚未形成完整的一等产品入口，不计入当前功能。…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": true,
+      "commands": [
+        "git clone https://github.com/fufankeji/deepseek-harness-studio.git"
+      ],
+      "commandSource": "README install section"
+    },
+    "sourceUrl": "https://github.com/fufankeji/deepseek-harness-studio",
+    "reason": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "sourceEvidenceUrl": "https://raw.githubusercontent.com/fufankeji/deepseek-harness-studio/257d429156a243517a2cafdff777125cd3fb6d54/package.json",
+    "sourceEvidenceCommit": "257d429156a243517a2cafdff777125cd3fb6d54",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/fufankeji/deepseek-harness-studio/257d429156a243517a2cafdff777125cd3fb6d54/package.json",
+        "sha256": "cdb85da822cad87bc3f7e05e6804ab60e3e3b7266adea7ff94b526c603c0e4fc",
+        "path": "package.json"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/fufankeji/deepseek-harness-studio/257d429156a243517a2cafdff777125cd3fb6d54/README.md",
+        "sha256": "f3a46dc53bfce8e269b7d40e9d1707f3bcdfb7b3dea8cb8cf8080156e10ee30d",
+        "path": "README.md"
+      }
+    ],
+    "reviewNotes": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "reviewScope": "production-package-followup",
+    "reviewedAt": "2026-09-10T07:54:45.301Z"
+  },
+  "op7418/pilot-harness": {
+    "sourceDescription": "Pilot Harness — a CodePilot-inspired desktop client and plugin suite for DeepSeek Harness on macOS, Windows, and Linux.",
+    "sourceReadme": "Pilot Harness English | 中文 A CodePilot-inspired desktop client and plugin suite for DeepSeek Harness. Run the DeepSeek Harness plugin runtime as a focused native app, manage providers and multimodal models visually, and keep desktop additions isolated as ordinary Harness plugins.…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false
+    },
+    "sourceUrl": "https://github.com/op7418/pilot-harness",
+    "reason": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "sourceEvidenceUrl": "https://raw.githubusercontent.com/op7418/pilot-harness/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/package.json",
+    "sourceEvidenceCommit": "d1fa9c15fc00c05ea6931aafd724554ca34d5a6d",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/op7418/pilot-harness/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/package.json",
+        "sha256": "fab8ea471db40d7292caae71e9e814f7d752b13db5f523bfec95fa1ddc43afc7",
+        "path": "package.json"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/op7418/pilot-harness/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/README.md",
+        "sha256": "4f8bd6940a62da2c19fab39584fce9e6f6bd90669a90a166c1a0a34dacbf68b5",
+        "path": "README.md"
+      }
+    ],
+    "reviewNotes": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "reviewScope": "production-package-followup",
+    "reviewedAt": "2026-09-10T07:54:45.301Z"
+  },
+  "see-sol-lab/deepseekgui": {
+    "sourceDescription": "Windows desktop workbench with a bundled DSH runtime and app-local settings and sessions, Changes / Git / Worktrees / Memory views, approval-gated Git/PR tools, and global and project memory. Experimental Linux AppImage.",
+    "sourceReadme": "English | 中文 在本地工作台中，与 DeepSeek 一起完成项目。 基于 DeepSeek Harness ，面向 Windows 与 Linux 的本地桌面工作台。 --> DeepSeekGUI 是基于 DeepSeek Harness 的本地 AI 工作台。选择项目文件夹，在会话中让助手读取代码、修改文件、运行命令和浏览网页；通过「改动」「Git」「并行工作区」「记忆」视图检查项目状态，用专用工具完成提交、推送与 Pull Request，并通过全局记忆和项目记忆延续协作。 发行包自带运行时，配置模型 API key 后即可开始。 非官方产品： 基于 DeepSeek Harness 构建，由第三方独立开发，与 DeepSeek 无隶属关系，未获官方背书。 许可分层： DeepSeekGUI 原创产品层采用 PolyForm Perimeter License 1.0.1；…",
+    "sourceInstall": {
+      "method": "pnpm-profile",
+      "packageName": "@deepseek-ai/dsh-root",
+      "needsConfig": false,
+      "commands": [
+        "git clone https://github.com/See-Sol-Lab/DeepSeekGUI.git"
+      ],
+      "commandSource": "README"
+    },
+    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI",
+    "reason": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "sourceEvidenceUrl": "https://raw.githubusercontent.com/See-Sol-Lab/DeepSeekGUI/000d003a6e9a0464dbf6a740694f569f3cc0b21f/package.json",
+    "sourceEvidenceCommit": "000d003a6e9a0464dbf6a740694f569f3cc0b21f",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/See-Sol-Lab/DeepSeekGUI/000d003a6e9a0464dbf6a740694f569f3cc0b21f/package.json",
+        "sha256": "ff00f0ca914eaf89b02938521c3adab60d46be32707ae7596f35e638d69962fa",
+        "path": "package.json"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/See-Sol-Lab/DeepSeekGUI/000d003a6e9a0464dbf6a740694f569f3cc0b21f/README.md",
+        "sha256": "a5415368743462c6278ee37e48f2cf695eb545633359b3ee62e93db676040079",
+        "path": "README.md"
+      }
+    ],
+    "reviewNotes": "所选 @deepseek-ai/dsh-root 是 private 工作区根，包含多个子工作区，未声明包入口或 dsh.bundle。README 的桌面发行产品用途属实，但不能证明当前 cordis-plugin / pnpm-profile 根包身份可作为独立插件。",
+    "reviewScope": "production-package-followup",
+    "reviewedAt": "2026-09-10T07:54:45.301Z"
+  }
+}

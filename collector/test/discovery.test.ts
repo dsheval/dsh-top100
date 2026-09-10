@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { GithubRepo } from "../src/github.js";
 import { discoverRepositories } from "../src/sources/discovery.js";
 
@@ -85,5 +85,119 @@ describe("discoverRepositories", () => {
       },
     });
     expect(receivedQuery).toContain("pushed:>=2026-08-20T00:00:00Z");
+  });
+});
+
+describe("discovery partial recovery", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("retains partial results from all engines and runs every subsequent source", async () => {
+    const repositoryRequest = vi.fn(async (query: string) => ({
+      total_count: query.startsWith("short") ? 2 : 1,
+      incomplete_results: false,
+      items: [repo(query.startsWith("short") ? 1 : 2, query.startsWith("short") ? "partial/repository" : "later/repository")],
+    }));
+    const codeRequest = vi.fn(async (query: string, page: number) => {
+      if (query === "timeout-code" && page === 2) throw new Error("timeout");
+      return {
+        total_count: query === "timeout-code" ? 2 : 1,
+        incomplete_results: false,
+        items: [{ repository: { id: query === "timeout-code" ? 3 : 4,
+          full_name: query === "timeout-code" ? "partial/code" : "later/code" } }],
+      };
+    });
+    const npmFetch = vi.fn(async (input: string | URL | Request) => {
+      const url = new URL(String(input));
+      const failedSource = url.searchParams.get("text") === "timeout-npm";
+      if (failedSource && url.searchParams.get("from") === "1") throw new Error("timeout");
+      return new Response(JSON.stringify({ total: failedSource ? 2 : 1, objects: [
+        { package: { name: "plugin", links: { repository: failedSource ? "github:partial/npm" : "github:later/npm" } } },
+      ] }), { status: 200 });
+    });
+    const result = await discoverRepositories({
+      config: {
+        repositoryQueries: [{ id: "short", query: "short" }, { id: "later", query: "later" }],
+        codeQueries: [{ id: "timeout", query: "timeout-code" }, { id: "later", query: "later-code" }],
+        npmQueries: [{ id: "timeout", query: "timeout-npm" }, { id: "later", query: "later-npm" }],
+      },
+      partitionOptions: { request: repositoryRequest, semanticRetries: 0 },
+      codeOptions: { request: codeRequest, perPage: 1, semanticRetries: 0 },
+      npmOptions: { fetchImpl: npmFetch as typeof fetch, pageSize: 1, maxPages: 2 },
+    });
+    expect(result.candidates.map((candidate) => candidate.fullName)).toEqual([
+      "partial/repository", "later/repository", "partial/code", "later/code", "partial/npm", "later/npm",
+    ]);
+    expect(result.candidates[0].repo).toEqual(repo(1, "partial/repository"));
+    expect(result.audit.complete).toBe(false);
+    expect(result.audit.sources.map(({ id, status, candidates, requests }) => ({ id, status, candidates, requests }))).toEqual([
+      { id: "github-repository:short", status: "partial", candidates: 1, requests: 2 },
+      { id: "github-repository:later", status: "complete", candidates: 1, requests: 2 },
+      { id: "github-code:timeout", status: "partial", candidates: 1, requests: 3 },
+      { id: "github-code:later", status: "complete", candidates: 1, requests: 2 },
+      { id: "npm:timeout", status: "partial", candidates: 1, requests: 2 },
+      { id: "npm:later", status: "complete", candidates: 1, requests: 1 },
+    ]);
+  });
+
+  it("reports empty initial failures accurately while still attempting later sources", async () => {
+    const result = await discoverRepositories({
+      config: {
+        repositoryQueries: [{ id: "failure", query: "failure" }],
+        codeQueries: [{ id: "failure", query: "failure" }],
+        npmQueries: [{ id: "failure", query: "failure" }, { id: "later", query: "later" }],
+      },
+      partitionOptions: { request: async () => { throw new Error("timeout"); } },
+      codeOptions: { request: async () => { throw new Error("timeout"); } },
+      npmOptions: { fetchImpl: (async (input) => {
+        if (new URL(String(input)).searchParams.get("text") === "failure") throw new Error("timeout");
+        return new Response(JSON.stringify({ total: 0, objects: [] }), { status: 200 });
+      }) as typeof fetch },
+    });
+    expect(result.candidates).toEqual([]);
+    expect(result.audit.complete).toBe(false);
+    expect(result.audit.sources.map(({ status, requests, candidates }) => ({ status, requests, candidates }))).toEqual([
+      { status: "failed", requests: 1, candidates: 0 },
+      { status: "failed", requests: 1, candidates: 0 },
+      { status: "failed", requests: 1, candidates: 0 },
+      { status: "complete", requests: 1, candidates: 0 },
+    ]);
+  });
+
+  it.each(["partial", "failed"] as const)("includes a %s npm source in overall completeness", async (status) => {
+    const result = await discoverRepositories({
+      config: {
+        repositoryQueries: [{ id: "empty", query: "empty" }], codeQueries: [],
+        npmQueries: [{ id: "npm", query: "npm" }],
+      },
+      partitionOptions: { request: async () => ({ total_count: 0, incomplete_results: false, items: [] }) },
+      npmOptions: {
+        maxPages: 1, pageSize: 1,
+        fetchImpl: (async () => {
+          if (status === "failed") throw new Error("timeout");
+          return new Response(JSON.stringify({ total: 2, objects: [{ package: { name: "one" } }] }), { status: 200 });
+        }) as typeof fetch,
+      },
+    });
+    expect(result.audit.sources[0].status).toBe("complete");
+    expect(result.audit.sources[1].status).toBe(status);
+    expect(result.audit.complete).toBe(false);
+  });
+
+  it("retains a successful incremental page when the next page fails", async () => {
+    vi.stubEnv("DSH_INCREMENTAL_REPOSITORY_PAGES", "2");
+    const result = await discoverRepositories({
+      mode: "incremental",
+      config: { repositoryQueries: [{ id: "window", query: "window" }], codeQueries: [], npmQueries: [] },
+      partitionOptions: {
+        perPage: 1,
+        request: async (_query, page) => {
+          if (page === 2) throw new Error("timeout");
+          return { total_count: 2, incomplete_results: false, items: [repo(1, "first/plugin")] };
+        },
+      },
+    });
+    expect(result.candidates.map((candidate) => candidate.fullName)).toEqual(["first/plugin"]);
+    expect(result.audit.sources[0]).toMatchObject({ status: "partial", candidates: 1, requests: 2 });
+    expect(result.audit.complete).toBe(false);
   });
 });

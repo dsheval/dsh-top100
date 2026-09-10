@@ -49,6 +49,16 @@ export function presentDiagnosticFinding(
   const bundle = report.bundles.find((item) => item.name === finding.subject);
   let message: string;
   switch (finding.code) {
+    case "runtime-missing-services":
+      message = en ? `Required host services are missing: ${(listParameter(finding, "services") ?? []).join(", ")}. Check the author’s configuration and companion plugins.`
+        : `宿主入口缺少必需服务：${(listParameter(finding, "services") ?? []).join("、")}。请检查作者要求的配置或配套插件。`;
+      break;
+    case "runtime-failed":
+      message = en ? "The host entry failed to load. Check DSH logs for the cause." : "宿主入口加载失败，请查看 DSH 日志中的具体原因。";
+      break;
+    case "runtime-restart-required":
+      message = en ? "Configuration changed. Restart DSH, then refresh to verify." : "配置已改变，重启 DSH 后刷新验证。";
+      break;
     case "profile-missing":
       message = en ? "The Profile directory or package.json could not be read." : "Profile 目录或 package.json 不可读取。";
       break;

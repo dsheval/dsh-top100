@@ -7,6 +7,8 @@ import { DatabaseSync } from "node:sqlite";
 import type { DshPlugin, MarketData, PluginCategoryAssignment } from "@dsh-top100/schema";
 import {
   fallbackCategoryAssignments,
+  categorySourceHash,
+  CATEGORY_POLICY_VERSION,
   normalizeCategoryAssignments,
 } from "./categories.js";
 
@@ -66,11 +68,7 @@ export function dateInTimeZone(date = new Date(), timeZone = "Asia/Shanghai"): s
   }).format(date);
 }
 
-export function categorySourceHash(plugin: Pick<DshPlugin, "readmeSummary" | "description" | "topics">): string {
-  return createHash("sha256")
-    .update(JSON.stringify([plugin.readmeSummary ?? "", plugin.description ?? "", plugin.topics ?? []]))
-    .digest("hex");
-}
+export { categorySourceHash } from "./categories.js";
 
 function summarySourceHash(plugin: DshPlugin): string {
   return createHash("sha256")
@@ -249,8 +247,11 @@ export function importMarketData(
   try {
     database.exec("UPDATE repositories SET active = 0");
     for (const plugin of market.plugins) {
-      const categories = normalizeCategoryAssignments(plugin.categories);
-      plugin.categories = categories.length > 0 ? categories : fallbackCategoryAssignments(plugin);
+      // An explicit array is the classification plan's decision, including a
+      // withdrawal. Only legacy callers that omit it receive a rule fallback.
+      plugin.categories = Array.isArray(plugin.categories)
+        ? normalizeCategoryAssignments(plugin.categories)
+        : fallbackCategoryAssignments(plugin);
       upsertRepository.run(
         plugin.fullName,
         plugin.name,
@@ -339,6 +340,8 @@ function readCategoriesByRepository(database: DatabaseSync): Map<number, PluginC
       confidence: Number(row.confidence),
       evidence: String(row.evidence),
       source: String(row.source) as PluginCategoryAssignment["source"],
+      sourceHash: String(row.source_hash),
+      policyVersion: CATEGORY_POLICY_VERSION,
       ...(row.model ? { model: String(row.model) } : {}),
       ...(row.classified_at ? { classifiedAt: String(row.classified_at) } : {}),
     });
@@ -368,6 +371,8 @@ export function readCategoryCache(database: DatabaseSync): Map<string, CategoryC
       confidence: Number(row.confidence),
       evidence: String(row.evidence),
       source: String(row.source) as PluginCategoryAssignment["source"],
+      sourceHash: String(row.source_hash),
+      policyVersion: CATEGORY_POLICY_VERSION,
       ...(row.model ? { model: String(row.model) } : {}),
       ...(row.classified_at ? { classifiedAt: String(row.classified_at) } : {}),
     });

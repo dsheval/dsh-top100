@@ -6,7 +6,7 @@ import {
   parseInstallSpec,
   resolveInstallSpec,
 } from "../src/install/install-spec.js";
-import type { RankingEntry } from "../src/shared/types.js";
+import type { InstallProvenance, RankingEntry } from "../src/shared/types.js";
 
 function entry(partial: Partial<RankingEntry> & Pick<RankingEntry, "fullName" | "type">): RankingEntry {
   return {
@@ -39,6 +39,7 @@ describe("parseInstallSpec", () => {
   it("accepts npm package names and github specs", () => {
     expect(parseInstallSpec("dshmarket")).toEqual({ kind: "npm", spec: "dshmarket" });
     expect(parseInstallSpec("@liustack/modlens")).toEqual({ kind: "npm", spec: "@liustack/modlens" });
+    expect(parseInstallSpec("npm:@kenz1117/dsh-ui-usage-billing@latest")).toEqual({ kind: "npm", spec: "@kenz1117/dsh-ui-usage-billing@latest" });
     expect(parseInstallSpec("dsh-better-sidebar@latest")).toEqual({
       kind: "npm",
       spec: "dsh-better-sidebar@latest",
@@ -78,6 +79,20 @@ describe("parseInstallSpec", () => {
 });
 
 describe("resolveInstallSpec", () => {
+  it("respects a caller's actual custom Profile", () => {
+    const plugin = entry({ fullName: "acme/demo", type: "cordis-plugin", install: { packageName: "demo", commands: ["dsh plugin --profile demo add demo"] } });
+    expect(resolveInstallSpec(plugin)).toBeNull();
+    expect(resolveInstallSpec(plugin, "demo")).toEqual({ kind: "npm", spec: "demo" });
+  });
+  it.each([
+    ["NanmiCoder/dsh-agent-teams", "@nanmicoder/dsh-agent-teams", "dsh plugin --profile web add --save-exact @nanmicoder/dsh-agent-teams@0.1.16-rc.1", "@nanmicoder/dsh-agent-teams@0.1.16-rc.1"],
+    ["xmanrui/dsh-im", "@xmanrui/dsh-im", "dsh plugin --profile web add -w @xmanrui/dsh-im", "@xmanrui/dsh-im"],
+    ["kenz1117/dsh-ui-usage-billing", "@kenz1117/dsh-ui-usage-billing", "dsh plugin add npm:@kenz1117/dsh-ui-usage-billing@latest", "@kenz1117/dsh-ui-usage-billing@latest"],
+    ["liangmianya/dsh-synapse", "dsh-synapse", "corepack pnpm dsh plugin --profile web add dsh-synapse", "dsh-synapse"],
+    ["MichengAI/dsh-skills-manager", "@michengai/dsh-skills-manager", "dsh plugin --profile web add @michengai/dsh-skills-manager@latest --registry=https://registry.npmjs.org/", "@michengai/dsh-skills-manager@latest"],
+  ])("recognizes verified Top100 author syntax without executing it: %s", (fullName, packageName, command, spec) => {
+    expect(resolveInstallSpec(entry({ fullName, type: "cordis-plugin", install: { packageName, commands: [command] } }))).toEqual({ kind: "npm", spec });
+  });
   it("selects the current repository rather than the prerequisite market", () => {
     const plugin = entry({
       fullName: "e2mcc/dsh-popout-sidebar",
@@ -154,6 +169,30 @@ describe("resolveInstallSpec", () => {
 });
 
 describe("installed matching", () => {
+  const recorded: InstallProvenance = {
+    source: "npm", requestedTarget: "@acme/theme", resolvedTarget: "@acme/theme@0.5.0", packageName: "@acme/theme",
+    version: "0.5.0", commit: null, integrity: "sha512-test", verifiedAt: 1,
+    repositoryUrl: "https://github.com/acme/theme-repo", repositoryIdentity: "matched",
+  };
+  const manifest = { name: "@acme/theme", version: "0.5.0", repository: { url: "git+https://github.com/acme/theme-repo.git" } };
+  const compact = () => entry({ fullName: "acme/theme-repo", type: "cordis-plugin", install: { commands: ["dsh plugin add github:acme/theme-repo"] } });
+  it("binds a compact GitHub entry to the exact npm package installed from verified provenance", () => {
+    expect(isInstalledEntry(compact(), { "@acme/theme": "0.5.0" })).toBe(false);
+    expect(isInstalledEntry(compact(), { "@acme/theme": "0.5.0" }, "web", { "@acme/theme": { manifest, provenance: recorded } })).toBe(true);
+  });
+  it.each([
+    { version: "0.4.0" }, { packageName: "@acme/other" }, { resolvedTarget: "@acme/other@0.5.0" },
+    { repositoryUrl: "https://github.com/acme/other" }, { repositoryIdentity: "unavailable" as const }, { integrity: null },
+  ])("does not use stale or mismatched provenance %j", (changed) => {
+    expect(isInstalledEntry(compact(), { "@acme/theme": "0.5.0" }, "web", { "@acme/theme": { manifest, provenance: { ...recorded, ...changed } } })).toBe(false);
+  });
+  it("requires unchanged dependency, installed manifest, and unambiguous package scope", () => {
+    const evidence = { "@acme/theme": { manifest, provenance: recorded } };
+    expect(isInstalledEntry(compact(), { "@acme/theme": "^0.5.0" }, "web", evidence)).toBe(false);
+    expect(isInstalledEntry(compact(), { "@acme/theme": "0.5.0" }, "web", { "@acme/theme": { manifest: { ...manifest, version: "0.6.0" }, provenance: recorded } })).toBe(false);
+    expect(isInstalledEntry({ ...compact(), install: { repositoryPath: "packages/other" } }, { "@acme/theme": "0.5.0" }, "web", evidence)).toBe(false);
+    expect(isInstalledEntry({ ...compact(), install: { packageName: "@acme/other" } }, { "@acme/theme": "0.5.0" }, "web", evidence)).toBe(false);
+  });
   it("matches npm names and github dependency specs", () => {
     const plugin = entry({ fullName: "dsh-market/dsh-market", type: "cordis-plugin" });
     expect(isInstalledEntry(plugin, { dshmarket: "^1.15.0" })).toBe(false);

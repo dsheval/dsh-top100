@@ -33,7 +33,7 @@ import {
 import { queryOf, readJsonBody, sameOrigin, sendJson } from "./http.js";
 import { FULL_NAME_RE, isInstalledEntry, resolveInstallSpec } from "../install/install-spec.js";
 import { allowPackageBuild } from "../install/allow-builds.js";
-import { withPnpmRecovery } from "../install/pnpm-compat.js";
+import { classifyInstallFailure, withPnpmRecovery } from "../install/pnpm-compat.js";
 import {
   dropFromManifest,
   INBOX_BUNDLES,
@@ -44,6 +44,7 @@ import {
   readProfileManifestSnapshot,
   restoreProfileManifest,
 } from "./profile.js";
+import type { RuntimeBundle } from "./runtime-status.js";
 import { buildDiagnosticReport } from "./diagnose.js";
 import { cleanupAfterUninstall, listManagedPlugins } from "./manage.js";
 import { backupSkill, inspectSkill, withSkillMutationLock } from "./skill-management.js";
@@ -60,7 +61,7 @@ import {
 import { installSkill, rollbackInstalledSkill } from "../install/skill-install.js";
 import { consumeInstallApproval, createInstallPreflight, validateInstallApprovals, type ApprovedInstall } from "./install-preflight.js";
 import { createUpdatePreflight, validateUpdateApprovals, assertUpdateUnchanged, discardUpdateApprovals, UpdateNotAvailableError, startUpdatePreflightSession, finalizeUpdatePreflightSession, discardUpdatePreflightSession, type ApprovedUpdate } from "./update-preflight.js";
-import { assertProvenanceLedgerReadable, recordInstallProvenance, readSkillProvenance } from "./provenance.js";
+import { assertProvenanceLedgerReadable, recordInstallProvenance, readSkillProvenance, readBundleProvenance } from "./provenance.js";
 import { MAX_UPDATE_BATCH_SIZE, type UpdatePreflightIssue } from "../shared/types.js";
 import { isPluginCategoryId } from "../shared/categories.js";
 import type {
@@ -97,6 +98,7 @@ function assertFixedDependencySources(config: PluginResolvedConfig): void {
 }
 
 interface InstallJob extends InstallJobSnapshot {
+  profileDirectory: string;
   controller: AbortController;
   approval?: ApprovedInstall;
 }
@@ -179,10 +181,9 @@ async function safeLoad(config: PluginResolvedConfig) {
 }
 
 function installFailure(result: InstallResult): string {
-  const combined = `${result.stdout}\n${result.stderr}`;
-  const pnpmErrorOffset = combined.lastIndexOf("ERR_PNPM_");
-  if (pnpmErrorOffset !== -1) return combined.slice(pnpmErrorOffset).trim().slice(0, 1200);
-  return [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n").slice(-1200) || "install failed";
+  const failure = classifyInstallFailure(result);
+  const detail = [result.stdout.trim(), result.stderr.trim()].filter(Boolean).join("\n").slice(-2400);
+  return failure ? `[${failure.code}] ${failure.message}\n${detail}` : detail || "install failed";
 }
 
 function runProfilePlugin(
@@ -401,6 +402,7 @@ function enqueueManageJob(
   updateApproval?: ApprovedUpdate,
 ): void {
   const job: InstallJob = {
+    profileDirectory: resolve(profileDir(config.profile, config.profileDirectory)),
     id: id("job"), batchId: batch.id, fullName: name, profile: config.profile, action, kind,
     phase: "queued", lastLine: action === "update" ? "等待更新" : "等待卸载",
     error: null, message: null, requiresRestart: false, cancelRequested: false,
@@ -657,7 +659,7 @@ async function prepareJob(
     }
     const resolvedTarget = approval.bundleTarget;
     if (!resolvedTarget) throw new Error("Bundle 安装确认缺少已验证目标");
-    const spec = resolveInstallSpec(entry);
+    const spec = resolveInstallSpec(entry, config.profile);
     if (!spec) throw new Error("this catalog entry has no trusted DSH install source");
     const target = resolvedTarget.target;
     let buildApprovalKeys: string[] = [];
@@ -744,6 +746,7 @@ function createBatch(
   const unique = new Map(approvals.map((approval) => [approval.entry.fullName, approval]));
   for (const [fullName, approval] of unique) {
     const job: InstallJob = {
+      profileDirectory: resolve(profileDir(config.profile, config.profileDirectory)),
       id: id("job"),
       batchId,
       fullName,
@@ -795,6 +798,17 @@ export function mountRoutes(
   if (config.profileDirectory === undefined && !isDshProfileName(config.profile)) {
     throw new Error(`dsh-top100: invalid profile name ${JSON.stringify(config.profile)}`);
   }
+  const initialInstalled = readInstalled(config.profile, config.profileDirectory);
+  const toggled = new Set<string>();
+  const observeRuntime = (bundles: readonly RuntimeBundle[]) => {
+    const installed = readInstalled(config.profile, config.profileDirectory);
+    return host.readRuntime?.(bundles.map((bundle) => ({ ...bundle,
+      requiresRestart: toggled.has(bundle.name)
+        || initialInstalled[bundle.name] !== installed[bundle.name]
+        || [...jobs.values()].some((job) => job.profileDirectory === resolve(profileDir(config.profile, config.profileDirectory)) && job.requiresRestart
+          && (job.fullName === bundle.name || job.provenance?.packageName === bundle.name)),
+    }))) ?? {};
+  };
   const disposers = [
     host.webServer.register({
       kind: "exact",
@@ -872,18 +886,35 @@ export function mountRoutes(
             loadCatalogMetadata(dataUrl),
           ]);
           const installed = readInstalled(config.profile, config.profileDirectory);
-          const { total, excludedSkillCount, items } = filterCatalog(document, {
+          const installedEvidence = Object.fromEntries(Object.keys(installed).map((name) => {
+            let provenance = null;
+            try { provenance = readBundleProvenance(name, config.profile, config.profileDirectory); }
+            catch { /* Unreadable historical evidence must not imply an installed catalog identity. */ }
+            return [name, { manifest: readInstalledManifest(config.profile, name, config.profileDirectory), provenance }];
+          }));
+          const filterOptions = {
+            profile: config.profile,
             view,
             category,
             query: q,
             offset,
             limit,
             installed,
+            installedEvidence,
             excludeSkills,
             compatibleOnly,
             catalogScope,
             installAvailability,
-          });
+          };
+          const { total, excludedSkillCount, items } = filterCatalog(document, filterOptions);
+          // Count the complete view/search and availability scope before category
+          // selection or pagination, so other categories remain useful targets.
+          const categoryEntries = filterCatalog(document, {
+            ...filterOptions, category: null, offset: 0, limit: Number.MAX_SAFE_INTEGER,
+          }).items;
+          const categories = filteredCatalogCategories({
+            ...document, rankings: { ...document.rankings, total: categoryEntries },
+          }, { excludeSkills, compatibleOnly, catalogScope });
           const cache = await catalogCacheStatus(
             dataUrl,
             catalogScope === "skills" ? "skill-directory" : usesViewShard ? "view-shard" : "search-index",
@@ -892,9 +923,7 @@ export function mountRoutes(
           sendJson(response, 200, {
             view,
             category,
-            categories: catalogScope === "plugins"
-              ? metadata.pluginCategories.map((definition) => ({ ...definition, excludedSkillCount: 0 }))
-              : filteredCatalogCategories(document, { excludeSkills, compatibleOnly, catalogScope }),
+            categories,
             generatedAt: document.generatedAt,
             snapshotDate: document.snapshotDate,
             dataUrl: normalizeDataUrl(config.dataUrl || DEFAULT_DATA_URL),
@@ -1149,6 +1178,18 @@ export function mountRoutes(
           }).filter((item) => {
             return !q || `${item.name} ${item.description} ${item.descriptionZh} ${item.fullName ?? ""}`.toLowerCase().includes(q);
           });
+          const runtime = observeRuntime(items.filter((item) => item.kind === "bundle").map((item) => {
+            let entryIds: string[] | undefined;
+            try { entryIds = rowIdsForPackage(config.profile, item.name, config.profileDirectory); } catch { /* Observer falls back to module names. */ }
+            return { name: item.name, enabled: item.enabled, entryIds };
+          }));
+          for (const item of items) {
+            const status = runtime[item.name];
+            if (!status || item.kind !== "bundle") continue;
+            item.runtime = status;
+            item.activationState = status.state === "loaded" ? "live" : status.state === "restart-required" ? "restart-required"
+              : status.state === "failed" || status.state === "missing-services" ? "broken" : status.state === "inactive" ? "inert" : "unknown";
+          }
           sendJson(response, 200, { profile: config.profile, query: q, total: items.length, items, sourceMigrationRequired: hasLegacyTagSources(config) });
         } catch (error) { sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) }); }
       },
@@ -1165,6 +1206,7 @@ export function mountRoutes(
           if (!name) { sendJson(response, 400, { error: "name is required" }); return; }
           if (readInstalled(config.profile, config.profileDirectory)[name] === undefined) { sendJson(response, 404, { error: "plugin is not installed" }); return; }
           const result = setPackageEnabled(config.profile, name, enabled, config.profileDirectory);
+          if (result.ok) toggled.add(name);
           sendJson(response, result.ok ? 200 : 400, { ok: result.ok, name, enabled, rows: result.rows, error: result.reason, requiresRestart: result.ok });
         } catch (error) { sendJson(response, 400, { error: error instanceof Error ? error.message : "invalid json" }); }
       },
@@ -1342,7 +1384,7 @@ export function mountRoutes(
       async handler(request, response) {
         if (request.method !== "GET") { sendJson(response, 405, { error: "method not allowed" }); return; }
         try {
-          sendJson(response, 200, await buildDiagnosticReport(config.profile, { dataUrl: config.dataUrl || DEFAULT_DATA_URL, profileDir: config.profileDirectory }));
+          sendJson(response, 200, await buildDiagnosticReport(config.profile, { dataUrl: config.dataUrl || DEFAULT_DATA_URL, profileDir: config.profileDirectory, readRuntime: observeRuntime }));
         } catch (error) { sendJson(response, 502, { error: error instanceof Error ? error.message : String(error) }); }
       },
     }),

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildDiagnosticReport } from "../src/host/diagnose.js";
 import type { RankingsDocument } from "../src/shared/types.js";
+import { readRuntimeStatus, type HostRuntimeStatus } from "../src/host/runtime-status.js";
 
 const emptyCatalog: RankingsDocument = {
   schemaVersion: 1,
@@ -22,6 +23,63 @@ function temporaryProfile(): string {
 afterEach(() => {
   vi.unstubAllEnvs();
   for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true });
+});
+
+describe("Host runtime diagnostic wiring", () => {
+  function profileWithBundle(requiredPeer = false): string {
+    const directory = temporaryProfile();
+    const pluginDirectory = join(directory, "node_modules", "runtime-demo");
+    mkdirSync(pluginDirectory, { recursive: true });
+    writeFileSync(join(directory, "package.json"), JSON.stringify({
+      dependencies: { "runtime-demo": "1.0.0", "not-a-bundle": "1.0.0" },
+      dsh: { profile: { bundles: ["runtime-demo"] } },
+    }));
+    writeFileSync(join(pluginDirectory, "package.json"), JSON.stringify({
+      name: "runtime-demo", version: "1.0.0", dsh: { bundle: { patch: "bundle.yml" } },
+      ...(requiredPeer ? { peerDependencies: { "missing-runtime-peer": "^1.0.0" } } : {}),
+    }));
+    writeFileSync(join(pluginDirectory, "bundle.yml"), '- insert: [{ id: declared-root, name: runtime-demo }]\n');
+    return directory;
+  }
+
+  it("includes missing required Host services in errors and keeps their names", async () => {
+    const readRuntime = vi.fn(() => ({ "runtime-demo": {
+      state: "missing-services", reason: "required-services-missing", missingServices: ["requiredBridge"],
+    } satisfies HostRuntimeStatus }));
+    const report = await buildDiagnosticReport("web", {
+      profileDir: profileWithBundle(), document: emptyCatalog, now: Date.parse(emptyCatalog.generatedAt), readRuntime,
+    });
+    expect(readRuntime).toHaveBeenCalledExactlyOnceWith([{ name: "runtime-demo", enabled: true, entryIds: ["declared-root"] }]);
+    expect(report.summary.ok).toBe(false);
+    expect(report.findings).toContainEqual(expect.objectContaining({
+      severity: "error", code: "runtime-missing-services", subject: "runtime-demo", parameters: { services: ["requiredBridge"] },
+    }));
+    expect(report.bundles[0].runtime?.missingServices).toEqual(["requiredBridge"]);
+  });
+
+  it("retains configuration errors even when a Host root has loaded", async () => {
+    const report = await buildDiagnosticReport("web", {
+      profileDir: profileWithBundle(true), document: emptyCatalog, now: Date.parse(emptyCatalog.generatedAt),
+      readRuntime: () => ({ "runtime-demo": { state: "loaded", reason: "root-active" } }),
+    });
+    expect(report.bundles[0].runtime).toEqual({ state: "loaded", reason: "root-active" });
+    expect(report.summary.ok).toBe(false);
+    expect(report.findings.some((finding) => finding.code === "peer-missing")).toBe(true);
+    expect(report.findings.filter((finding) => finding.code.startsWith("runtime-"))).toEqual([]);
+  });
+
+  it("preserves unknown for another Profile without claiming Host success or failure", async () => {
+    const get = vi.fn(() => { throw new Error("must not read a different Profile"); });
+    const report = await buildDiagnosticReport("other-profile", {
+      profileDir: profileWithBundle(), document: emptyCatalog, now: Date.parse(emptyCatalog.generatedAt),
+      readRuntime: (bundles) => readRuntimeStatus({ get }, { isCurrentProfile: false, bundles }),
+    });
+    expect(get).not.toHaveBeenCalled();
+    expect(report.bundles[0].runtime).toEqual({ state: "unknown", reason: "profile-not-active" });
+    // Summary covers detected errors; the distinct runtime field retains the observation gap.
+    expect(report.summary.ok).toBe(true);
+    expect(report.findings.filter((finding) => finding.code.startsWith("runtime-"))).toEqual([]);
+  });
 });
 
 describe("profile diagnostics", () => {

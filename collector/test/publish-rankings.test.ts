@@ -182,7 +182,7 @@ describe("v2 ranking publication", () => {
       });
     }
     expect(publication.manifest.snapshotId).toMatch(/^2026-08-31-[a-f0-9]{16}$/);
-    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.5");
+    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.6");
   });
 
   it("omits full-catalog-only fields from ranking pages and further trims search entries", () => {

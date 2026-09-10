@@ -9,6 +9,11 @@ import {
   type RepositoryRow,
 } from "./database.js";
 import { CATEGORY_DEFINITIONS } from "./categories.js";
+import { fallbackDescriptionZh } from "./llm.js";
+import { hasChineseDescription } from "./description-jobs.js";
+import { reviewedDescription } from "./editorial.js";
+import { matchingEditorialHold } from "./content-source.js";
+import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 interface RankingConfig {
   limits: { rising: number; hot: number };
@@ -127,7 +132,8 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     owner: repository.owner,
     description: repository.description,
     descriptionZh:
-      repository.descriptionZh || repository.description || "暂无中文简介，请查看项目 README。",
+      reviewedDescription(repository) ?? (hasChineseDescription(repository.descriptionZh) ? repository.descriptionZh!
+        : matchingEditorialHold({ ...repository, id: repository.fullName }) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(repository)),
     ...(repository.readmeSummary ? { readmeSummary: repository.readmeSummary } : {}),
     stars: repository.stars,
     dailyStars: scored.dailyStars,

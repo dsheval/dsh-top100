@@ -17,6 +17,33 @@ export class GithubError extends Error {
   }
 }
 
+/** Private metadata is usable only to suppress publication, never as report content. */
+export function rejectPrivateRepository(
+  repository: { private?: boolean; visibility?: string; full_name?: string; fullName?: string },
+  requestedFullName: string,
+  definitiveRejections: Set<string>,
+  knownPrivateIds: Set<string>,
+): { fullName: string; reason: string } | null {
+  if (repository.private !== true && repository.visibility !== "private") return null;
+  definitiveRejections.add(requestedFullName.toLowerCase());
+  knownPrivateIds.add(requestedFullName.toLowerCase());
+  const canonical = repository.full_name ?? repository.fullName;
+  if (canonical) {
+    definitiveRejections.add(canonical.toLowerCase());
+    knownPrivateIds.add(canonical.toLowerCase());
+  }
+  return { fullName: "[private repository]", reason: "private repository" };
+}
+
+/** A later private refresh also redacts failures recorded earlier in this run. */
+export function redactPrivateRejections(
+  records: ReadonlyArray<{ fullName: string; reason: string }>, knownPrivateIds: ReadonlySet<string>,
+): Array<{ fullName: string; reason: string }> {
+  return records.map(record => knownPrivateIds.has(record.fullName.toLowerCase())
+    ? { fullName: "[private repository]", reason: "private repository" }
+    : { ...record });
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
@@ -111,16 +138,14 @@ export async function fetchRawFile(
   branch?: string | null
 ): Promise<string | null> {
   const url = `https://raw.githubusercontent.com/${fullName}/${branch ? branch : "HEAD"}/${filePath}`;
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "dsh-market-collector" },
-    });
-    if (!res.ok) return null;
-    const text = await res.text();
-    return text.length > 1_000_000 ? text.slice(0, 1_000_000) : text;
-  } catch {
-    return null;
-  }
+  const res = await fetch(url, {
+    headers: { "User-Agent": "dsh-market-collector" },
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new GithubError(`GitHub raw ${res.status}`, res.status, url);
+  const text = await res.text();
+  return text.length > 1_000_000 ? text.slice(0, 1_000_000) : text;
 }
 
 /** 通过 contents API 读取小文件；可固定到与目录探测相同的分支。 */
@@ -171,6 +196,8 @@ export interface RepoContentItem {
 }
 
 export interface GithubRepo {
+  private?: boolean;
+  visibility?: string;
   id: number;
   node_id?: string;
   full_name: string;

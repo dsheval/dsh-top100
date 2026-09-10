@@ -42,8 +42,8 @@
           "name": "dsh-top100",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Cross-platform",
-          "softwareVersion": "1.3.3",
-          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.3",
+          "softwareVersion": "1.3.4",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.4",
           "license": "https://opensource.org/license/mit"
         }
       }
@@ -3122,15 +3122,15 @@
                 <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>插件版本</dt><dd>v1.3.3</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.4</dd></div>
                 <div><dt>指南使用 DSH</dt><dd>0.1.2-rc.1</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.3</code>
+                <code>npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.4</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.3"
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.4"
                   data-analytics="install-command"
                 >复制安装命令</button>
               </div>
@@ -3855,7 +3855,7 @@
               .map((item) => typeof item === "string" ? item : item?.id)
               .filter(Boolean)
           : [];
-        if (backendCategories.length > 0) {
+        if (Array.isArray(entry.plugin.categories)) {
           return backendCategories.includes(category);
         }
         return (categoryKeywords[category] ?? []).some((keyword) => {
@@ -3869,11 +3869,22 @@
       }
 
       function updateCategoryCounts() {
+        const query = viewState[currentView].query;
+        const indexed = requiresSearchIndex(currentView, query, installableOnly);
+        const usePublishedTotals = currentView === "all" && !indexed;
+        const scopedEntries = filterDiscoveryEntries(
+          indexed ? searchEntries ?? []
+            : currentView === "top100" ? hotEntries
+            : currentView === "rising" ? risingEntries : rankedEntries,
+          { query, installableOnly }
+        );
         for (const button of categoryButtons) {
           const category = button.dataset.category;
           const publishedCategory = (manifest?.categories ?? legacyCategoryDefinitions)
             .find((item) => item.id === category);
-          const count = category
+          const count = !usePublishedTotals
+            ? scopedEntries.filter((entry) => entryMatchesCategory(entry, category)).length
+            : category
             ? publishedCategory
               ? Math.max(0, publishedCategory.count - (publishedCategory.skillCount ?? 0))
               : rankedEntries.filter((entry) => entryMatchesCategory(entry, category)).length
@@ -4303,6 +4314,7 @@
       }
 
       function renderRanking() {
+        updateCategoryCounts();
         const state = viewState[currentView];
         featuredPlugin.hidden = !showFeaturedPlugin({
           view: currentView === "top100" ? "hot" : currentView === "all" ? "total" : currentView,
@@ -4339,9 +4351,9 @@
           ? matched.slice(0, state.visible)
           : matched;
         const fragment = document.createDocumentFragment();
-        rankHead.textContent = activeCategory || searchActive
-          ? "总榜排名"
-          : "排名";
+        rankHead.textContent = searchActive || currentView === "all"
+          ? "Stars 排名"
+          : currentView === "rising" ? "新锐榜排名" : "热度榜排名";
         searchClear.hidden = !searchActive;
         searchSort.hidden = !searchActive;
         searchResult.closest(".search-status-row").classList.toggle(
@@ -4364,9 +4376,7 @@
 
         for (const entry of shown) {
           const { plugin, rank: absoluteRank, name, descriptionZh } = entry;
-          const displayRank = activeCategory
-            ? Number(plugin.totalRank) || absoluteRank
-            : absoluteRank;
+          const displayRank = absoluteRank;
           const item = template.content.cloneNode(true);
           const pluginElement = item.querySelector(".plugin");
           const rank = item.querySelector(".rank");
@@ -4387,6 +4397,7 @@
           const command = installCommand(plugin);
 
           rank.textContent = `#${String(displayRank).padStart(3, "0")}`;
+          rank.setAttribute("aria-label", `${rankHead.textContent}第 ${displayRank} 名`);
           nameText.textContent = name;
           nameText.title = name;
           githubLink.href = repositoryUrl;

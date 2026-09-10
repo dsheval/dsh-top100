@@ -10,8 +10,10 @@ RUN npm ci --no-audit --no-fund
 
 COPY collector collector
 COPY schema schema
-COPY plugin/src/shared/install-source.ts plugin/src/shared/install-source.ts
-COPY plugin/src/shared/reviewed-descriptions.json plugin/src/shared/reviewed-descriptions.json
+COPY plugin/src/shared plugin/src/shared
+COPY plugin/src/install/install-spec.ts plugin/src/install/install-spec.ts
+COPY plugin/src/install/install-verify.ts plugin/src/install/install-verify.ts
+COPY plugin/src/install/npm-selector.ts plugin/src/install/npm-selector.ts
 COPY config config
 
 ENV NODE_ENV=production

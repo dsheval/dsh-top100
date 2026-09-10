@@ -33,6 +33,15 @@ function entry(extra: Partial<RankingEntry> = {}): RankingEntry {
 }
 
 describe("catalog evidence", () => {
+  it("keeps retained history in the ecosystem until its structure is rechecked", () => {
+    const historical = entry({ type: "cordis-plugin", install: {
+      method: "pnpm-profile", packageName: "@acme/example", commands: [],
+      discovery: { status: "review-required", kind: "bundle", evidence: ["历史记录保留"], checkedAt: "2026-09-01T00:00:00Z", policyVersion: 0 },
+    } });
+    expect(catalogEvidence(historical)).toMatchObject({ formFactor: "ecosystem-project", compatible: false });
+    expect(catalogEvidence(historical).signalCodes).not.toContain("dsh-bundle");
+  });
+
   it("lets an installable Cordis bundle outrank incidental MCP or desktop wording", () => {
     const plugin = entry({
       type: "cordis-plugin",

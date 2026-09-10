@@ -7,6 +7,7 @@ import { EventEmitter } from "node:events";
 import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { WebServerService } from "../src/host/contracts.js";
+import { readRuntimeStatus } from "../src/host/runtime-status.js";
 import { mountRoutes } from "../src/host/routes.js";
 import { invalidateCatalog } from "../src/host/catalog.js";
 import { clearUpdateApprovals } from "../src/host/update-preflight.js";
@@ -251,6 +252,26 @@ describe("plugin lifecycle routes", () => {
       expect(readFileSync(join(backupPath, "my-notes.txt"), "utf8")).toBe("user edits");
       expect(existsSync(join(home, "skills", "my-skill"))).toBe(false);
     });
+  });
+
+  it("reports host evidence and keeps changed configurations pending until restart", async () => {
+    const directory = profileFixture("runtime");
+    writeFileSync(join(directory, "cordis.patch.yml"), "[]\n");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 503 })));
+    const harness = routeHarness();
+    const readRuntime = vi.fn((bundles) => readRuntimeStatus({ get: () => ({ entries: () => [
+      { id: "custom-loader-id", options: { name: "demo" }, fiber: { state: 2 } },
+    ] }) }, { isCurrentProfile: true, bundles }));
+    mountRoutes({ webServer: harness.webServer, readRuntime }, { profile: "web", profileDirectory: directory, dataUrl: "https://unused.invalid/runtime" });
+    const before = await harness.request("/dsh-top100/managed");
+    expect(before.body.items).toContainEqual(expect.objectContaining({ name: "demo", activationState: "live", runtime: { state: "loaded", reason: "root-active" } }));
+    const toggle = await harness.request("/dsh-top100/toggle", { method: "POST", body: { name: "demo", enabled: false } });
+    expect(toggle.status).toBe(200);
+    const after = await harness.request("/dsh-top100/managed");
+    expect(after.body.items).toContainEqual(expect.objectContaining({ name: "demo", enabled: false, activationState: "restart-required", runtime: { state: "restart-required", reason: "configuration-changed" } }));
+    expect(readRuntime).toHaveBeenLastCalledWith([expect.objectContaining({ name: "demo", entryIds: ["custom-loader-id"], requiresRestart: true })]);
+    const diagnose = await harness.request("/dsh-top100/diagnose");
+    expect(diagnose.body.findings).toContainEqual(expect.objectContaining({ code: "runtime-restart-required", subject: "demo" }));
   });
 
   it("reports the same Skill as global in multiple Profiles and removal affects both inventories", async () => {
@@ -779,7 +800,7 @@ describe("plugin lifecycle routes", () => {
       total: 1,
       items: [expect.objectContaining({ installLocator: { snapshotId, totalRank: 27 } })],
       scopeCounts: { plugins: 50, skills: 7, ecosystem: 0 },
-      categories: [{ id: "tools", count: 12 }],
+      categories: expect.arrayContaining([expect.objectContaining({ id: "tools", count: 1 })]),
     });
     expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
       "https://hot-metadata.example.invalid/data/manifest.json",
@@ -1158,5 +1179,57 @@ describe("plugin lifecycle routes", () => {
     expect(response.status).toBe(409);
     expect(response.body.userPatchReferenced).toBe(true);
     expect(runPlugin).not.toHaveBeenCalled();
+  });
+});
+
+describe("ranking category counts", () => {
+  it.each([
+    { query: "view=hot&category=tools", total: 3, counts: { tools: 3, coding: 1, knowledge: 1 } },
+    { query: "view=rising&category=knowledge", total: 1, counts: { tools: 0, coding: 1, knowledge: 1 } },
+    { query: "view=total&category=tools", total: 3, counts: { tools: 3, coding: 2, knowledge: 2 } },
+    { query: "view=hot&q=browser&category=tools", total: 3, counts: { tools: 3, coding: 2, knowledge: 1 } },
+    { query: "view=hot&q=browser&category=tools&installAvailability=installable", total: 2, counts: { tools: 2, coding: 2, knowledge: 1 } },
+    { query: "view=hot&category=tools&installAvailability=installable", total: 2, counts: { tools: 2, coding: 1, knowledge: 1 } },
+  ])("counts complete API scope before category and pagination: $query", async ({ query, total, counts }) => {
+    const directory = profileFixture("category-counts");
+    const entry = (id: number, category: string, searchable = true, installable = true) => ({
+      rank: id, fullName: `acme/item-${id}`, name: `item-${id}`, type: "cordis-plugin",
+      description: searchable ? "Browser automation" : "Document analysis", descriptionZh: "", stars: 10,
+      tags: [], categories: [category],
+      ...(installable ? { install: { packageName: `acme-item-${id}`, commands: [`dsh plugin add acme-item-${id}`] } } : {}),
+    });
+    const hot = [entry(1, "tools"), entry(2, "tools"), entry(3, "coding"), entry(4, "tools", true, false), entry(5, "knowledge", false)];
+    const rising = [entry(6, "knowledge"), entry(7, "coding")];
+    const all = [...hot, ...rising];
+    const snapshotId = "category-count-snapshot";
+    const prefix = `/data/snapshots/${snapshotId}`;
+    const files = Object.fromEntries(Object.entries({ hot, rising, search: all }).map(([dataset, rankings]) => [
+      `${prefix}/${dataset}.json`, JSON.stringify({ schemaVersion: 2, snapshotId, dataset, rankings }),
+    ]));
+    const reference = (dataset: string, count: number) => {
+      const url = `${prefix}/${dataset}.json`, text = files[url] ?? "{}";
+      return { url, count, bytes: Buffer.byteLength(text), sha256: createHash("sha256").update(text).digest("hex") };
+    };
+    const manifest = {
+      schemaVersion: 2, snapshotId, generatedAt: "2026-09-10T00:00:00Z", snapshotDate: "2026-09-10", pageSize: 100,
+      definitions: { total: "stars", rising: "growth", hot: "composite" },
+      datasets: { hot: reference("hot", 5), rising: reference("rising", 2), search: reference("search", 7), skills: reference("skills", 0),
+        total: { count: 7, skillCount: 0, pageSize: 100, pageCount: 0, pages: [] } },
+      categories: ["tools", "coding", "knowledge"].map(id => ({ id, label: id, description: id, count: 999,
+        skillCount: 0, pageSize: 100, pageCount: 0, pages: [] })),
+    };
+    vi.stubGlobal("fetch", vi.fn(async (url: string | URL | Request) => {
+      const path = new URL(String(url)).pathname;
+      if (path.endsWith("/manifest.json")) return Response.json(manifest);
+      return files[path] ? new Response(files[path]) : new Response("missing", { status: 404 });
+    }));
+    const harness = routeHarness();
+    mountRoutes(harness, { dataUrl: "https://category-counts.example.invalid/data", profile: "web", profileDirectory: directory });
+    const response = await harness.request(`/dsh-top100/rankings?${query}&catalogScope=plugins&limit=1`);
+    expect(response.status).toBe(200);
+    expect(response.body.total).toBe(total);
+    expect(response.body.items).toHaveLength(1);
+    const categories = response.body.categories as Array<{ id: string; count: number }>;
+    for (const [id, count] of Object.entries(counts)) expect(categories.find(item => item.id === id)?.count, id).toBe(count);
   });
 });

@@ -1,6 +1,8 @@
 /** Read-only profile and rankings diagnostics for the Settings page. */
+import type { PluginHost } from "./contracts.js";
 import { type DiagnosticReport, type RankingsDocument } from "../shared/types.js";
 export interface DiagnoseOptions {
+    readRuntime?: PluginHost["readRuntime"];
     profileDir?: string;
     dataUrl?: string;
     document?: RankingsDocument | null;

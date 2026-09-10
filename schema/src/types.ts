@@ -26,6 +26,8 @@ export interface PluginCategoryAssignment {
   source: PluginCategorySource;
   model?: string;
   classifiedAt?: string;
+  sourceHash?: string;
+  policyVersion?: number;
 }
 
 /** 一键安装方式 */
@@ -58,7 +60,28 @@ export interface PracticalScore {
   explanation: string;
 }
 
+export interface DiscoveryEvidence {
+  status: "verified" | "review-required";
+  kind: "bundle" | "client" | "host" | "skill";
+  evidence: string[];
+  checkedAt: string;
+  policyVersion: number;
+  sourceRevision?: string;
+}
+
+/** Source checks do not assert host compatibility, installation or runtime success. */
+export interface InstallSourceAssessment {
+  sourceKey: string;
+  status: "verified" | "invalid" | "unavailable";
+  checkedAt: string;
+  resolvedTarget?: string;
+  integrity?: string;
+  reason: string;
+}
+
 export interface InstallInfo {
+  discovery?: DiscoveryEvidence;
+  assessment?: InstallSourceAssessment;
   method: InstallMethod;
   /** skill 型：~/.agents/skills；cordis 型：profile 名 */
   target?: string;
@@ -240,6 +263,9 @@ export interface RankingSearchEntry {
   installTarget?: string;
   /** Selected plugin's package.json name; required to offer an npm target. Not publisher verification. */
   installPackageName?: string;
+  installRepositoryPath?: string;
+  discovery?: DiscoveryEvidence;
+  installAssessment?: InstallSourceAssessment;
   /** Omitted for legacy indexes or unknown configuration requirements. */
   needsConfig?: boolean;
 }

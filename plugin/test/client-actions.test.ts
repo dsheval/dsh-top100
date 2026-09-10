@@ -56,6 +56,21 @@ async function rankingSetup() {
 }
 
 describe("actual ranking navigation and failure actions", () => {
+  it("switches between four top-level pages with the correct market scope", async () => {
+    let { tree } = await rankingSetup();
+    const nav = elements(tree).find((e) => e.type === "nav")!;
+    expect(elements(nav).filter((e) => e.type === "button").map(text)).toEqual(["rankings", "skillsMarket", "installedPage", "diagnostics"]);
+    button(tree, "skillsMarket").props.onClick(); tree = render(); await tick(); tree = render();
+    expect(button(tree, "skillsMarket").props["aria-selected"]).toBe(true);
+    expect(button(tree, "rankings").props["aria-selected"]).toBe(false);
+    expect(requests.filter((r) => r.url.includes("rankings?")).at(-1)!.url).toContain("catalogScope=skills");
+    expect(requests.filter((r) => r.url.includes("rankings?")).at(-1)!.url).toContain("view=total");
+    button(tree, "installedPage").props.onClick(); tree = render();
+    button(tree, "rankings").props.onClick(); tree = render(); await tick(); tree = render();
+    expect(button(tree, "rankings").props["aria-selected"]).toBe(true);
+    expect(requests.filter((r) => r.url.includes("rankings?")).at(-1)!.url).toContain("catalogScope=plugins");
+    expect(elements(tree).some((e) => e.props.className === "catalog-navigation")).toBe(false);
+  });
   it("finds a restored failed Skill in its own directory before retrying", async () => {
     window.localStorage.setItem("dsh-top100:last-install-batch:v1", "failed-skill");
     const task = { batchId: "failed-skill", createdAt: 1, total: 1, completed: 1, requiresRestart: false, jobs: [
@@ -81,7 +96,7 @@ describe("actual ranking navigation and failure actions", () => {
   });
   it.each(["scope", "sort", "search", "category", "availability", "section"])("cancels pending preflight through the %s UI action", async (action) => {
     const { pending, tree } = await rankingSetup(); button(tree, "reviewInstall").props.onClick(); let current = render();
-    if (action === "scope") button(current, "catalogScope_skills").props.onClick();
+    if (action === "scope") button(current, "skillsMarket").props.onClick();
     if (action === "sort") button(current, "total").props.onClick();
     if (action === "availability") button(current, "installableOnly").props.onClick();
     if (action === "section") button(current, "installedPage").props.onClick();
@@ -137,8 +152,8 @@ describe("actual managed update actions", () => {
   });
   it.each(["2.0.0", "3.0.0-beta.1"])("does not offer a redundant or older update for installed %s", async (version) => {
     const { tree } = await managedSetup(undefined, { version, updateAvailable: false });
-    expect(button(tree, "noUpdateAvailable").props.disabled).toBe(true);
-    expect(button(tree, "updateAll").props.disabled).toBe(true);
+    expect(elements(tree).some((e) => e.type === "button" && ["noUpdateAvailable", "update", "checkUpdates"].includes(text(e)))).toBe(false);
+    expect(elements(tree).some((e) => e.type === "button" && text(e.props.children).includes("updateAll"))).toBe(false);
     expect(requests.some((r) => r.url.includes("update-preflight") || r.url === "/dsh-top100/manage")).toBe(false);
   });
   it("checks an unknown source without presenting it as an available update", async () => {

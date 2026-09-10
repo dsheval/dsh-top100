@@ -2,6 +2,15 @@
  * 轻量并发池：限制同时运行的异步任务数
  */
 
+/** Keep collection concurrency bounded while allowing large read-only validation runs. */
+export function collectionConcurrency(value = process.env.DSH_COLLECTION_CONCURRENCY): number {
+  const concurrency = Number(value ?? "10");
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 50) {
+    throw new Error("DSH_COLLECTION_CONCURRENCY must be an integer from 1 to 50");
+  }
+  return concurrency;
+}
+
 export async function runPool<T>(
   items: T[],
   worker: (item: T, index: number) => Promise<void>,

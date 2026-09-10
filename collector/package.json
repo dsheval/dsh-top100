@@ -11,10 +11,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@dsh-top100/schema": "*"
+    "@dsh-top100/schema": "*",
+    "js-yaml": "^4.1.0",
+    "semver": "^7.8.5"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "@types/js-yaml": "^4.0.9",
+    "@types/semver": "^7.8.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",
     "vitest": "4.1.11"

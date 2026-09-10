@@ -1,11 +1,14 @@
 /** Read-only profile and rankings diagnostics for the Settings page. */
 
+import type { PluginHost } from "./contracts.js";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_DATA_URL, loadSearchRankings, normalizeDataUrl } from "./catalog.js";
 import { matchCatalogEntry, skillsRoot } from "./manage.js";
+import { isInstalledEntry } from "../install/install-spec.js";
+import { readBundleProvenance } from "./provenance.js";
 import { bundlePatchEntries, isProtectedPackage, readUserPatch, userPatchState, userPatchPath } from "./patch-toggle.js";
 import { applyDshPatches, disabledRowIds, insertedRows, type DshPatch } from "./dsh-patch.js";
 import { INBOX_BUNDLES, profileDir } from "./profile.js";
@@ -26,6 +29,7 @@ const HOST_CORE_RE = /^@deepseek-ai\/(?:dsh|cordis)(?:-|$)/;
 const STALE_DAYS = 14;
 
 export interface DiagnoseOptions {
+  readRuntime?: PluginHost["readRuntime"];
   profileDir?: string;
   dataUrl?: string;
   document?: RankingsDocument | null;
@@ -69,8 +73,17 @@ function findDshInstallDir(entry = process.argv[1]): string | null {
 }
 
 function resolvePackageDir(profileDirectory: string, name: string, hostDir: string | null): string | null {
-  const candidates = [join(profileDirectory, "node_modules", name), hostDir ? join(hostDir, "node_modules", name) : null, join(dirname(profileDirectory), "node_modules", name)];
-  return candidates.find((candidate): candidate is string => Boolean(candidate && existsSync(join(candidate, "package.json")))) ?? null;
+  const candidates = [join(profileDirectory, "node_modules", name)];
+  if (hostDir) {
+    // npm/npx hoists official packages beside DSH, while pnpm may nest them.
+    // Enumerate Node's lookup directories without importing any target module.
+    try {
+      const paths = createRequire(join(hostDir, "package.json")).resolve.paths(name) ?? [];
+      candidates.push(...paths.map((directory) => join(directory, name)));
+    } catch { candidates.push(join(hostDir, "node_modules", name)); }
+  }
+  candidates.push(join(dirname(profileDirectory), "node_modules", name));
+  return candidates.find((candidate) => existsSync(join(candidate, "package.json"))) ?? null;
 }
 
 function resolvePeerDirectory(packageDirectory: string, profileDirectory: string, name: string, hostDir: string | null): string | null {
@@ -178,7 +191,14 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
     bundlePatches.push(...patch.patches);
     const version = typeof packageManifest?.version === "string" ? packageManifest.version : null;
     const local = spec.startsWith("link:") || spec.startsWith("file:");
-    const catalogEntry = matchCatalogEntry(document, name, spec, null);
+    let catalogEntry = matchCatalogEntry(document, name, spec, null);
+    if (!catalogEntry && packageManifest && !official) {
+      try {
+        const evidence = { [name]: { manifest: packageManifest, provenance: readBundleProvenance(name, profile, directory) } };
+        const matches = document?.rankings.total.filter((entry) => isInstalledEntry(entry, { [name]: spec }, profile, evidence)) ?? [];
+        if (matches.length === 1) catalogEntry = matches[0];
+      } catch { /* Missing or unreadable provenance is not proof of a catalog association. */ }
+    }
     let error: string | null = null;
     let errorCode: DiagnosticBundle["errorCode"];
     if (!packageDirectory) { error = "包未解析到安装目录"; errorCode = "package-missing"; }
@@ -228,6 +248,17 @@ export async function buildDiagnosticReport(profile: string, options: DiagnoseOp
   const orphans = patchState.disables.filter((id) => !knownIds.has(id));
   for (const id of orphans) findings.push({ severity: "warning", code: "patch-orphan", subject: id, message: "用户补丁停用了一个当前加载层找不到的 id" });
   for (const name of extraDependencies) findings.push({ severity: "info", code: "extra-dependency", subject: name, message: "写在 package.json 里，但不在 dsh.profile.bundles 加载顺序中", detail: dependencies[name] });
+  const runtime = options.readRuntime?.(bundles.map((bundle) => ({ name: bundle.name, enabled: bundle.enabled, entryIds: bundle.entries }))) ?? {};
+  for (const bundle of bundles) {
+    const status = runtime[bundle.name];
+    if (!status) continue;
+    bundle.runtime = status;
+    if (status.state === "missing-services" || status.state === "failed" || status.state === "restart-required") {
+      findings.push({ severity: status.state === "restart-required" ? "info" : "error", code: `runtime-${status.state}`, subject: bundle.name,
+        message: status.state === "missing-services" ? "宿主入口缺少必需服务；请检查作者要求的配置或配套插件" : status.state === "failed" ? "宿主入口加载失败；请查看 DSH 日志" : "配置已改变，重启 DSH 后刷新验证",
+        parameters: { services: status.missingServices ?? [] } });
+    }
+  }
   findings.sort((left, right) => ({ error: 0, warning: 1, info: 2 })[left.severity] - ({ error: 0, warning: 1, info: 2 })[right.severity]);
   const errors = findings.filter((item) => item.severity === "error");
   const warnings = findings.filter((item) => item.severity === "warning");

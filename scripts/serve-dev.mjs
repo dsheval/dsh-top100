@@ -1,13 +1,17 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { request as httpsRequest } from "node:https";
-import { extname, join, normalize, sep } from "node:path";
+import { extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const projectRoot = join(fileURLToPath(new URL("..", import.meta.url)));
 const publicRoot = join(projectRoot, "web/public");
 const port = Number(process.env.WEB_PORT ?? "4173");
 const dataOrigin = new URL(process.env.DSH_DATA_ORIGIN ?? "https://www.dsheval.ai");
+const localDataRoot = process.env.DSH_LOCAL_DATA_DIR ? resolve(process.env.DSH_LOCAL_DATA_DIR) : null;
+if (localDataRoot && !existsSync(join(localDataRoot, "manifest.json"))) {
+  throw new Error("DSH_LOCAL_DATA_DIR must contain a published manifest.json");
+}
 
 const mimeTypes = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -51,22 +55,22 @@ function proxyData(request, response) {
   upstream.end();
 }
 
-function localFileFor(pathname) {
+function localFileFor(pathname, root = publicRoot) {
   let decodedPath;
   try {
     decodedPath = decodeURIComponent(pathname);
   } catch {
     return null;
   }
-  const candidate = normalize(join(publicRoot, decodedPath));
-  if (candidate !== publicRoot && !candidate.startsWith(`${publicRoot}${sep}`)) return null;
+  const candidate = normalize(join(root, decodedPath));
+  if (candidate !== root && !candidate.startsWith(`${root}${sep}`)) return null;
   if (!existsSync(candidate) || !statSync(candidate).isFile()) return null;
   return candidate;
 }
 
 const server = createServer((request, response) => {
   const requestUrl = new URL(request.url ?? "/", "http://127.0.0.1");
-  if (requestUrl.pathname.startsWith("/data/")) return proxyData(request, response);
+  if (requestUrl.pathname.startsWith("/data/") && !localDataRoot) return proxyData(request, response);
   if (requestUrl.pathname === "/api/events") {
     response.writeHead(204);
     return response.end();
@@ -74,6 +78,16 @@ const server = createServer((request, response) => {
   if (request.method !== "GET" && request.method !== "HEAD") {
     response.writeHead(405, { allow: "GET, HEAD" });
     return response.end();
+  }
+  if (requestUrl.pathname.startsWith("/data/") && localDataRoot) {
+    const path = localFileFor(requestUrl.pathname.slice("/data".length), localDataRoot);
+    if (!path) {
+      response.writeHead(404);
+      return response.end("Local snapshot asset not found.\n");
+    }
+    response.writeHead(200, { "cache-control": "no-cache", "content-type": "application/json; charset=utf-8" });
+    if (request.method === "HEAD") return response.end();
+    return createReadStream(path).pipe(response);
   }
 
   // Match the public /top100/ mount while keeping /data/ and /api/events at root.
@@ -101,5 +115,5 @@ const server = createServer((request, response) => {
 
 server.listen(port, "127.0.0.1", () => {
   console.log(`Local preview: http://127.0.0.1:${server.address().port}/top100/`);
-  console.log(`Ranking data: ${dataOrigin.origin}/data/`);
+  console.log(`Ranking data: ${localDataRoot ?? `${dataOrigin.origin}/data/`}`);
 });

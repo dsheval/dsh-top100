@@ -11,8 +11,24 @@ export interface CatalogInstallSource {
         commands?: readonly unknown[];
     };
 }
+/** Recognized author intent, not arguments to pass to a shell or package manager. */
+export interface DshInstallCommandDetails {
+    target: string;
+    profile: string | null;
+    registry: string | null;
+    saveExact: boolean;
+    workspace: boolean;
+}
 export declare function normalizeInstallTarget(value: unknown): string | null;
 /** A # inside a ref or a quoted token is not a shell comment. */
 export declare function stripInstallComment(command: string): string;
+export declare function parseDshInstallCommandDetails(value: unknown): DshInstallCommandDetails | null;
+/** Public npm is supported; an explicit author Profile must match the requested destination. */
+export declare function isDshInstallCommandCompatible(command: DshInstallCommandDetails, options?: {
+    profile?: string;
+}): boolean;
+/** Syntax-only convenience. Installation must use the contextual catalog resolver below. */
 export declare function parseDshInstallCommand(value: unknown): string | null;
-export declare function resolveCatalogInstallTarget(entry: CatalogInstallSource): string | null;
+export declare function resolveCatalogInstallTarget(entry: CatalogInstallSource, options?: {
+    profile?: string;
+}): string | null;

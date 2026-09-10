@@ -1,3 +1,4 @@
+import { modelRequestsEnabled } from "./model-requests.js";
 /** Import collector JSON into SQLite and publish atomic frontend snapshots. */
 
 import "./env.js";
@@ -6,27 +7,24 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DshPlugin, MarketData } from "@dsh-top100/schema";
+import { fallbackDescriptionZh } from "./llm.js";
 import {
-  fallbackCategoryAssignments,
-  hasAuthoritativeCategories,
-  normalizeCategoryAssignments,
-  toDeepSeekAssignments,
-} from "./categories.js";
-import {
-  classifyWithDeepSeek,
-  fallbackDescriptionZh,
-  isGenericDescriptionZh,
-} from "./llm.js";
-import { runPool } from "./pool.js";
+  carryForwardDailyCategories, dailyCategoryWorker, planDailyCategories, runDailyCategories,
+  type DailyCategoryState,
+} from "./daily-categories.js";
 import { publishRankings } from "./publish-rankings.js";
 import { buildRankings } from "./rankings.js";
 import {
-  categorySourceHash,
   importMarketData,
   openDatabase,
   readActiveRepositories,
-  readCategoryCache,
 } from "./database.js";
+
+import { reviewedDescription } from "./editorial.js";
+import { hasChineseDescription } from "./description-jobs.js";
+import { refreshInstallAssessments, type AssessmentCache } from "./install-assessment.js";
+import { matchingEditorialHold } from "./content-source.js";
+import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -58,67 +56,43 @@ function publicPlugins(database: ReturnType<typeof openDatabase>, generatedAt: s
 
 async function classifyRepositories(
   market: MarketData,
-  database: ReturnType<typeof openDatabase>
+  database: ReturnType<typeof openDatabase>,
+  statePath: string,
+  priority: ReadonlySet<string>,
 ): Promise<void> {
-  const cache = readCategoryCache(database);
-  for (const plugin of market.plugins) {
-    plugin.categories = normalizeCategoryAssignments(plugin.categories);
-    if (hasAuthoritativeCategories(plugin.categories)) continue;
-    const cached = cache.get(plugin.fullName.toLocaleLowerCase());
-    const cachedCategories = normalizeCategoryAssignments(cached?.categories);
-    if (
-      cached &&
-      cached.sourceHash === categorySourceHash(plugin) &&
-      hasAuthoritativeCategories(cachedCategories)
-    ) {
-      plugin.categories = cachedCategories;
+  let previous: DailyCategoryState | undefined;
+  try {
+    previous = JSON.parse(readFileSync(statePath, "utf8")) as DailyCategoryState;
+    if (previous.schemaVersion !== 1 || !previous.jobs || typeof previous.jobs !== "object" || Array.isArray(previous.jobs)) {
+      throw new Error("Invalid daily category job state");
     }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
   }
-
-  const pending = market.plugins.filter(
-    (plugin) => !hasAuthoritativeCategories(plugin.categories)
-  );
+  // Legacy SQLite category-cache hashes omit identity fields. The full old row
+  // supplies the evidence needed to migrate unchanged sources without rebinding.
+  const previousSources = new Map(readActiveRepositories(database).map(repository => [
+    repository.fullName.toLowerCase(), { ...repository.raw, categories: repository.categories },
+  ]));
+  carryForwardDailyCategories(market.plugins, previousSources);
+  const plan = planDailyCategories(market.plugins, { previous, priority });
   const apiKey = process.env.DEEPSEEK_API_KEY;
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-chat";
+  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
   const batchSize = Number(process.env.DEEPSEEK_CATEGORY_BATCH_SIZE ?? "200");
   if (!Number.isInteger(batchSize) || batchSize < 0 || batchSize > 2000) {
     throw new Error("DEEPSEEK_CATEGORY_BATCH_SIZE must be an integer from 0 to 2000");
   }
-
-  let classified = 0;
-  if (apiKey && batchSize > 0) {
-    const batch = pending.slice(0, batchSize);
-    await runPool(
-      batch,
-      async (plugin) => {
-        const suggestions = await classifyWithDeepSeek(
-          {
-            name: plugin.fullName,
-            description: plugin.description,
-            readmeSummary: plugin.readmeSummary,
-            topics: plugin.topics,
-          },
-          { apiKey, baseURL, model }
-        );
-        if (suggestions.length > 0) {
-          plugin.categories = toDeepSeekAssignments(suggestions, model);
-          classified++;
-        }
-      },
-      5
-    );
-  }
-
-  let fallback = 0;
-  for (const plugin of market.plugins) {
-    if (hasAuthoritativeCategories(plugin.categories)) continue;
-    plugin.categories = fallbackCategoryAssignments(plugin);
-    fallback++;
-  }
-  console.log(
-    `Category classification: ${classified} DeepSeek, ${fallback} rule fallback, ${pending.length} pending before this run`
-  );
+  atomicJson(statePath, plan.state);
+  const result = await runDailyCategories(plan, {
+    worker: dailyCategoryWorker({ apiKey: apiKey ?? "", baseURL, model }),
+    model, limit: modelRequestsEnabled() && apiKey ? batchSize : 0, concurrency: 5,
+    onProgress: () => atomicJson(statePath, plan.state),
+  });
+  atomicJson(statePath, plan.state);
+  const count = (status: string) => Object.values(plan.state.jobs).filter(job => job.status === status).length;
+  console.log(`Category classification: ${result.completed} DeepSeek, ${result.failed} retry, ${plan.ready.length} ready before this run; `
+    + `${count("review-required")} held, ${count("missing-source")} missing source`);
 }
 
 async function main(): Promise<void> {
@@ -138,9 +112,12 @@ async function main(): Promise<void> {
 
   let repairedDescriptions = 0;
   for (const plugin of market.plugins) {
-    if (plugin.descriptionZh && !isGenericDescriptionZh(plugin.descriptionZh)) continue;
-    plugin.descriptionZh = fallbackDescriptionZh({
+    const reviewed = reviewedDescription(plugin);
+    if (reviewed) plugin.descriptionZh = reviewed;
+    if (hasChineseDescription(plugin.descriptionZh)) continue;
+    plugin.descriptionZh = matchingEditorialHold(plugin) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh({
       name: plugin.name,
+      repositoryPath: plugin.install?.repositoryPath,
       description: plugin.description,
       readmeSummary: plugin.readmeSummary,
       topics: plugin.topics,
@@ -151,12 +128,28 @@ async function main(): Promise<void> {
     console.log(`Description fallback repair: ${repairedDescriptions} repositories`);
   }
 
+  const assessmentPath = join(dirname(sourcePath), "install-assessments.json");
+  let assessmentCache: AssessmentCache = {};
+  try { assessmentCache = JSON.parse(readFileSync(assessmentPath, "utf8")); } catch { /* first check */ }
+  const assessmentLimit = Number(process.env.INSTALL_ASSESSMENT_BATCH_SIZE ?? "100");
+  if (!Number.isInteger(assessmentLimit) || assessmentLimit < 0 || assessmentLimit > 2000) throw new Error("INSTALL_ASSESSMENT_BATCH_SIZE must be an integer from 0 to 2000");
+  const priority = new Set<string>();
+  try {
+    const previous = JSON.parse(readFileSync(join(publicDirectory, "rankings.json"), "utf8"));
+    for (const list of [previous.rankings?.hot, previous.rankings?.rising, previous.rankings?.total?.slice(0, 100)]) {
+      for (const entry of list ?? []) priority.add(String(entry.fullName).toLowerCase());
+    }
+  } catch { /* first publication prioritizes Stars */ }
+  const assessmentResult = await refreshInstallAssessments(market.plugins, assessmentCache, { limit: assessmentLimit, priority });
+  atomicJson(assessmentPath, assessmentResult.cache);
+  console.log(`Source metadata preflight: ${assessmentResult.checked} checked (no package execution)`);
+
   const database = openDatabase({ path: databasePath });
   try {
-    await classifyRepositories(market, database);
+    await classifyRepositories(market, database, join(dirname(sourcePath), "category-jobs.json"), priority);
     atomicJson(sourcePath, market);
     const imported = importMarketData(database, market, {
-      model: process.env.DEEPSEEK_MODEL ?? "deepseek-chat",
+      model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro",
       timeZone: process.env.TZ ?? "Asia/Shanghai",
     });
     const rankings = buildRankings(

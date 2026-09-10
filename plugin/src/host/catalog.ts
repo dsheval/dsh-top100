@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rename, rm, writeFile } from "node:fs/promise
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { isInstalledEntry, parseInstallSpec, resolveInstallSpec } from "../install/install-spec.js";
+import { isInstalledEntry, parseInstallSpec, resolveInstallSpec, type InstalledEntryEvidence } from "../install/install-spec.js";
 import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
 import { withReviewedDescription } from "../shared/descriptions.js";
@@ -262,14 +262,14 @@ export function matchesQuery(entry: RankingEntry, query: string): boolean {
   return matchesSearchQuery(withReviewedDescription(entry), query);
 }
 
-function annotate(entry: RankingEntry, installed: Record<string, string>): CatalogItem {
-  const installSpec = resolveInstallSpec(entry);
+function annotate(entry: RankingEntry, installed: Record<string, string>, profile = "web", evidence?: Record<string, InstalledEntryEvidence>): CatalogItem {
+  const installSpec = resolveInstallSpec(entry, profile);
   return {
     ...entry,
     installSpec,
     installable: installSpec !== null,
-    installed: isInstalledEntry(entry, installed),
-    evidence: catalogEvidence(entry),
+    installed: isInstalledEntry(entry, installed, profile, evidence),
+    evidence: catalogEvidence(entry, profile),
   };
 }
 
@@ -360,6 +360,8 @@ export function filterCatalog(
     offset: number;
     limit: number;
     installed: Record<string, string>;
+    installedEvidence?: Record<string, InstalledEntryEvidence>;
+    profile?: string;
     excludeSkills?: boolean;
     compatibleOnly?: boolean;
     catalogScope?: CatalogScope;
@@ -378,7 +380,7 @@ export function filterCatalog(
     .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
     .filter((entry) => {
       if (!options.installAvailability || options.installAvailability === "all") return true;
-      const installable = resolveInstallSpec(entry) !== null;
+      const installable = resolveInstallSpec(entry, options.profile) !== null;
       return options.installAvailability === "installable" ? installable : !installable;
     })
     .map((entry) => ({ entry, score: scoreEntry(entry) }))
@@ -392,7 +394,7 @@ export function filterCatalog(
   if (hasQuery) {
     visible.sort((left, right) => right.score - left.score || left.entry.rank - right.entry.rank);
   }
-  const matched = visible.map(({ entry }) => annotate(entry, options.installed));
+  const matched = visible.map(({ entry }) => annotate(entry, options.installed, options.profile, options.installedEvidence));
   return {
     total: matched.length,
     excludedSkillCount,
@@ -737,18 +739,21 @@ export function parseSkillDirectoryDocument(raw: string): RankingsDocument {
 
 function normalizeSearchEntry(value: unknown, index: number): RankingEntry | null {
   if (value === null || typeof value !== "object") return null;
-  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown; needsConfig?: unknown };
+  const entry = value as Partial<RankingEntry> & { installTarget?: unknown; installPackageName?: unknown; installRepositoryPath?: string; discovery?: import("../shared/types.js").DiscoveryEvidence; installAssessment?: import("../shared/types.js").InstallSourceAssessment; needsConfig?: unknown };
   if (typeof entry.fullName !== "string") return null;
   const [owner = "", repositoryName = entry.fullName] = entry.fullName.split("/");
   const parsedTarget = typeof entry.installTarget === "string"
     ? parseInstallSpec(entry.installTarget)
     : null;
-  const install = entry.install ?? (parsedTarget ? {
+  const install = entry.install ?? (parsedTarget || entry.discovery ? {
     method: "manifest-v2",
     packageName: typeof entry.installPackageName === "string" ? entry.installPackageName : undefined,
-    target: parsedTarget.spec,
+    target: parsedTarget?.spec,
+    repositoryPath: entry.installRepositoryPath,
+    discovery: entry.discovery,
+    assessment: entry.installAssessment,
     ...(typeof entry.needsConfig === "boolean" ? { needsConfig: entry.needsConfig } : {}),
-    commands: [`dsh plugin add ${parsedTarget.spec}`],
+    commands: parsedTarget ? [`dsh plugin add ${parsedTarget.spec}`] : [],
     commandSource: "manifest-v2",
   } : undefined);
   return {

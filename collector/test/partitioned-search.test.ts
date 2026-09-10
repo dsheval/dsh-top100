@@ -123,3 +123,70 @@ describe("partitionedRepositorySearch", () => {
     ).rejects.toBeInstanceOf(RepositorySearchIncompleteError);
   });
 });
+
+describe("Repository Search partial recovery", () => {
+  it("retains observed pages and the failed request when the next page times out", async () => {
+    const request = vi.fn(async (_query: string, pageNumber: number, pageSize: number) => {
+      if (pageNumber === 2) throw new Error("timeout");
+      return { total_count: 3, incomplete_results: false, items: [repo(1), repo(2)].slice(0, pageSize) };
+    });
+    await expect(partitionedRepositorySearch("topic:dsh-plugin", {
+      request, perPage: 2, semanticRetries: 0,
+    })).rejects.toMatchObject({
+      name: "SearchPartialError",
+      partial: { repositories: [repo(1), repo(2)], audit: { requests: 3, repositories: 2, shards: 0 } },
+    });
+    expect(request).toHaveBeenCalledTimes(3);
+  });
+
+  it("retains identities even when complete pagination cannot be proved", async () => {
+    await expect(partitionedRepositorySearch("topic:dsh-plugin", {
+      request: async () => ({ total_count: 2, incomplete_results: false, items: [repo(1)] }),
+      semanticRetries: 0,
+    })).rejects.toMatchObject({
+      name: "RepositorySearchIncompleteError",
+      partial: { repositories: [repo(1)], audit: { requests: 2, repositories: 1, shards: 0 } },
+    });
+  });
+
+  it("retains candidates returned in persistently incomplete responses", async () => {
+    const request = vi.fn()
+      .mockResolvedValueOnce({ total_count: 2, incomplete_results: true, items: [repo(1)] })
+      .mockResolvedValueOnce({ total_count: 2, incomplete_results: true, items: [repo(2)] });
+    await expect(partitionedRepositorySearch("topic:dsh-plugin", {
+      request, semanticRetries: 1, retryDelayMs: 0,
+    })).rejects.toMatchObject({
+      name: "RepositorySearchIncompleteError",
+      partial: { repositories: [repo(1), repo(2)], audit: { requests: 2, repositories: 2, shards: 0 } },
+    });
+  });
+
+  it("reports one attempted request when no response was read", async () => {
+    await expect(partitionedRepositorySearch("topic:dsh-plugin", {
+      request: async () => { throw new Error("network"); },
+    })).rejects.toMatchObject({
+      partial: { repositories: [], audit: { requests: 1, repositories: 0, shards: 0 } },
+    });
+  });
+});
+
+describe("partition failure after completed shards", () => {
+  it("preserves completed leaves and candidates observed in the failing shard", async () => {
+    const request = vi.fn(async (query: string, _page: number, pageSize: number) => {
+      if (query.includes("00:00:00Z..2026-01-01T00:00:01Z")) {
+        return { total_count: 3, incomplete_results: false, items: [repo(1)] };
+      }
+      if (query.includes("00:00:00Z..2026-01-01T00:00:00Z")) {
+        return { total_count: 1, incomplete_results: false, items: [repo(1)] };
+      }
+      if (pageSize === 1) return { total_count: 2, incomplete_results: false, items: [repo(2)] };
+      throw new Error("timeout");
+    });
+    await expect(partitionedRepositorySearch("topic:dsh-plugin", {
+      from: new Date("2026-01-01T00:00:00Z"), to: new Date("2026-01-01T00:00:01Z"),
+      maxItemsPerShard: 2, perPage: 2, request, semanticRetries: 0,
+    })).rejects.toMatchObject({
+      partial: { repositories: [repo(1), repo(2)], audit: { repositories: 2, requests: 5, shards: 1 } },
+    });
+  });
+});

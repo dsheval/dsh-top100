@@ -93,6 +93,8 @@ export function bundleInstallPreflight(
 export async function createInstallPreflight(entry: RankingEntry, profile: string, signal?: AbortSignal): Promise<ApprovedInstall> {
   signal?.throwIfAborted();
   removeExpiredApprovals();
+  const spec = resolveInstallSpec(entry, profile);
+  if (!spec) throw new Error("this catalog entry has no trusted DSH install source");
   const approvalToken = randomUUID();
   const expiresAt = Date.now() + APPROVAL_TTL_MS;
   if (entry.type?.toLowerCase() === "skill") {
@@ -132,8 +134,6 @@ export async function createInstallPreflight(entry: RankingEntry, profile: strin
     return approved;
   }
 
-  const spec = resolveInstallSpec(entry);
-  if (!spec) throw new Error("this catalog entry has no trusted DSH install source");
   const bundleTarget = await verifyInstallSpec(spec, {
     signal,
     expectedRepository: entry.fullName,

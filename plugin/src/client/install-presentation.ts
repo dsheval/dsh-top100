@@ -1,6 +1,9 @@
 import type { InstallJobSnapshot, InstallPhase } from "../shared/types.js";
 
 export type InstallErrorKind =
+  | "peer"
+  | "build"
+  | "policy"
   | "ignored-builds"
   | "network"
   | "timeout"
@@ -89,13 +92,23 @@ function ignoredBuildPackages(raw: string): string[] {
 /** Turn raw pnpm/DSH output into an error category while preserving details. */
 export function presentInstallError(raw: string): InstallErrorPresentation {
   const detail = raw.trim() || "install failed";
+  const code = /^\[([a-z-]+)\]/.exec(detail)?.[1];
+  const kinds: Record<string, InstallErrorKind> = {
+    "ignored-builds": "ignored-builds", "peer-dependency": "peer", "host-peer": "peer",
+    "prepare-failed": "build", "lifecycle-failed": "build", "release-age": "policy",
+    "hoist-drift": "lockfile", "git-network": "network", "transient-network": "network",
+    "fetch-timeout": "timeout", "install-timeout": "timeout",
+  };
+  if (code && kinds[code]) return { kind: kinds[code], packages: code === "ignored-builds" ? ignoredBuildPackages(detail) : [], detail };
+  if (/ERR_PNPM_PEER_DEP_ISSUES/.test(detail)) return { kind: "peer", packages: [], detail };
+  if (/ERR_PNPM_PREPARE_PACKAGE|ELIFECYCLE/.test(detail)) return { kind: "build", packages: [], detail };
   if (/ERR_PNPM_IGNORED_BUILDS|Ignored build scripts/i.test(detail)) {
     return { kind: "ignored-builds", packages: ignoredBuildPackages(detail), detail };
   }
   if (/ERR_PNPM_FETCH_5\d\d|ERR_PNPM_META_FETCH_FAIL|ECONNRESET|EAI_AGAIN|ENETUNREACH|socket hang up/i.test(detail)) {
     return { kind: "network", packages: [], detail };
   }
-  if (/TimeoutError|ETIMEDOUT|timed?\s*out|超时/i.test(detail)) {
+  if (/TimeoutError|UND_ERR_CONNECT_TIMEOUT|ETIMEDOUT|timed?\s*out|超时/i.test(detail)) {
     return { kind: "timeout", packages: [], detail };
   }
   if (/\bEACCES\b|\bEPERM\b|permission denied|权限/i.test(detail)) {

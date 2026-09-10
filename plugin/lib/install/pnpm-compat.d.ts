@@ -1,18 +1,22 @@
-/** pnpm compatibility and one-shot recovery for profile package mutations. */
+/** pnpm compatibility and one-shot network recovery for profile package mutations. */
 import type { InstallResult } from "../shared/types.js";
-export declare const RELEASE_AGE_OVERRIDE = "--config.minimumReleaseAge=0";
-export declare const FETCH_TIMEOUT_OVERRIDE = "--config.fetchTimeout=600000";
-export declare const AUTO_INSTALL_PEERS_OFF = "--config.auto-install-peers=false";
 export type PluginRunner = (profile: string, args: string[]) => Promise<InstallResult>;
 /** pnpm 9 needs `-w` at a workspace root; every pnpm version rejects it outside one. */
 export declare function pluginArgsFor(directory: string, args: string[]): string[];
-type FailureCode = "hoist-drift" | "release-age" | "host-peer" | "fetch-timeout" | "transient-network";
-interface PnpmFailure {
-    code: FailureCode;
+export type PnpmFailureCode = "ignored-builds" | "peer-dependency" | "prepare-failed" | "lifecycle-failed" | "hoist-drift" | "release-age" | "host-peer" | "git-network" | "fetch-timeout" | "transient-network";
+export interface PnpmFailure {
+    code: PnpmFailureCode;
     packageName?: string;
     message: string;
 }
+export interface InstallFailure {
+    code: PnpmFailureCode | "cancelled" | "install-timeout" | "install-failed";
+    packageName?: string;
+    message: string;
+}
+/** Classify a failed command's output; warnings alone do not establish failure. */
 export declare function classifyPnpmFailure(raw: string): PnpmFailure | null;
-/** Apply the narrow, one-shot recoveries used by dsh-market. */
-export declare function withPnpmRecovery(run: PluginRunner, profile: string, args: string[], explicitDir?: string): Promise<InstallResult>;
-export {};
+/** UI summary only. Keep stdout/stderr as the unabridged details of both attempts. */
+export declare function classifyInstallFailure(result: InstallResult): InstallFailure | null;
+/** Retry only transport failures, once, with the user's exact options and policy. */
+export declare function withPnpmRecovery(run: PluginRunner, profile: string, args: string[], _explicitDir?: string): Promise<InstallResult>;
