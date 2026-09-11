@@ -4671,15 +4671,46 @@
   },
   "mrrisega/dsh-remote": {
     "sourceDescription": "Reverse-proxy gateway to control the DSH Web UI from a phone browser with full feature coverage (incl. privileged methods): loopback masquerading, WebSocket passthrough, login rate limiting, optional TLS, LAN or public reverse-proxy deployment.",
-    "sourceReadme": "> 曾用名 dsh-remote-ui（≤0.4.9）；2026-09 更名 dsh-remote-web —— 本插件是 > dsh-remote 全家桶的 dsh web 插件半（远程控制宿主插件，不是纯 UI/皮肤插件）， > 名称与功能定位一致。旧名安装可由新版 dsh-setup.mjs 自动迁移/清理。 > 给 DeepSeek Harness（dsh web）一个「随时随地」的公网入口。 > 安装后在 dsh web 的设置页登录账号，即得到一个专属的加密远程地址：人在办公室外、 > 用手机流量或任意网络打开它，都能像坐在电脑前一样操作 dsh——继续对话、看工具执行、 > 审批授权、改设置。不要求手机和电脑在同一 WiFi/局域网，也不需要公网 IP、 > 路由器映射或自己搭服务器，开箱即用、全程加密。 > 懂技术的用户也可以把服务部署到自己的服务器上，数据与流量完全自控（普通用户无需关心）。…",
-    "descriptionZh": "为电脑上的 DSH 提供远程网页入口，在手机或其他网络继续对话、查看工具执行与处理审批，也可按需自行部署服务。",
-    "sourceUrl": "https://github.com/mrRisega/dsh-remote",
-    "reviewedAt": "2026-09-10",
+    "sourceReadme": "> ⚠️ 兼容别名包（dsh-remote-ui）：本目录由 npm run sync:alias 从 packages/dsh-remote-web 自动生成， > 用于旧名条目在改名审核通过前继续可装。请勿手改——改源包后重新生成。 > 曾用名 dsh-remote-ui（≤0.4.9）；2026-09 更名 dsh-remote-web —— 本插件是 > dsh-remote 全家桶的 dsh web 插件半（远程控制宿主插件，不是纯 UI/皮肤插件）， > 名称与功能定位一致。旧名安装可由新版 dsh-setup.mjs 自动迁移/清理。 > 给 DeepSeek Harness（dsh web）一个「随时随地」的公网入口。 > 安装后在 dsh web 的设置页登录账号，即得到一个专属的加密远程地址：…",
     "sourceInstall": {
-      "packageName": "dsh-remote-web",
-      "repositoryPath": "packages/dsh-remote-web"
+      "packageName": "dsh-remote-ui",
+      "repositoryPath": "packages/dsh-remote-ui"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/mrRisega/dsh-remote",
+    "sourceEvidenceCommit": "67dc16033636fd13d99bcb10107b8c7d69e1e1e8",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/mrRisega/dsh-remote/blob/67dc16033636fd13d99bcb10107b8c7d69e1e1e8/packages/dsh-remote-ui/package.json",
+        "path": "packages/dsh-remote-ui/package.json",
+        "sha256": "1228ac325acf6c608d8a6460354e8c58060688367b86189f431338303a7f0677"
+      },
+      {
+        "url": "https://github.com/mrRisega/dsh-remote/blob/67dc16033636fd13d99bcb10107b8c7d69e1e1e8/packages/dsh-remote-ui/README.md",
+        "path": "packages/dsh-remote-ui/README.md",
+        "sha256": "21dfa4f1e0d7eacd64d2ccd7a1b7400974a31d85fc26edbf55f3c61cd62ca1df"
+      },
+      {
+        "url": "https://github.com/mrRisega/dsh-remote/blob/67dc16033636fd13d99bcb10107b8c7d69e1e1e8/packages/dsh-remote-ui/lib/index.js",
+        "path": "packages/dsh-remote-ui/lib/index.js",
+        "sha256": "f62fa8c8802415138a36bd4c0a9268f8a4b8e23d47881fde281850e91380e74a"
+      },
+      {
+        "url": "https://github.com/mrRisega/dsh-remote/blob/67dc16033636fd13d99bcb10107b8c7d69e1e1e8/packages/dsh-remote-ui/lib/client.js",
+        "path": "packages/dsh-remote-ui/lib/client.js",
+        "sha256": "b906c1ceec9e0ba28e91380492b44622dd8f946846f5aa80f6dbfc7220993e4c"
+      },
+      {
+        "url": "https://github.com/mrRisega/dsh-remote/blob/67dc16033636fd13d99bcb10107b8c7d69e1e1e8/packages/dsh-remote-ui/cordis.patch.yml",
+        "path": "packages/dsh-remote-ui/cordis.patch.yml",
+        "sha256": "6db66279af79839f1449f956382b99c22831518dbb433c8f045436194ef41e3c"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "reviewScope": "top100-20260911",
+    "descriptionZh": "在 DSH 设置页管理远程访问账号、连接地址和桥接服务，连接云端或自建服务，让手机浏览器远程操作电脑上的 DSH。"
   },
   "fisfzy/dsh-ego-browser": {
     "sourceDescription": "Browser agent.",

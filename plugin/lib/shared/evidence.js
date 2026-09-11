@@ -21,6 +21,15 @@ export function classifyFormFactor(entry, profile = "web") {
         return /dsh|deepseek harness/i.test(text) ? "dsh-skill" : "agent-skill";
     if (discoveryNeedsReview(entry))
         return "ecosystem-project";
+    const discovery = entry.install?.discovery;
+    if (isCordisEntry(entry) && discovery?.status === "verified") {
+        if (discovery.kind === "client")
+            return "dsh-client";
+        if (discovery.kind === "host")
+            return "dsh-plugin";
+        if (discovery.kind === "bundle")
+            return "dsh-bundle";
+    }
     if (isCordisEntry(entry) && resolveInstallSpec(entry, profile))
         return THEME_RE.test(text) ? "theme" : "dsh-bundle";
     if (DESKTOP_RE.test(text))
@@ -46,13 +55,17 @@ export function catalogEvidence(entry, profile = "web") {
     if (structured) {
         const structureCode = formFactor === "dsh-skill" ? "dsh-skill"
             : formFactor === "agent-skill" ? "agent-skill"
-                : formFactor === "theme" ? "theme-bundle"
-                    : "dsh-bundle";
+                : formFactor === "dsh-client" ? "dsh-client"
+                    : formFactor === "dsh-plugin" ? "dsh-plugin"
+                        : formFactor === "theme" ? "theme-bundle"
+                            : "dsh-bundle";
         signalCodes.push(structureCode);
         signals.push(formFactor === "dsh-skill" ? "声明为 DSH Skill"
             : formFactor === "agent-skill" ? "声明为通用 Agent Skill"
-                : formFactor === "theme" ? "命中 DSH/Cordis 主题 Bundle 结构"
-                    : "命中 DSH Bundle 结构");
+                : formFactor === "dsh-client" ? "已识别 DSH 客户端插件结构"
+                    : formFactor === "dsh-plugin" ? "已识别 DSH 宿主插件结构"
+                        : formFactor === "theme" ? "命中 DSH/Cordis 主题 Bundle 结构"
+                            : "命中 DSH Bundle 结构");
     }
     if (installSpec) {
         signalCodes.push("install-source");

@@ -44,7 +44,7 @@ export function initializeInstallGuide(root) {
     root.querySelector("[data-existing-status]").textContent = commands
       ? ""
       : isNpx
-        ? "填写完整版本号后显示命令，例如 0.1.2-rc.1。"
+        ? "填写完整版本号后显示命令，例如 0.1.5-rc.2。"
         : "选择后显示安装命令。";
     root.querySelector("[data-existing-location]").textContent = method.value === "source"
       ? "在原来的 DSH 源码仓库根目录执行："

@@ -6,7 +6,8 @@ import type { DshPlugin } from "@dsh-top100/schema";
 import { planDailyCategories, runDailyCategories, type DailyCategoryInput } from "../src/daily-categories.js";
 import { matchingEditorialHold } from "../src/content-source.js";
 import { planDescriptionJobs } from "../src/description-jobs.js";
-import { reviewedDescription } from "../src/editorial.js";
+import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
+import { descriptionFor } from "../../plugin/src/shared/description-rules.js";
 
 describe("September 11 source review", () => {
   const cohort = Object.entries(reviews).filter(([, value]) => "reviewBatch" in value && value.reviewBatch === "top100-20260911");
@@ -21,12 +22,12 @@ describe("September 11 source review", () => {
     stars: 100, topics: [], categories: [],
   });
 
-  it("recovers thirty source-reviewed categories across the priority lists, and withholds the two excluded objects", async () => {
-    expect(cohort).toHaveLength(32);
+  it("recovers thirty-one source-reviewed categories across the priority lists, and withholds the two excluded objects", async () => {
+    expect(cohort).toHaveLength(33);
     const entries = cohort.map(input);
     const first = planDailyCategories(entries);
     const second = planDailyCategories(entries, { previous: first.state });
-    expect(Object.values(second.state.jobs).filter(job => job.status === "complete")).toHaveLength(30);
+    expect(Object.values(second.state.jobs).filter(job => job.status === "complete")).toHaveLength(31);
     expect(second.state.jobs["zuorn/tydora"].status).toBe("review-required");
     expect(entries.find(entry => entry.fullName === "zuorn/tydora")!.categories).toEqual([]);
     expect(second.state.jobs["whitelonng/dshcode"].status).toBe("review-required");
@@ -34,6 +35,26 @@ describe("September 11 source review", () => {
     const worker = vi.fn();
     await runDailyCategories(second, { model: "mock", worker });
     expect(worker).not.toHaveBeenCalled();
+  });
+
+  it("uses the remote alias's functional review instead of its maintenance notice or negated skin phrase", () => {
+    const entry = input(cohort.find(([id]) => id === "mrrisega/dsh-remote")!);
+    expect(entry.install).toMatchObject({ packageName: "dsh-remote-ui", repositoryPath: "packages/dsh-remote-ui" });
+    expect(entry.readmeSummary).toContain("请勿手改——改源包后重新生成。");
+    expect(entry.readmeSummary).toContain("不是纯 UI/皮肤插件");
+    const first = planDailyCategories([entry]);
+    expect(entry.categories).toEqual([expect.objectContaining({ id: "tools", source: "manual" })]);
+    expect(first.ready).toHaveLength(0);
+    const second = planDailyCategories([entry], { previous: first.state });
+    expect(second.state).toEqual(first.state);
+    const source = { ...entry, description: entry.description ?? "", readmeSummary: entry.readmeSummary ?? "", install: entry.install ?? undefined };
+    const description = reviewedDescription(source);
+    expect(description).toContain("管理远程访问账号、连接地址和桥接服务");
+    expect(description).not.toMatch(/请勿手改|重新生成|皮肤/);
+    expect(descriptionFor({ ...source, descriptionZh: "请勿手改——改源包后重新生成。" }, descriptions)).toBe(description);
+    const differentPackage = { ...source, install: { ...source.install, packageName: "dsh-remote-web", repositoryPath: "packages/dsh-remote-web" } };
+    expect(reviewedDescription(differentPackage)).toBeNull();
+    expect(reviewedCategories(differentPackage)).toBeNull();
   });
 
   it("rejects caches for the six wrong package identities without invalidating other detection caches", () => {

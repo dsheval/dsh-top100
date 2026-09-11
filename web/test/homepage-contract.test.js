@@ -83,7 +83,7 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.match(html, /id="hero-search-form"/);
   assert.doesNotMatch(html, /market-radar|radar-item|renderMarketRadar/);
   assert.match(html, /data-content-switch="dsh"/);
-  assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.2-rc\.1 plugin/);
+  assert.match(dsh, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.5-rc\.2 plugin/);
   assert.match(html, /data-track-ranking-view="hot"/);
   assert.match(html, /track\("search_used"/);
   assert.match(html, /closest\("a\.github-link"\)/);
@@ -297,7 +297,7 @@ test("lets existing users choose their own DSH installation method", () => {
     assert.match(existing, new RegExp(`<code[^>]*data-existing-command="${command}"[^>]*><\\/code>`));
     assert.match(existing, new RegExp(`<button[^>]*data-existing-copy="${command}"`));
   }
-  assert.doesNotMatch(existing, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.2-rc\.1/);
+  assert.doesNotMatch(existing, /data-copy-command="npx @deepseek-ai\/dsh@0\.1\.5-rc\.2/);
 });
 
 test("keeps setup before the main three-step installation flow and folds recovery guidance", () => {
@@ -340,9 +340,9 @@ test("keeps displayed commands equal to copied commands and pins the beginner DS
   for (const command of [
     "node --version\nnpm --version\npnpm --version",
     "npm install -g pnpm@11.24.0",
-    `npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
-    "npx @deepseek-ai/dsh@0.1.2-rc.1 web",
-    "npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web list --depth 0",
+    `npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}`,
+    "npx @deepseek-ai/dsh@0.1.5-rc.2 web",
+    "npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web list --depth 0",
   ]) assert.ok(commands.includes(command), `missing copyable command: ${command}`);
   assert.doesNotMatch(dsh, /npx @deepseek-ai\/dsh (?:plugin|web|--version)/);
   const labels = [...dsh.matchAll(/<button[^>]*aria-label="([^"]+)"/g)].map((match) => match[1]);
@@ -438,9 +438,9 @@ test("keeps ranking rows subtly banded and clamps long plugin names", () => {
   assert.match(html, />安装 Top100 到 DSH<\/a>/);
   assert.doesNotMatch(html, /hero-release-version/);
   assert.doesNotMatch(html, /class="release-band"/);
-  assert.ok(html.includes(`data-copy-command="npx @deepseek-ai/dsh@0.1.2-rc.1 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}"`));
+  assert.ok(html.includes(`data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@${packageJson.version}"`));
   assert.ok(dsh.includes(`@dsheval/dsh-top100-plugin/v/${packageJson.version}`));
-  assert.match(dsh, /npx @deepseek-ai\/dsh@0\.1\.2-rc\.1 plugin --profile web add @dsheval\/dsh-top100-plugin/);
+  assert.match(dsh, /npx @deepseek-ai\/dsh@0\.1\.5-rc\.2 plugin --profile web add @dsheval\/dsh-top100-plugin/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?-webkit-line-clamp: 2/);
   assert.match(html, /\.plugin-name \{[\s\S]*?line-height: 1\.14/);
   assert.match(html, /\.plugin-name-text \{[\s\S]*?padding-bottom: 0\.08em/);

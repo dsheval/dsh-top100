@@ -2,7 +2,7 @@
 import type { Context } from "@deepseek-ai/cordis";
 import z from "@deepseek-ai/schemastery";
 import type { PluginResolvedConfig } from "./contracts.js";
-export declare const TOP100_SETTINGS_NS: import("@deepseek-ai/dsh-settings").SettingsNamespace;
+export declare const TOP100_SETTINGS_NS = "dsh-top100";
 export interface Top100Settings {
     dataUrl: string;
 }

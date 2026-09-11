@@ -32,9 +32,9 @@ test("a release bump fails the check until all install surfaces are synchronized
       assert.ok(targets.length, file);
       assert.ok(targets.every(([, target]) => target === "@dsheval/dsh-top100-plugin@9.8.7"), file);
       if (file.endsWith("README.md")) {
-        assert.match(content, /0\.1\.0-rc\.6\+/, "existing README compatibility notes must not change");
+        assert.match(content, /DSH Web 0\.1\.5-rc\.2/, "existing README compatibility notes must not change");
       } else {
-        assert.match(content, /npx @deepseek-ai\/dsh@0\.1\.2-rc\.1/, "a Top100 release bump must preserve the tested DSH version");
+        assert.match(content, /npx @deepseek-ai\/dsh@0\.1\.5-rc\.2/, "a Top100 release bump must preserve the tested DSH version");
       }
       if (file.endsWith("README.md")) assert.ok(content.includes("- '@dsheval/dsh-top100-plugin@9.8.7'"));
     }

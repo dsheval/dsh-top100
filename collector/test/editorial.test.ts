@@ -29,11 +29,11 @@ describe("current priority editorial review", () => {
     expect(reviewedCategories({ ...changed, install: { ...entry.install, packageName: "different" } })).toBeNull();
   });
 
-  it("covers 174 priority and 84 high-star reviews with Chinese descriptions and matching source evidence", () => {
+  it("covers the remaining 173 priority and 84 high-star reviews after the remote alias moves to the September 11 cohort", () => {
     const priorityReview = (review: (typeof categories)[keyof typeof categories]) => !("reviewScope" in review) || review.reviewScope === "production-package-followup";
     const baseline = Object.entries(categories).filter(([, review]) => priorityReview(review) || ("reviewScope" in review && review.reviewScope === "highstar-longtail"));
-    expect(baseline).toHaveLength(258);
-    expect(baseline.filter(([, review]) => priorityReview(review))).toHaveLength(174);
+    expect(baseline).toHaveLength(257);
+    expect(baseline.filter(([, review]) => priorityReview(review))).toHaveLength(173);
     expect(baseline.filter(([, review]) => "reviewScope" in review && review.reviewScope === "highstar-longtail")).toHaveLength(84);
     for (const [fullName, review] of baseline) {
       const entry = source(fullName as keyof typeof categories);

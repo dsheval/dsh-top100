@@ -104,9 +104,9 @@ export interface InstallSpec {
     kind: "npm" | "github";
     spec: string;
 }
-export type CatalogFormFactor = "dsh-bundle" | "dsh-skill" | "agent-skill" | "theme" | "mcp-integration" | "desktop-app" | "ecosystem-project" | "candidate";
+export type CatalogFormFactor = "dsh-bundle" | "dsh-client" | "dsh-plugin" | "dsh-skill" | "agent-skill" | "theme" | "mcp-integration" | "desktop-app" | "ecosystem-project" | "candidate";
 export type CatalogTrustLevel = "indexed" | "structured" | "install-source";
-export type CatalogEvidenceSignalCode = "indexed" | "dsh-skill" | "agent-skill" | "theme-bundle" | "dsh-bundle" | "install-source";
+export type CatalogEvidenceSignalCode = "indexed" | "dsh-skill" | "agent-skill" | "theme-bundle" | "dsh-bundle" | "dsh-client" | "dsh-plugin" | "install-source";
 export interface CatalogEvidence {
     formFactor: CatalogFormFactor;
     compatible: boolean;

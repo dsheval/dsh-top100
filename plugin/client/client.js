@@ -77,9 +77,16 @@ function matchesReviewedIdentity(entry, sourceInstall, sourceType) {
 	const packageName = entry.install?.packageName ?? entry.installPackageName ?? null;
 	const repositoryPath = entry.install?.repositoryPath ?? entry.installRepositoryPath ?? null;
 	if (!sourceInstall) return packageName === null && repositoryPath === null;
-	return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath;
+	return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath && (!sourceInstall.functionEvidence || !!entry.install?.discovery?.evidence.includes(`reviewed-function-sha256:${sourceInstall.functionEvidence}`));
 }
 const PENDING_DESCRIPTION_ZH = "中文简介待生成。";
+/** A leading language switch is navigation, not a change to reviewed functionality.
+* Keep the rest of the source exact, including numbers, versions and missing text.
+*/
+function matchesReviewedReadme(current, reviewed) {
+	const withoutLanguageSwitch = (value) => value.replace(/^(?:中文\s*\|\s*English|English\s*\|\s*中文)\s+/, "");
+	return withoutLanguageSwitch(current) === withoutLanguageSwitch(reviewed);
+}
 /** Allow product names, but a few Chinese words must not validate an English paragraph. */
 function isChineseDescription(value) {
 	const hanCount = (value.match(/[\u4e00-\u9fff]/g) || []).length;
@@ -95,7 +102,7 @@ function isPlaceholder(value) {
 }
 function descriptionFor(entry, reviewed = {}, context = {}) {
 	const review = reviewed[String(entry.fullName || "").toLowerCase()];
-	if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (review.sourceReadme === (entry.readmeSummary || "") || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
+	if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (matchesReviewedReadme(entry.readmeSummary || "", review.sourceReadme) || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
 		if (review.suspended) return PENDING_DESCRIPTION_ZH;
 		const chinese$1 = cleanDescription(review.descriptionZh);
 		if (!isPlaceholder(chinese$1) && isChineseDescription(chinese$1)) return chinese$1;
@@ -5863,6 +5870,8 @@ const zh = {
 	evidenceSignalAgentSkill: "声明为通用 Agent Skill",
 	evidenceSignalThemeBundle: "命中 DSH/Cordis 主题 Bundle 结构",
 	evidenceSignalDshBundle: "命中 DSH Bundle 结构",
+	evidenceSignalDshClient: "已识别 DSH 客户端插件结构",
+	evidenceSignalDshPlugin: "已识别 DSH 宿主插件结构",
 	evidenceSignalInstallSource: "安装源可解析",
 	evidenceCaveatNotSecurityReview: "这些证据不代表代码已通过安全审核；安装前仍需核对精确来源、脚本与权限。",
 	"risk_lifecycle-scripts_summary": "安装会执行包生命周期脚本",
@@ -5877,6 +5886,8 @@ const zh = {
 	trust_structured: "符合 DSH 插件结构",
 	"trust_install-source": "目录含安装目标",
 	"form_dsh-bundle": "DSH Bundle",
+	"form_dsh-client": "DSH 客户端插件",
+	"form_dsh-plugin": "DSH 插件",
 	"form_dsh-skill": "DSH Skill",
 	"form_agent-skill": "Agent Skill",
 	form_theme: "主题",
@@ -6283,6 +6294,8 @@ const en = {
 	evidenceSignalAgentSkill: "Declared as a general Agent Skill",
 	evidenceSignalThemeBundle: "Matches the DSH/Cordis theme Bundle structure",
 	evidenceSignalDshBundle: "Matches the DSH Bundle structure",
+	evidenceSignalDshClient: "DSH client plugin structure identified",
+	evidenceSignalDshPlugin: "DSH host plugin structure identified",
 	evidenceSignalInstallSource: "Install source resolved",
 	evidenceCaveatNotSecurityReview: "This evidence is not a security review. Verify the exact source, scripts, and permissions before installing.",
 	"risk_lifecycle-scripts_summary": "Installation will run package lifecycle scripts",
@@ -6297,6 +6310,8 @@ const en = {
 	trust_structured: "Matches the DSH plugin structure",
 	"trust_install-source": "Catalog has an install target",
 	"form_dsh-bundle": "DSH Bundle",
+	"form_dsh-client": "DSH client plugin",
+	"form_dsh-plugin": "DSH plugin",
 	"form_dsh-skill": "DSH Skill",
 	"form_agent-skill": "Agent Skill",
 	form_theme: "Theme",

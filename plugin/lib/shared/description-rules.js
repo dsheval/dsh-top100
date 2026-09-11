@@ -7,9 +7,17 @@ export function matchesReviewedIdentity(entry, sourceInstall, sourceType) {
     // Unbound historical records cannot establish the identity of an installed package.
     if (!sourceInstall)
         return packageName === null && repositoryPath === null;
-    return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath;
+    return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath
+        && (!sourceInstall.functionEvidence || !!entry.install?.discovery?.evidence.includes(`reviewed-function-sha256:${sourceInstall.functionEvidence}`));
 }
 export const PENDING_DESCRIPTION_ZH = '中文简介待生成。';
+/** A leading language switch is navigation, not a change to reviewed functionality.
+ * Keep the rest of the source exact, including numbers, versions and missing text.
+ */
+export function matchesReviewedReadme(current, reviewed) {
+    const withoutLanguageSwitch = (value) => value.replace(/^(?:中文\s*\|\s*English|English\s*\|\s*中文)\s+/, '');
+    return withoutLanguageSwitch(current) === withoutLanguageSwitch(reviewed);
+}
 /** Allow product names, but a few Chinese words must not validate an English paragraph. */
 export function isChineseDescription(value) {
     const hanCount = (value.match(/[\u4e00-\u9fff]/g) || []).length;
@@ -35,7 +43,7 @@ export function isPlaceholder(value) {
 export function descriptionFor(entry, reviewed = {}, context = {}) {
     const review = reviewed[String(entry.fullName || '').toLowerCase()];
     // Invalidate editorial text when its evidence changes, rather than pinning stale claims.
-    if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || '') && (review.sourceReadme === (entry.readmeSummary || '')
+    if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || '') && (matchesReviewedReadme(entry.readmeSummary || '', review.sourceReadme)
         || (entry.readmeSummary === undefined && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId))) {
         if (review.suspended)
             return PENDING_DESCRIPTION_ZH;
