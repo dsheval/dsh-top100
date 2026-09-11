@@ -7,6 +7,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { applyModelApiKey } from "./model-secret.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const envPath = join(here, "../../.env"); // collector/src -> 仓库根
@@ -28,3 +29,6 @@ if (existsSync(envPath)) {
     process.env[key] = value;
   }
 }
+
+// A configured secret file is authoritative; failed validation cannot reuse an old env key.
+applyModelApiKey();

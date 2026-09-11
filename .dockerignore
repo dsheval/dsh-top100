@@ -1,5 +1,8 @@
 .git
 .env
+.env.*
+**/.env
+**/.env.*
 node_modules
 runtime
 coverage

@@ -10,7 +10,7 @@
 
 Model enrichment is paused in 1.3.4 until shared monetary budget protection is implemented and verified. GitHub collection, local ranking calculations and valid existing content reuse continue without model requests. Do not restore paid generation merely by providing an API key or increasing request limits.
 
-Request defaults use the explicit `deepseek-v4-flash` identifier, disabled thinking, 256 output tokens and three workers. The provider now documents that this legacy identifier is served by V4.1 Flash; restoring requests requires a separate review of the actual model and price. These defaults and the hard pause do not implement monetary budget accounting.
+Request defaults use `deepseek-flash` (V4.1 Flash, released 2026-09-10 and verified against the [official change log](https://api-docs.deepseek.com/updates/) on 2026-09-11), disabled thinking, 256 output tokens and three workers. Restoring requests requires a separate review of the actual model, price and approved scope. These defaults and the hard pause do not implement monetary budget accounting.
 
 ## CI checks
 
@@ -147,3 +147,9 @@ Repository About and npm public metadata should use:
 
 Updating repository About, publishing npm, and deploying the gateway are separate
 external actions; local changes do not apply those updates automatically.
+
+## Model secret files
+
+Prefer `DEEPSEEK_API_KEY_FILE` with an absolute runtime path outside the repository (including its resolved path). The file must be a regular, non-symlink file owned by the process user, with mode `0600` and one hard link. Mount it read-only into the container; keep the actual file outside Git and the Docker build context. The loader rejects empty, multiline or oversized content and never includes file contents or paths in errors. A configured file overrides `DEEPSEEK_API_KEY`; any validation or read failure clears the old environment key and stops startup. The environment key remains supported when no file is configured. Neither credential option enables paid requests by itself.
+
+`.dockerignore` excludes `.env` and `.env.*` at the root and in nested directories. Do not put a real credential into `.env.example`, source files, commands, build arguments or committed deployment files.

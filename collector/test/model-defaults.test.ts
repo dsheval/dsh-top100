@@ -21,7 +21,7 @@ describe("paused model request defaults", () => {
     expect((await classifyWithDeepSeek(input, { ...options, offlineTransport: transport }))[0].id).toBe("knowledge");
     for (const [, init] of transport.mock.calls as unknown as [string, RequestInit][]) {
       const body = JSON.parse(String(init.body));
-      expect(body).toMatchObject({ model: "deepseek-v4-flash", max_tokens: 256, thinking: { type: "disabled" } });
+      expect(body).toMatchObject({ model: "deepseek-flash", max_tokens: 256, thinking: { type: "disabled" } });
       expect(init.signal).toBeInstanceOf(AbortSignal);
     }
     expect(network).not.toHaveBeenCalled();
