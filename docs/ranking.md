@@ -38,3 +38,5 @@ The Top 100 keeps the existing composite popularity score, combining normalized 
 Growth and popularity use logarithmic normalization so one very large repository does not flatten the rest of the list. Activity uses an exponential half-life, currently 60 days. The public Top 100 is ordered by the computed score, but each card displays GitHub Stars for a consistent user-facing metric.
 
 Changing weights changes product behavior. Update tests and this document in the same change.
+
+The source-reviewed exclusions currently include Tydora’s empty DSH entry and dshcode’s workspace root / standalone Electron product. They remain in source/history storage, but do not enter plugin ranking eligibility. Existing score and tie-break rules fill the vacated positions.

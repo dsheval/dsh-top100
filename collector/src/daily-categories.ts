@@ -49,7 +49,8 @@ export function carryForwardDailyCategories(sources: DshPlugin[], previousSource
     // A full unchanged market source is existing content, including while held.
     // Incomplete derived-cache replay remains gated separately in the planner.
     const current = currentCategoryAssignments(categoryInput(entry), previous.categories);
-    if (hasAuthoritativeCategories(current)) entry.categories = current;
+    if (hasAuthoritativeCategories(current)
+      || (current.length > 0 && !matchingEditorialHold(entry) && hasContentEvidence(entry))) entry.categories = current;
   }
 }
 
@@ -84,7 +85,18 @@ export function planDailyCategories(entries: DailyCategoryInput[], options: {
         const cached = currentCategoryAssignments(input, completed.categories);
         if (hasAuthoritativeCategories(cached)) entry.categories = cached;
       }
-      if (!hasAuthoritativeCategories(entry.categories)) entry.categories = fallbackCategoryAssignments(input);
+      if (!hasAuthoritativeCategories(entry.categories)) {
+        const fallback = fallbackCategoryAssignments(input);
+        // Reapplying an unchanged rule is not a new classification event.
+        for (const assignment of fallback) {
+          const previous = entry.categories?.find(category => category.id === assignment.id
+            && category.source === assignment.source && category.confidence === assignment.confidence
+            && category.evidence === assignment.evidence && category.sourceHash === assignment.sourceHash
+            && category.policyVersion === assignment.policyVersion);
+          if (previous?.classifiedAt) assignment.classifiedAt = previous.classifiedAt;
+        }
+        entry.categories = fallback;
+      }
     }
     const job: DailyCategoryJob = hasAuthoritativeCategories(entry.categories)
       ? { sourceHash, policyVersion: CATEGORY_POLICY_VERSION, status: "complete", attempts: reusable ? old.attempts : 0,

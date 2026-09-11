@@ -187,22 +187,57 @@
     "sourceType": "cordis-plugin"
   },
   "whitelonng/dshcode": {
-    "descriptionZh": "中文简介待生成。",
     "sourceDescription": "Community desktop companion for DeepSeek Harness — one-click Electron app for macOS and Windows",
     "sourceReadme": "English | 中文 DSHCode 是一款面向 macOS 和 Windows 的免费开源桌面 AI Agent 应用。它将 DeepSeek 官方开源项目 DeepSeek Harness 的 Web UI 与插件运行时打包成一个可直接安装的 Electron 应用——无需 Node.js、无需终端、无需命令行。 DSHCode 继承了 DeepSeek Harness 的完整能力，并加上了开箱即用的桌面体验。 Agent 核心 — 插件化框架，内置 bash、文件系统、网页搜索/抓取、终端、LSP 与子进程工具；支持沙箱隔离与逐操作审批提示。 交互式 UI — 内联渲染的 GenUI 卡片：图表、表格、测验、3D 场景、示意图、表单与进度视图。 Skills 技能 — 可安装的技能目录，为 Agent 提供专项工作流——研究、文档写作、视觉工具等。…",
-    "sourceUrl": "https://github.com/whitelonng/dshcode",
-    "reviewedAt": "2026-09-10",
-    "leaderboards": [
-      "hot",
-      "rising",
-      "total"
-    ],
     "sourceInstall": {
       "packageName": "@deepseek-ai/dsh-root",
       "repositoryPath": null
     },
     "sourceType": "cordis-plugin",
-    "suspended": true
+    "sourceUrl": "https://github.com/whitelonng/dshcode",
+    "sourceEvidenceCommit": "db823cece8666e8450708ee6fd044e6257ca473f",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/README.md",
+        "path": "README.md",
+        "sha256": "e659565bfde97d9d497a5f1f60ccfff48ab5929fa6ff3ac55420f44913ce609f"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/README.zh.md",
+        "path": "README.zh.md",
+        "sha256": "e01ddab9eb47636b9b6a1c801e5f61fb191730940e40f7f32750fe2073da55e7"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/package.json",
+        "path": "package.json",
+        "sha256": "1d8e9d6591bc9429f324e9edc6d90560e095b05312faaefdfd0c30e54965d7bb"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/apps/desktop/package.json",
+        "path": "apps/desktop/package.json",
+        "sha256": "7c42a99d33a8b6bac873194ae9c30fe163713967ef91746ba5a305536a3f59ca"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/apps/desktop/README.md",
+        "path": "apps/desktop/README.md",
+        "sha256": "d2cf437aa330a6158796bd1b0b74e49040a00eba5e15d245d6f46a7107e40098"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/apps/web/package.json",
+        "path": "apps/web/package.json",
+        "sha256": "58f30dc714deaa1c2bcf6aca5ca80a121620ad4cc5082ac6e9a881b8c9d63c5e"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/whitelonng/dshcode/db823cece8666e8450708ee6fd044e6257ca473f/apps/desktop/src/main.ts",
+        "path": "apps/desktop/src/main.ts",
+        "sha256": "ec928920d44a57642c4ed9e2e76a73916d57f8e5c6afefa5efeb0d7c9df7ba3c"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "suspended": true,
+    "descriptionZh": "中文简介待生成。"
   },
   "dream-num/dsh-univer-office": {
     "descriptionZh": "在 DSH 中处理表格、文档、幻灯片和画布，连接数据并记录版本变更，通过独立工作区支持多智能体协作。",
@@ -2885,20 +2920,56 @@
     "sourceType": "cordis-plugin"
   },
   "fufankeji/deepseek-harness-studio": {
-    "descriptionZh": "中文简介待生成。",
     "sourceDescription": "DeepSeek Harness 零代码桌面端｜一键启动，支持 Windows 与 macOS；内置插件发现、热点插件推送、一键安装与管理、AI 智能推荐和视觉增强。",
-    "sourceReadme": "DeepSeek Harness Studio 官方网站 · 中文 · English 赋范空间出品 · DeepSeek Harness 的零代码桌面增强 视觉增强 + 本地模型 + 插件市场 + Preset 广场 · 0 代码一键部署和使用 自动发现并推送生态新插件，AI 智能推荐值得安装的能力；无需命令行即可完成搜索、校验、安装、启停与卸载。 下载 macOS arm64 开发预览版 · 下载 Windows x64 开发预览版 点击快速查看功能演示 https://github.com/user-attachments/assets/0717f7c7-a872-4d2b-acc2-3a1c4874c732 > 下表只列已经进入源码、桌面组合和用户操作链路的能力；远期设想不再与现有功能混排。 > 以下能力尚未形成完整的一等产品入口，不计入当前功能。…",
-    "sourceUrl": "https://github.com/fufankeji/deepseek-harness-studio",
-    "reviewedAt": "2026-09-10",
-    "leaderboards": [
-      "total"
-    ],
+    "sourceReadme": "English | 中文 Desktop-only Plugin Center and Plugin Discovery entries: sidebar.primary.action supplies both navigation actions and main.page supplies their independent pages. Plugin Center searches a verified catalog, switches between ordinary Plugins and Bundle-wrapped Skill packs, opens exact-version detail in the same page, and reports cache freshness.…",
     "sourceInstall": {
-      "packageName": "@deepseek-ai/dsh-root",
-      "repositoryPath": null
+      "packageName": "@deepseek-ai/dsh-client-ui-plugin-center",
+      "repositoryPath": "packages/client/ui-plugin-center"
     },
     "sourceType": "cordis-plugin",
-    "suspended": true
+    "sourceUrl": "https://github.com/fufankeji/deepseek-harness-studio",
+    "sourceEvidenceCommit": "257d429156a243517a2cafdff777125cd3fb6d54",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/package.json#L5",
+        "path": "package.json",
+        "sha256": "cdb85da822cad87bc3f7e05e6804ab60e3e3b7266adea7ff94b526c603c0e4fc"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/package.json#L2",
+        "path": "packages/client/ui-plugin-center/package.json",
+        "sha256": "2e61c41d0feb20bee30933bc5acc0908d20c03655b256de3468c9765f89e0e5e"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/README.md#L5",
+        "path": "packages/client/ui-plugin-center/README.md",
+        "sha256": "eb6ba6a234b02c76ccde5de02d3353d99c3b666606ea358337c953679572b627"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/README.md#L11",
+        "path": "packages/client/ui-plugin-center/README.md",
+        "sha256": "eb6ba6a234b02c76ccde5de02d3353d99c3b666606ea358337c953679572b627"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/src/client/index.ts#L55",
+        "path": "packages/client/ui-plugin-center/src/client/index.ts",
+        "sha256": "cbbc6053d6e8fa5dcf545c94c32b84a879abcb4f6288b33908ed1de51b081b22"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/src/client/index.ts#L252",
+        "path": "packages/client/ui-plugin-center/src/client/index.ts",
+        "sha256": "cbbc6053d6e8fa5dcf545c94c32b84a879abcb4f6288b33908ed1de51b081b22"
+      },
+      {
+        "url": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/src/index.ts#L27",
+        "path": "packages/client/ui-plugin-center/src/index.ts",
+        "sha256": "0370d71a9a6fe7213cf76e2d91facaaf2b56e4143213788a2a066bbdb957bf8c"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "descriptionZh": "为 Studio 桌面端提供插件搜索、发现与管理页面，并展示预设广场和应用入口，依赖桌面端目录服务。"
   },
   "adoresever/graph-memory": {
     "descriptionZh": "为 DSH 提供知识图谱记忆，保留近期对话、归档较早历史，并在需要时召回附带来源的知识，延续跨会话经验。",
@@ -3081,19 +3152,57 @@
     "sourceType": "cordis-plugin"
   },
   "hust-open-atom-club/oh-dsh": {
-    "descriptionZh": "把 DSH 与本地开发工具打包为桌面、网页和终端三种入口，共享会话资源，并集中组织项目工作区和插件状态。",
     "sourceDescription": " 一套 DSH runtime，Desktop、Web 与 TUI 三种开发体验。",
-    "sourceReadme": "简体中文 · English Oh-DSH 一套 DSH runtime，Desktop、Web 与 TUI 三种开发体验。 把 AI Agent、Workspace、本地工具与插件生态带到你习惯的界面。 下载最新版 · 使用文档 · 设计文档 Oh-DSH 将 DeepSeek Harness、Node.js、本地开发工具和内置插件打包为可安装的 Desktop、Web 与 TUI 发行版。模型服务仍可按需运行在云端；Workspace、终端、 Git Review、浏览器、文件、会话与插件状态由本地工作台统一组织。 🖥️ 三种交互界面 使用同一个 ohdsh 命令启动 Desktop、Web 或 TUI。三端共享会话、凭据、皮肤与插件缓存，同时保留独立 Profile。 🧰 本地开发工作台 内置 Workspace、PTY 终端、浏览器、文件浏览、Side chat 与 Trajectory；…",
-    "sourceUrl": "https://github.com/hust-open-atom-club/oh-dsh",
-    "reviewedAt": "2026-09-10",
-    "leaderboards": [
-      "total"
-    ],
+    "sourceReadme": "",
     "sourceInstall": {
-      "packageName": "@oh-dsh/desktop",
-      "repositoryPath": null
+      "packageName": "@oh-dsh/about",
+      "repositoryPath": "plugins/about",
+      "functionEvidence": "4a83a20206e2bca013c85c881fc4ffee1e12d88f91a909ed87a612576c53a599"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/hust-open-atom-club/oh-dsh",
+    "sourceEvidenceCommit": "cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/package.json#L2",
+        "path": "plugins/about/package.json",
+        "sha256": "6530e0d317d655685835bb9e2d67010a8b0d2e57bb21bacf88df343cff81cfd2"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/index.ts#L1",
+        "path": "plugins/about/src/index.ts",
+        "sha256": "975ae5c02c710ce5d457f354bf47390d575cfd57f07e87de0d1f0630a0f45a60"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/client.ts#L1",
+        "path": "plugins/about/src/client.ts",
+        "sha256": "e310a152cc429e6a62176c84304d83c89ebc41b135a34c1eee027e7414626fdb"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/client/plugin.tsx#L120",
+        "path": "plugins/about/src/client/plugin.tsx",
+        "sha256": "54adfc76206ba5922fada2e785cd32131a706ebf7f06ebf1956c691e55cc6b79"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/client/plugin.tsx#L199",
+        "path": "plugins/about/src/client/plugin.tsx",
+        "sha256": "54adfc76206ba5922fada2e785cd32131a706ebf7f06ebf1956c691e55cc6b79"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/client/plugin.tsx#L379",
+        "path": "plugins/about/src/client/plugin.tsx",
+        "sha256": "54adfc76206ba5922fada2e785cd32131a706ebf7f06ebf1956c691e55cc6b79"
+      },
+      {
+        "url": "https://github.com/hust-open-atom-club/oh-dsh/blob/cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9/plugins/about/src/client/versions.ts#L1",
+        "path": "plugins/about/src/client/versions.ts",
+        "sha256": "2ce440d6d29760b02bf7fc6966742fe7c8cbeb61fdb262e6189c64c4fcc12b37"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "descriptionZh": "在 Oh-DSH 设置中展示产品与组件版本，并在桌面端提供检查更新、下载进度和安装更新的操作入口。"
   },
   "zseven-w/dsh-ios": {
     "descriptionZh": "在 DSH 对话中操作苹果手机模拟器或连接的真机，支持应用构建、界面操作、文字识别和实时预览，辅助开发验证。",
@@ -3111,20 +3220,51 @@
     "sourceType": "cordis-plugin"
   },
   "op7418/pilot-harness": {
-    "descriptionZh": "中文简介待生成。",
     "sourceDescription": "Pilot Harness — a CodePilot-inspired desktop client and plugin suite for DeepSeek Harness on macOS, Windows, and Linux.",
-    "sourceReadme": "Pilot Harness English | 中文 A CodePilot-inspired desktop client and plugin suite for DeepSeek Harness. Run the DeepSeek Harness plugin runtime as a focused native app, manage providers and multimodal models visually, and keep desktop additions isolated as ordinary Harness plugins.…",
-    "sourceUrl": "https://github.com/op7418/pilot-harness",
-    "reviewedAt": "2026-09-10",
-    "leaderboards": [
-      "total"
-    ],
+    "sourceReadme": "English | 中文 An ordinary DeepSeek Harness Client plugin that applies the CodePilot visual language without replacing Harness state or interaction logic. The plugin owns its stylesheet and an activation marker. Unloading or disabling the plugin removes both, allowing the stock Harness theme to take over again.…",
     "sourceInstall": {
-      "packageName": "@deepseek-ai/dsh-root",
-      "repositoryPath": null
+      "packageName": "@deepseek-ai/dsh-client-ui-codepilot-theme",
+      "repositoryPath": "packages/client/ui-codepilot-theme"
     },
     "sourceType": "cordis-plugin",
-    "suspended": true
+    "sourceUrl": "https://github.com/op7418/pilot-harness",
+    "sourceEvidenceCommit": "d1fa9c15fc00c05ea6931aafd724554ca34d5a6d",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/package.json#L5",
+        "path": "package.json",
+        "sha256": "fab8ea471db40d7292caae71e9e814f7d752b13db5f523bfec95fa1ddc43afc7"
+      },
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/package.json#L2",
+        "path": "packages/client/ui-codepilot-theme/package.json",
+        "sha256": "dae0053b3b3b6e405f995131639777b6ff533225e6e230b517b86172bf515bc1"
+      },
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/cordis.patch.yml#L3",
+        "path": "packages/client/ui-codepilot-theme/cordis.patch.yml",
+        "sha256": "76ae2aa829036ff5449817e1ef2b19dbba00c3cabd8d03ec1b945dcbc69bf114"
+      },
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/README.md#L5",
+        "path": "packages/client/ui-codepilot-theme/README.md",
+        "sha256": "679261ab74e3dc3edb0184fcc2adf83057544aa71171c4c02829abec9281cc59"
+      },
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/src/client/index.ts#L27",
+        "path": "packages/client/ui-codepilot-theme/src/client/index.ts",
+        "sha256": "68c784d505843f0ad2f49d54180820bdabe26c8e88e02a1ff890c79ea45e0d59"
+      },
+      {
+        "url": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/src/client/index.ts#L37",
+        "path": "packages/client/ui-codepilot-theme/src/client/index.ts",
+        "sha256": "68c784d505843f0ad2f49d54180820bdabe26c8e88e02a1ff890c79ea45e0d59"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "descriptionZh": "为 DSH 提供 Pilot 风格的明暗主题、品牌标识与组件样式，并同步桌面原生外观；停用后可恢复默认界面。"
   },
   "huiliyi37/dsh-tianshu-tui": {
     "descriptionZh": "为 DSH 提供交互式终端工作台，流式展示回答与工具卡片，支持主题、命令选择、输入历史和代码诊断显示。",
@@ -4226,16 +4366,51 @@
     "sourceType": "cordis-plugin"
   },
   "minglink/dsh-infinite-gen-4": {
-    "sourceDescription": "DeepSeek v4.1 flash 网络安全红队工具（无限四代） — jailbreak prompts and test suite for DeepSeek    求 Star 收藏 ⭐",
+    "sourceDescription": "DeepSeek v4.1 flash 网络安全红队工具（无限四代） — jailbreak prompts and test suite for DeepSeek    求 Star 收藏 ⭐欢迎大家提交项目的改进",
     "sourceReadme": "> 🌐 插件生态市场：DeepSeek Harness Hub - DeepSeek 官方与开源生态市场 | 插件发现与一键安装 > ## 💬 DeepSeek 交流群 > > ### 👉 红队安全交流 7 群：1108511134 > ### 👉 DeepSeek 插件开发群：1121385378 > > 🔥 欢迎进群交流红队攻防对抗心得、分享提示词与评测基准、探讨插件开发与生态共建！ --- 在生成式人工智能与大语言模型（LLM）向各行业深度融合的背景下，模型的鲁棒性、对抗防御能力与系统对齐安全性已成为网络空间安全的核心研究课题： 1. 暴露防御边界，反哺安全护栏：只有通过专业的网络安全红队对抗模拟（Red-Teaming），在受控环境下深入探查模型的输入逃逸、提示词注入与非预期行为，才能帮助安全团队精确定位模型的防护盲区，从而在模型微调、输入过滤网关（Guardrails）与系统安全层实现前置加固。 2.…",
-    "descriptionZh": "面向 DeepSeek 模型提供红队提示词与测试套件，在受控环境中研究输入逃逸、提示词注入和模型防御边界。",
-    "sourceUrl": "https://github.com/Minglink/dsh-infinite-gen-4",
-    "reviewedAt": "2026-09-10",
     "sourceInstall": {
       "packageName": "dsh-infinite-gen-4",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/Minglink/dsh-infinite-gen-4",
+    "sourceEvidenceCommit": "b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/README.md",
+        "path": "README.md",
+        "sha256": "55220225d158b207ce83c089fc8b958d52f44ec887def33ca6a0c55772897ac8"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/HARNESS_PLUGIN.md",
+        "path": "HARNESS_PLUGIN.md",
+        "sha256": "c3c6977489a452a448c1055b8b032e85ec1e42948d113f539afacea536f96622"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/package.json",
+        "path": "package.json",
+        "sha256": "fe189de725792ae6c53c6437a80dfd48d46db5e76a583856b371c95e12ae913a"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/cordis.patch.yml",
+        "path": "cordis.patch.yml",
+        "sha256": "2aba5b8bb99b714bb8dee817028af4741ab05e68807231c840823ddd39169253"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/index.js",
+        "path": "index.js",
+        "sha256": "38f31c7323a10231b1d8cfd13c0b73aee41eee8511b986f180453b1e3918c666"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Minglink/dsh-infinite-gen-4/b0a7bfedd45be9f97dbd0ab49e844ed2f0074f5f/client.js",
+        "path": "client.js",
+        "sha256": "c3b21a1a05da35f89126b1b7449b3772440648787f0a3b23b6858399017c199f"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "descriptionZh": "为受控的大模型红队评测提供提示词测试组件与运行状态展示，辅助研究模型对抗输入下的响应。"
   },
   "lipu-jpg/openwrite": {
     "sourceDescription": "dsh-Openwrite：OpenWrite 的 DeepSeek Harness 小说创作插件，含统一创作 Agent、90 个小说工具、原生工作台与标准审稿 DAG",
@@ -6136,5 +6311,58 @@
     "sourceReadmeNormalization": "language-navigation-v1",
     "reviewScope": "top100-20260911",
     "descriptionZh": "在 DSH 模型请求、回答和工具执行环节接入安全判定，阻止被拒绝的操作，并在本地脱敏敏感信息。"
+  },
+  "anywhere-labs/agents-anywhere": {
+    "sourceDescription": "跨设备的开源Agent工作台",
+    "sourceReadme": "@agents-anywhere/dsh-aa-gateway 把原来的 dsh-aa-bridge（DSH 进程内 JSON-RPC 桥接插件）整体迁入新插件，并预留 Connector CLI 子进程管理、设置 页面 UI 容器、以及 desktop-next 控制台迁移的扩展点。 - ✅ 完整继承 dsh-aa-bridge 的 host 能力（Loopback JSON-RPC、Session、 Timeline、Interactions、Approvals、User Questions、Workspace 回填等）。 - ✅ 在 DSH 设置中心注册 Agents Anywhere 入口，点击后打开空白页 （后续逐步接入状态、配对、日志、环境四张卡片）。 - ⏳ Connector CLI 子进程管理、uv/Python 自动解析、Pypi 镜像源与 desktop-next UI 移植尚未实现。 - Step 2：…",
+    "sourceInstall": {
+      "packageName": "@agents-anywhere/dsh-aa-gateway",
+      "repositoryPath": "dsh-bridge"
+    },
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/anywhere-labs/Agents-Anywhere",
+    "sourceEvidenceCommit": "10300fd5b013d34b0c236921f8137f8fdd7cb422",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/README.md",
+        "path": "dsh-bridge/README.md",
+        "sha256": "b022274aab848cfeb8b4de8e85bf17c77bfe36b98d26c56fc8c456a7736e49cc"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/package.json",
+        "path": "dsh-bridge/package.json",
+        "sha256": "acd033b5c48a0d171fe415e7277e662ddd80a96fac2595c449419f6675fe075d"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/cordis.patch.yml",
+        "path": "dsh-bridge/cordis.patch.yml",
+        "sha256": "4d6858a407f1ecd2e9072c18b1aaad79669fd49aacac903ce17a18e30d2cd058"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/src/index.ts",
+        "path": "dsh-bridge/src/index.ts",
+        "sha256": "a9172bc8cb05992d43d3c6d8948772ffe4eb34a3b868daf6dea103f7942c5b5b"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/src/bridge-service.ts",
+        "path": "dsh-bridge/src/bridge-service.ts",
+        "sha256": "ecf21c8e77745a7e1a8baee12e6da19305a200e664d4ff73d3ccc8be59672286"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/src/client/index.tsx",
+        "path": "dsh-bridge/src/client/index.tsx",
+        "sha256": "4e7eaef2d5a7aa1921fdad09c46f277f215c3034cfb0a06992b05744d3a65fef"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/anywhere-labs/Agents-Anywhere/10300fd5b013d34b0c236921f8137f8fdd7cb422/dsh-bridge/src/manager/connector-coordinator.ts",
+        "path": "dsh-bridge/src/manager/connector-coordinator.ts",
+        "sha256": "703afac1702967be5b95ea983d78611d30dd8e90959a65b05dceadf6cd203972"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "reviewScope": "top100-20260911",
+    "descriptionZh": "通过本地 JSON-RPC 桥接 DSH 会话、时间线与交互审批，并在设置页提供 Agents Anywhere 连接器管理。"
   }
 }

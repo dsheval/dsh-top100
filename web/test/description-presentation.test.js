@@ -81,7 +81,7 @@ test('current editorial evidence cannot reuse an older compact snapshot', () => 
 test('explicit publisher withholding survives compact data without the review evidence', () => {
   const reviews=JSON.parse(readFileSync(new URL('../../plugin/src/shared/reviewed-descriptions.json',import.meta.url),'utf8'));
   const withdrawn=Object.entries(reviews).filter(([,review])=>review.suspended);
-  for (const fullName of ['whitelonng/dshcode','fufankeji/deepseek-harness-studio','op7418/pilot-harness','zuorn/tydora']) {
+  for (const fullName of ['whitelonng/dshcode','zuorn/tydora']) {
     assert.ok(withdrawn.some(([id])=>id===fullName),fullName);
   }
   for (const [fullName,review] of withdrawn) {

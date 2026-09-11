@@ -11,9 +11,9 @@ const review: ReviewedFunctionEvidence = { ...identity, sourceCommit: "fixture-c
   expectedFingerprint: functionEvidenceFingerprint(identity, files) };
 
 describe("scoped source-file evidence", () => {
-  it("checks only the four reviewed no-README packages and validates their concrete manifests", () => {
+  it("checks only the five reviewed no-README packages and validates their concrete manifests", () => {
     expect(Object.keys(reviewedFunctionEvidence).sort()).toEqual([
-      "dataelement/dsh-desktop", "derpyu520/qq-bridge", "jingyunstudio/jingyun-dsh", "zhu1090093659/dsh-trading",
+      "dataelement/dsh-desktop", "derpyu520/qq-bridge", "hust-open-atom-club/oh-dsh", "jingyunstudio/jingyun-dsh", "zhu1090093659/dsh-trading",
     ]);
     for (const value of Object.values(reviewedFunctionEvidence)) {
       expect(value.files.length).toBeGreaterThan(1);

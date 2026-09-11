@@ -90,5 +90,33 @@
         "sha256": "6878617e97ed01ea83102ab4b89b6e1574d7f87ee11866daf751cd948dc02dc1"
       }
     ]
+  },
+  "hust-open-atom-club/oh-dsh": {
+    "packageName": "@oh-dsh/about",
+    "repositoryPath": "plugins/about",
+    "sourceCommit": "cb8d8b83dd1d5fb980416380e4aff4cd840e3ab9",
+    "expectedFingerprint": "4a83a20206e2bca013c85c881fc4ffee1e12d88f91a909ed87a612576c53a599",
+    "files": [
+      {
+        "path": "plugins/about/package.json",
+        "sha256": "6530e0d317d655685835bb9e2d67010a8b0d2e57bb21bacf88df343cff81cfd2"
+      },
+      {
+        "path": "plugins/about/src/client.ts",
+        "sha256": "e310a152cc429e6a62176c84304d83c89ebc41b135a34c1eee027e7414626fdb"
+      },
+      {
+        "path": "plugins/about/src/client/plugin.tsx",
+        "sha256": "54adfc76206ba5922fada2e785cd32131a706ebf7f06ebf1956c691e55cc6b79"
+      },
+      {
+        "path": "plugins/about/src/client/versions.ts",
+        "sha256": "2ce440d6d29760b02bf7fc6966742fe7c8cbeb61fdb262e6189c64c4fcc12b37"
+      },
+      {
+        "path": "plugins/about/src/index.ts",
+        "sha256": "975ae5c02c710ce5d457f354bf47390d575cfd57f07e87de0d1f0630a0f45a60"
+      }
+    ]
   }
 }

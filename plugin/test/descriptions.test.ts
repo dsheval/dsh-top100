@@ -183,7 +183,7 @@ it("does not display the root Chinese description for an undocumented subpackage
 it("preserves an explicit pending summary in every current withdrawn compact entry", () => {
   const withdrawn = Object.entries(reviewed).filter(([, review]) => "suspended" in review && review.suspended);
   expect(withdrawn.map(([id]) => id)).toEqual(expect.arrayContaining([
-    "whitelonng/dshcode", "fufankeji/deepseek-harness-studio", "op7418/pilot-harness", "zuorn/tydora",
+    "whitelonng/dshcode", "zuorn/tydora",
   ]));
   for (const [fullName] of withdrawn) {
     const entry = sample(fullName as keyof typeof reviewed);
@@ -200,9 +200,9 @@ it("preserves an explicit pending summary in every current withdrawn compact ent
   }
 });
 
-it("does not apply the reviewed DeepSeekGUI workbench capabilities to its withdrawn workspace root", () => {
-  const entry = sample("see-sol-lab/deepseekgui");
-  expect(descriptionFor(entry, reviewed)).toBe(reviewed["see-sol-lab/deepseekgui"].descriptionZh);
+it.each(["see-sol-lab/deepseekgui", "fufankeji/deepseek-harness-studio", "op7418/pilot-harness"] as const)("does not apply %s reviewed plugin capabilities to its withdrawn workspace root", (id) => {
+  const entry = sample(id);
+  expect(descriptionFor(entry, reviewed)).toBe(reviewed[id].descriptionZh);
   expect(descriptionFor({ ...entry, install: { packageName: "@deepseek-ai/dsh-root" }, descriptionZh: "中文简介待生成。" }, reviewed)).toBe("中文简介待生成。");
 });
 
@@ -213,7 +213,7 @@ it("keeps pending markup normalized and permits a fresh fully bound review to re
 });
 
 it("does not claim an unbound old compact cache can recognize a new withdrawal", () => {
-  const full = sample("fufankeji/deepseek-harness-studio");
+  const full = sample("whitelonng/dshcode");
   full.descriptionZh = "提供桌面界面和插件管理，方便使用智能助手。";
   expect(withReviewedDescription(full).descriptionZh).toBe("中文简介待生成。");
   const compact = { ...full };

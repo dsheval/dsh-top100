@@ -10,7 +10,7 @@ export interface ReviewedFunctionEvidence {
   files: ReviewedFunctionFile[];
 }
 
-/** Only four source-reviewed packages without a README opt into this check. */
+/** Only five source-reviewed packages without a README opt into this check. */
 export const reviewedFunctionEvidence: Readonly<Record<string, ReviewedFunctionEvidence>> = configuration;
 export const FUNCTION_EVIDENCE_MARKER_PREFIX = "reviewed-function-sha256:";
 

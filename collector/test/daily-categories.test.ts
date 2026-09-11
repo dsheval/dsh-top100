@@ -5,7 +5,7 @@ import {
   carryForwardDailyCategories, dailyCategoryWorker, planDailyCategories, runDailyCategories,
   type DailyCategoryInput, type DailyCategoryState,
 } from "../src/daily-categories.js";
-import { bindCategoryAssignments, CATEGORY_POLICY_VERSION, categorySourceHash } from "../src/categories.js";
+import { fallbackCategoryAssignments, bindCategoryAssignments, CATEGORY_POLICY_VERSION, categorySourceHash } from "../src/categories.js";
 import { contentSourceHash } from "../src/content-source.js";
 import * as editorial from "../src/editorial.js";
 import * as llm from "../src/llm.js";
@@ -33,6 +33,52 @@ function held(): DailyCategoryInput {
 afterEach(() => vi.restoreAllMocks());
 
 describe("daily source-bound category planning", () => {
+  it("carries a rule timestamp through a fresh daily collection before replanning", () => {
+    const previous = { ...entry(), description: "Persistent memory and context management",
+      readmeSummary: "Persistent memory and context management" };
+    previous.categories = fallbackCategoryAssignments({ ...previous, install: previous.install ?? undefined });
+    expect(previous.categories.length).toBeGreaterThan(0);
+    previous.categories.forEach(category => { category.classifiedAt = "2026-09-01T00:00:00Z"; });
+    const current = { ...structuredClone(previous), categories: [] };
+    carryForwardDailyCategories([current as DshPlugin], new Map([[previous.fullName, previous as DshPlugin]]));
+    const plan = planDailyCategories([current], { now });
+    expect(current.categories).toEqual(previous.categories);
+    expect(plan.state.jobs[current.fullName].status).toBe("pending");
+
+    const changed = { ...structuredClone(previous), categories: [], description: "Visual theme for a desktop app",
+      readmeSummary: "Visual theme for a desktop app" };
+    carryForwardDailyCategories([changed as DshPlugin], new Map([[previous.fullName, previous as DshPlugin]]));
+    expect(changed.categories).toEqual([]);
+    planDailyCategories([changed], { now: now + day });
+    expect(changed.categories.length).toBeGreaterThan(0);
+    expect(changed.categories.every(category => category.classifiedAt !== "2026-09-01T00:00:00Z")).toBe(true);
+  });
+
+  it("does not carry a same-source fallback into a held root runtime identity", () => {
+    const previous = { ...held(), description: "Persistent memory and context management",
+      readmeSummary: "Persistent memory and context management" };
+    previous.categories = fallbackCategoryAssignments({ ...previous, install: previous.install ?? undefined });
+    expect(previous.categories.length).toBeGreaterThan(0);
+    const current = { ...structuredClone(previous), categories: [] };
+    carryForwardDailyCategories([current as DshPlugin], new Map([[previous.fullName, previous as DshPlugin]]));
+    expect(current.categories).toEqual([]);
+    expect(planDailyCategories([current], { now }).state.jobs[current.fullName].status).toBe("review-required");
+  });
+
+  it("keeps an unchanged fallback rule's classification time across daily syncs", () => {
+    const input = { ...entry(), description: "Persistent memory and context management", readmeSummary: "Persistent memory and context management" };
+    input.categories = fallbackCategoryAssignments({ ...input, install: input.install ?? undefined });
+    expect(input.categories.length).toBeGreaterThan(0);
+    input.categories.forEach(category => { category.classifiedAt = "2026-09-01T00:00:00Z"; });
+    const before = structuredClone(input.categories);
+    planDailyCategories([input], { now });
+    expect(input.categories).toEqual(before);
+    input.description = "Custom theme and appearance";
+    input.readmeSummary = "Custom theme and appearance";
+    planDailyCategories([input], { now: now + day });
+    expect(input.categories.every(category => category.classifiedAt !== "2026-09-01T00:00:00Z")).toBe(true);
+  });
+
   it("does not revive an explicit editorial withdrawal from complete jobs, cache or rules", async () => {
     const input = entry();
     input.description = "Knowledge base and research tools.";

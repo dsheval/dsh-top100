@@ -26,5 +26,19 @@
     "sourceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
     "sourceUrl": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/package.json",
     "reason": "作者根 README 快速开始明确直接安装 @dshtrading/base + 市场包，架构段将 base 指定为共享核心。base 自身清单具有 bundle/真实入口，src/index.ts 实现统一订单审批；cordis.patch.yml 实际挂载路由、watchlist、holdings、market-tools、知识、策略和业务界面，不是单纯依赖声明。src/market-tools.ts 在 registry 中注册只读账户/市场工具。作为共享交易操作工作台归 tools，研究只是组合功能之一；不能声称单独 base 就有四市场数据或下单连接器。"
+  },
+  "fufankeji/deepseek-harness-studio": {
+    "packageName": "@deepseek-ai/dsh-client-ui-plugin-center",
+    "repositoryPath": "packages/client/ui-plugin-center",
+    "sourceCommit": "257d429156a243517a2cafdff777125cd3fb6d54",
+    "sourceUrl": "https://github.com/fufankeji/deepseek-harness-studio/blob/257d429156a243517a2cafdff777125cd3fb6d54/packages/client/ui-plugin-center/package.json#L2",
+    "reason": "原@deepseek-ai/dsh-root为private工作区根，无main/exports/dsh入口。实际packages/client/ui-plugin-center有dsh.client声明和独立README，client apply注册sidebar.primary.action/main.page的Plugin Center、Plugin Discovery、Preset Square、Application Center，通过目录桥接调用管理服务。功能用途为插件/技能/预设管理，归tools。"
+  },
+  "op7418/pilot-harness": {
+    "packageName": "@deepseek-ai/dsh-client-ui-codepilot-theme",
+    "repositoryPath": "packages/client/ui-codepilot-theme",
+    "sourceCommit": "d1fa9c15fc00c05ea6931aafd724554ca34d5a6d",
+    "sourceUrl": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/package.json#L2",
+    "reason": "原@deepseek-ai/dsh-root为private无入口工作区根。实际packages/client/ui-codepilot-theme是作者维护的主题包，repository.url指向op7418/pilot-harness，dsh.bundle指向精确补丁并有dsh.client。客户端导入品牌/主题CSS、注册data-codepilot-theme激活标识与清理、同步theme/change至可选桌面桥。单一主类appearance。"
   }
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { openDatabase, importMarketData } from '../src/database.js';
 import { buildRankings } from '../src/rankings.js';
 import reviews from '../../plugin/src/shared/reviewed-descriptions.json';
@@ -60,14 +62,21 @@ describe('withdrawn source-bound content', () => {
       pushedAt: '2026-09-10T00:00:00Z', createdAt: '2026-09-01T00:00:00Z',
       updatedAt: '2026-09-10T00:00:00Z', lastCheckedAt: '2026-09-10T00:00:00Z' });
     const db = openDatabase({ path: ':memory:' });
+    const dir = mkdtempSync(resolve(tmpdir(), 'withdrawal-ranking-'));
+    const configPath = resolve(dir, 'ranking.json');
+    const config = JSON.parse(readFileSync(resolve('../config/ranking.json'), 'utf8'));
+    writeFileSync(configPath, JSON.stringify({ ...config, excludedRepositories: {} }));
     try {
       importMarketData(db, { schemaVersion: 2, generatedAt: '2026-09-10T00:00:00Z', plugins: [source] });
-      const rankings = buildRankings(db, '2026-09-10', resolve('../config/ranking.json'));
+      const excluded = buildRankings(db, '2026-09-10', resolve('../config/ranking.json'));
+      for (const list of Object.values(excluded.rankings)) expect(list).toEqual([]);
+      // Withdrawal must also remain effective independently of ranking exclusion.
+      const rankings = buildRankings(db, '2026-09-10', configPath);
       for (const list of Object.values(rankings.rankings)) {
         expect(list[0].descriptionZh).toBe(PENDING_DESCRIPTION_ZH);
         expect(list[0].categories).toEqual([]);
       }
-    } finally { db.close(); }
+    } finally { db.close(); rmSync(dir, { recursive: true, force: true }); }
   });
   it('hides withdrawn text in old public snapshots without suspending a changed package identity', () => {
     const { source } = fixture();

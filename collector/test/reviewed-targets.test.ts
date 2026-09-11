@@ -21,22 +21,23 @@ describe("September 11 source review", () => {
     stars: 100, topics: [], categories: [],
   });
 
-  it("recovers twenty-five source-reviewed categories across both Top100 lists, and withholds the empty skeleton", async () => {
-    expect(cohort).toHaveLength(26);
+  it("recovers thirty source-reviewed categories across the priority lists, and withholds the two excluded objects", async () => {
+    expect(cohort).toHaveLength(32);
     const entries = cohort.map(input);
     const first = planDailyCategories(entries);
     const second = planDailyCategories(entries, { previous: first.state });
-    expect(Object.values(second.state.jobs).filter(job => job.status === "complete")).toHaveLength(25);
+    expect(Object.values(second.state.jobs).filter(job => job.status === "complete")).toHaveLength(30);
     expect(second.state.jobs["zuorn/tydora"].status).toBe("review-required");
     expect(entries.find(entry => entry.fullName === "zuorn/tydora")!.categories).toEqual([]);
+    expect(second.state.jobs["whitelonng/dshcode"].status).toBe("review-required");
     expect(second.ready).toHaveLength(0);
     const worker = vi.fn();
     await runDailyCategories(second, { model: "mock", worker });
     expect(worker).not.toHaveBeenCalled();
   });
 
-  it("rejects caches for the four wrong package identities without invalidating other detection caches", () => {
-    expect(Object.keys(reviewedPluginTargets)).toHaveLength(4);
+  it("rejects caches for the six wrong package identities without invalidating other detection caches", () => {
+    expect(Object.keys(reviewedPluginTargets)).toHaveLength(6);
     for (const target of Object.values(reviewedPluginTargets)) {
       const correct = { isPlugin: true, packageName: target.packageName, pluginPath: target.repositoryPath };
       expect(matchesReviewedTarget(correct, target)).toBe(true);
