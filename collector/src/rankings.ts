@@ -15,6 +15,7 @@ import { hasChineseDescription } from "./description-jobs.js";
 import { reviewedDescription } from "./editorial.js";
 import { matchingEditorialHold } from "./content-source.js";
 import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { isFeaturedRepository } from "../../plugin/src/shared/featured.js";
 
 interface RankingConfig {
   excludedRepositories?: Record<string, { reason: string; reviewedAt: string; sourceUrl: string }>;
@@ -168,6 +169,7 @@ export function buildRankings(
   const config = JSON.parse(readFileSync(configPath, "utf8")) as RankingConfig;
   const activeRepositories = readActiveRepositories(database);
   const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin"
+    && !isFeaturedRepository(repository)
     && !Object.hasOwn(config.excludedRepositories ?? {}, repository.fullName.toLowerCase()));
   const skills = activeRepositories.filter((repository) => repository.type === "skill");
   const weekDate = subtractDays(snapshotDate, 7);

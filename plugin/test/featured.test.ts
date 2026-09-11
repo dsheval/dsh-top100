@@ -1,12 +1,18 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { showFeaturedPlugin } from "../src/shared/featured.js";
+import { isFeaturedRepository, showFeaturedPlugin } from "../src/shared/featured.js";
 import { css } from "../src/client/styles.js";
 import { zh } from "../src/client/locales.js";
 
 const page = readFileSync(new URL("../src/client/RankingsPage.tsx", import.meta.url), "utf8");
 
 describe("website unranked editorial placement", () => {
+  it("identifies only our exact repository, case-insensitively", () => {
+    expect(isFeaturedRepository({ fullName: "DSHEval/DSH-Top100" })).toBe(true);
+    expect(isFeaturedRepository({ fullName: "another/dsh-top100" })).toBe(false);
+    expect(isFeaturedRepository({ fullName: "dsheval/dsh-top100-extra" })).toBe(false);
+    expect(isFeaturedRepository({})).toBe(false);
+  });
   it.each(["hot", "rising", "total"])("shows in the unfiltered %s plugin ranking", (view) => {
     expect(showFeaturedPlugin({ view })).toBe(true);
     expect(showFeaturedPlugin({ view, query: "  " })).toBe(true);

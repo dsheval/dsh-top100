@@ -10,6 +10,7 @@ import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPlugin
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
 import { withReviewedDescription } from "../shared/descriptions.js";
 import { catalogEvidence } from "../shared/evidence.js";
+import { isFeaturedRepository } from "../shared/featured.js";
 export const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";
 const CACHE_MS = 30 * 60 * 1000;
 const FETCH_MS = 15_000;
@@ -194,6 +195,8 @@ export function catalogScopeCounts(document, skillsDocument) {
         ...(skillsDocument?.rankings.total ?? []),
     ].map((entry) => [entry.fullName.toLowerCase(), entry]));
     for (const entry of uniqueEntries.values()) {
+        if (isFeaturedRepository(entry))
+            continue;
         if (entryMatchesCatalogScope(entry, "plugins"))
             counts.plugins += 1;
         else if (entryMatchesCatalogScope(entry, "skills"))
@@ -260,6 +263,8 @@ export function filterCatalog(document, options) {
         ? document.rankings.total
         : document.rankings[options.view] ?? [];
     const scored = source
+        // Older snapshots may still contain our editorial #000 project as a ranked entry.
+        .filter((entry) => !isFeaturedRepository(entry))
         .map((entry) => withReviewedDescription(entry, document))
         .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
         .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
@@ -292,6 +297,8 @@ export function filteredCatalogCategories(document, options) {
     const definitions = catalogCategories(document);
     const stats = new Map(definitions.map(({ id }) => [id, { count: 0, excludedSkillCount: 0 }]));
     for (const entry of document.rankings.total) {
+        if (isFeaturedRepository(entry))
+            continue;
         if (options.compatibleOnly && !catalogEvidence(entry).compatible)
             continue;
         if (options.catalogScope && !entryMatchesCatalogScope(entry, options.catalogScope))

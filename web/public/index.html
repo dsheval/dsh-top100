@@ -3368,7 +3368,7 @@
       import { initializeInstallGuide } from "./install-guide.js";
       import { descriptionFor, loadReviewedDescriptions } from "./description-presentation.js";
       const reviewedDescriptions = await loadReviewedDescriptions();
-      import { showFeaturedPlugin } from "./featured-plugin.js";
+      import { showFeaturedPlugin, isFeaturedRepository } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
       import { track, trackPageView } from "./analytics.js";
 
@@ -3955,6 +3955,7 @@
           .filter((plugin) =>
             plugin
             && typeof plugin.fullName === "string"
+            && !isFeaturedRepository(plugin)
             && plugin.type?.toLowerCase() === "cordis-plugin"
           )
           .map((plugin, index) => {

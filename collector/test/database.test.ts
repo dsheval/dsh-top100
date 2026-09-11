@@ -58,6 +58,31 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
+  it("keeps our editorial project out of positions, category counts and score normalization while filling Top100", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-self-exclusion-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    const control = openDatabase({ path: join(directory, "control.sqlite") });
+    try {
+      const peers = Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index));
+      for (const snapshotDate of ["2026-08-20", "2026-08-21"]) {
+        importMarketData(database, market([plugin("DSHEval/DSH-Top100", snapshotDate.endsWith("21") ? 999999 : 1), ...peers]), { snapshotDate });
+        importMarketData(control, market(peers), { snapshotDate });
+      }
+      const result = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
+      const baseline = buildRankings(control, "2026-08-21", resolve("../config/ranking.json"));
+      expect(result.rankings).toEqual(baseline.rankings);
+      expect(result.categories).toEqual(baseline.categories);
+      expect(result.rankings.total).toHaveLength(101);
+      for (const view of ["hot", "rising"] as const) expect(result.rankings[view]).toHaveLength(100);
+      for (const rows of Object.values(result.rankings)) {
+        expect(rows.map(({ rank }) => rank)).toEqual(rows.map((_, index) => index + 1));
+      }
+      expect(readActiveRepositories(database)).toHaveLength(102);
+      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(204);
+    } finally { database.close(); control.close(); }
+  });
+
   it("excludes reviewed empty skeletons before scoring and fills both Top100 lists without deleting history", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-exclusions-"));
     temporaryDirectories.push(directory);

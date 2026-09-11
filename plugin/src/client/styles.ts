@@ -1050,10 +1050,16 @@ export const css = `
   background: color-mix(in srgb, Canvas 94%, var(--t100-accent-soft));
   font-size: 12px;
 }
+.dsh-top100 .task-details { display: grid; gap: 9px; min-width: 0; overflow-wrap: anywhere; }
+.dsh-top100 .task-details .job-status { color: var(--t100-body); }
+.dsh-top100 .managed-list .row-actions > .job { width: 100%; }
 .dsh-top100 .job-plugin-name {
   overflow: hidden;
   color: var(--t100-ink);
-  font: 700 14px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1067,7 +1073,7 @@ export const css = `
   flex: 0 0 auto;
   color: var(--t100-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .dsh-top100 .job-progress {
   position: relative;
@@ -1190,6 +1196,10 @@ export const css = `
 .dsh-top100 .job-installed.activation-restart-required .job-progress > span {
   background: #c98300;
 }
+.dsh-top100 .job-uninstall.job-installed:not(.activation-broken) {
+  border-color: var(--t100-line);
+  background: var(--t100-surface);
+}
 .dsh-top100 .job-error-message {
   display: grid;
   gap: 6px;
@@ -1231,7 +1241,7 @@ export const css = `
 .dsh-top100 .job-error-details summary {
   color: var(--t100-muted);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 400;
 }
 .dsh-top100 .job-error-details pre {
   max-height: 140px;
@@ -1258,6 +1268,11 @@ export const css = `
   background: var(--t100-accent-soft);
   font-size: 13px;
 }
+.dsh-top100 .task-history > summary { cursor: pointer; font-weight: 500; }
+.dsh-top100 .task-history-list { max-height: 260px; overflow-y: auto; margin-top: 8px; }
+.dsh-top100 .task-history-item { padding: 8px 0; border: 0; border-top: 1px solid var(--t100-line); border-radius: 0; background: transparent; }
+.dsh-top100 .task-history-item > summary { cursor: pointer; font: inherit; line-height: 1.6; color: var(--t100-ink); overflow-wrap: anywhere; }
+.dsh-top100 .task-history-item > .task-details { margin-top: 6px; line-height: 1.6; }
 .dsh-top100 .install-activity-banner {
   display: flex;
   align-items: center;
@@ -1277,12 +1292,16 @@ export const css = `
 }
 .dsh-top100 .install-activity-banner strong {
   font-size: 12px;
+  font-weight: 500;
 }
 .dsh-top100 .install-activity-banner span {
   max-width: 280px;
   overflow: hidden;
   color: var(--t100-muted);
-  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1293,7 +1312,7 @@ export const css = `
   border-color: color-mix(in srgb, var(--t100-accent) 34%, var(--t100-line));
   color: var(--t100-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .dsh-top100 .install-activity-banner.is-active {
   border-left: 3px solid var(--t100-accent);
@@ -1333,6 +1352,7 @@ export const css = `
 .dsh-top100 .install-activity-head h3 {
   margin: 0 0 3px;
   font-size: 16px;
+  font-weight: 600;
   line-height: 1.3;
 }
 .dsh-top100 .install-activity-head p {

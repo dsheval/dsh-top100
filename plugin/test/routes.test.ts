@@ -609,6 +609,8 @@ describe("plugin lifecycle routes", () => {
       const recoveryFailed = scenario.startsWith("recovery-");
       expect(job.phase).toBe(scenario.endsWith("cancel") ? "cancelled" : "failed");
       expect(job.activationState).toBe(recoveryFailed ? "broken" : "restart-required");
+      expect(job.recovery).toBe(recoveryFailed ? "failed" : "restored");
+      expect(job.profileDirectory).toBe(directory);
       expect(job.error).toContain(recoveryFailed ? "自动恢复失败" : "已自动回滚");
       expect(JSON.parse(readFileSync(join(directory, "package.json"), "utf8"))).toEqual(JSON.parse(manifestBefore));
       if (!recoveryFailed) {

@@ -121,6 +121,15 @@ pnpm --version" aria-label="复制环境检查命令">复制</button>
               </details>
             </div>
             <details class="dsh-detail dsh-inline-help">
+              <summary>用 pnpm 从源码启动：首次准备与日常使用</summary>
+              <div class="dsh-detail-body">
+                <p>首次准备或更新 DSH 源码后，先在源码仓库根目录依次执行 <code>pnpm install</code> 和 <code>pnpm run build</code>。每条成功后再继续，随后安装 Top100。请沿用该源码版本要求的 Node 和 pnpm。</p>
+                <p>日常使用只需回到同一源码目录运行 <code>pnpm dsh web</code>，在浏览器打开终端输出的地址；保持终端运行，结束时按 <code>Ctrl+C</code>。不用每次重新安装 Top100 或全量构建。</p>
+                <p>pnpm 会复用缓存，但启动脚本也可能同步缺失或变更的工作区依赖，因此有时仍会下载。出现其他平台、Desktop 或 SDK 包不代表正在使用它们或调用模型。<code>ECONNRESET</code> 表示下载连接中断，请看重试后的最终结果；<code>WARN</code> 本身不等于失败。</p>
+                <p>若报客户端构建文件缺失，先完成 <code>pnpm run build</code> 再启动。构建失败时保留最后的错误输出，先处理宿主构建问题；反复安装 Top100 不会补齐宿主构建文件。</p>
+              </div>
+            </details>
+            <details class="dsh-detail dsh-inline-help">
               <summary>不确定启动方式，或安装报错？</summary>
               <div class="dsh-detail-body">
                 <p>查看原来的终端命令。安装和启动必须使用相同的命令前缀、DSH 版本和配置目录（包括自定义 <code>DSH_HOME</code>）。使用桌面应用图标启动的用户，请查看该应用的插件安装说明。</p>

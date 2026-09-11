@@ -4,6 +4,7 @@ import { isInstallBatchComplete } from "./install-batch-presentation.js";
 
 const BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const RECENT_KEY = "dsh-top100:recent-install-batches:v1";
+const COMPLETED_KEY = "dsh-top100:completed-install-batches:v1";
 const PENDING_KEY = "dsh-top100:pending-submission:v1";
 const SUBMIT_PATHS = new Set(["/dsh-top100/install-batch", "/dsh-top100/install", "/dsh-top100/manage", "/dsh-top100/retry"]);
 export interface PendingSubmission { id: string; url: string; startedAt: number; state: "sending" | "uncertain" | "cancelling" }
@@ -50,12 +51,24 @@ function rememberBatches(batches: InstallBatchSnapshot[]): void {
   // would continually reorder storage and wake every other tab again.
   writeStorage(RECENT_KEY, JSON.stringify([...new Set([...batches.map((batch) => batch.batchId), ...recentIds()])].slice(0, 10)));
   writeStorage(BATCH_KEY, batches[0].batchId);
+  batches.forEach(rememberCompletion);
+}
+function completedIds(): string[] {
+  try {
+    const ids: unknown = JSON.parse(readStorage(COMPLETED_KEY) ?? "[]");
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string").slice(0, 10) : [];
+  } catch { return []; }
+}
+// Persist only completion markers, never task output, paths or approval tokens.
+function rememberCompletion(batch: InstallBatchSnapshot): void {
+  if (isInstallBatchComplete(batch)) writeStorage(COMPLETED_KEY, JSON.stringify([...new Set([batch.batchId, ...completedIds()])].slice(0, 10)));
 }
 function rememberBatch(batch: InstallBatchSnapshot): void { rememberBatches([batch]); }
 function forgetBatch(id: string): void {
   const ids = recentIds().filter((value) => value !== id);
   writeStorage(RECENT_KEY, JSON.stringify(ids));
   if (readStorage(BATCH_KEY) === id) writeStorage(BATCH_KEY, ids[0] ?? null);
+  writeStorage(COMPLETED_KEY, JSON.stringify(completedIds().filter((value) => value !== id)));
 }
 class TaskHttpError extends Error { constructor(message: string, readonly status: number) { super(message); } }
 async function readTask<T>(url: string, init?: RequestInit): Promise<T> {
@@ -110,6 +123,7 @@ export function useTaskTracker() {
   }, [requestRecovery]);
   const track = useCallback((batch: InstallBatchSnapshot): void => { broadcast(batch); }, []);
   const retryTracking = useCallback(() => { requestRecovery(undefined, null); }, [requestRecovery]);
+  const dismissNotice = useCallback(() => { setState((previous) => previous.error?.kind === "missing" ? { ...previous, error: null } : previous); }, []);
 
   useEffect(() => {
     const controller = new AbortController(); const epoch = generation.current;
@@ -127,7 +141,7 @@ export function useTaskTracker() {
         if (status.submission) known.current.set(status.submission.batchId, status.submission);
         for (const batch of status.activeBatches) known.current.set(batch.batchId, batch);
         rememberBatches([...status.activeBatches, ...(status.submission ? [status.submission] : [])]);
-        let missing = false;
+        let missing = stateRef.current.error?.kind === "missing";
         // IDs only are persisted; terminal details are read back from the host.
         for (const id of recentIds()) {
           if (status.activeBatches.some((batch) => batch.batchId === id) || known.current.get(id) && isInstallBatchComplete(known.current.get(id)!)) continue;
@@ -136,9 +150,10 @@ export function useTaskTracker() {
             if (!current()) return;
             if (batch.batchId !== id) throw new Error("Task response did not match the requested batch");
             known.current.set(id, batch);
+            rememberCompletion(batch);
           } catch (cause) {
             if (!current()) return;
-            if (cause instanceof TaskHttpError && cause.status === 404) { missing = true; forgetBatch(id); known.current.delete(id); }
+            if (cause instanceof TaskHttpError && cause.status === 404) { missing ||= !completedIds().includes(id); forgetBatch(id); known.current.delete(id); }
             else throw cause;
           }
         }
@@ -169,6 +184,7 @@ export function useTaskTracker() {
         if (!current()) return;
         if (snapshot.batchId !== batchId) throw new Error("Task response did not match the requested batch");
         known.current.set(batchId, snapshot);
+        rememberCompletion(snapshot);
         if (isInstallBatchComplete(snapshot)) {
           again = false;
           setState((previous) => ({ ...previous, batch: snapshot, history: history() }));
@@ -177,7 +193,7 @@ export function useTaskTracker() {
         } else setState((previous) => previous.busy !== batchId ? previous : ({ ...previous, batch: snapshot, error: previous.error?.kind === "cancel" ? previous.error : null }));
       } catch (cause) {
         if (!current()) return; delay = 2000;
-        if (cause instanceof TaskHttpError && cause.status === 404) { again = false; forgetBatch(batchId); known.current.delete(batchId); requestRecovery(); }
+        if (cause instanceof TaskHttpError && cause.status === 404) { again = false; forgetBatch(batchId); known.current.delete(batchId); requestRecovery(undefined, { kind: "missing", message: "Task record is no longer available" }); }
         else setState((previous) => ({ ...previous, error: { kind: "tracking", message: cause instanceof Error ? cause.message : String(cause) } }));
       } finally { if (current() && again) timer = setTimeout(() => { void poll(); }, delay); }
     };
@@ -230,6 +246,6 @@ export function useTaskTracker() {
     } catch (cause) { if (mounted.current && epoch === generation.current) setState((previous) => ({ ...previous, error: { kind: "cancel", message: cause instanceof Error ? cause.message : String(cause) } })); }
     finally { cancellationLocks.current.delete(jobId); if (mounted.current) setCancelling((ids) => ids.filter((id) => id !== jobId)); }
   }, []);
-  return { ...state, cancelling, track, submit, cancel, cancelSubmission, retryTracking };
+  return { ...state, cancelling, track, submit, cancel, cancelSubmission, retryTracking, dismissNotice };
 }
 export type TaskTracker = ReturnType<typeof useTaskTracker>;

@@ -1,3 +1,5 @@
+import { TaskStatus } from "../src/client/TaskStatus.js";
+import { TaskDetails } from "../src/client/TaskDetails.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement, ReactNode } from "react";
 
@@ -32,7 +34,7 @@ function render(page: typeof RankingsPage | typeof ManagedPage = RankingsPage): 
   host.flush(); return tree;
 }
 function elements(node: ReactNode): ReactElement<any>[] { if (Array.isArray(node)) return node.flatMap(elements); if (!node || typeof node !== "object" || !("props" in node)) return []; const e = node as ReactElement<any>; return [e, ...elements(e.props.children)]; }
-function text(node: ReactNode): string { if (Array.isArray(node)) return node.map(text).join(""); if (typeof node === "string" || typeof node === "number") return String(node); return node && typeof node === "object" && "props" in node ? text((node as ReactElement<any>).props.children) : ""; }
+function text(node: ReactNode): string { if (node && typeof node === "object" && "type" in node && node.type === TaskDetails) return text(TaskDetails(node.props as any)); if (Array.isArray(node)) return node.map(text).join(""); if (typeof node === "string" || typeof node === "number") return String(node); return node && typeof node === "object" && "props" in node ? text((node as ReactElement<any>).props.children) : ""; }
 function button(tree: ReactNode, label: string) { const found = elements(tree).find((e) => e.type === "button" && text(e).startsWith(label)); expect(found, `button ${label}`).toBeTruthy(); return found!; }
 const tick = async () => { for (let i = 0; i < 40; i++) await Promise.resolve(); };
 function deferred() { let resolve!: (value: Response) => void; let reject!: (reason: Error) => void; const promise = new Promise<Response>((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; }
@@ -88,7 +90,7 @@ describe("actual ranking navigation and failure actions", () => {
     }));
     let tree = render();
     for (let i = 0; i < 5; i++) { await tick(); tree = render(); }
-    button(tree, "viewInstallResult").props.onClick(); tree = render();
+    button(TaskStatus(elements(tree).find((node) => node.type === TaskStatus)!.props), "viewLatestTaskResult").props.onClick(); tree = render();
     button(tree, "retry").props.onClick(); await tick(); tree = render();
     expect(requests.find((r) => r.url.includes("q=acme%2Fskill-demo"))?.url).toContain("catalogScope=skills");
     expect(requests.some((r) => r.url.includes("install-preflight"))).toBe(true);
@@ -184,7 +186,7 @@ describe("actual managed update actions", () => {
     button(tree, "updateAll").props.onClick(); pending.resolve(json({ items: [preflight(), preflight("second")] })); await tick();
     const review = elements(render(ManagedPage)).find((e) => e.type === UpdateReview)!;
     review.props.onConfirm(); for (let i = 0; i < 6; i++) { await tick(); render(ManagedPage); } const current = render(ManagedPage);
-    expect(text(current)).toContain(phase === "failed" ? "manageFailed" : "manageCancelled"); expect(text(current)).toContain(failure); expect(text(current)).not.toContain("manageComplete");
+    expect(text(current)).toContain(`task_update_${phase}`); expect(text(current)).toContain(failure); expect(text(current)).not.toContain("manageComplete");
     button(current, "retry").props.onClick(); await tick(); expect(requests.filter((r) => r.url === "/dsh-top100/update-preflight")).toHaveLength(2); expect(JSON.parse(requests.findLast((r) => r.url === "/dsh-top100/update-preflight")!.init!.body as string)).toEqual({ names: ["demo"], strategy: "preserve", partial: true, sessionToken: "test-session" });
     expect(requests.filter((r) => r.url === "/dsh-top100/manage")).toHaveLength(1);
   });

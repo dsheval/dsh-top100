@@ -1,4 +1,7 @@
 // plugin/src/shared/featured.ts
+function isFeaturedRepository(entry) {
+  return entry.fullName?.trim().toLowerCase() === "dsheval/dsh-top100";
+}
 function showFeaturedPlugin({
   view,
   query = "",
@@ -9,5 +12,6 @@ function showFeaturedPlugin({
   return (view === "hot" || view === "rising" || view === "total") && !query.trim() && !category && catalogScope === "plugins" && installAvailability === "all";
 }
 export {
+  isFeaturedRepository,
   showFeaturedPlugin
 };

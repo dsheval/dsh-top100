@@ -4,6 +4,10 @@
 
 One GitHub repository is one ranking entry. Stars from multiple skills in the same repository are not duplicated.
 
+Our own repository, `dsheval/dsh-top100`, is always excluded before score normalization and ranking selection. It occupies only the website's editorial `#000` placement, never a competitive position or category count. The plugin keeps its existing title link rather than adding a promotional ranking card. Collection and historical statistics remain intact.
+
+Both clients also hide this repository from older ranked snapshots. They retain the other entries' published historical ranks and scores rather than inventing replacement scores; a new ranking publication is required to fill a previously truncated Top 100 and refresh published counts.
+
 Source-reviewed exclusions are recorded with a reason and evidence URL in `config/ranking.json`. Excluded plugin repositories do not participate in score normalization, total ranking, rising ranking, or Top 100 selection. The next eligible entries fill the lists under the same ordering rules. Collection and historical statistics are retained; reinstatement requires reviewing the implemented plugin functionality. Skills remain a separate directory.
 
 ## Total ranking

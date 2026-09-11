@@ -1,4 +1,7 @@
 /** Editorial placement, never a catalog entry or a scoring input. */
+export declare function isFeaturedRepository(entry: {
+    fullName?: string;
+}): boolean;
 export declare function showFeaturedPlugin({ view, query, category, catalogScope, installAvailability, }: {
     view: string;
     query?: string;

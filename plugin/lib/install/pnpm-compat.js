@@ -42,7 +42,7 @@ export function classifyPnpmFailure(raw) {
     if (/ERR_PNPM_IGNORED_BUILDS/.test(output)) {
         return {
             code: "ignored-builds",
-            message: "依赖的构建脚本尚未获准。请在当前 Profile 查看并审核日志列出的依赖，再重试安装。",
+            message: "依赖的构建脚本尚未获准。请先查看恢复结果；回滚后 approve-builds 可能不再列出该依赖，需按构建授权指南明确批准后重试。",
         };
     }
     if (/ERR_PNPM_PEER_DEP_ISSUES/.test(output)) {

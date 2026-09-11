@@ -183,6 +183,22 @@ afterEach(async () => {
 });
 
 describe("catalog filter", () => {
+  it("excludes our project from legacy snapshot views, search and category/scope counts", () => {
+    const own = entry("DSHEval/DSH-Top100", { type: "cordis-plugin", categories: ["tools"] });
+    const peer = entry("other/dsh-top100", { type: "cordis-plugin", categories: ["tools"] });
+    const legacy = { ...document, rankings: { total: [own, peer], hot: [own, peer], rising: [own, peer] } };
+    for (const view of ["total", "hot", "rising"] as const) {
+      for (const query of ["", "dsh-top100"]) {
+        const result = filterCatalog(legacy, { view, query, category: null, offset: 0, limit: 100, installed: {} });
+        expect(result.items.map(({ fullName }) => fullName)).toEqual([peer.fullName]);
+        expect(result.total).toBe(1);
+      }
+    }
+    expect(catalogScopeCounts(legacy)).toEqual(catalogScopeCounts({ ...legacy, rankings: { ...legacy.rankings, total: [peer] } }));
+    expect(filteredCatalogCategories(legacy, {}).find(({ id }) => id === "tools")?.count).toBe(1);
+    expect(legacy.rankings.total).toEqual([own, peer]);
+  });
+
   it("shows a compact Git source as installed after a verified npm installation of that catalog entry", () => {
     const plugin = entry("acme/theme-repo", { type: "cordis-plugin", install: { commands: ["dsh plugin add github:acme/theme-repo"] } });
     const provenance: InstallProvenance = { source: "npm", requestedTarget: "@acme/theme", resolvedTarget: "@acme/theme@0.5.0", packageName: "@acme/theme", version: "0.5.0", commit: null, integrity: "sha512-test", verifiedAt: 1, repositoryIdentity: "matched", repositoryUrl: "https://github.com/acme/theme-repo" };

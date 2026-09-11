@@ -1,4 +1,8 @@
 /** Editorial placement, never a catalog entry or a scoring input. */
+export function isFeaturedRepository(entry: { fullName?: string }): boolean {
+  return entry.fullName?.trim().toLowerCase() === "dsheval/dsh-top100";
+}
+
 export function showFeaturedPlugin({
   view,
   query = "",

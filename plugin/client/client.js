@@ -596,45 +596,6 @@ function DiagnosticsPage({ t }) {
 function isInstallBatchComplete(batch) {
 	return batch.completed === batch.total;
 }
-/** A deliberately coarse stage indicator; it never pretends to be byte progress. */
-function installStage(job) {
-	if (job.phase === "installed") return {
-		current: 4,
-		total: 4,
-		percent: 100
-	};
-	if (job.phase === "queued" || job.phase === "validating") return {
-		current: 1,
-		total: 4,
-		percent: 25
-	};
-	if (job.phase === "downloading") return {
-		current: 2,
-		total: 4,
-		percent: 50
-	};
-	if (job.phase === "waiting-profile-lock" || job.phase === "installing") return {
-		current: 3,
-		total: 4,
-		percent: 75
-	};
-	const output = `${job.lastLine}\n${job.error ?? ""}`;
-	if (/下载|fetch|network|ECONN|ETIMEDOUT|EAI_AGAIN/i.test(output)) return {
-		current: 2,
-		total: 4,
-		percent: 50
-	};
-	if (/Progress:|ERR_PNPM_|写入|配置验证|profile/i.test(output)) return {
-		current: 3,
-		total: 4,
-		percent: 75
-	};
-	return {
-		current: 1,
-		total: 4,
-		percent: 25
-	};
-}
 
 //#endregion
 //#region src/shared/github-source.ts
@@ -926,33 +887,49 @@ function visibleInstallReviewRisks(risks, scriptCount) {
 
 //#endregion
 //#region src/client/install-presentation.ts
-function progressAddedCount(line) {
-	if (!/\bProgress:/i.test(line)) return null;
-	const added = /\badded\s+(\d+)/i.exec(line)?.[1];
-	if (added !== void 0) return Number(added);
-	const resolved = /\bresolved\s+(\d+)/i.exec(line)?.[1];
-	return resolved === void 0 ? null : Number(resolved);
+/** Status follows the operation, never the shared internal mutation phase. */
+function taskPhaseKey(job) {
+	const action = job.action ?? "install";
+	if (job.activationState === "broken") return `task_${action}_failed`;
+	if ([
+		"installing",
+		"installed",
+		"failed",
+		"cancelled"
+	].includes(job.phase)) return `task_${action}_${job.phase}`;
+	return `phase_${job.phase}`;
 }
-/** Replace package-manager chatter with one short, stable status sentence. */
+function taskProgressKey(jobs) {
+	const actions = new Set(jobs.map((job) => job.action ?? "install"));
+	return actions.size === 1 ? `task_${[...actions][0]}_progress` : "batchProgress";
+}
+function dependencyProgress(line) {
+	if (!/\bProgress:/i.test(line)) return null;
+	const result = {};
+	for (const key of [
+		"resolved",
+		"reused",
+		"downloaded",
+		"added"
+	]) {
+		const value = new RegExp(`\\b${key}\\s+(\\d+)`, "i").exec(line)?.[1];
+		if (value !== void 0) result[key] = Number(value);
+	}
+	return Object.keys(result).length ? result : null;
+}
+/** Terminal state takes precedence over stale package-manager output. */
 function installStatus(job) {
-	const dependencyCount = progressAddedCount(job.lastLine);
-	if (dependencyCount !== null) return {
-		key: "installStatusDependencies",
-		count: dependencyCount
-	};
+	if ([
+		"installed",
+		"failed",
+		"cancelled"
+	].includes(job.phase)) return { key: taskPhaseKey(job) };
+	if (/正在恢复/.test(job.lastLine)) return { key: "taskRecoveringDependencies" };
+	if (/Will retry|retries? left|retrying/i.test(job.lastLine)) return { key: "taskNetworkRetry" };
+	if (dependencyProgress(job.lastLine)) return { key: "taskDependencies" };
 	if (/检查当前.*profile/i.test(job.lastLine)) return { key: "installStatusProfileCheck" };
 	if (/验证安装后|验证更新后/i.test(job.lastLine)) return { key: "installStatusFinalCheck" };
-	if (/写入.*profile/i.test(job.lastLine)) return { key: "installStatusWriting" };
-	return { key: {
-		queued: "installStatusQueued",
-		validating: "installStatusValidating",
-		downloading: "installStatusDownloading",
-		"waiting-profile-lock": "installStatusWaiting",
-		installing: "installStatusWriting",
-		installed: "installStatusInstalled",
-		failed: "installStatusFailed",
-		cancelled: "installStatusCancelled"
-	}[job.phase] };
+	return { key: taskPhaseKey(job) };
 }
 function ignoredBuildPackages(raw) {
 	return [...(/Ignored build scripts:\s*([\s\S]*?)(?:\s+Run\s+["']?pnpm approve-builds|$)/i.exec(raw)?.[1] ?? "").matchAll(/(?:@[a-z0-9._~-]+\/)?[a-z0-9._~-]+@[a-z0-9._~+-]+/gi)].map((match) => match[0]);
@@ -1032,9 +1009,116 @@ function presentInstallError(raw) {
 }
 
 //#endregion
+//#region src/client/TaskDetails.tsx
+const ERROR_LOCALE_KEYS = {
+	"ignored-builds": "ignoredBuilds",
+	peer: "peer",
+	build: "build",
+	policy: "policy",
+	network: "network",
+	timeout: "timeout",
+	permission: "permission",
+	lockfile: "lockfile",
+	profile: "profile",
+	source: "source",
+	generic: "generic"
+};
+const ROUTINE_COMPLETION_LINES = new Set([
+	"已卸载，重启后确认运行状态",
+	"卸载已完成，并清理了残留配置",
+	"更新完成，已记录精确来源；重启后验证运行状态",
+	"已写入且配置可组合；完成作者要求的配置并重启 DSH 后再验证",
+	"已写入且配置可组合；重启 DSH 后再验证实际运行状态",
+	"Skill 已复制并记录来源；完成作者要求的配置后，在后续 Agent 会话中验证可见性",
+	"全局 Skill 已复制并记录来源；将在后续 Agent 会话中验证可见性"
+]);
+const normalizedText = (value) => value.replace(/[\s。.!！]+/g, "").toLowerCase();
+function taskResultText(job, t, includeIdentity = true) {
+	const parts = includeIdentity ? [`${job.fullName} · ${t(taskPhaseKey(job))}`] : [];
+	if (job.phase === "installed" && job.activationState !== "broken") {
+		if (job.activationState === "configuration-required") parts.push(t("taskCheckConfiguration"));
+		if (!job.requiresRestart && job.action !== "uninstall" && job.activationState !== "configuration-required") parts.push(t(`activation_${job.activationState}`));
+		if (job.requiresRestart) parts.push(t(job.action === "uninstall" ? "taskUninstallRestart" : job.action === "update" ? "taskUpdateRestart" : "taskInstallRestart"));
+	}
+	if (job.recovery) parts.push(t(job.recovery === "restored" ? "taskRestored" : "taskRecoveryFailed"));
+	return parts.join(" ");
+}
+/** Shared by the task dialog and Installed page, including mutation failures. */
+function TaskDetails({ job, t, headingPresent = false }) {
+	const terminal = [
+		"installed",
+		"failed",
+		"cancelled"
+	].includes(job.phase);
+	const counters = !terminal ? dependencyProgress(job.lastLine ?? "") : null;
+	const error = job.phase === "failed" ? presentInstallError(job.error ?? job.lastLine) : null;
+	const errorKey = error ? ERROR_LOCALE_KEYS[error.kind] : null;
+	const statusKey = installStatus(job).key;
+	const heading = headingPresent ? t(taskPhaseKey(job)) : "";
+	const rawProgress = !terminal && !counters && job.lastLine && normalizedText(job.lastLine) !== normalizedText(heading) ? job.lastLine : "";
+	const statusText = terminal ? taskResultText(job, t, !headingPresent) : rawProgress && statusKey !== "taskNetworkRetry" ? "" : normalizedText(t(statusKey)) === normalizedText(heading) ? "" : t(statusKey);
+	const log = job.error || job.lastLine;
+	const duplicateLog = job.phase === "installed" && job.activationState !== "broken" && !job.error && (ROUTINE_COMPLETION_LINES.has(log?.trim() ?? "") || normalizedText(log ?? "") === normalizedText(statusText));
+	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: "task-details",
+		children: [
+			statusText ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "job-status",
+				children: statusText
+			}) : null,
+			counters ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "job-status",
+				children: [
+					"resolved",
+					"reused",
+					"downloaded",
+					"added"
+				].filter((key) => counters[key] !== void 0).map((key) => `${t(`task${key[0].toUpperCase()}${key.slice(1)}`)} ${counters[key]}`).join(" · ")
+			}) : null,
+			rawProgress && normalizedText(rawProgress) !== normalizedText(statusText) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
+				className: "job-status",
+				style: { overflowWrap: "anywhere" },
+				children: rawProgress
+			}) : null,
+			error && errorKey ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				className: "job-error-message",
+				role: "alert",
+				children: [
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(`installError_${errorKey}_title`) }),
+					job.action === "uninstall" ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(`installError_${errorKey}_summary`) }),
+					error.packages.length ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+						className: "job-error-packages",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installErrorPackages") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: error.packages.join(", ") })]
+					}) : null,
+					job.profileDirectory ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+						className: "job-error-packages",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("taskProfileDirectory") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: job.profileDirectory })]
+					}) : null,
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
+						className: "job-error-hint",
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installErrorNext") }), t(`installError_${errorKey}_hint`)]
+					}),
+					error.kind === "ignored-builds" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("a", {
+						href: "https://github.com/dsheval/dsh-top100/blob/main/docs/build-approval-recovery.md",
+						target: "_blank",
+						rel: "noopener noreferrer",
+						children: t("buildRecoveryGuide")
+					}) }) : null
+				]
+			}) : null,
+			terminal && log && !duplicateLog ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+				className: "job-error-details",
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("taskLogs") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", { children: log })]
+			}) : null
+		]
+	});
+}
+
+//#endregion
 //#region src/client/use-task-tracker.ts
 const BATCH_KEY = "dsh-top100:last-install-batch:v1";
 const RECENT_KEY = "dsh-top100:recent-install-batches:v1";
+const COMPLETED_KEY = "dsh-top100:completed-install-batches:v1";
 const PENDING_KEY = "dsh-top100:pending-submission:v1";
 const SUBMIT_PATHS = new Set([
 	"/dsh-top100/install-batch",
@@ -1106,6 +1190,18 @@ function rememberBatches(batches) {
 	if (!batches.length) return;
 	writeStorage(RECENT_KEY, JSON.stringify([...new Set([...batches.map((batch) => batch.batchId), ...recentIds()])].slice(0, 10)));
 	writeStorage(BATCH_KEY, batches[0].batchId);
+	batches.forEach(rememberCompletion);
+}
+function completedIds() {
+	try {
+		const ids = JSON.parse(readStorage(COMPLETED_KEY) ?? "[]");
+		return Array.isArray(ids) ? ids.filter((id) => typeof id === "string").slice(0, 10) : [];
+	} catch {
+		return [];
+	}
+}
+function rememberCompletion(batch) {
+	if (isInstallBatchComplete(batch)) writeStorage(COMPLETED_KEY, JSON.stringify([...new Set([batch.batchId, ...completedIds()])].slice(0, 10)));
 }
 function rememberBatch(batch) {
 	rememberBatches([batch]);
@@ -1114,6 +1210,7 @@ function forgetBatch(id) {
 	const ids = recentIds().filter((value) => value !== id);
 	writeStorage(RECENT_KEY, JSON.stringify(ids));
 	if (readStorage(BATCH_KEY) === id) writeStorage(BATCH_KEY, ids[0] ?? null);
+	writeStorage(COMPLETED_KEY, JSON.stringify(completedIds().filter((value) => value !== id)));
 }
 var TaskHttpError = class extends Error {
 	constructor(message, status) {
@@ -1212,6 +1309,12 @@ function useTaskTracker() {
 	const retryTracking = (0, react.useCallback)(() => {
 		requestRecovery(void 0, null);
 	}, [requestRecovery]);
+	const dismissNotice = (0, react.useCallback)(() => {
+		setState((previous) => previous.error?.kind === "missing" ? {
+			...previous,
+			error: null
+		} : previous);
+	}, []);
 	(0, react.useEffect)(() => {
 		const controller = new AbortController();
 		const epoch = generation.current;
@@ -1233,7 +1336,7 @@ function useTaskTracker() {
 				if (status.submission) known.current.set(status.submission.batchId, status.submission);
 				for (const batch of status.activeBatches) known.current.set(batch.batchId, batch);
 				rememberBatches([...status.activeBatches, ...status.submission ? [status.submission] : []]);
-				let missing = false;
+				let missing = stateRef.current.error?.kind === "missing";
 				for (const id of recentIds()) {
 					if (status.activeBatches.some((batch) => batch.batchId === id) || known.current.get(id) && isInstallBatchComplete(known.current.get(id))) continue;
 					try {
@@ -1244,10 +1347,11 @@ function useTaskTracker() {
 						if (!current()) return;
 						if (batch.batchId !== id) throw new Error("Task response did not match the requested batch");
 						known.current.set(id, batch);
+						rememberCompletion(batch);
 					} catch (cause) {
 						if (!current()) return;
 						if (cause instanceof TaskHttpError && cause.status === 404) {
-							missing = true;
+							missing ||= !completedIds().includes(id);
 							forgetBatch(id);
 							known.current.delete(id);
 						} else throw cause;
@@ -1308,6 +1412,7 @@ function useTaskTracker() {
 				if (!current()) return;
 				if (snapshot.batchId !== batchId) throw new Error("Task response did not match the requested batch");
 				known.current.set(batchId, snapshot);
+				rememberCompletion(snapshot);
 				if (isInstallBatchComplete(snapshot)) {
 					again = false;
 					setState((previous) => ({
@@ -1328,7 +1433,10 @@ function useTaskTracker() {
 					again = false;
 					forgetBatch(batchId);
 					known.current.delete(batchId);
-					requestRecovery();
+					requestRecovery(void 0, {
+						kind: "missing",
+						message: "Task record is no longer available"
+					});
 				} else setState((previous) => ({
 					...previous,
 					error: {
@@ -1475,14 +1583,15 @@ function useTaskTracker() {
 		submit,
 		cancel,
 		cancelSubmission,
-		retryTracking
+		retryTracking,
+		dismissNotice
 	};
 }
 
 //#endregion
 //#region src/client/TaskStatus.tsx
-function TaskStatus({ tracking, t }) {
-	const failed = tracking.history.flatMap((batch) => batch.jobs.filter((job) => job.phase === "failed" || job.phase === "cancelled" || job.activationState === "broken"));
+function TaskStatus({ tracking, t, onViewResult }) {
+	const recent = tracking.history.flatMap((batch) => batch.jobs);
 	return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [tracking.pending ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 		className: "banner",
 		role: "status",
@@ -1508,12 +1617,20 @@ function TaskStatus({ tracking, t }) {
 				children: t("cancelSubmission")
 			})
 		]
+	}) : tracking.error?.kind === "missing" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+		className: "banner",
+		role: "status",
+		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t("installTaskUnavailable") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+			type: "button",
+			onClick: tracking.dismissNotice,
+			children: t("dismissTaskNotice")
+		})]
 	}) : tracking.error ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 		className: "error",
 		role: "alert",
 		children: [
-			t(tracking.error.kind === "missing" ? "installTaskUnavailable" : tracking.error.kind === "cancel" ? "cancelFailed" : tracking.error.kind === "submission" ? "submissionRejected" : "taskTrackingError"),
-			tracking.error.kind !== "missing" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: tracking.error.message }) : null,
+			t(tracking.error.kind === "cancel" ? "cancelFailed" : tracking.error.kind === "submission" ? "submissionRejected" : "taskTrackingError"),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: tracking.error.message }),
 			" ",
 			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 				type: "button",
@@ -1525,13 +1642,37 @@ function TaskStatus({ tracking, t }) {
 		className: "banner",
 		role: "status",
 		children: t("taskRecovering")
-	}) : null, failed.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
-		className: "banner",
-		children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("previousTaskErrors") }), failed.map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("strong", { children: [
-			job.fullName,
-			" · ",
-			t(`phase_${job.phase}`)
-		] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: job.error ?? job.message ?? job.lastLine })] }, job.id))]
+	}) : null, recent.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+		className: "banner task-history",
+		open: true,
+		children: [
+			/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
+				t("recentTasks"),
+				" (",
+				recent.length,
+				")"
+			] }),
+			/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+				className: "task-history-list",
+				children: recent.map((job) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
+					className: "task-history-item",
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("summary", { children: [
+						job.fullName,
+						" · ",
+						t(taskPhaseKey(job))
+					] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TaskDetails, {
+						job,
+						t,
+						headingPresent: true
+					})]
+				}, job.id))
+			}),
+			onViewResult && tracking.batch && !tracking.busy && isInstallBatchComplete(tracking.batch) ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+				type: "button",
+				onClick: onViewResult,
+				children: t("viewLatestTaskResult")
+			}) : null
+		]
 	}) : null] });
 }
 
@@ -1943,9 +2084,6 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 	(0, react.useEffect)(() => {
 		if (!batch || busy || batch.completed !== batch.total || completedBatch.current === batch.batchId) return;
 		completedBatch.current = batch.batchId;
-		const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
-		const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
-		setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("manageComplete"));
 		load();
 	}, [
 		batch,
@@ -2228,6 +2366,7 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 			}),
 			notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 				className: "banner",
+				style: { whiteSpace: "pre-line" },
 				children: notice
 			}) : null,
 			batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SkillBackupList, {
@@ -2299,7 +2438,7 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 				className: "banner",
 				role: "status",
 				children: [
-					t("batchProgress"),
+					t(taskProgressKey(batch.jobs)),
 					" ",
 					batch.completed,
 					"/",
@@ -2312,7 +2451,7 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 							job.fullName,
 							" · ",
-							t(`phase_${job.phase}`)
+							t(taskPhaseKey(job))
 						] }),
 						" ",
 						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -2418,9 +2557,12 @@ function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initialQuery =
 									children: [!item.protected || job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 										className: "actions row-actions",
 										children: [
-											job ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+											job ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 												className: "job",
-												children: [t(`phase_${job.phase}`), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("small", { children: job.error ?? job.message ?? job.lastLine })]
+												children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)(TaskDetails, {
+													job,
+													t
+												})
 											}) : null,
 											job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 												type: "button",
@@ -2614,19 +2756,6 @@ const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => /* @__PURE__ */ (
 		/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { className: "skeleton-pills" })
 	] })]
 }, index));
-const ERROR_LOCALE_KEYS = {
-	"ignored-builds": "ignoredBuilds",
-	peer: "peer",
-	build: "build",
-	policy: "policy",
-	network: "network",
-	timeout: "timeout",
-	permission: "permission",
-	lockfile: "lockfile",
-	profile: "profile",
-	source: "source",
-	generic: "generic"
-};
 var HttpError = class extends Error {
 	constructor(message, status, code) {
 		super(message);
@@ -2736,9 +2865,6 @@ function RankingsPage({ t }) {
 	(0, react.useEffect)(() => {
 		if (!batch || busy || !isInstallBatchComplete(batch) || completedBatch.current === batch.batchId) return;
 		completedBatch.current = batch.batchId;
-		const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
-		const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
-		setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("batchComplete"));
 		if (section === "rankings") load(view, query, category, catalogScope, installAvailability, 0, false);
 	}, [
 		batch,
@@ -2902,24 +3028,8 @@ function RankingsPage({ t }) {
 		}
 	}
 	function jobPanel(job) {
-		const stage = installStage(job);
-		const status = installStatus(job);
-		const error$1 = job.phase === "failed" ? presentInstallError(job.error ?? job.lastLine) : null;
-		const errorKey = error$1 ? ERROR_LOCALE_KEYS[error$1.kind] : null;
-		const activeStage = stage.current - 1;
-		const terminal = [
-			"installed",
-			"failed",
-			"cancelled"
-		].includes(job.phase);
-		const stages = [
-			"installStageCheck",
-			"installStageDownload",
-			"installStageApply",
-			"installStageReady"
-		];
 		return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-			className: `job job-${job.phase} activation-${job.activationState}`,
+			className: `job job-${job.phase} job-${job.action ?? "install"} activation-${job.activationState}`,
 			"aria-live": "polite",
 			children: [
 				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -2928,57 +3038,17 @@ function RankingsPage({ t }) {
 						className: "job-plugin-name",
 						title: job.fullName,
 						children: job.fullName
-					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(`phase_${job.phase}`) })]
+					}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(taskPhaseKey(job)) })]
 				}),
-				!terminal ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "job-progress",
-					role: "progressbar",
-					"aria-label": t("installProgressLabel"),
-					"aria-valuemin": 0,
-					"aria-valuemax": 100,
-					"aria-valuenow": stage.percent,
-					"aria-valuetext": `${t("installProgressEstimate")} ${stage.current}/${stage.total}`,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { style: { width: `${stage.percent}%` } })
-				}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					className: "job-stages",
-					"aria-hidden": "true",
-					children: stages.map((key, index) => /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
-						className: index < activeStage ? "is-complete" : index === activeStage ? "is-active" : void 0,
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("i", {}), t(key)]
-					}, key))
-				})] }) : null,
-				/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-					className: "job-status",
-					children: [t(status.key), status.count === void 0 ? null : /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [" · ", status.count] })]
+				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TaskDetails, {
+					job,
+					t,
+					headingPresent: true
 				}),
-				job.phase === "installed" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
-					className: `activation activation-${job.activationState}`,
-					children: t(`activation_${job.activationState}`)
-				}) : null,
 				/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SkillBackupList, {
 					jobs: [job],
 					t
 				}),
-				error$1 && errorKey ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					className: "job-error-message",
-					role: "alert",
-					children: [
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: t(`installError_${errorKey}_title`) }),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: t(`installError_${errorKey}_summary`) }),
-						error$1.packages.length > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-							className: "job-error-packages",
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installErrorPackages") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("code", { children: error$1.packages.join(", ") })]
-						}) : null,
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("p", {
-							className: "job-error-hint",
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: t("installErrorNext") }), t(`installError_${errorKey}_hint`)]
-						}),
-						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("details", {
-							className: "job-error-details",
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("summary", { children: t("installErrorDetails") }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", { children: error$1.detail })]
-						})
-					]
-				}) : null,
 				![
 					"installed",
 					"failed",
@@ -3069,7 +3139,8 @@ function RankingsPage({ t }) {
 			}),
 			/* @__PURE__ */ (0, react_jsx_runtime.jsx)(TaskStatus, {
 				tracking,
-				t
+				t,
+				onViewResult: () => setInstallActivityOpen(true)
 			}),
 			section === "rankings" ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(react_jsx_runtime.Fragment, { children: [
 				data?.cache.stale ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
@@ -3216,6 +3287,7 @@ function RankingsPage({ t }) {
 				}) : null,
 				notice ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
 					className: "banner",
+					style: { whiteSpace: "pre-line" },
 					children: notice
 				}) : null,
 				error ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
@@ -3250,10 +3322,10 @@ function RankingsPage({ t }) {
 						children: t("cancel")
 					})]
 				}) : null,
-				batch ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+				batch && busy ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: `install-activity-banner ${busy ? "is-active" : "is-complete"}`,
 					role: "status",
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: batch.jobs[0] ? t(`phase_${batch.jobs[0].phase}`) : t(busy ? "installTaskRunning" : "installTaskComplete") }), batch.jobs[0] ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("strong", { children: batch.jobs[0] ? t(taskPhaseKey(batch.jobs[0])) : t(busy ? "installTaskRunning" : "installTaskComplete") }), batch.jobs[0] ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 						title: batch.jobs[0].fullName,
 						children: batch.jobs[0].fullName
 					}) : null] }), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
@@ -4661,10 +4733,16 @@ const css = `
   background: color-mix(in srgb, Canvas 94%, var(--t100-accent-soft));
   font-size: 12px;
 }
+.dsh-top100 .task-details { display: grid; gap: 9px; min-width: 0; overflow-wrap: anywhere; }
+.dsh-top100 .task-details .job-status { color: var(--t100-body); }
+.dsh-top100 .managed-list .row-actions > .job { width: 100%; }
 .dsh-top100 .job-plugin-name {
   overflow: hidden;
   color: var(--t100-ink);
-  font: 700 14px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4678,7 +4756,7 @@ const css = `
   flex: 0 0 auto;
   color: var(--t100-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .dsh-top100 .job-progress {
   position: relative;
@@ -4801,6 +4879,10 @@ const css = `
 .dsh-top100 .job-installed.activation-restart-required .job-progress > span {
   background: #c98300;
 }
+.dsh-top100 .job-uninstall.job-installed:not(.activation-broken) {
+  border-color: var(--t100-line);
+  background: var(--t100-surface);
+}
 .dsh-top100 .job-error-message {
   display: grid;
   gap: 6px;
@@ -4842,7 +4924,7 @@ const css = `
 .dsh-top100 .job-error-details summary {
   color: var(--t100-muted);
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 400;
 }
 .dsh-top100 .job-error-details pre {
   max-height: 140px;
@@ -4869,6 +4951,11 @@ const css = `
   background: var(--t100-accent-soft);
   font-size: 13px;
 }
+.dsh-top100 .task-history > summary { cursor: pointer; font-weight: 500; }
+.dsh-top100 .task-history-list { max-height: 260px; overflow-y: auto; margin-top: 8px; }
+.dsh-top100 .task-history-item { padding: 8px 0; border: 0; border-top: 1px solid var(--t100-line); border-radius: 0; background: transparent; }
+.dsh-top100 .task-history-item > summary { cursor: pointer; font: inherit; line-height: 1.6; color: var(--t100-ink); overflow-wrap: anywhere; }
+.dsh-top100 .task-history-item > .task-details { margin-top: 6px; line-height: 1.6; }
 .dsh-top100 .install-activity-banner {
   display: flex;
   align-items: center;
@@ -4888,12 +4975,16 @@ const css = `
 }
 .dsh-top100 .install-activity-banner strong {
   font-size: 12px;
+  font-weight: 500;
 }
 .dsh-top100 .install-activity-banner span {
   max-width: 280px;
   overflow: hidden;
   color: var(--t100-muted);
-  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -4904,7 +4995,7 @@ const css = `
   border-color: color-mix(in srgb, var(--t100-accent) 34%, var(--t100-line));
   color: var(--t100-accent);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 500;
 }
 .dsh-top100 .install-activity-banner.is-active {
   border-left: 3px solid var(--t100-accent);
@@ -4944,6 +5035,7 @@ const css = `
 .dsh-top100 .install-activity-head h3 {
   margin: 0 0 3px;
   font-size: 16px;
+  font-weight: 600;
   line-height: 1.3;
 }
 .dsh-top100 .install-activity-head p {
@@ -5504,13 +5596,45 @@ const css = `
 //#endregion
 //#region src/client/locales.ts
 const zh = {
+	taskDependencies: "正在处理依赖",
+	taskNetworkRetry: "网络请求失败，正在等待重试",
+	taskRecoveringDependencies: "正在恢复原有依赖，请等待恢复结束",
+	taskResolved: "已解析",
+	taskReused: "复用缓存",
+	taskDownloaded: "已下载",
+	taskAdded: "已写入",
+	taskLogs: "执行详情",
+	taskRestored: "原有依赖已恢复。",
+	taskRecoveryFailed: "自动恢复失败，请先检查并修复当前配置。",
+	taskProfileDirectory: "当前插件目录",
+	taskUninstallRestart: "请重启 DSH，使卸载生效。",
+	taskUpdateRestart: "请重启 DSH，使更新生效，再检查插件功能。",
+	taskInstallRestart: "请重启 DSH，再检查插件功能。",
+	taskCheckConfiguration: "请先完成作者要求的配置。",
+	buildRecoveryGuide: "查看构建授权与重试指南",
+	task_install_installing: "安装中",
+	task_install_installed: "已安装",
+	task_install_failed: "安装失败",
+	task_install_cancelled: "安装已取消",
+	task_install_progress: "安装进度",
+	task_update_installing: "更新中",
+	task_update_installed: "已更新",
+	task_update_failed: "更新失败",
+	task_update_cancelled: "更新已取消",
+	task_update_progress: "更新进度",
+	task_uninstall_installing: "卸载中",
+	task_uninstall_installed: "已卸载",
+	task_uninstall_failed: "卸载失败",
+	task_uninstall_cancelled: "卸载已取消",
+	task_uninstall_progress: "卸载进度",
 	submissionRejected: "提交未被接受，请核对错误后重新操作。",
 	submissionSending: "正在确认提交结果，确认前暂不接受新的安装或更新。",
 	submissionUncertain: "提交结果暂时未知，服务端可能已经开始执行。请查询结果或取消这次提交。",
 	submissionCancelling: "正在确认取消提交；只有服务端确认后才会解除等待。",
 	querySubmission: "查询结果",
 	cancelSubmission: "取消这次提交",
-	previousTaskErrors: "此前任务的失败与恢复记录",
+	recentTasks: "最近操作",
+	viewLatestTaskResult: "查看最新任务详情",
 	taskRecovering: "正在恢复安装与更新任务状态…",
 	taskTrackingError: "无法读取任务状态，任务可能仍在执行。",
 	reviewUpdateTitle: "确认更新",
@@ -5609,19 +5733,20 @@ const zh = {
 	install: "安装",
 	preflighting: "正在核对来源",
 	batchInstall: "安装已选择",
-	batchProgress: "批量安装进度",
+	batchProgress: "任务进度",
 	batchComplete: "文件操作已完成；请按各项运行状态继续验证。",
-	installTaskRunning: "安装任务正在运行",
-	installTaskComplete: "安装任务已有结果",
-	viewInstallProgress: "查看安装进度",
-	viewInstallResult: "查看安装结果",
-	installActivityTitle: "安装任务",
-	installActivityActiveHint: "安装会在后台继续；关闭窗口不会中断任务。",
+	installTaskRunning: "任务正在运行",
+	installTaskComplete: "任务已有结果",
+	viewInstallProgress: "查看任务进度",
+	viewInstallResult: "查看任务结果",
+	installActivityTitle: "插件任务",
+	installActivityActiveHint: "操作会在后台继续；关闭窗口不会中断任务。",
 	installActivityCompleteHint: "任务已经结束，可在这里查看结果或重新尝试。",
-	installTaskRecovered: "已恢复上次未完成的安装任务。",
-	installTaskUnavailable: "上次安装任务已随 DSH 重启结束，无法恢复进度；请检查已安装与诊断页面确认最终状态。",
+	installTaskRecovered: "已恢复上次未完成的任务。",
+	installTaskUnavailable: "此前的任务记录已失效，无法确认最终结果。可到“已安装”或“诊断”查看当前状态。",
+	dismissTaskNotice: "知道了",
 	cancelFailed: "取消请求失败，任务可能仍在运行；正在继续读取权威状态。",
-	closeInstallActivity: "关闭安装窗口",
+	closeInstallActivity: "关闭任务窗口",
 	continueBrowsing: "继续浏览",
 	batchSucceeded: "成功",
 	batchFailed: "失败",
@@ -5802,7 +5927,7 @@ const zh = {
 	basisShort_total: "Stars 总榜",
 	basisShort_category: "分类筛选",
 	basisShort_search: "相关性排序",
-	restart: "文件已写入且配置可组合；请重启 DSH，再验证插件是否实际运行。",
+	restart: "配置已更新；请重启 DSH，使变更生效。",
 	phase_queued: "排队中",
 	phase_validating: "验证中",
 	phase_downloading: "下载中",
@@ -5826,7 +5951,7 @@ const zh = {
 	installStatusDependencies: "正在安装依赖",
 	installStatusFinalCheck: "正在确认 Profile 配置可组合",
 	installStatusInstalled: "文件已写入，配置检查已结束",
-	installStatusFailed: "安装没有完成",
+	installStatusFailed: "操作没有完成",
 	installStatusCancelled: "安装已取消",
 	installErrorNext: "建议操作",
 	installErrorDetails: "查看技术详情",
@@ -5837,12 +5962,12 @@ const zh = {
 	installError_build_title: "插件构建失败",
 	installError_build_summary: "作者源码包或依赖的安装脚本执行失败。",
 	installError_build_hint: "检查作者要求的构建环境；若作者提供预构建包，可使用该安装来源。",
-	installError_policy_title: "安装受当前策略限制",
+	installError_policy_title: "操作受当前策略限制",
 	installError_policy_summary: "当前 Profile 的版本等待期或发布渠道策略阻止安装。",
 	installError_policy_hint: "等待策略允许，或自行调整当前 Profile 的策略后重试。",
 	installError_ignoredBuilds_title: "依赖构建被安全策略拦截",
 	installError_ignoredBuilds_summary: "pnpm 阻止了部分依赖运行安装脚本，因此插件没有安装完成。",
-	installError_ignoredBuilds_hint: "确认依赖来源可信后，在当前 Profile 目录运行 pnpm approve-builds，批准列出的依赖，再点击重试。",
+	installError_ignoredBuilds_hint: "先查看任务恢复结果。回滚后 pnpm approve-builds 可能不再列出这些依赖；请按指南核对 pnpm 版本，在当前插件目录中明确批准所需构建后，再重试。不要全局放行脚本。",
 	installError_network_title: "下载连接中断",
 	installError_network_summary: "插件或依赖没有完整下载，当前 Profile 未完成这次安装。",
 	installError_network_hint: "检查网络、代理或 DNS，连接恢复后点击重试。",
@@ -5855,14 +5980,14 @@ const zh = {
 	installError_lockfile_title: "依赖记录不一致",
 	installError_lockfile_summary: "当前 Profile 的依赖记录与已安装文件不匹配。",
 	installError_lockfile_hint: "先在 DSH 插件诊断中修复 Profile 依赖，再重试安装。",
-	installError_profile_title: "安装后的配置无法加载",
+	installError_profile_title: "操作后的配置无法加载",
 	installError_profile_summary: "插件文件已处理，但 DSH 配置检查没有通过。系统会尽量保留或恢复原配置。",
 	installError_profile_hint: "打开诊断页查看 Profile 问题；修复冲突后再重试。",
 	installError_source_title: "安装源未通过验证",
 	installError_source_summary: "榜单没有找到可验证的插件安装源，因此没有修改当前 Profile。",
 	installError_source_hint: "前往项目 GitHub 核对作者提供的安装方式，或等待榜单数据更新。",
-	installError_generic_title: "安装没有完成",
-	installError_generic_summary: "DSH 没能完成这次插件安装。",
+	installError_generic_title: "操作没有完成",
+	installError_generic_summary: "DSH 没能完成这次插件操作。",
 	installError_generic_hint: "展开技术详情确认具体原因，处理后再点击重试。",
 	evidence: "查看信任证据",
 	evidenceSignalIndexed: "已进入 DSHEval 索引",
@@ -5896,7 +6021,7 @@ const zh = {
 	"form_ecosystem-project": "生态项目",
 	form_candidate: "候选项目",
 	activation_pending: "运行状态：等待安装",
-	"activation_not-applicable": "运行状态：不适用于 Bundle loader；后续会话需验证 Skill 可见性",
+	"activation_not-applicable": "请在新会话中确认 Skill 是否可用。",
 	"activation_configuration-required": "状态：已安装，完成作者要求的配置后再验证",
 	"activation_configuration-valid": "运行状态：配置可组合，当前进程尚未验证",
 	"activation_restart-required": "运行状态：需要重启后验证",
@@ -5928,13 +6053,45 @@ const zh = {
 	diagOrphans: "孤立停用项"
 };
 const en = {
+	taskDependencies: "Processing dependencies",
+	taskNetworkRetry: "Network request failed; waiting to retry",
+	taskRecoveringDependencies: "Restoring previous dependencies; please wait",
+	taskResolved: "Resolved",
+	taskReused: "Reused",
+	taskDownloaded: "Downloaded",
+	taskAdded: "Added",
+	taskLogs: "Execution details",
+	taskRestored: "Previous dependencies restored.",
+	taskRecoveryFailed: "Automatic recovery failed. Check and repair the current configuration first.",
+	taskProfileDirectory: "Current plugin profile directory",
+	taskUninstallRestart: "Restart DSH for removal to take effect.",
+	taskUpdateRestart: "Restart DSH to apply the update, then check the plugin.",
+	taskInstallRestart: "Restart DSH, then check the plugin.",
+	taskCheckConfiguration: "Complete the configuration required by the author first.",
+	buildRecoveryGuide: "Build approval and retry guide",
+	task_install_installing: "Installing",
+	task_install_installed: "Installed",
+	task_install_failed: "install failed",
+	task_install_cancelled: "install cancelled",
+	task_install_progress: "install progress",
+	task_update_installing: "Updating",
+	task_update_installed: "Updated",
+	task_update_failed: "update failed",
+	task_update_cancelled: "update cancelled",
+	task_update_progress: "update progress",
+	task_uninstall_installing: "Uninstalling",
+	task_uninstall_installed: "Uninstalled",
+	task_uninstall_failed: "uninstall failed",
+	task_uninstall_cancelled: "uninstall cancelled",
+	task_uninstall_progress: "uninstall progress",
 	submissionRejected: "The submission was not accepted. Review the error before trying again.",
 	submissionSending: "Confirming the submission result. New installations and updates are temporarily blocked.",
 	submissionUncertain: "The submission result is unknown; the server may already be running it. Check the result or cancel this submission.",
 	submissionCancelling: "Waiting for the server to confirm cancellation before releasing this submission.",
 	querySubmission: "Check result",
 	cancelSubmission: "Cancel this submission",
-	previousTaskErrors: "Previous task failures and recovery records",
+	recentTasks: "Recent activity",
+	viewLatestTaskResult: "View latest task details",
 	taskRecovering: "Restoring installation and update task status…",
 	taskTrackingError: "Could not read task status. The task may still be running.",
 	reviewUpdateTitle: "Review updates",
@@ -6035,17 +6192,18 @@ const en = {
 	batchInstall: "Install selected",
 	batchProgress: "Batch progress",
 	batchComplete: "File operations finished; continue with the runtime verification shown for each item.",
-	installTaskRunning: "Installation in progress",
-	installTaskComplete: "Installation result available",
-	viewInstallProgress: "View install progress",
-	viewInstallResult: "View install result",
-	installActivityTitle: "Installation task",
-	installActivityActiveHint: "Installation continues in the background; closing this window will not interrupt it.",
+	installTaskRunning: "Operation in progress",
+	installTaskComplete: "Operation result available",
+	viewInstallProgress: "View task progress",
+	viewInstallResult: "View task result",
+	installActivityTitle: "Plugin task",
+	installActivityActiveHint: "The operation continues in the background; closing this window will not interrupt it.",
 	installActivityCompleteHint: "The task has finished. Review the result or try again here.",
 	installTaskRecovered: "Recovered the previous active installation task.",
-	installTaskUnavailable: "The previous task ended when DSH restarted and its progress cannot be recovered. Check Installed and Diagnostics for the final state.",
+	installTaskUnavailable: "A previous task record has expired, so its final result is unknown. Check Installed or Diagnostics for the current state.",
+	dismissTaskNotice: "Dismiss",
 	cancelFailed: "The cancel request failed. The task may still be running; authoritative status polling will continue.",
-	closeInstallActivity: "Close installation window",
+	closeInstallActivity: "Close task window",
 	continueBrowsing: "Continue browsing",
 	batchSucceeded: "Succeeded",
 	batchFailed: "Failed",
@@ -6226,7 +6384,7 @@ const en = {
 	basisShort_total: "Stars ranking",
 	basisShort_category: "Category filter",
 	basisShort_search: "Relevance order",
-	restart: "Files were written and the profile composes. Restart DSH, then verify that the plugin is actually running.",
+	restart: "Configuration updated. Restart DSH to apply the changes.",
 	phase_queued: "Queued",
 	phase_validating: "Validating",
 	phase_downloading: "Downloading",
@@ -6250,7 +6408,7 @@ const en = {
 	installStatusDependencies: "Installing dependencies",
 	installStatusFinalCheck: "Confirming that the Profile configuration composes",
 	installStatusInstalled: "Files written; configuration check finished",
-	installStatusFailed: "Installation did not finish",
+	installStatusFailed: "Operation did not finish",
 	installStatusCancelled: "Installation cancelled",
 	installErrorNext: "What to do",
 	installErrorDetails: "View technical details",
@@ -6261,12 +6419,12 @@ const en = {
 	installError_build_title: "Plugin build failed",
 	installError_build_summary: "A source package or dependency install script failed.",
 	installError_build_hint: "Check the required build environment, or use the author’s prebuilt package if available.",
-	installError_policy_title: "Installation restricted by Profile policy",
+	installError_policy_title: "Operation restricted by Profile policy",
 	installError_policy_summary: "A version waiting period or release channel policy prevented installation.",
 	installError_policy_hint: "Wait until the policy permits installation, or explicitly adjust your Profile policy before retrying.",
 	installError_ignoredBuilds_title: "Dependency build blocked by safety policy",
 	installError_ignoredBuilds_summary: "pnpm prevented some dependencies from running install scripts, so installation could not finish.",
-	installError_ignoredBuilds_hint: "After confirming the dependencies are trusted, run pnpm approve-builds in the current profile directory, approve the listed packages, and retry.",
+	installError_ignoredBuilds_hint: "Check the task recovery result. After rollback, pnpm approve-builds may no longer list these dependencies. Follow the guide for your pnpm version, explicitly approve the required builds in this profile, then retry. Do not allow all scripts globally.",
 	installError_network_title: "Download connection interrupted",
 	installError_network_summary: "The plugin or its dependencies were not fully downloaded, so the profile was not updated.",
 	installError_network_hint: "Check the network, proxy, or DNS, then retry when the connection is stable.",
@@ -6285,8 +6443,8 @@ const en = {
 	installError_source_title: "Install source could not be verified",
 	installError_source_summary: "The catalog does not contain a verifiable install source, so the profile was not changed.",
 	installError_source_hint: "Check the author's instructions on GitHub or wait for the catalog to refresh.",
-	installError_generic_title: "Installation did not finish",
-	installError_generic_summary: "DSH could not complete this plugin installation.",
+	installError_generic_title: "Operation did not finish",
+	installError_generic_summary: "DSH could not complete this plugin operation.",
 	installError_generic_hint: "Expand the technical details, resolve the reported issue, and retry.",
 	evidence: "Review trust evidence",
 	evidenceSignalIndexed: "Listed in the DSHEval index",
@@ -6320,7 +6478,7 @@ const en = {
 	"form_ecosystem-project": "Ecosystem project",
 	form_candidate: "Candidate",
 	activation_pending: "Runtime: waiting for installation",
-	"activation_not-applicable": "Runtime: not a Bundle loader item; verify Skill visibility in a later session",
+	"activation_not-applicable": "Check that the Skill is available in a new session.",
 	"activation_configuration-required": "Status: installed; complete the author's configuration before verification",
 	"activation_configuration-valid": "Runtime: profile composes; current process not verified",
 	"activation_restart-required": "Runtime: restart required before verification",

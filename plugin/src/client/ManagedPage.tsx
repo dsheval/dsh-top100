@@ -1,3 +1,5 @@
+import { taskPhaseKey, taskProgressKey } from "./install-presentation.js";
+import { TaskDetails } from "./TaskDetails.js";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { InstallBatchSnapshot, ManagedKind, ManagedListResponse, ManagedPlugin, UpdatePreflightItem } from "../shared/types.js";
 import { LatestRequest } from "./latest-request.js";
@@ -71,9 +73,6 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
   useEffect(() => {
     if (!batch || busy || batch.completed !== batch.total || completedBatch.current === batch.batchId) return;
     completedBatch.current = batch.batchId;
-    const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
-    const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
-    setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("manageComplete"));
     void load();
   }, [batch, busy, load, t]);
 
@@ -219,7 +218,7 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
         </div> : null}
         </div>
       </div>
-      {notice ? <div className="banner">{notice}</div> : null}
+      {notice ? <div className="banner" style={{ whiteSpace: "pre-line" }}>{notice}</div> : null}
       {batch ? <SkillBackupList jobs={batch.jobs} t={t} /> : null}
       {error ? <div className="error">{error} <button type="button" disabled={operationBlocked} onClick={() => void (retryNames ? prepareUpdates(retryNames) : load(true))}>{t(retryNames ? "retry" : "refreshInstalled")}</button></div> : null}
       {issues.length ? <div className="banner" role="status"><strong>{t("updateCheckResults")}</strong>
@@ -229,9 +228,9 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
       {preparing ? <div className="install-activity-banner is-active" role="status"><div><strong>{t("preflighting")} {checkedCount}/{checkingTotal}</strong><span>{t("updatePreflightWait")}</span></div><button type="button" onClick={cancelUpdateReview}>{t("cancel")}</button></div> : null}
       {submitting ? <div className="banner" role="status">{t("updateSubmitting")}</div> : null}
       {review ? <UpdateReview items={review} issues={issues} strategy={updateStrategy} accepted={accepted} onAccepted={setAccepted} onCancel={cancelUpdateReview} onConfirm={() => void confirmUpdates()} t={t} restoreFocusTo={updateInvoker.current} /> : null}
-      {busy && batch ? <div className="banner" role="status">{t("batchProgress")} {batch.completed}/{batch.total}
+      {busy && batch ? <div className="banner" role="status">{t(taskProgressKey(batch.jobs))} {batch.completed}/{batch.total}
         {batch.jobs.filter((job) => !["installed", "failed", "cancelled"].includes(job.phase)).map((job) => <div key={job.id}>
-          <span>{job.fullName} · {t(`phase_${job.phase}`)}</span>{" "}
+          <span>{job.fullName} · {t(taskPhaseKey(job))}</span>{" "}
           <button type="button" disabled={job.cancelRequested || tracking.cancelling.includes(job.id)} onClick={() => void tracking.cancel(job.id)}>{t("cancel")}</button>
         </div>)}
       </div> : null}
@@ -273,7 +272,7 @@ export function ManagedPage({ t, tracking, retryUpdate, onRetryConsumed, initial
                 {item.kind === "skill" ? <p className="lede">{t("skillReinstallHint")}</p> : null}
               <div className="managed-footer">
               {!item.protected || job ? <div className="actions row-actions">
-                {job ? <span className="job">{t(`phase_${job.phase}`)}<small>{job.error ?? job.message ?? job.lastLine}</small></span> : null}
+                {job ? <div className="job"><TaskDetails job={job} t={t} /></div> : null}
                 {job?.action === "update" && (job.phase === "failed" || job.phase === "cancelled") ? <button type="button" disabled={item.protected || item.local || operationBlocked} onClick={() => void prepareUpdates([item.name])}>{t("retry")}</button> : null}
                 {item.kind === "bundle" ? <button type="button" disabled={item.protected || operationBlocked} onClick={() => void toggle(item)}>{item.enabled ? t("disable") : t("enable")}</button> : null}
                 {item.kind === "bundle" && !item.local && !noUpdate ? <button type="button" disabled={item.protected || operationBlocked || data?.sourceMigrationRequired === true} onClick={() => void prepareUpdates([item.name])}>{t(item.updateAvailable ? "update" : "checkUpdates")}</button> : null}

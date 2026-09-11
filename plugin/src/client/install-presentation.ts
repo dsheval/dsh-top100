@@ -24,63 +24,39 @@ export interface InstallStatusPresentation {
   count?: number;
 }
 
-const ACTIVE_RANGES: Record<Exclude<InstallPhase, "installed" | "failed" | "cancelled">, [number, number, number]> = {
-  queued: [6, 10, 8_000],
-  validating: [16, 30, 12_000],
-  downloading: [36, 56, 18_000],
-  "waiting-profile-lock": [60, 66, 20_000],
-  installing: [70, 92, 30_000],
-};
-
-function easedProgress(start: number, end: number, elapsed: number, duration: number): number {
-  const ratio = 1 - Math.exp(-Math.max(0, elapsed) / duration);
-  return Math.round(start + (end - start) * ratio);
+/** Status follows the operation, never the shared internal mutation phase. */
+export function taskPhaseKey(job: InstallJobSnapshot): string {
+  const action = job.action ?? "install";
+  if (job.activationState === "broken") return `task_${action}_failed`;
+  if (["installing", "installed", "failed", "cancelled"].includes(job.phase)) return `task_${action}_${job.phase}`;
+  return `phase_${job.phase}`;
 }
 
-function terminalProgress(job: InstallJobSnapshot): number {
-  const output = `${job.lastLine}\n${job.error ?? ""}`;
-  if (/安装源|catalog|trusted source/i.test(output)) return 26;
-  if (/下载|fetch|network|ECONN|ETIMEDOUT|EAI_AGAIN/i.test(output)) return 50;
-  if (/等待.*profile|lockfile|锁/i.test(output)) return 64;
-  if (/Progress:|ERR_PNPM_|写入|配置验证|profile/i.test(output)) return 88;
-  return 76;
+export function taskProgressKey(jobs: InstallJobSnapshot[]): string {
+  const actions = new Set(jobs.map((job) => job.action ?? "install"));
+  return actions.size === 1 ? `task_${[...actions][0]}_progress` : "batchProgress";
 }
 
-/** A phase-based estimate. Active work deliberately stops below 100%. */
-export function installProgress(job: InstallJobSnapshot, now = Date.now()): number {
-  if (job.phase === "installed") return 100;
-  if (job.phase === "failed" || job.phase === "cancelled") return terminalProgress(job);
-  const [start, end, duration] = ACTIVE_RANGES[job.phase];
-  const reference = job.startedAt ?? job.createdAt;
-  return easedProgress(start, end, now - reference, duration);
-}
-
-function progressAddedCount(line: string): number | null {
+export interface DependencyProgress { resolved?: number; reused?: number; downloaded?: number; added?: number }
+export function dependencyProgress(line: string): DependencyProgress | null {
   if (!/\bProgress:/i.test(line)) return null;
-  const added = /\badded\s+(\d+)/i.exec(line)?.[1];
-  if (added !== undefined) return Number(added);
-  const resolved = /\bresolved\s+(\d+)/i.exec(line)?.[1];
-  return resolved === undefined ? null : Number(resolved);
+  const result: DependencyProgress = {};
+  for (const key of ["resolved", "reused", "downloaded", "added"] as const) {
+    const value = new RegExp(`\\b${key}\\s+(\\d+)`, "i").exec(line)?.[1];
+    if (value !== undefined) result[key] = Number(value);
+  }
+  return Object.keys(result).length ? result : null;
 }
 
-/** Replace package-manager chatter with one short, stable status sentence. */
+/** Terminal state takes precedence over stale package-manager output. */
 export function installStatus(job: InstallJobSnapshot): InstallStatusPresentation {
-  const dependencyCount = progressAddedCount(job.lastLine);
-  if (dependencyCount !== null) return { key: "installStatusDependencies", count: dependencyCount };
+  if (["installed", "failed", "cancelled"].includes(job.phase)) return { key: taskPhaseKey(job) };
+  if (/正在恢复/.test(job.lastLine)) return { key: "taskRecoveringDependencies" };
+  if (/Will retry|retries? left|retrying/i.test(job.lastLine)) return { key: "taskNetworkRetry" };
+  if (dependencyProgress(job.lastLine)) return { key: "taskDependencies" };
   if (/检查当前.*profile/i.test(job.lastLine)) return { key: "installStatusProfileCheck" };
   if (/验证安装后|验证更新后/i.test(job.lastLine)) return { key: "installStatusFinalCheck" };
-  if (/写入.*profile/i.test(job.lastLine)) return { key: "installStatusWriting" };
-  const keys: Record<InstallPhase, string> = {
-    queued: "installStatusQueued",
-    validating: "installStatusValidating",
-    downloading: "installStatusDownloading",
-    "waiting-profile-lock": "installStatusWaiting",
-    installing: "installStatusWriting",
-    installed: "installStatusInstalled",
-    failed: "installStatusFailed",
-    cancelled: "installStatusCancelled",
-  };
-  return { key: keys[job.phase] };
+  return { key: taskPhaseKey(job) };
 }
 
 function ignoredBuildPackages(raw: string): string[] {

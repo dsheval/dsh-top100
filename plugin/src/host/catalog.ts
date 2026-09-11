@@ -11,6 +11,7 @@ import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPlugin
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
 import { withReviewedDescription } from "../shared/descriptions.js";
 import { catalogEvidence } from "../shared/evidence.js";
+import { isFeaturedRepository } from "../shared/featured.js";
 import type {
   CatalogCacheStatus,
   CatalogCategoryDefinition,
@@ -291,6 +292,7 @@ export function catalogScopeCounts(
     ...(skillsDocument?.rankings.total ?? []),
   ].map((entry) => [entry.fullName.toLowerCase(), entry]));
   for (const entry of uniqueEntries.values()) {
+    if (isFeaturedRepository(entry)) continue;
     if (entryMatchesCatalogScope(entry, "plugins")) counts.plugins += 1;
     else if (entryMatchesCatalogScope(entry, "skills")) counts.skills += 1;
     else if (entryMatchesCatalogScope(entry, "ecosystem")) counts.ecosystem += 1;
@@ -374,6 +376,8 @@ export function filterCatalog(
     ? document.rankings.total
     : document.rankings[options.view] ?? [];
   const scored = source
+    // Older snapshots may still contain our editorial #000 project as a ranked entry.
+    .filter((entry) => !isFeaturedRepository(entry))
     .map((entry) => withReviewedDescription(entry, document))
     .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
     .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
@@ -409,6 +413,7 @@ export function filteredCatalogCategories(
   const definitions = catalogCategories(document);
   const stats = new Map(definitions.map(({ id }) => [id, { count: 0, excludedSkillCount: 0 }]));
   for (const entry of document.rankings.total) {
+    if (isFeaturedRepository(entry)) continue;
     if (options.compatibleOnly && !catalogEvidence(entry).compatible) continue;
     if (options.catalogScope && !entryMatchesCatalogScope(entry, options.catalogScope)) continue;
     const excluded = Boolean(options.excludeSkills && entry.type?.toLowerCase() === "skill");

@@ -16,14 +16,11 @@ import { descriptionFor } from "../shared/description-rules.js";
 import { LatestRequest } from "./latest-request.js";
 import { deltaLabel, scoreLabel } from "./metric-presentation.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
-import { installStage, isInstallBatchComplete } from "./install-batch-presentation.js";
+import { isInstallBatchComplete } from "./install-batch-presentation.js";
 import { presentInstallCapability } from "./install-capability.js";
 import { visibleInstallReviewRisks } from "./install-review-presentation.js";
-import {
-  installStatus,
-  presentInstallError,
-  type InstallErrorKind,
-} from "./install-presentation.js";
+import { taskPhaseKey } from "./install-presentation.js";
+import { TaskDetails } from "./TaskDetails.js";
 import { useTaskTracker } from "./use-task-tracker.js";
 import { TaskStatus } from "./TaskStatus.js";
 import { ManagedPage } from "./ManagedPage.js";
@@ -121,19 +118,6 @@ const SKELETON_CARDS = Array.from({ length: 6 }, (_, index) => (
   </div>
 ));
 
-const ERROR_LOCALE_KEYS: Record<InstallErrorKind, string> = {
-  "ignored-builds": "ignoredBuilds",
-  peer: "peer",
-  build: "build",
-  policy: "policy",
-  network: "network",
-  timeout: "timeout",
-  permission: "permission",
-  lockfile: "lockfile",
-  profile: "profile",
-  source: "source",
-  generic: "generic",
-};
 
 class HttpError extends Error {
   constructor(message: string, readonly status: number, readonly code?: string) {
@@ -251,9 +235,6 @@ export function RankingsPage({ t }: RankingsPageProps) {
   useEffect(() => {
     if (!batch || busy || !isInstallBatchComplete(batch) || completedBatch.current === batch.batchId) return;
     completedBatch.current = batch.batchId;
-    const failed = batch.jobs.some((job) => job.phase === "failed" || job.activationState === "broken");
-    const cancelled = batch.jobs.some((job) => job.phase === "cancelled");
-    setNotice(failed ? t("manageFailed") : cancelled ? t("manageCancelled") : batch.requiresRestart ? t("restart") : t("batchComplete"));
     if (section === "rankings") void load(view, query, category, catalogScope, installAvailability, 0, false);
   }, [batch, busy, catalogScope, category, installAvailability, load, query, section, t, view]);
 
@@ -420,72 +401,14 @@ export function RankingsPage({ t }: RankingsPageProps) {
   }
 
   function jobPanel(job: InstallJobSnapshot) {
-    const stage = installStage(job);
-    const status = installStatus(job);
-    const failed = job.phase === "failed";
-    const error = failed ? presentInstallError(job.error ?? job.lastLine) : null;
-    const errorKey = error ? ERROR_LOCALE_KEYS[error.kind] : null;
-    const activeStage = stage.current - 1;
-    const terminal = ["installed", "failed", "cancelled"].includes(job.phase);
-    const stages = ["installStageCheck", "installStageDownload", "installStageApply", "installStageReady"];
     return (
-      <div className={`job job-${job.phase} activation-${job.activationState}`} aria-live="polite">
+      <div className={`job job-${job.phase} job-${job.action ?? "install"} activation-${job.activationState}`} aria-live="polite">
         <div className="job-heading">
           <div className="job-plugin-name" title={job.fullName}>{job.fullName}</div>
-          <strong>{t(`phase_${job.phase}`)}</strong>
+          <strong>{t(taskPhaseKey(job))}</strong>
         </div>
-        {!terminal ? <>
-          <div
-            className="job-progress"
-            role="progressbar"
-            aria-label={t("installProgressLabel")}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={stage.percent}
-            aria-valuetext={`${t("installProgressEstimate")} ${stage.current}/${stage.total}`}
-          >
-            <span style={{ width: `${stage.percent}%` }} />
-          </div>
-          <div className="job-stages" aria-hidden="true">
-            {stages.map((key, index) => (
-              <span
-                key={key}
-                className={index < activeStage
-                  ? "is-complete"
-                  : index === activeStage ? "is-active" : undefined}
-              >
-                <i />{t(key)}
-              </span>
-            ))}
-          </div>
-        </> : null}
-        <p className="job-status">
-          {t(status.key)}{status.count === undefined ? null : <span> · {status.count}</span>}
-        </p>
-        {job.phase === "installed" ? (
-          <p className={`activation activation-${job.activationState}`}>{t(`activation_${job.activationState}`)}</p>
-        ) : null}
+        <TaskDetails job={job} t={t} headingPresent />
         <SkillBackupList jobs={[job]} t={t} />
-        {error && errorKey ? (
-          <div className="job-error-message" role="alert">
-            <strong>{t(`installError_${errorKey}_title`)}</strong>
-            <p>{t(`installError_${errorKey}_summary`)}</p>
-            {error.packages.length > 0 ? (
-              <p className="job-error-packages">
-                <span>{t("installErrorPackages")}</span>
-                <code>{error.packages.join(", ")}</code>
-              </p>
-            ) : null}
-            <p className="job-error-hint">
-              <span>{t("installErrorNext")}</span>
-              {t(`installError_${errorKey}_hint`)}
-            </p>
-            <details className="job-error-details">
-              <summary>{t("installErrorDetails")}</summary>
-              <pre>{error.detail}</pre>
-            </details>
-          </div>
-        ) : null}
         {!["installed", "failed", "cancelled"].includes(job.phase) ? (
           <button type="button" disabled={job.cancelRequested || tracking.cancelling.includes(job.id)} onClick={() => void tracking.cancel(job.id)}>
             {t("cancel")}
@@ -525,7 +448,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
         <button type="button" aria-selected={section === "installed"} onClick={() => selectSection("installed")}>{t("installedPage")}</button>
         <button type="button" aria-selected={section === "diagnostics"} onClick={() => selectSection("diagnostics")}>{t("diagnostics")}</button>
       </nav>
-      <TaskStatus tracking={tracking} t={t} />
+      <TaskStatus tracking={tracking} t={t} onViewResult={() => setInstallActivityOpen(true)} />
 
       {section === "rankings" ? <>
         {data?.cache.stale ? <p className="cache-warning" title={data.cache.reason ?? undefined}>{t("cachedStale")}</p> : null}
@@ -654,7 +577,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
         </div>
       ) : null}
 
-      {notice ? <div className="banner">{notice}</div> : null}
+      {notice ? <div className="banner" style={{ whiteSpace: "pre-line" }}>{notice}</div> : null}
       {error ? (
         <div className="error">
           {t(errorAction === "install" ? "installError" : "loadError")}: {error}{" "}
@@ -673,10 +596,10 @@ export function RankingsPage({ t }: RankingsPageProps) {
           <button type="button" onClick={cancelPreflight}>{t("cancel")}</button>
         </div>
       ) : null}
-      {batch ? (
+      {batch && busy ? (
         <div className={`install-activity-banner ${busy ? "is-active" : "is-complete"}`} role="status">
           <div>
-            <strong>{batch.jobs[0] ? t(`phase_${batch.jobs[0].phase}`) : t(busy ? "installTaskRunning" : "installTaskComplete")}</strong>
+            <strong>{batch.jobs[0] ? t(taskPhaseKey(batch.jobs[0])) : t(busy ? "installTaskRunning" : "installTaskComplete")}</strong>
             {batch.jobs[0] ? <span title={batch.jobs[0].fullName}>{batch.jobs[0].fullName}</span> : null}
           </div>
           <button type="button" onClick={() => setInstallActivityOpen(true)}>

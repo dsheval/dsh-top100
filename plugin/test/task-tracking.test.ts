@@ -1,3 +1,4 @@
+import { TaskDetails } from "../src/client/TaskDetails.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement, ReactNode } from "react";
 
@@ -28,7 +29,7 @@ import type { InstallBatchSnapshot } from "../src/shared/types.js";
 
 const t = (key: string) => key;
 function elements(node: ReactNode): ReactElement<any>[] { if (Array.isArray(node)) return node.flatMap(elements); if (!node || typeof node !== "object" || !("props" in node)) return []; const e = node as ReactElement<any>; return [e, ...elements(e.props.children)]; }
-function text(node: ReactNode): string { if (Array.isArray(node)) return node.map(text).join(""); if (typeof node === "string" || typeof node === "number") return String(node); return node && typeof node === "object" && "props" in node ? text((node as ReactElement<any>).props.children) : ""; }
+function text(node: ReactNode): string { if (node && typeof node === "object" && "type" in node && node.type === TaskDetails) return text(TaskDetails(node.props as any)); if (Array.isArray(node)) return node.map(text).join(""); if (typeof node === "string" || typeof node === "number") return String(node); return node && typeof node === "object" && "props" in node ? text((node as ReactElement<any>).props.children) : ""; }
 function button(tree: ReactNode, label: string) { const found = elements(tree).find((e) => e.type === "button" && text(e).startsWith(label)); expect(found, `button ${label}`).toBeTruthy(); return found!; }
 function draw() {
   const root = host.run("root", () => RankingsPage({ t }));
@@ -110,6 +111,148 @@ async function startUpdate() {
 }
 
 describe("serial task tracking and lifecycle", () => {
+  it("quietly expires completed task IDs after a host restart", async () => {
+    tasks.set("finished", batch("finished"));
+    await settle();
+    tasks.set("finished", batch("finished", "installed"));
+    await vi.advanceTimersByTimeAsync(1_000); await settle();
+    host.reset(); tasks.clear();
+    const normalFetch = globalThis.fetch;
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => url.includes("install-jobs")
+      ? Promise.resolve(new Response(JSON.stringify({ error: "Task not found" }), { status: 404 })) : normalFetch(url, init));
+    const tree = await settle();
+    expect(tree.tracking.error).toBeNull();
+    expect(tree.tracking.ready).toBe(true);
+    expect(storage.get("dsh-top100:last-install-batch:v1")).toBeUndefined();
+  });
+
+  it("shows a dismissible neutral notice for an unknown expired task instead of retrying it", async () => {
+    storage.set("dsh-top100:last-install-batch:v1", "unknown");
+    const normalFetch = globalThis.fetch;
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => url.includes("install-jobs")
+      ? Promise.resolve(new Response(JSON.stringify({ error: "Task not found" }), { status: 404 })) : normalFetch(url, init));
+    let tree = await settle();
+    expect(text(tree.status)).toContain("installTaskUnavailable");
+    expect(elements(tree.status).some((node) => node.props.role === "alert")).toBe(false);
+    expect(elements(tree.status).some((node) => node.type === "button" && text(node) === "retry")).toBe(false);
+    button(tree.status, "dismissTaskNotice").props.onClick(); tree = await settle();
+    expect(text(tree.status)).not.toContain("installTaskUnavailable");
+    host.reset(); tree = await settle(); expect(tree.tracking.error).toBeNull();
+  });
+
+  it("does not silently report success when a running task disappears", async () => {
+    tasks.set("running", batch("running")); await settle(); tasks.clear();
+    const normalFetch = globalThis.fetch;
+    vi.stubGlobal("fetch", (url: string, init?: RequestInit) => url.includes("install-jobs")
+      ? Promise.resolve(new Response(JSON.stringify({ error: "Task not found" }), { status: 404 })) : normalFetch(url, init));
+    await vi.advanceTimersByTimeAsync(1_000); const tree = await settle();
+    expect(text(tree.status)).toContain("installTaskUnavailable");
+    expect(tree.tracking.batch).toBeNull();
+    expect(tree.tracking.busy).toBeNull();
+    expect(tree.tracking.ready).toBe(true);
+  });
+
+  it("keeps real connection errors visible and retryable", async () => {
+    vi.stubGlobal("fetch", () => Promise.reject(new Error("Connection lost")));
+    const tree = await settle();
+    expect(elements(tree.status).some((node) => node.props.role === "alert")).toBe(true);
+    expect(text(tree.status)).toContain("Connection lost");
+    expect(button(tree.status, "retry")).toBeTruthy();
+    expect(tree.tracking.ready).toBe(false);
+  });
+
+  it("shows a completed task once above the list and keeps its result dialog accessible on every page", async () => {
+    const completed = batch("dedup", "installed");
+    Object.assign(completed.jobs[0], { action: "install", requiresRestart: true });
+    tasks.set(completed.batchId, completed);
+    storage.set("dsh-top100:last-install-batch:v1", completed.batchId);
+    let tree = await settle();
+    for (const page of ["rankings", "skillsMarket", "installedPage"]) {
+      button(tree.root, page).props.onClick(); tree = await settle();
+      const banners = [tree.root, tree.managed].flatMap(elements)
+        .filter((node) => node.props.className === "banner" || node.props.className?.startsWith("install-activity-banner"));
+      const content = [text(tree.status), ...banners.map(text)].join(" ");
+      expect(content.match(/task_install_installed/g)).toHaveLength(1);
+      expect(content.match(/taskInstallRestart/g)).toHaveLength(1);
+      button(tree.status, "viewLatestTaskResult").props.onClick(); tree = await settle();
+      expect(elements(tree.root).some((node) => node.props.role === "dialog")).toBe(true);
+      elements(tree.root).find((node) => node.props["aria-label"] === "closeInstallActivity")!.props.onClick();
+      tree = await settle();
+    }
+  });
+
+  it("keeps successful results when another task starts, completes, and the page remounts", async () => {
+    const first = batch("first", "installed");
+    Object.assign(first.jobs[0], { fullName: "old-plugin", action: "uninstall", requiresRestart: true });
+    tasks.set(first.batchId, first);
+    storage.set("dsh-top100:last-install-batch:v1", first.batchId);
+    let tree = await settle();
+    expect(text(tree.status)).toContain("old-plugin · task_uninstall_installed");
+
+    const next = batch("next"); next.createdAt = 2;
+    Object.assign(next.jobs[0], { fullName: "new-skill", action: "install", kind: "skill", activationState: "not-applicable" });
+    tasks.set(next.batchId, next); tree.tracking.track(next); tree = await settle();
+    expect(text(tree.status)).toContain("old-plugin · task_uninstall_installed");
+    expect(text(tree.status)).not.toContain("new-skill");
+    tasks.set(next.batchId, { ...next, completed: 1, jobs: [{ ...next.jobs[0], phase: "installed" }] });
+    await vi.advanceTimersByTimeAsync(1_000); tree = await settle();
+
+    const expectBoth = () => {
+      const content = text(tree.status);
+      expect(content).toContain("recentTasks (2)");
+      expect(content).toContain("old-plugin · task_uninstall_installed");
+      expect(content).toContain("taskUninstallRestart");
+      expect(content).toContain("new-skill · task_install_installed");
+      expect(content).toContain("activation_not-applicable");
+      expect(content.indexOf("new-skill")).toBeLessThan(content.indexOf("old-plugin"));
+    };
+    expectBoth();
+    for (const page of ["installedPage", "skillsMarket", "rankings"]) {
+      button(tree.root, page).props.onClick(); tree = await settle(); expectBoth();
+    }
+    host.reset(); tree = await settle(); expectBoth();
+  });
+
+  it.each((["install", "update", "uninstall"] as const).flatMap((action) => (["installed", "failed", "cancelled"] as const).map((phase) => ({ action, phase }))))("shows Skill $action / $phase without a plugin restart prompt", async ({ action, phase }) => {
+    const running = batch("skill-wording");
+    Object.assign(running.jobs[0], { action, kind: "skill", fullName: "demo-skill", requiresRestart: false });
+    tasks.set("skill-wording", running);
+    let tree = await settle();
+    button(tree.root, "skillsMarket").props.onClick(); tree = await settle();
+    const completed = batch("skill-wording", phase);
+    completed.requiresRestart = false;
+    Object.assign(completed.jobs[0], { action, kind: "skill", fullName: "demo-skill", requiresRestart: false, activationState: "not-applicable" });
+    tasks.set("skill-wording", completed);
+    await vi.advanceTimersByTimeAsync(1_000); tree = await settle();
+    const expected = `demo-skill · task_${action}_${phase}`;
+    expect(text(tree.status)).toContain(expected);
+    if (phase === "installed" && action !== "uninstall") expect(text(tree.status)).toContain("activation_not-applicable");
+    expect(text(tree.status)).not.toMatch(/restart|Restart/);
+    button(tree.root, "installedPage").props.onClick(); tree = await settle();
+    button(tree.root, "skillsMarket").props.onClick(); tree = await settle();
+    expect(text(tree.status)).toContain(expected);
+  });
+
+  it.each(["install", "update", "uninstall"] as const)("keeps the shared completion result specific to %s after switching pages", async (action) => {
+    const running = batch("wording");
+    running.jobs[0].action = action;
+    tasks.set("wording", running);
+    await settle();
+    const completed = batch("wording", "installed");
+    completed.jobs[0].action = action;
+    completed.jobs[0].requiresRestart = true;
+    tasks.set("wording", completed);
+    await vi.advanceTimersByTimeAsync(1_000);
+    let tree = await settle();
+    const expectedRestart = action === "uninstall" ? "taskUninstallRestart" : action === "update" ? "taskUpdateRestart" : "taskInstallRestart";
+    expect(text(tree.status)).toContain(`demo · task_${action}_installed`);
+    expect(text(tree.status)).toContain(expectedRestart);
+    button(tree.root, "installedPage").props.onClick(); tree = await settle();
+    button(tree.root, "rankings").props.onClick(); tree = await settle();
+    expect(text(tree.status)).toContain(`demo · task_${action}_installed`);
+    expect(text(tree.status)).toContain(expectedRestart);
+  });
+
   it("uses real scheduled polls without overlapping slow requests", async () => {
     tasks.set("A", batch("A")); const first = deferred(); const second = deferred(); taskReads.set("A", [first, second]); await settle();
     expect(reads("A")).toHaveLength(1);
@@ -128,13 +271,13 @@ describe("serial task tracking and lifecycle", () => {
     let tree = await startUpdate(); expect(tree.tracking.busy).toBe("accepted"); expect(storage.get("dsh-top100:last-install-batch:v1")).toBe("accepted");
     button(tree.root, "rankings").props.onClick(); tree = await settle(); expect(tree.managed).toBeNull(); const count = reads("accepted").length;
     await vi.advanceTimersByTimeAsync(800); await settle(); expect(reads("accepted").length).toBeGreaterThan(count);
-    button(tree.root, "installedPage").props.onClick(); tree = await settle(); expect(text(tree.managed)).toContain("batchProgress"); expect(button(tree.managed, "updateAll").props.disabled).toBe(true);
+    button(tree.root, "installedPage").props.onClick(); tree = await settle(); expect(text(tree.managed)).toContain("task_update_progress"); expect(button(tree.managed, "updateAll").props.disabled).toBe(true);
     button(tree.managed, "cancel").props.onClick(); await settle(); const request = records.find((record) => record.url === "/dsh-top100/cancel")!; expect(JSON.parse(request.init!.body as string)).toEqual({ jobId: "accepted-job" });
   });
   it("recovers a completed update on full remount and routes retry through a new review", async () => {
     await startUpdate(); host.reset(); tasks.set("accepted", batch("accepted", "failed")); let tree = await settle();
     expect(tree.tracking.batch.batchId).toBe("accepted"); expect(tree.tracking.busy).toBeNull();
-    button(tree.root, "viewInstallResult").props.onClick(); tree = await settle(); button(tree.root, "retry").props.onClick(); tree = await settle();
+    button(tree.status, "viewLatestTaskResult").props.onClick(); tree = await settle(); button(tree.root, "retry").props.onClick(); tree = await settle();
     expect(tree.managed).not.toBeNull(); expect(text(tree.review)).toContain("demo@2.0.0"); expect(button(tree.review, "confirmUpdate").props.disabled).toBe(true);
     expect(records.filter((record) => record.url === "/dsh-top100/update-preflight")).toHaveLength(2);
     expect(records.some((record) => record.url === "/dsh-top100/retry")).toBe(false);

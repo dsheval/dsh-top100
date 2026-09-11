@@ -302,6 +302,8 @@ export interface InstallJobSnapshot {
   kind?: ManagedKind;
   phase: InstallPhase;
   lastLine: string;
+  profileDirectory?: string;
+  recovery?: "restored" | "failed";
   skillBackups?: Array<{ name: string; path: string }>;
   error: string | null;
   message: string | null;

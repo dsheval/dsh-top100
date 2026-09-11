@@ -173,6 +173,8 @@ function publicJob(job) {
         batchId: job.batchId,
         fullName: job.fullName,
         profile: job.profile,
+        profileDirectory: job.profileDirectory,
+        recovery: job.recovery,
         action: job.action,
         kind: job.kind,
         phase: job.phase,
@@ -224,6 +226,7 @@ async function recoverDependencyOperation(job, config, before, error, commandRun
             throw new Error(installFailure(checked));
         invalidateCatalog();
         updateJob(job, job.cancelRequested ? "cancelled" : "failed", {
+            recovery: "restored",
             error: `${detail}；已自动回滚到${action}前版本`,
             lastLine: `${action}${job.cancelRequested ? "已取消" : "失败"}，原有依赖已恢复`,
             activationState: "restart-required", requiresRestart: true,
@@ -231,6 +234,7 @@ async function recoverDependencyOperation(job, config, before, error, commandRun
     }
     catch (recoveryError) {
         updateJob(job, "failed", {
+            recovery: "failed",
             error: `${detail}；自动恢复失败，需要手动检查：${recoveryError instanceof Error ? recoveryError.message : String(recoveryError)}`,
             lastLine: `${action}未完成且自动恢复失败，需要修复`, activationState: "broken", requiresRestart: true,
         });

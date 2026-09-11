@@ -1,5 +1,6 @@
 import { createSearchScorer, tokenizeSearchQuery } from "./search-engine.js";
 import { catalogPresentation } from "./catalog-presentation.js";
+import { isFeaturedRepository } from "./featured-plugin.js";
 
 /** Text search always covers the full Plugin catalog, regardless of the browsing tab. */
 export function requiresSearchIndex(view, query, installableOnly) {
@@ -10,6 +11,7 @@ export function filterDiscoveryEntries(entries, { query = "", category = null, i
   const score = createSearchScorer(query);
   const matches = [];
   for (const entry of entries) {
+    if (isFeaturedRepository(entry.plugin)) continue;
     if (category && !matchesCategory(entry, category)) continue;
     if (installableOnly && !catalogPresentation(entry.plugin).installable) continue;
     const relevance = score(entry.plugin);

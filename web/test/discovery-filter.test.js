@@ -4,6 +4,15 @@ import { filterDiscoveryEntries, requiresSearchIndex } from "../public/discovery
 
 const row = (rank, name, extra = {}) => ({ rank, plugin: { rank, name, fullName: `acme/${name}`, type: "cordis-plugin", ...extra } });
 
+test("old snapshots never duplicate our #000 project in ranked rows or search", () => {
+  const own = row(12, "dsh-top100", { fullName: "DSHEval/DSH-Top100" });
+  const peer = row(13, "dsh-top100");
+  for (const query of ["", "dsh-top100"]) {
+    assert.deepEqual(filterDiscoveryEntries([own, peer], { query }), [peer]);
+  }
+  assert.equal(own.rank, 12, "client filtering must not mutate published historical ranks");
+});
+
 test("search uses the complete catalog on every ranking tab; normal first paint stays lightweight", () => {
   for (const view of ["top100", "rising", "all"]) {
     assert.equal(requiresSearchIndex(view, "browser", false), true);

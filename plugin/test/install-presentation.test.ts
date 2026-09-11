@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { InstallJobSnapshot } from "../src/shared/types.js";
 import {
-  installProgress,
+  dependencyProgress,
+  taskPhaseKey,
   installStatus,
   presentInstallError,
 } from "../src/client/install-presentation.js";
@@ -27,19 +28,23 @@ function job(patch: Partial<InstallJobSnapshot> = {}): InstallJobSnapshot {
 }
 
 describe("install progress presentation", () => {
-  it("advances within a phase without pretending an active install is complete", () => {
-    const early = installProgress(job(), 2_000);
-    const later = installProgress(job(), 32_000);
-    expect(early).toBeGreaterThanOrEqual(70);
-    expect(later).toBeGreaterThan(early);
-    expect(later).toBeLessThanOrEqual(92);
-    expect(installProgress(job({ phase: "installed", finishedAt: 33_000 }), 33_000)).toBe(100);
+  it("shows all real pnpm counters including zero downloads", () => {
+    const line = "Progress: resolved 172, reused 168, downloaded 0, added 167, done";
+    expect(dependencyProgress(line)).toEqual({ resolved: 172, reused: 168, downloaded: 0, added: 167 });
+    expect(installStatus(job({ lastLine: line }))).toEqual({ key: "taskDependencies" });
   });
-
-  it("turns pnpm counters into a short user-facing dependency status", () => {
-    expect(installStatus(job({
-      lastLine: "Progress: resolved 172, reused 168, downloaded 0, added 167, done",
-    }))).toEqual({ key: "installStatusDependencies", count: 167 });
+  it("shows retries and does not reuse stale dependency text after failure", () => {
+    const lastLine = "[WARN] GET https://registry.npmjs.org/demo error (ECONNRESET). Will retry in 1 minute. 1 retries left.";
+    expect(installStatus(job({ lastLine }))).toEqual({ key: "taskNetworkRetry" });
+    expect(installStatus(job({ phase: "failed", lastLine }))).toEqual({ key: "task_install_failed" });
+    expect(installStatus(job({ phase: "validating", lastLine: "正在恢复安装前的依赖，请等待恢复完成" }))).toEqual({ key: "taskRecoveringDependencies" });
+  });
+  it.each(["install", "update", "uninstall"] as const)("uses %s wording for each terminal and mutation state", (action) => {
+    for (const phase of ["installing", "installed", "failed", "cancelled"] as const) {
+      expect(taskPhaseKey(job({ action, phase }))).toBe(`task_${action}_${phase}`);
+      expect(zh[taskPhaseKey(job({ action, phase }))]).toBeTruthy();
+      expect(en[taskPhaseKey(job({ action, phase }))]).toBeTruthy();
+    }
   });
 
   it("classifies ignored build scripts and extracts the affected dependencies", () => {
@@ -49,11 +54,7 @@ describe("install progress presentation", () => {
       kind: "ignored-builds",
       packages: ["node-pty@1.1.0"],
     });
-    expect(installProgress(job({
-      phase: "failed",
-      error: "ERR_PNPM_IGNORED_BUILDS",
-      finishedAt: 33_000,
-    }), 33_000)).toBe(88);
+
   });
 
   it("separates network and profile-validation failures from generic failures", () => {
