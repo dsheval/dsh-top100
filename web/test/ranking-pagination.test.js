@@ -74,7 +74,7 @@ function createPage(category = null) {
     },
     categoryLabels: { tools: "工具" }, categoryPageLoadPromises: new Map(),
     categoryDescription: { hidden: true },
-    totalPageLoadPromise: null, excludedHotSkillCount: 0, revealObserver: null,
+    totalPageLoadPromise: null, excludedHotEntryCount: 0, excludedRisingEntryCount: 0, revealObserver: null,
     searchSortButtons: [],
     requiresSearchIndex, filterDiscoveryEntries, normalizeSearchText, tokenizeSearchQuery,
     catalogPresentation, catalogInstallCapability, installCommand,
@@ -113,6 +113,28 @@ function createPage(category = null) {
   ].join("\n"), context);
   return { page, requests, allCategoryButton };
 }
+
+test("old hot and rising snapshots explain filtered entries without calling them Skills", () => {
+  for (const view of ["top100", "rising"]) {
+    const { page } = createPage();
+    page.currentView = view;
+    page.hotEntries = page.rankedEntries.slice(0, 99);
+    page.risingEntries = page.rankedEntries.slice(0, 99);
+    page.excludedHotEntryCount = 1;
+    page.excludedRisingEntryCount = 1;
+    page.renderRanking();
+    assert.match(page.searchResult.textContent, /旧快照已过滤 1 个非参榜项目/);
+    assert.match(page.searchResult.textContent, /刷新页面获取最新榜单/);
+    assert.doesNotMatch(page.searchResult.textContent, /Skills/);
+
+    page.hotEntries = page.rankedEntries;
+    page.risingEntries = page.rankedEntries;
+    page.excludedHotEntryCount = 0;
+    page.excludedRisingEntryCount = 0;
+    page.renderRanking();
+    assert.equal(page.searchResult.textContent, "已显示 100 / 100 个插件");
+  }
+});
 
 function renderedRanks(page) {
   return page.list.children.slice(1).map((row) => row.querySelector(".rank").textContent);

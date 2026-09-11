@@ -3493,7 +3493,8 @@
       let rankedEntries = [];
       let risingEntries = [];
       let hotEntries = [];
-      let excludedHotSkillCount = 0;
+      let excludedHotEntryCount = 0;
+      let excludedRisingEntryCount = 0;
       let searchEntries = null;
       let manifest = null;
       let legacyCategoryDefinitions = [];
@@ -3993,7 +3994,7 @@
           const hot = await fetchJson(manifest.datasets.hot.url);
           const publishedHotEntries = Array.isArray(hot.rankings) ? hot.rankings : [];
           hotEntries = makeEntries(publishedHotEntries);
-          excludedHotSkillCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
+          excludedHotEntryCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
           if (hotEntries.length === 0) throw new Error("Top 100 榜单为空");
           updateAllCount();
           updateCategoryCounts();
@@ -4008,7 +4009,7 @@
         legacyCategoryDefinitions = Array.isArray(data.categories) ? data.categories : [];
         const publishedHotEntries = Array.isArray(data.rankings) ? data.rankings : [];
         hotEntries = makeEntries(publishedHotEntries);
-        excludedHotSkillCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
+        excludedHotEntryCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
         if (hotEntries.length === 0) {
           throw new Error("兼容 Top 100 榜单为空");
         }
@@ -4027,7 +4028,9 @@
           const payload = await fetchJson(
             manifest ? manifest.datasets.rising.url : LEGACY_URLS.rising
           );
-          risingEntries = makeEntries(payload.rankings);
+          const publishedRisingEntries = Array.isArray(payload.rankings) ? payload.rankings : [];
+          risingEntries = makeEntries(publishedRisingEntries);
+          excludedRisingEntryCount = Math.max(0, publishedRisingEntries.length - risingEntries.length);
           if (risingEntries.length === 0) throw new Error("新锐榜为空");
           return;
         }
@@ -4519,8 +4522,10 @@
           const publishedTotal = currentView === "all" && !searchActive
             ? manifest?.datasets?.total?.count ?? matched.length
             : matched.length;
-          const migrationStatus = currentView === "top100" && !searchActive && excludedHotSkillCount > 0
-            ? `当前快照：${formatStars(shown.length)} 个插件 · 已排除 ${formatStars(excludedHotSkillCount)} 个 Skills`
+          const excludedEntryCount = currentView === "top100" ? excludedHotEntryCount
+            : currentView === "rising" ? excludedRisingEntryCount : 0;
+          const migrationStatus = !searchActive && excludedEntryCount > 0
+            ? `旧快照已过滤 ${formatStars(excludedEntryCount)} 个非参榜项目 · 刷新页面获取最新榜单`
             : null;
           searchResult.textContent = searchActive
             ? `匹配 ${formatStars(matched.length)} 个 · ${activeSearchSort === "relevance" ? "按相关度" : "按榜单顺序"} · 显示原榜排名`

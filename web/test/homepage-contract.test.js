@@ -140,7 +140,7 @@ test("shares one category interaction system across Plugin and Skills directorie
   assert.match(categoryStyles, /@media \(min-width: 641px\) and \(max-width: 1100px\)[\s\S]*?\.category-count \{ display: none; \}/);
   assert.doesNotMatch(skills, /<select[^>]+id="category"/);
   assert.match(skills, /aria-label="Skill 分类"/);
-  assert.match(html, /当前快照：.*个插件.*已排除.*个 Skills/);
+  assert.match(html, /旧快照已过滤.*个非参榜项目.*刷新页面获取最新榜单/);
 });
 
 test("aligns installation controls and badges while keeping utility text readable", () => {
