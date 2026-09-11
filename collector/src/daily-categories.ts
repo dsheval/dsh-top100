@@ -9,6 +9,7 @@ import { reviewedCategories } from "./editorial.js";
 import { contentSourceHash, hasContentEvidence, matchingEditorialHold, nextContentAttemptAt,
   type ContentSource } from "./content-source.js";
 import { classifyWithDeepSeek, type DeepSeekRequestOptions } from "./llm.js";
+import { DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKING, DEFAULT_MODEL_TIMEOUT_MS } from "./model-defaults.js";
 
 export interface DailyCategoryInput extends ContentSource {
   fullName: string;
@@ -69,13 +70,14 @@ export function planDailyCategories(entries: DailyCategoryInput[], options: {
     const hold = matchingEditorialHold(entry);
     const evidence = hasContentEvidence(entry);
     const review = reviewedCategories(input);
+    const withdrawn = review !== null && review.length === 0;
     let current = currentCategoryAssignments(input, entry.categories);
     // An identity-only change is not represented in the older assignment hash.
     // Drop content known to be the previous job's output; a fresh matching review wins.
     if (old?.policyVersion === CATEGORY_POLICY_VERSION && !reusable && old.categories
       && JSON.stringify(current) === JSON.stringify(currentCategoryAssignments(input, old.categories))) current = [];
     entry.categories = review ?? current;
-    if (!hasAuthoritativeCategories(entry.categories) && !hold && evidence) {
+    if (!withdrawn && !hasAuthoritativeCategories(entry.categories) && !hold && evidence) {
       const completed = reusable && old.status === "complete" ? old : options.cache?.get(id);
       if (completed?.sourceHash === sourceHash) {
         // Validate the assignments as well. Never rebind a legacy SQLite cache.
@@ -87,6 +89,9 @@ export function planDailyCategories(entries: DailyCategoryInput[], options: {
     const job: DailyCategoryJob = hasAuthoritativeCategories(entry.categories)
       ? { sourceHash, policyVersion: CATEGORY_POLICY_VERSION, status: "complete", attempts: reusable ? old.attempts : 0,
         categories: entry.categories }
+      : withdrawn
+        ? { sourceHash, policyVersion: CATEGORY_POLICY_VERSION, status: "review-required", attempts: reusable ? old.attempts : 0,
+          reviewReason: "Fixed editorial review withdrew this source's categories; review its functionality before restoring content." }
       : hold
         ? { sourceHash, policyVersion: CATEGORY_POLICY_VERSION, status: "review-required", attempts: reusable ? old.attempts : 0,
           reviewReason: hold.reason }
@@ -111,7 +116,7 @@ export function dailyCategoryWorker(options: Pick<DeepSeekRequestOptions, "apiKe
     name: entry.fullName, type: entry.type, packageName: entry.install?.packageName,
     repositoryPath: entry.install?.repositoryPath, description: entry.description ?? "",
     readmeSummary: entry.readmeSummary ?? null, topics: entry.topics ?? [],
-  }, { ...options, timeoutMs: 120_000, thinking: "enabled", maxAttempts: 1 });
+  }, { ...options, timeoutMs: DEFAULT_MODEL_TIMEOUT_MS, thinking: DEFAULT_MODEL_THINKING, maxTokens: DEFAULT_MODEL_MAX_TOKENS, maxAttempts: 1 });
 }
 
 export async function runDailyCategories(plan: DailyCategoryPlan, options: {
@@ -120,7 +125,7 @@ export async function runDailyCategories(plan: DailyCategoryPlan, options: {
   onProgress?: (task: DailyCategoryTask) => void;
 }) {
   const limit = options.limit ?? 200;
-  const concurrency = options.concurrency ?? 5;
+  const concurrency = options.concurrency ?? DEFAULT_MODEL_CONCURRENCY;
   if (!Number.isInteger(limit) || limit < 0 || limit > 2000) throw new Error("category limit must be from 0 to 2000");
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 256) throw new Error("category concurrency must be from 1 to 256");
   const tasks = plan.ready.slice(0, limit);

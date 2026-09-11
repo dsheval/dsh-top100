@@ -1,9 +1,13 @@
+import { functionEvidenceMarker, needsFunctionReview } from "./reviewed-evidence-state.js";
+import { reviewedFunctionEvidence } from "./reviewed-evidence.js";
 /** Source identity and eligibility shared by daily collection and frozen batches. */
 import { createHash } from "node:crypto";
 import type { InstallInfo } from "@dsh-top100/schema";
 import { CATEGORY_POLICY_VERSION } from "./categories.js";
 import editorialHolds from "../config/editorial-holds.json";
-import { cleanDescription, isPlaceholder } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isPlaceholder, matchesReviewedIdentity, matchesReviewedReadme, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
+import reviewedDescriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import { reviewedPluginTargets } from "./reviewed-targets.js";
 
 export const DESCRIPTION_POLICY_VERSION = 3;
 export interface ContentSource {
@@ -28,9 +32,22 @@ function installEvidence(install: ContentSource["install"]): string {
     install?.repositoryPath ?? null, install?.commands ?? [], install?.commandSource ?? null]);
 }
 export function matchingEditorialHold(entry: ContentSource): EditorialHold | null {
+  if (needsFunctionReview(entry)) return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+    reason: "已复核的功能源码尚未通过当前核验，旧简介和分类暂停使用。" };
   const hold = (editorialHolds as Record<string, EditorialHold>)[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()];
   if (hold && hold.sourceDescription === (entry.description ?? "") && hold.sourceReadme === (entry.readmeSummary ?? "")
     && installEvidence(hold.sourceInstall) === installEvidence(entry.install)) return hold;
+  const target = reviewedPluginTargets[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()];
+  if (target && (target.packageName !== entry.install?.packageName || target.repositoryPath !== (entry.install?.repositoryPath ?? null))) {
+    return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+      reason: "尚未验证已复核的插件包身份，不得恢复旧包的内容或安装信息。" };
+  }
+  const review = (reviewedDescriptions as Record<string, ReviewedDescription>)[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()];
+  if (review?.suspended && matchesReviewedIdentity({ ...entry, install: entry.install ?? undefined }, review.sourceInstall, review.sourceType)
+    && review.sourceDescription === (entry.description ?? "") && matchesReviewedReadme(entry.readmeSummary ?? "", review.sourceReadme)) {
+    return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+      reason: "当前来源的内容已被复核撤回，须确认具体插件能力后再恢复。" };
+  }
   const packageName = entry.install?.packageName?.toLowerCase() ?? "";
   const repositoryPath = entry.install?.repositoryPath?.toLowerCase() ?? "";
   let reason: string | undefined;
@@ -49,11 +66,13 @@ export function matchingEditorialHold(entry: ContentSource): EditorialHold | nul
   return reason ? { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install, reason } : null;
 }
 export function contentSourceHash(entry: ContentSource, kind: "description" | "categories"): string {
-  return createHash("sha256").update(JSON.stringify([
+  const fields: unknown[] = [
     kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION,
     (entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase(), entry.name ?? (entry.fullName ?? entry.id ?? "").split("/").pop(), entry.type, entry.description ?? "", entry.readmeSummary ?? "", entry.topics ?? [],
     entry.install?.packageName ?? null, entry.install?.repositoryPath ?? null,
-  ])).digest("hex");
+  ];
+  if (reviewedFunctionEvidence[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()]) fields.push(functionEvidenceMarker(entry));
+  return createHash("sha256").update(JSON.stringify(fields)).digest("hex");
 }
 
 export function hasContentEvidence(entry: ContentSource): boolean {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import reviewed from "../src/shared/reviewed-descriptions.json";
-import { descriptionFor } from "../src/shared/description-rules.js";
+import { descriptionFor, matchesReviewedReadme } from "../src/shared/description-rules.js";
 import { withReviewedDescription } from "../src/shared/descriptions.js";
 import { filterCatalog } from "../src/host/catalog.js";
 import { recommendationResult } from "../src/host/recommendations.js";
@@ -13,7 +13,10 @@ function sample(fullName: keyof typeof reviewed = "nexu-io/open-design"): Rankin
     fullName, name, owner, rank: 1,
     description: review.sourceDescription, readmeSummary: review.sourceReadme,
     ...("sourceInstall" in review ? { install: { method: "pnpm-profile" as const, needsConfig: false,
-      packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined } } : {}),
+      packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined,
+      ...("functionEvidence" in review.sourceInstall ? { discovery: { status: "verified" as const, kind: "bundle" as const,
+        checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6, sourceRevision: "fixture",
+        evidence: [`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`] } } : {}) } } : {}),
     descriptionZh: "现有项目资料不足以生成可靠的功能简介。",
     stars: 100, dailyStars: 1, weeklyStars: 7, hotScore: 90, forks: 0, openIssues: 0,
     language: null, homepage: null, license: null, topics: [], tags: [],
@@ -28,6 +31,21 @@ function document(entry: RankingEntry, snapshotId?: string): RankingsDocument {
 const options = { view: "total" as const, category: null, query: "协议桥接", offset: 0, limit: 10, installed: {} };
 
 describe("shared editorial descriptions", () => {
+  it("ignores only a leading bilingual navigation switch in reviewed sources", () => {
+    const body = "--- I spent a long time settling into focused writing in Typora.";
+    expect(matchesReviewedReadme(body, `中文 | English ${body}`)).toBe(true);
+    expect(matchesReviewedReadme(`English | 中文 ${body}`, body)).toBe(true);
+    for (const changed of ["", `${body} New behavior.`, body.replace("writing", "coding"), `Other | English ${body}`]) {
+      expect(matchesReviewedReadme(changed, `中文 | English ${body}`)).toBe(false);
+    }
+    expect(matchesReviewedReadme("3,000 endpoints", "2,896 endpoints")).toBe(false);
+    expect(matchesReviewedReadme("version 0.2.0", "version 0.1.14")).toBe(false);
+    const entry = sample();
+    const expected = descriptionFor(entry, reviewed);
+    expect(descriptionFor({ ...entry, readmeSummary: `中文 | English ${entry.readmeSummary}` }, reviewed)).toBe(expected);
+    expect(descriptionFor({ ...entry, readmeSummary: `中文 | English ${entry.readmeSummary}`, install: { packageName: "different" } }, reviewed)).not.toBe(expected);
+  });
+
   it("applies every source-bound summary and preserves the evidence", () => {
     expect(Object.keys(reviewed).length).toBeGreaterThan(0);
     for (const [fullName, review] of Object.entries(reviewed)) {
@@ -165,7 +183,7 @@ it("does not display the root Chinese description for an undocumented subpackage
 it("preserves an explicit pending summary in every current withdrawn compact entry", () => {
   const withdrawn = Object.entries(reviewed).filter(([, review]) => "suspended" in review && review.suspended);
   expect(withdrawn.map(([id]) => id)).toEqual(expect.arrayContaining([
-    "whitelonng/dshcode", "fufankeji/deepseek-harness-studio", "op7418/pilot-harness", "see-sol-lab/deepseekgui",
+    "whitelonng/dshcode", "fufankeji/deepseek-harness-studio", "op7418/pilot-harness", "zuorn/tydora",
   ]));
   for (const [fullName] of withdrawn) {
     const entry = sample(fullName as keyof typeof reviewed);
@@ -180,6 +198,12 @@ it("preserves an explicit pending summary in every current withdrawn compact ent
       expect(filterCatalog(document(item), { ...options, query: "" }).items[0].descriptionZh, fullName).toBe("中文简介待生成。");
     }
   }
+});
+
+it("does not apply the reviewed DeepSeekGUI workbench capabilities to its withdrawn workspace root", () => {
+  const entry = sample("see-sol-lab/deepseekgui");
+  expect(descriptionFor(entry, reviewed)).toBe(reviewed["see-sol-lab/deepseekgui"].descriptionZh);
+  expect(descriptionFor({ ...entry, install: { packageName: "@deepseek-ai/dsh-root" }, descriptionZh: "中文简介待生成。" }, reviewed)).toBe("中文简介待生成。");
 });
 
 it("keeps pending markup normalized and permits a fresh fully bound review to replace it", () => {

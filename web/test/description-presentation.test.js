@@ -17,7 +17,7 @@ test('reviewed summaries are source-bound and safe to display', () => {
   assert.ok(Object.keys(reviews).length > 0);
   for(const [fullName,review] of Object.entries(reviews)) {
     const entry={fullName,description:review.sourceDescription,readmeSummary:review.sourceReadme,
-      ...(review.sourceInstall ? {install:review.sourceInstall} : {}),
+      ...(review.sourceInstall ? {install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})}} : {}),
       ...(review.sourceType !== undefined ? {type:review.sourceType} : {})};
     assert.equal(descriptionFor(entry,reviews),review.descriptionZh);
     if (review.suspended) assert.equal(review.descriptionZh,'中文简介待生成。',fullName);
@@ -81,12 +81,12 @@ test('current editorial evidence cannot reuse an older compact snapshot', () => 
 test('explicit publisher withholding survives compact data without the review evidence', () => {
   const reviews=JSON.parse(readFileSync(new URL('../../plugin/src/shared/reviewed-descriptions.json',import.meta.url),'utf8'));
   const withdrawn=Object.entries(reviews).filter(([,review])=>review.suspended);
-  for (const fullName of ['whitelonng/dshcode','fufankeji/deepseek-harness-studio','op7418/pilot-harness','see-sol-lab/deepseekgui']) {
+  for (const fullName of ['whitelonng/dshcode','fufankeji/deepseek-harness-studio','op7418/pilot-harness','zuorn/tydora']) {
     assert.ok(withdrawn.some(([id])=>id===fullName),fullName);
   }
   for (const [fullName,review] of withdrawn) {
     const full={fullName,description:review.sourceDescription,readmeSummary:review.sourceReadme,
-      install:review.sourceInstall,type:review.sourceType,descriptionZh:'提供桌面界面和插件管理，方便使用智能助手。'};
+      install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})},type:review.sourceType,descriptionZh:'提供桌面界面和插件管理，方便使用智能助手。'};
     assert.equal(descriptionFor(full,reviews),'中文简介待生成。',fullName);
     const compact={fullName,description:full.description,type:full.type,descriptionZh:'中文简介待生成。'};
     assert.equal(descriptionFor(compact,reviews,{snapshotId:'new-data-snapshot'}),'中文简介待生成。',fullName);
@@ -95,4 +95,13 @@ test('explicit publisher withholding survives compact data without the review ev
   }
   assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。'}),'自动生成研究报告并管理企业知识库。');
   assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。',descriptionZh:' **中文简介待生成。** '}),'中文简介待生成。');
+});
+
+test('the new workbench review does not revive DeepSeekGUI workspace-root claims', () => {
+  const reviews=JSON.parse(readFileSync(new URL('../public/reviewed-descriptions.json',import.meta.url),'utf8'));
+  const review=reviews['see-sol-lab/deepseekgui'];
+  const entry={fullName:'see-sol-lab/deepseekgui',description:review.sourceDescription,readmeSummary:review.sourceReadme,
+    type:review.sourceType,install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})},descriptionZh:'中文简介待生成。'};
+  assert.equal(descriptionFor(entry,reviews),review.descriptionZh);
+  assert.equal(descriptionFor({...entry,install:{packageName:'@deepseek-ai/dsh-root'}},reviews),'中文简介待生成。');
 });

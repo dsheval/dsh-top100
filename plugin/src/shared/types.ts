@@ -118,6 +118,8 @@ export interface InstallSpec {
 
 export type CatalogFormFactor =
   | "dsh-bundle"
+  | "dsh-client"
+  | "dsh-plugin"
   | "dsh-skill"
   | "agent-skill"
   | "theme"
@@ -134,6 +136,8 @@ export type CatalogEvidenceSignalCode =
   | "agent-skill"
   | "theme-bundle"
   | "dsh-bundle"
+  | "dsh-client"
+  | "dsh-plugin"
   | "install-source";
 
 export interface CatalogEvidence {

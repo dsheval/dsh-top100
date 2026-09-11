@@ -90,7 +90,10 @@ describe("daily description source gates", () => {
     if (!("sourceInstall" in review) || !("sourceType" in review)) throw new Error("Bound fixture required");
     const entry = source(1, { id, fullName: id, name: id.split("/").pop()!, description: review.sourceDescription, readmeSummary: review.sourceReadme,
       type: review.sourceType as DshPlugin["type"], install: { method: "pnpm-profile", needsConfig: false,
-        packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined } });
+        packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined,
+        ...("functionEvidence" in review.sourceInstall ? { discovery: { status: "verified" as const, kind: "bundle" as const,
+          checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6, sourceRevision: "fixture",
+          evidence: [`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`] } } : {}) } });
     const previous = { ...entry, descriptionZh: review.descriptionZh };
     prepare([entry]);
     expect(entry.descriptionZh).toBe(review.descriptionZh);
@@ -114,7 +117,10 @@ describe("daily description cache migration and identity", () => {
       description: review.sourceDescription, readmeSummary: review.sourceReadme, descriptionZh: review.descriptionZh,
       type: review.sourceType as DshPlugin["type"], topics, tags: [...topics, "桌面客户端", "插件管理", "community-market"],
       install: { method: "pnpm-profile", needsConfig: false,
-        packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined } });
+        packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined,
+        ...("functionEvidence" in review.sourceInstall ? { discovery: { status: "verified" as const, kind: "bundle" as const,
+          checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6, sourceRevision: "fixture",
+          evidence: [`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`] } } : {}) } });
     const collected = { ...structuredClone(previous), descriptionZh: null, tags: [...topics] };
     const plan = prepare([collected], [previous], new Map());
     expect(collected.descriptionZh).toBe(review.descriptionZh);

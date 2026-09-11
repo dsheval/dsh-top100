@@ -37,11 +37,27 @@ export function extractInstallSection(readme: string): string | null {
 }
 
 const INSTALL_CMD_RE =
-  /^(git clone|git submodule|git config|dsh plugin|dsh\s+.*\sadd|pnpm (add|i)\b|npm (install|i)\b|npx skills add|npx @[^\s]+ add|curl .*install|pip install|uv (tool )?install|brew install|cargo install|git init)/;
+  /^(git clone|git submodule|git config|pnpm (add|i)\b|npm (install|i)\b|npx skills add|npx @(?!deepseek-ai\/dsh(?:@|\s))[^\s]+ add|curl .*install|pip install|uv (tool )?install|brew install|cargo install|git init)/;
+
+/** A local tarball is README display evidence, never a vetted install target. */
+function isDshInstallDisplayCommand(cmd: string): boolean {
+  if (parseDshInstallCommandDetails(cmd) !== null) return true;
+  const tarball = cmd.match(/\s(\.\/[A-Za-z0-9][A-Za-z0-9._-]*\.tgz)$/);
+  if (!tarball) return false;
+  // Keep the shared parser's command/flag restrictions without broadening its
+  // allow-list of installable npm/GitHub targets to machine-local files.
+  return parseDshInstallCommandDetails(cmd.slice(0, -tarball[1].length) + "dsh-local-tarball") !== null;
+}
 
 /** 判断是否为安装类命令 */
 function isInstallCmd(cmd: string): boolean {
-  return parseDshInstallCommandDetails(cmd) !== null || INSTALL_CMD_RE.test(cmd);
+  return isDshInstallDisplayCommand(cmd) || INSTALL_CMD_RE.test(cmd);
+}
+
+/** Explicit warnings apply only to commands on that same README line. */
+function isProhibitedInstallLine(line: string): boolean {
+  const prose = line.replace(/`[^`\r\n]*`/g, "").replace(/[*_]/g, "");
+  return /\b(?:do\s+not|don['’]t)\b|\bnever\s+(?:install|run|use|execute)\b|请勿|切勿|不要|禁止/i.test(prose);
 }
 
 /** 清洗单行命令：去提示符/注释/无意义前缀 */
@@ -57,7 +73,7 @@ function cleanCmdLine(line: string): string {
 /** Bounded display evidence; retain DSH commands ahead of generic prerequisites. */
 function selectCommands(commands: string[]): string[] {
   return [...new Set(commands)].sort((a, b) =>
-    Number(parseDshInstallCommandDetails(b) !== null) - Number(parseDshInstallCommandDetails(a) !== null)
+    Number(isDshInstallDisplayCommand(b)) - Number(isDshInstallDisplayCommand(a))
   ).slice(0, 32);
 }
 
@@ -66,6 +82,7 @@ export function extractInstallCommands(section: string): string[] {
   section = section.replace(/[ \t]*\\\r?\n[ \t]*/g, " ");
   const cmds: string[] = [];
   const push = (line: string) => {
+    if (isProhibitedInstallLine(line)) return;
     const c = cleanCmdLine(line);
     if (c && isInstallCmd(c) && !cmds.includes(c)) cmds.push(c);
   };
@@ -79,7 +96,10 @@ export function extractInstallCommands(section: string): string[] {
     if (/^\s*[$#>]\s*/.test(line)) push(line);
   }
   const outsideFences = section.replace(/```[\s\S]*?```/g, "");
-  for (const match of outsideFences.matchAll(/`([^`\r\n]+)`/g)) push(match[1]);
+  for (const line of outsideFences.split(/\r?\n/)) {
+    if (isProhibitedInstallLine(line)) continue;
+    for (const match of line.matchAll(/`([^`\r\n]+)`/g)) push(match[1]);
+  }
   return selectCommands(cmds);
 }
 
@@ -89,7 +109,7 @@ export function parseInstallCommands(readme: string | null): { commands: string[
   const section = extractInstallSection(readme);
   if (section) {
     const cmds = extractInstallCommands(section);
-    const extras = extractInstallCommands(readme).filter((cmd) => parseDshInstallCommandDetails(cmd) !== null && !cmds.includes(cmd));
+    const extras = extractInstallCommands(readme).filter((cmd) => isDshInstallDisplayCommand(cmd) && !cmds.includes(cmd));
     if (cmds.length > 0) return { commands: selectCommands([...cmds, ...extras]), source: extras.length ? "README" : "README install section" };
   }
   // 兜底：全文找安装命令

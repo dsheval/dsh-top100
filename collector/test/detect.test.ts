@@ -23,6 +23,92 @@ const CORDIS_SUBDIR = [
   rootItem("lib", "dir"),
 ];
 
+describe("reviewed package selection", () => {
+  const root = [rootItem("package.json"), rootItem("cordis.patch.yml"), rootItem("packages", "dir")];
+  const target = { packageName: "@fixture/reviewed", repositoryPath: "packages/reviewed" };
+  beforeEach(() => {
+    vi.resetAllMocks();
+    mockFetch.mockResolvedValue(CORDIS_SUBDIR);
+    mockFetchFile.mockImplementation(async (_repo, path) => ({ sha: "x", content: path.endsWith("package.json")
+      ? JSON.stringify({ name: path === "package.json" ? "root-first" : target.packageName,
+        dsh: { bundle: { patch: "./cordis.patch.yml" } } }) : "plugins: []" }));
+  });
+
+  it("validates the reviewed subpackage before a valid root or sibling", async () => {
+    const result = await detectPlugin("fixture/repo", root as never, "pinned", { primaryOnly: true, reviewedTarget: target });
+    expect(result).toMatchObject({ isPlugin: true, kind: "bundle", packageName: target.packageName,
+      pluginPath: target.repositoryPath, pluginPaths: [target.repositoryPath] });
+    expect(mockFetch).toHaveBeenCalledExactlyOnceWith("fixture/repo", "pinned", target.repositoryPath);
+    expect(mockFetchFile.mock.calls.map(call => call[1])).toEqual(["packages/reviewed/package.json"]);
+  });
+
+  it("supports an explicitly reviewed root package", async () => {
+    expect(await detectPlugin("fixture/repo", root as never, "pinned", {
+      reviewedTarget: { packageName: "root-first", repositoryPath: null },
+    })).toMatchObject({ packageName: "root-first", pluginPath: null, pluginPaths: ["."] });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockFetchFile).toHaveBeenCalledExactlyOnceWith("fixture/repo", "package.json", "pinned");
+  });
+
+  it("retains the default root priority without a reviewed target", async () => {
+    expect(await detectPlugin("fixture/repo", root as never, "pinned", { primaryOnly: true }))
+      .toMatchObject({ packageName: "root-first", pluginPath: null });
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(mockFetchFile).toHaveBeenCalledExactlyOnceWith("fixture/repo", "package.json", "pinned");
+  });
+
+  it("rejects a changed package name without falling back to a valid root", async () => {
+    await expect(detectPlugin("fixture/repo", root as never, "pinned", {
+      reviewedTarget: { ...target, packageName: "previous-name" },
+    })).rejects.toThrow("name mismatch");
+    expect(mockFetchFile).toHaveBeenCalledExactlyOnceWith("fixture/repo", "packages/reviewed/package.json", "pinned");
+  });
+
+  it("keeps a deleted reviewed package inconclusive without falling back", async () => {
+    mockFetch.mockResolvedValue([]);
+    await expect(detectPlugin("fixture/repo", root as never, "pinned", { reviewedTarget: target })).rejects.toThrow("metadata missing");
+    expect(mockFetchFile).not.toHaveBeenCalled();
+  });
+
+  it("keeps an unreadable reviewed package inconclusive", async () => {
+    mockFetchFile.mockResolvedValue(null);
+    await expect(detectPlugin("fixture/repo", root as never, "pinned", { reviewedTarget: target })).rejects.toThrow("metadata unavailable");
+  });
+
+  it.each(["../outside", "/absolute", "packages/*", "packages/../other", "packages/**", "packages\\other", "./packages/reviewed", ".", "", "packages//reviewed"])
+    ("rejects unsafe or noncanonical reviewed path %j before reads", async repositoryPath => {
+      await expect(detectPlugin("fixture/repo", root as never, "pinned", {
+        reviewedTarget: { ...target, repositoryPath },
+      })).rejects.toThrow("Invalid reviewed package target");
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockFetchFile).not.toHaveBeenCalled();
+    });
+
+  it("rejects the reviewed package when its declared patch was deleted", async () => {
+    mockFetch.mockResolvedValue([rootItem("package.json")]);
+    await expect(detectPlugin("fixture/repo", root as never, "pinned", { reviewedTarget: target })).rejects.toThrow("declaration or entry invalid");
+  });
+
+  it.each(["host", "client"])("uses existing %s validation without requiring committed build outputs", async kind => {
+    const declaration = kind === "client"
+      ? { dsh: { client: { platform: "web" } }, exports: { "./client": { types: "./index.d.ts", import: "./lib/index.js" } } }
+      : { peerDependencies: { cordis: "*" }, main: "./lib/index.js" };
+    mockFetch.mockResolvedValue([rootItem("package.json"), rootItem("src", "dir")]);
+    mockFetchFile.mockResolvedValue({ sha: "x", content: JSON.stringify({ name: target.packageName, ...declaration }) });
+    expect(await detectPlugin("fixture/repo", root as never, "pinned", { reviewedTarget: target }))
+      .toMatchObject({ kind, packageName: target.packageName });
+    expect(mockFetchFile).toHaveBeenCalledExactlyOnceWith("fixture/repo", "packages/reviewed/package.json", "pinned");
+  });
+
+  it("does not let a reviewed name bypass package declaration validation", async () => {
+    mockFetch.mockResolvedValue([rootItem("package.json")]);
+    mockFetchFile.mockResolvedValue({ sha: "x", content: JSON.stringify({ name: target.packageName, private: true,
+      workspaces: ["packages/*"], devDependencies: { "@deepseek-ai/dsh-tools": "*" } }) });
+    await expect(detectPlugin("fixture/repo", root as never, "pinned", { reviewedTarget: target }))
+      .rejects.toThrow("declaration or entry invalid");
+  });
+});
+
 describe("pnpm workspace discovery", () => {
   beforeEach(() => { vi.resetAllMocks(); mockFetch.mockResolvedValue([]); });
 

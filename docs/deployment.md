@@ -6,9 +6,11 @@
 - At least 2 CPU cores, 2 GB RAM and 5 GB free disk for the current dataset and image cache.
 - A domain, reverse proxy and TLS certificate for public access.
 - A GitHub token with public repository metadata and contents read access.
-- Optional DeepSeek API credentials for new Chinese summaries.
+- Model credentials are not needed while paid enrichment remains paused.
 
 Model enrichment is paused in 1.3.4 until shared monetary budget protection is implemented and verified. GitHub collection, local ranking calculations and valid existing content reuse continue without model requests. Do not restore paid generation merely by providing an API key or increasing request limits.
+
+Request defaults use the explicit `deepseek-v4-flash` identifier, disabled thinking, 256 output tokens and three workers. The provider now documents that this legacy identifier is served by V4.1 Flash; restoring requests requires a separate review of the actual model and price. These defaults and the hard pause do not implement monetary budget accounting.
 
 ## CI checks
 

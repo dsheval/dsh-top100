@@ -137,7 +137,7 @@ describe("Chinese summary validation", () => {
       .toBe("这个插件支持跨设备同步会话。");
   });
 
-  it("retries empty or invalid successful responses instead of failing immediately", async () => {
+  it("does not spend another request on an empty successful response", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValueOnce(new Response(JSON.stringify({ choices: [{ message: { content: "" } }] })))
@@ -174,8 +174,8 @@ describe("Chinese summary validation", () => {
       }
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(result?.descriptionZh).toContain("智能体协同");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result).toBeNull();
   });
 });
 

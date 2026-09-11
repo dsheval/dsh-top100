@@ -33,6 +33,21 @@ function held(): DailyCategoryInput {
 afterEach(() => vi.restoreAllMocks());
 
 describe("daily source-bound category planning", () => {
+  it("does not revive an explicit editorial withdrawal from complete jobs, cache or rules", async () => {
+    const input = entry();
+    input.description = "Knowledge base and research tools.";
+    const previous = completed(input);
+    input.categories = assigned(input);
+    vi.spyOn(editorial, "reviewedCategories").mockReturnValue([]);
+    const cache = new Map([[input.fullName, { sourceHash: contentSourceHash(input, "categories"), categories: assigned(input) }]]);
+    const plan = planDailyCategories([input], { previous, cache, now });
+    expect(input.categories).toEqual([]);
+    expect(plan.state.jobs[input.fullName].status).toBe("review-required");
+    const worker = vi.fn(async () => suggestions);
+    await runDailyCategories(plan, { model: "mock", worker });
+    expect(worker).not.toHaveBeenCalled();
+  });
+
   it("keeps same-source categories and leaves pending attempts untouched during the model pause", async () => {
     const input = entry();
     const previous = { ...input, categories: assigned(input) };
@@ -203,12 +218,12 @@ describe("daily source-bound category planning", () => {
 });
 
 describe("daily category attempts and persistence", () => {
-  it("uses one HTTP attempt, a 120-second timeout and thinking enabled", async () => {
+  it("uses one HTTP attempt, 256 output tokens, a 45-second timeout and no thinking", async () => {
     const classify = vi.spyOn(llm, "classifyWithDeepSeek").mockResolvedValue(suggestions);
     const input = { ...entry(), description: null, readmeSummary: null };
     await dailyCategoryWorker({ apiKey: "mock", baseURL: "https://invalid.example", model: "mock" })(input);
     expect(classify).toHaveBeenCalledWith(expect.objectContaining({ name: input.fullName, description: "", readmeSummary: null }),
-      expect.objectContaining({ timeoutMs: 120_000, maxAttempts: 1, thinking: "enabled" }));
+      expect.objectContaining({ timeoutMs: 45_000, maxAttempts: 1, thinking: "disabled", maxTokens: 256 }));
   });
 
   it("persists an attempt before dispatch, then stores source-bound success for a restart", async () => {
@@ -268,14 +283,14 @@ describe("daily category attempts and persistence", () => {
     expect(plan.ready.map(task => task.fullName)).toEqual([fresh.fullName, failed.fullName, ordinary.fullName]);
   });
 
-  it("keeps the daily defaults at 200 tasks and five concurrent workers", async () => {
+  it("keeps the daily defaults at 200 tasks and three concurrent workers", async () => {
     const plan = planDailyCategories(Array.from({ length: 205 }, (_, i) => entry(i)), { now });
     let active = 0, peak = 0;
     const result = await runDailyCategories(plan, { model: "mock", now: () => now, worker: async () => {
       peak = Math.max(peak, ++active); await Promise.resolve(); active--; return suggestions;
     } });
     expect(result).toEqual({ attempted: 200, completed: 200, failed: 0 });
-    expect(peak).toBe(5);
+    expect(peak).toBe(3);
     expect(Object.values(plan.state.jobs).filter(job => job.status === "pending")).toHaveLength(5);
   });
 

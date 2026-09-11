@@ -1,0 +1,94 @@
+{
+  "dataelement/dsh-desktop": {
+    "packageName": "dsh-desktop-client-ui",
+    "repositoryPath": "packages/dsh-desktop-client-ui",
+    "sourceCommit": "f7aebb5c68a1e9182a0e2a425bd13b63236ea703",
+    "expectedFingerprint": "eb704a5fc3393a193e7f091b865a357452da858e28477525f390d920906b2350",
+    "files": [
+      {
+        "path": "packages/dsh-desktop-client-ui/client.js",
+        "sha256": "dca0360dddffbd407f8f4253ef63f5bbc5c00905e75b5ee9df761d48a565cc32"
+      },
+      {
+        "path": "packages/dsh-desktop-client-ui/index.js",
+        "sha256": "39947400685dd3eeb870bfa2b713c001404e259c82bfef420d8a5cc31faf3b78"
+      },
+      {
+        "path": "packages/dsh-desktop-client-ui/package.json",
+        "sha256": "9378a61cf4e5628f628e4afb8fcdc0d08e24f60586c0820353950907dccf6d81"
+      }
+    ]
+  },
+  "jingyunstudio/jingyun-dsh": {
+    "packageName": "@jingyun-ai/jingyun-dsh",
+    "repositoryPath": "packages/jingyun-dsh",
+    "sourceCommit": "0d1eedd693aa8d0d30d0561850f985f473aa9949",
+    "expectedFingerprint": "f292ffbe540803d32d7d627f2ee5cb7a6ab0ab2cb04f35e7c0f452eaf08cd63f",
+    "files": [
+      {
+        "path": "packages/jingyun-dsh/cordis.patch.yml",
+        "sha256": "dab0ac4f8ba865eda66684417f1f02b198f682c5fc43945c0b83856b6c2a3631"
+      },
+      {
+        "path": "packages/jingyun-dsh/package.json",
+        "sha256": "d7dd2f0cb4ce8534ee9bb0402e0bd2e98ebb9709c2f57305b297f31a86429f80"
+      },
+      {
+        "path": "packages/jingyun-dsh/src/client/index.tsx",
+        "sha256": "acf02fa9d9232ba25f968cc744d6ff26433e9acbfc32e1a1718bce4d7773cafd"
+      },
+      {
+        "path": "packages/jingyun-dsh/src/index.ts",
+        "sha256": "20efafa5cbb6566d0137aeb3ec21cd4d41b9d9cccea0b516ef014ff89f8a726d"
+      }
+    ]
+  },
+  "derpyu520/qq-bridge": {
+    "packageName": "qq-mode-console",
+    "repositoryPath": "plugins/qq-mode-console",
+    "sourceCommit": "c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f",
+    "expectedFingerprint": "5c2b4383064c98cd928bfa3d321b4ecb908f21bf86fc28eb25ea814c74c4778f",
+    "files": [
+      {
+        "path": "plugins/qq-mode-console/cordis.patch.yml",
+        "sha256": "18bf412ebd7de68e077c0e38e21bc468f6c32ab3f8f598dc5902e621cec4ead1"
+      },
+      {
+        "path": "plugins/qq-mode-console/lib/index.js",
+        "sha256": "c6974d533738d37718b893e6a54fd135bcd69c28406e275e7f26096add1af30e"
+      },
+      {
+        "path": "plugins/qq-mode-console/package.json",
+        "sha256": "a2718b44ef69fc282292a98fe487c55f0ec1f20f136dc3f3fc4082dc2dcd0309"
+      }
+    ]
+  },
+  "zhu1090093659/dsh-trading": {
+    "packageName": "@dshtrading/base",
+    "repositoryPath": "packages/base",
+    "sourceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
+    "expectedFingerprint": "efa2a06917551249126b4c05bab9bffcbd0957af5f3c055dbc76032659338d98",
+    "files": [
+      {
+        "path": "packages/base/cordis.patch.yml",
+        "sha256": "5fd74407232369bbf695b2178c924cbd4d491d31d7fcd53a983b2f83896eab98"
+      },
+      {
+        "path": "packages/base/package.json",
+        "sha256": "dd38b5aca8b698e67b99a5bfb1b2452a272c9ee5f093040613d7337762e776cb"
+      },
+      {
+        "path": "packages/base/src/index.ts",
+        "sha256": "6c45ad8d24e3b5efa3fc465e7c18b7331bf3962510ca01ab631e20eda217d032"
+      },
+      {
+        "path": "packages/base/src/market-tools.ts",
+        "sha256": "9c485d3151d00d107e9f16383e7ac5c1d6d71476f2a10a199127ce74c9e29395"
+      },
+      {
+        "path": "packages/base/src/presets.ts",
+        "sha256": "6878617e97ed01ea83102ab4b89b6e1574d7f87ee11866daf751cd948dc02dc1"
+      }
+    ]
+  }
+}

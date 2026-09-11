@@ -17,6 +17,24 @@ test("marks retained historical entries for review without claiming Bundle struc
   assert.equal(catalogInstallCapability(entry).label, "收录依据待复核");
 });
 
+test("uses the verified discovery kind consistently in ranking and compact search entries", () => {
+  for (const [kind, label] of [["client", "DSH 客户端插件"], ["host", "DSH 插件"], ["bundle", "DSH Bundle"]]) {
+    const discovery = { status: "verified", kind };
+    for (const entry of [
+      { fullName: "acme/demo", type: "cordis-plugin", install: { discovery } },
+      { fullName: "acme/demo", type: "cordis-plugin", discovery },
+    ]) {
+      assert.equal(catalogPresentation(entry).formFactor, label);
+      assert.equal(catalogPresentation(entry).installable, false);
+      assert.equal(installCommand(entry), null);
+    }
+  }
+});
+
+test("does not infer a Bundle declaration from the legacy plugin type alone", () => {
+  assert.equal(catalogPresentation({ fullName: "acme/demo", type: "cordis-plugin" }).formFactor, "DSH 插件");
+});
+
 test("does not equate an install source with zero configuration or safety", () => {
   const entry = { fullName: "acme/demo", installTarget: "github:acme/demo" };
   assert.equal(catalogInstallCapability(entry).label, "已识别安装源");

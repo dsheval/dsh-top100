@@ -58,6 +58,31 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
+  it("excludes reviewed empty skeletons before scoring and fills both Top100 lists without deleting history", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-top100-exclusions-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      const sources = [plugin("Zuorn/Tydora", 999999), ...Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index)), plugin("fixture/skill", 1000, "skill")];
+      importMarketData(database, market(sources), { snapshotDate: "2026-08-20" });
+      importMarketData(database, market(sources), { snapshotDate: "2026-08-21" });
+      const first = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
+      const second = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
+      for (const rankings of [first, second]) {
+        expect(rankings.rankings.total).toHaveLength(101);
+        expect(rankings.rankings.hot).toHaveLength(100);
+        expect(rankings.rankings.rising).toHaveLength(100);
+        for (const entries of Object.values(rankings.rankings)) {
+          expect(entries.some(entry => entry.fullName.toLowerCase() === "zuorn/tydora")).toBe(false);
+          expect(entries.map(entry => entry.rank)).toEqual(entries.map((_, index) => index + 1));
+        }
+        expect(rankings.directories.skills).toHaveLength(1);
+      }
+      expect(readActiveRepositories(database)).toHaveLength(103);
+      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(206);
+    } finally { database.close(); }
+  });
+
   it("clears stored categories when a later classification plan explicitly supplies an empty array", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-category-withdrawal-"));
     temporaryDirectories.push(directory);

@@ -4,6 +4,8 @@
 
 One GitHub repository is one ranking entry. Stars from multiple skills in the same repository are not duplicated.
 
+Source-reviewed exclusions are recorded with a reason and evidence URL in `config/ranking.json`. Excluded plugin repositories do not participate in score normalization, total ranking, rising ranking, or Top 100 selection. The next eligible entries fill the lists under the same ordering rules. Collection and historical statistics are retained; reinstatement requires reviewing the implemented plugin functionality. Skills remain a separate directory.
+
 ## Total ranking
 
 The total ranking contains every active, verified repository ordered by current GitHub Stars. Ties use the stable repository order produced by the database query.

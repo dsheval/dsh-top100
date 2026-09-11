@@ -1,4 +1,5 @@
 import { canRequestModel, requestModel, type ModelRequestControl } from "./model-requests.js";
+import { DEFAULT_MODEL_ATTEMPTS, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKING, DEFAULT_MODEL_TIMEOUT_MS } from "./model-defaults.js";
 /**
  * M3 中文化与智能分类：用 DeepSeek API 读取 README，生成中文简介、标签与受控分类
  * 只处理 descriptionZh 为空的插件（增量，控制成本）；失败跳过可重试
@@ -32,7 +33,7 @@ export interface DeepSeekRequestOptions extends ModelRequestControl {
   maxAttempts?: number;
   retryDelayMs?: number;
   timeoutMs?: number;
-  thinking?: "enabled" | "disabled";
+  thinking?: "disabled";
 }
 
 /** Only these locally generated codes may reach logs; provider bodies may echo secrets. */
@@ -119,15 +120,15 @@ export async function translateWithDeepSeek(
   input: LlmRepositoryInput,
   opts: DeepSeekRequestOptions
 ): Promise<ZhResult | null> {
-  const maxTokens = opts.maxTokens ?? Number(process.env.DEEPSEEK_MAX_TOKENS ?? "800");
+  const maxTokens = opts.maxTokens ?? Number(process.env.DEEPSEEK_MAX_TOKENS ?? DEFAULT_MODEL_MAX_TOKENS);
   if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > 4096) {
     throw new Error("DEEPSEEK_MAX_TOKENS must be an integer from 128 to 4096");
   }
-  const maxAttempts = opts.maxAttempts ?? Number(process.env.DEEPSEEK_SUMMARY_ATTEMPTS ?? "3");
+  const maxAttempts = opts.maxAttempts ?? Number(process.env.DEEPSEEK_SUMMARY_ATTEMPTS ?? DEFAULT_MODEL_ATTEMPTS);
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) {
     throw new Error("DEEPSEEK_SUMMARY_ATTEMPTS must be an integer from 1 to 5");
   }
-  const timeoutMs = opts.timeoutMs ?? Number(process.env.DEEPSEEK_SUMMARY_TIMEOUT_MS ?? "45000");
+  const timeoutMs = opts.timeoutMs ?? Number(process.env.DEEPSEEK_SUMMARY_TIMEOUT_MS ?? DEFAULT_MODEL_TIMEOUT_MS);
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120000) {
     throw new Error("DEEPSEEK_SUMMARY_TIMEOUT_MS must be an integer from 1000 to 120000");
   }
@@ -145,7 +146,7 @@ export async function translateWithDeepSeek(
     ],
     temperature: 0.3,
     max_tokens: maxTokens,
-    thinking: { type: opts.thinking ?? "disabled" },
+    thinking: { type: DEFAULT_MODEL_THINKING },
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -169,10 +170,11 @@ export async function translateWithDeepSeek(
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) throw new ModelRequestError("empty-response");
+      if (!content) return null;
       const result = extractJson(content);
       if (!result) {
-        throw new ModelRequestError("invalid-summary-response");
+        console.warn("    [llm] invalid-summary-response");
+        return null;
       }
       return result;
     } catch (err) {
@@ -205,11 +207,12 @@ export async function classifyWithDeepSeek(
   input: LlmRepositoryInput,
   opts: DeepSeekRequestOptions
 ): Promise<CategorySuggestion[]> {
-  const maxTokens = opts.maxTokens ?? 4096;
-  const maxAttempts = opts.maxAttempts ?? 3;
-  const timeoutMs = opts.timeoutMs ?? 45_000;
+  const maxTokens = opts.maxTokens ?? DEFAULT_MODEL_MAX_TOKENS;
+  const maxAttempts = opts.maxAttempts ?? DEFAULT_MODEL_ATTEMPTS;
+  const timeoutMs = opts.timeoutMs ?? DEFAULT_MODEL_TIMEOUT_MS;
   const retryDelayMs = opts.retryDelayMs ?? 2000;
   if (!Number.isInteger(maxAttempts) || maxAttempts < 1 || maxAttempts > 5) throw new Error("Classification maxAttempts must be from 1 to 5");
+  if (!Number.isInteger(maxTokens) || maxTokens < 128 || maxTokens > 4096) throw new Error("Classification maxTokens must be from 128 to 4096");
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 120_000) throw new Error("Classification timeoutMs must be from 1000 to 120000");
   if (!canRequestModel(opts)) return [];
   const body = {
@@ -227,7 +230,7 @@ export async function classifyWithDeepSeek(
     ],
     temperature: 0.1,
     max_tokens: maxTokens,
-    thinking: { type: opts.thinking ?? "enabled" },
+    thinking: { type: DEFAULT_MODEL_THINKING },
   };
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {

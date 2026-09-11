@@ -13,6 +13,8 @@ const SIGNAL_KEYS = {
   "agent-skill": "evidenceSignalAgentSkill",
   "theme-bundle": "evidenceSignalThemeBundle",
   "dsh-bundle": "evidenceSignalDshBundle",
+  "dsh-client": "evidenceSignalDshClient",
+  "dsh-plugin": "evidenceSignalDshPlugin",
   "install-source": "evidenceSignalInstallSource",
 } as const;
 

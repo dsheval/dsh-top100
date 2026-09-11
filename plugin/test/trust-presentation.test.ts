@@ -18,6 +18,22 @@ const evidence: CatalogEvidence = {
 };
 
 describe("trust evidence presentation", () => {
+  it.each([
+    ["dsh-client", "DSH 客户端插件", "DSH client plugin"],
+    ["dsh-plugin", "DSH 插件", "DSH plugin"],
+  ] as const)("localizes %s without claiming Bundle evidence", (formFactor, chinese, english) => {
+    const typed: CatalogEvidence = { ...evidence, formFactor, trustLevel: "structured",
+      signalCodes: ["indexed", formFactor] };
+    expect(zh[`form_${formFactor}`]).toBe(chinese);
+    expect(en[`form_${formFactor}`]).toBe(english);
+    for (const dictionary of [zh, en]) {
+      const presented = presentCatalogEvidence(typed, null, translator(dictionary));
+      expect(presented.signals.join(" ")).not.toContain("Bundle");
+      expect(presented.signals).toHaveLength(2);
+      expect(presented.signals[1]).not.toContain("evidenceSignal");
+    }
+  });
+
   it("uses the active English locale instead of host fallback prose", () => {
     const presented = presentCatalogEvidence(evidence, "npm", translator(en));
     expect(presented.signals).toEqual([

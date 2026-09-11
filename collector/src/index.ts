@@ -1,3 +1,8 @@
+import { reviewedReadmeSource, summarizeSelectedReadme } from "./reviewed-summary.js";
+import { reviewedFunctionEvidence, checkReviewedFunctionEvidence } from "./reviewed-evidence.js";
+import { applyFunctionEvidenceCheck } from "./reviewed-evidence-state.js";
+import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
+import { refreshCachedInstallEvidence } from "./install-cache.js";
 import { modelRequestsEnabled } from "./model-requests.js";
 /**
  * collector 主流程（v2：并发 + 缓存）
@@ -15,6 +20,7 @@ import "./env.js"; // 加载仓库根 .env（GITHUB_TOKEN）
 import {
   githubFetch,
   fetchRepoRoot,
+  fetchRawFile,
   rejectPrivateRepository,
   redactPrivateRejections,
   type GithubRepo,
@@ -24,7 +30,8 @@ import { fetchAwesomeEntries } from "./sources/awesome.js";
 import { scanOrg } from "./sources/github-search.js";
 import { discoverRepositories, type DiscoveryMode } from "./sources/discovery.js";
 import { fetchSubmissionRepos, fetchPackSubmissionRepos } from "./sources/issues.js";
-import { detectPlugin, detectNeedsConfig, DISCOVERY_POLICY_VERSION, type Detection } from "./detect.js";
+import { detectPlugin, detectNeedsConfig, DISCOVERY_POLICY_VERSION, ReviewedTargetValidationError, type Detection } from "./detect.js";
+import { reviewedPluginTargets, matchesReviewedTarget, quarantineUnreviewedTarget } from "./reviewed-targets.js";
 import { canRestorePrevious, restoredDiscovery, canReuseDetectionCache } from "./discovery-policy.js";
 import { loadSelectedReadme, getCachedSelectedReadme, loadSelectedSkill, SOURCE_DOCUMENT_CACHE_VERSION } from "./selected-readme.js";
 import { computePracticalScore, computeP99Stars } from "./scoring.js";
@@ -217,6 +224,10 @@ async function main() {
     });
   }
 
+  // Keep the small explicitly reviewed cohort eligible for current validation,
+  // including repositories outside the incremental discovery window.
+  for (const fullName of Object.keys(reviewedPluginTargets)) addCandidate(fullName, null, "reviewed-package");
+
   const all = [...candidates.values()];
   console.log(`  candidates: ${all.length}`);
 
@@ -225,6 +236,7 @@ async function main() {
   const rejected: { fullName: string; reason: string }[] = [];
   const definitiveRejections = new Set<string>();
   const knownPrivateIds = new Set<string>();
+  const invalidReviewedTargets = new Set<string>();
   let checkedCandidates = 0;
 
   await runPool(all, async (candidate) => {
@@ -251,6 +263,7 @@ async function main() {
       // ===== 检测结果缓存（增量核心）：repo 未变化则复用，跳过全部检测网络调用 =====
       const DETECT_TTL = 7 * 24 * 3600_000;
       const cachedDetect = cacheGet<DetectCache>("detect", candidate.fullName, DETECT_TTL);
+      const reviewedTarget = reviewedPluginTargets[candidate.fullName.toLowerCase()];
       let detection: Awaited<ReturnType<typeof detectPlugin>>;
       let isCordis: boolean;
       let needsConfig: boolean;
@@ -261,7 +274,8 @@ async function main() {
       let subdir: string | null = null;
       let checkedAt = new Date().toISOString();
 
-      if (cachedDetect && canReuseDetectionCache(cachedDetect, repo.pushed_at, INSTALL_PARSER_VERSION)) {
+      if (cachedDetect && matchesReviewedTarget(cachedDetect.detection, reviewedTarget)
+        && canReuseDetectionCache(cachedDetect, repo.pushed_at, INSTALL_PARSER_VERSION)) {
         checkedAt = cachedDetect.checkedAt;
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
         detection = cachedDetect.detection;
@@ -288,7 +302,7 @@ async function main() {
         );
 
         // 特征检测（只基于文件列表）
-        detection = await detectPlugin(candidate.fullName, rootItems, repo!.default_branch, { primaryOnly: true });
+        detection = await detectPlugin(candidate.fullName, rootItems, repo!.default_branch, { primaryOnly: true, reviewedTarget });
         if (!detection.isPlugin) {
           definitiveRejections.add(candidate.fullName.toLowerCase());
           definitiveRejections.add(repo.full_name.toLowerCase());
@@ -310,7 +324,7 @@ async function main() {
         needsConfig = detectNeedsConfig(readmeContent);
         readmeSummary = skillMd
           ? `SKILL.md: ${summarizeReadme(skillMd, 700)}${readmeContent ? ` README: ${summarizeReadme(readmeContent, 420)}` : ""}`
-          : readmeContent ? summarizeReadme(readmeContent) : null;
+          : readmeContent ? summarizeSelectedReadme(candidate.fullName, { packageName: detection.packageName, repositoryPath: subdir }, readmeContent) : null;
         installParsed = parseInstallCommands(readmeContent);
         hasSkillMd = detection.skillFiles.length > 0;
 
@@ -336,6 +350,38 @@ async function main() {
         readmeContent = getCachedSelectedReadme(candidate.fullName, subdir, repo.pushed_at, repo.default_branch);
       }
 
+      const selectedIdentity = { packageName: detection.packageName, repositoryPath: subdir };
+      const reviewedReadme = reviewedReadmeSource(candidate.fullName, selectedIdentity);
+      if (reviewedReadme && readmeContent === null && readmeSummary !== reviewedReadme.sourceReadme) {
+        readmeContent = await loadSelectedReadme(candidate.fullName, subdir, repo.pushed_at, repo.default_branch);
+      }
+      if (reviewedReadme && readmeContent !== null) {
+        const normalized = summarizeSelectedReadme(candidate.fullName, selectedIdentity, readmeContent);
+        if (readmeSummary !== normalized) {
+          readmeSummary = normalized;
+          cacheSet<DetectCache>("detect", candidate.fullName, {
+            schemaVersion: DISCOVERY_POLICY_VERSION, checkedAt, installParserVersion: INSTALL_PARSER_VERSION,
+            sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, pushedAt: repo.pushed_at,
+            detection, isCordis, needsConfig, readmeSummary, installParsed, hasSkillMd, subdir,
+          });
+        }
+      }
+      const installIdentity = { fullName: candidate.fullName, ...selectedIdentity };
+      let refreshedInstall = refreshCachedInstallEvidence(installIdentity, installParsed, readmeContent);
+      if (refreshedInstall.needsReadmeRefresh) {
+        // Only the audited stale installation record needs a document fetch.
+        try { readmeContent = await loadSelectedReadme(candidate.fullName, subdir, repo.pushed_at, repo.default_branch); }
+        catch { /* Keep its untrusted commands withheld; metadata collection can continue. */ }
+        refreshedInstall = refreshCachedInstallEvidence(installIdentity, refreshedInstall.installParsed, readmeContent);
+      }
+      if (JSON.stringify(installParsed) !== JSON.stringify(refreshedInstall.installParsed)) {
+        installParsed = refreshedInstall.installParsed;
+        cacheSet<DetectCache>("detect", candidate.fullName, {
+          schemaVersion: DISCOVERY_POLICY_VERSION, checkedAt, installParserVersion: INSTALL_PARSER_VERSION,
+          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, pushedAt: repo.pushed_at,
+          detection, isCordis, needsConfig, readmeSummary, installParsed, hasSkillMd, subdir,
+        });
+      }
       const installCommands =
         installParsed.commands.length > 0 ? installParsed.commands : undefined;
       const installMethod = detection.installMethod!;
@@ -393,6 +439,7 @@ async function main() {
         hasSkillMd: detection.skillFiles.length > 0,
       });
     } catch (err) {
+      if (err instanceof ReviewedTargetValidationError) invalidReviewedTargets.add(candidate.fullName.toLowerCase());
       rejected.push({
         fullName: candidate.fullName,
         reason: `error: ${(err as Error).message.slice(0, 80)}`,
@@ -491,7 +538,7 @@ async function main() {
       };
       detected.push({
         candidate: { fullName: canonicalFullName, repo, sources: ["restore"] },
-        plugin: {
+        plugin: quarantineUnreviewedTarget({
           ...prev,
           id: canonicalId,
           fullName: canonicalFullName,
@@ -504,7 +551,7 @@ async function main() {
           updatedAt: update?.updatedAt ?? prev.updatedAt,
           lastCheckedAt: prev.lastCheckedAt,
           install: { ...prev.install, discovery: restoredDiscovery(prev) },
-        },
+        }, reviewedPluginTargets[id] ?? reviewedPluginTargets[canonicalId], invalidReviewedTargets.has(id) || invalidReviewedTargets.has(canonicalId)),
         repo,
         readmeContent: null,
         hasSkillMd: false,
@@ -515,6 +562,29 @@ async function main() {
     console.log(`  [B2] 补回 ${restored}，过滤私有/fork/归档 ${filteredOut}，刷新失败保留 ${unresolved}`);
   }
 
+  // Verify the small source-reviewed cohort independently from README/detection caches.
+  for (const item of detected) {
+    if (!reviewedFunctionEvidence[item.plugin.fullName.toLowerCase()]) continue;
+    let refPromise: Promise<string> | undefined;
+    const check = await checkReviewedFunctionEvidence(item.plugin.fullName, item.plugin.install, async path => {
+      // Resolve one commit, so all file hashes describe a single repository state.
+      refPromise ??= (async () => {
+        const head = await githubFetch<{ sha: string }>(`/repos/${item.plugin.fullName}/commits/${encodeURIComponent(item.repo.default_branch ?? "HEAD")}`);
+        if (!/^[a-f0-9]{40}$/.test(head.sha)) throw new Error("Missing source commit");
+        return head.sha;
+      })();
+      return fetchRawFile(item.plugin.fullName, path, await refPromise);
+    });
+    item.plugin = applyFunctionEvidenceCheck(item.plugin, prevPlugins.get(item.plugin.fullName.toLowerCase()), check);
+  }
+  // The historical fallback path also passes the targeted stale-command guard.
+  for (const { plugin, readmeContent } of detected) {
+    const parsed = refreshCachedInstallEvidence({ fullName: plugin.fullName,
+      packageName: plugin.install.packageName, repositoryPath: plugin.install.repositoryPath },
+      { commands: plugin.install.commands ?? [], source: plugin.install.commandSource ?? "template" }, readmeContent).installParsed;
+    plugin.install.commands = parsed.commands.length ? parsed.commands : undefined;
+    plugin.install.commandSource = parsed.source === "template" ? undefined : parsed.source;
+  }
   console.log("[3/5] 实用五维评分...");
   const p99 = computeP99Stars(detected.map((d) => d.repo.stargazers_count));
   for (const d of detected) {
@@ -573,9 +643,9 @@ async function main() {
   const modelsEnabled = modelRequestsEnabled() && !!apiKey;
   if (!modelsEnabled) console.log("  模型请求已暂停；保留同源已有内容并继续更新目录");
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
+  const model = process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL;
   const summaryBatchSize = Number(process.env.DEEPSEEK_SUMMARY_BATCH_SIZE ?? "300");
-  const summaryConcurrency = Number(process.env.DEEPSEEK_SUMMARY_CONCURRENCY ?? "3");
+  const summaryConcurrency = Number(process.env.DEEPSEEK_SUMMARY_CONCURRENCY ?? DEFAULT_MODEL_CONCURRENCY);
   if (!Number.isInteger(summaryBatchSize) || summaryBatchSize < 0 || summaryBatchSize > 3000) throw new Error("DEEPSEEK_SUMMARY_BATCH_SIZE must be an integer from 0 to 3000");
   if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
   const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);

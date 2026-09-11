@@ -1,4 +1,5 @@
 import { canRequestModel, requestModel, type ModelRequestControl } from "./model-requests.js";
+import { DEFAULT_MODEL_ATTEMPTS, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKING, DEFAULT_MODEL_TIMEOUT_MS } from "./model-defaults.js";
 /**
  * 标签归一化：合并同义/近义标签，删除宽泛标签
  * - 调 DeepSeek 给出同义词合并映射（只合并，不发明新标签）
@@ -41,7 +42,7 @@ function buildPrompt(tagList: [string, number][]): string {
 2. 主标签选更通用、更常用、表达更准确的
 3. 例：{"AI增强": "AI 增强"}、{"网页自动化": "浏览器自动化"}、{"上下文管理": "会话管理"}
 4. 含义不同的标签绝对不要合并
-5. 没有把握就不合并（宁可少合并）
+5. 没有把握就不合并（宁可少合并）；本轮最多输出 6 组映射，保持完整 JSON
 
 标签清单：
 ${lines}
@@ -56,13 +57,13 @@ export async function normalizeTags(
   if (!canRequestModel(opts)) return { alias: {}, removedGeneric: 0, mergedCount: 0 };
   const counts = aggregateZhTags(plugins);
   const entries = [...counts.entries()].sort((a, b) => b[1] - a[1]);
-  // 只给 LLM 出现 ≥2 次或同义风险高的（单次标签数量太多，全给会超长；给 top 120）
+  // Bound this auxiliary request too; unfinished mappings can stay unchanged.
   const llmList = entries.filter(([, n]) => n >= 2).concat(entries.filter(([, n]) => n === 1).slice(0, 80));
-  const chunk = llmList.slice(0, 120);
+  const chunk = llmList.slice(0, 20);
 
   const prompt = buildPrompt(chunk);
   let alias: Record<string, string> = {};
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  for (let attempt = 1; attempt <= DEFAULT_MODEL_ATTEMPTS; attempt++) {
     try {
       const res = await requestModel(opts, `${opts.baseURL}/chat/completions`, {
         method: "POST",
@@ -71,23 +72,34 @@ export async function normalizeTags(
           model: opts.model,
           messages: [{ role: "user", content: prompt }],
           temperature: 0.1,
-          max_tokens: 2500, // 120 个标签的合并映射可能超过 800 token，防止截断导致 JSON 不完整
+          max_tokens: DEFAULT_MODEL_MAX_TOKENS,
+          thinking: { type: DEFAULT_MODEL_THINKING },
         }),
+        signal: AbortSignal.timeout(DEFAULT_MODEL_TIMEOUT_MS),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (!res.ok) {
+        if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+          console.warn(`  [normalize] HTTP ${res.status}`);
+          break;
+        }
+        throw new Error("request-failed");
+      }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content ?? "";
-      console.log(`  [normalize] LLM 原始输出长度: ${content.length}，前 80 字: ${content.slice(0, 80)}`);
       const cleaned = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
       const start = cleaned.indexOf("{");
       const end = cleaned.lastIndexOf("}");
       if (start >= 0 && end > start) {
-        const parsed = JSON.parse(cleaned.slice(start, end + 1));
-        console.log(`  [normalize] parsed 类型: ${typeof parsed}, 键数: ${Object.keys(parsed as object).length}`);
-        alias = parsed;
+        let parsed: unknown;
+        try { parsed = JSON.parse(cleaned.slice(start, end + 1)); }
+        catch { break; }
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) break;
         // 校验：只保留确实存在的标签映射，且目标非空、非同源
         alias = Object.fromEntries(
-          Object.entries(alias).filter(([s, t]) => counts.has(s) && t && s !== t)
+          Object.entries(parsed).filter((entry): entry is [string, string] => {
+            const [s, t] = entry;
+            return counts.has(s) && typeof t === "string" && Boolean(t.trim()) && s !== t;
+          }).slice(0, 6)
         );
         // 主标签修正：LLM 可能把「使用次数少」的当主标签（界面增强6 ← 界面美化104）
         // source 明显更常用且 target 未被多个映射指向时，反转方向
@@ -106,9 +118,9 @@ export async function normalizeTags(
         console.log(`  [normalize] filter 后 alias 键数: ${Object.keys(alias).length}`);
       }
       break;
-    } catch (err) {
-      if (attempt === 3) {
-        console.warn(`  [normalize] LLM 失败: ${(err as Error).message.slice(0, 100)}`);
+    } catch {
+      if (attempt === DEFAULT_MODEL_ATTEMPTS) {
+        console.warn("  [normalize] request-or-response-failure");
         alias = {};
       } else {
         await new Promise((r) => setTimeout(r, 2000 * attempt));
@@ -130,9 +142,7 @@ export async function normalizeTags(
       if (target && target !== t) {
         mergedCount++;
         if (!next.includes(target)) next.push(target);
-      } else {
-        next.push(t);
-      }
+      } else if (!next.includes(t)) next.push(t);
     }
     p.tags = next;
   }

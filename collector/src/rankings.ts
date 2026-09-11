@@ -1,3 +1,4 @@
+import { needsFunctionReview } from "./reviewed-evidence-state.js";
 /** Ranking computation and stable public JSON models. */
 
 import { readFileSync } from "node:fs";
@@ -16,6 +17,7 @@ import { matchingEditorialHold } from "./content-source.js";
 import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 interface RankingConfig {
+  excludedRepositories?: Record<string, { reason: string; reviewedAt: string; sourceUrl: string }>;
   limits: { rising: number; hot: number };
   hotWeights: {
     dailyGrowth: number;
@@ -146,7 +148,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     license: repository.license,
     topics: repository.topics,
     tags: repository.tags,
-    categories: repository.categories,
+    categories: needsFunctionReview(repository) ? [] : repository.categories,
     type: repository.type,
     install: repository.install,
     sources: repository.sources,
@@ -165,7 +167,8 @@ export function buildRankings(
 ): RankingsDocument {
   const config = JSON.parse(readFileSync(configPath, "utf8")) as RankingConfig;
   const activeRepositories = readActiveRepositories(database);
-  const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin");
+  const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin"
+    && !Object.hasOwn(config.excludedRepositories ?? {}, repository.fullName.toLowerCase()));
   const skills = activeRepositories.filter((repository) => repository.type === "skill");
   const weekDate = subtractDays(snapshotDate, 7);
   const now = new Date();

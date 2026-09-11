@@ -4,13 +4,14 @@ export interface DescriptionEntry {
   descriptionZh?: string;
   readmeSummary?: string;
   type?: string;
-  install?: { packageName?: string | null; repositoryPath?: string | null };
+  install?: { packageName?: string | null; repositoryPath?: string | null; discovery?: { evidence: string[] } };
   installPackageName?: string | null;
   installRepositoryPath?: string | null;
 }
 export interface ReviewedInstallIdentity {
   packageName: string | null;
   repositoryPath: string | null;
+  functionEvidence?: string;
 }
 /** Full and compact catalogs must identify the same reviewed package. */
 export function matchesReviewedIdentity(
@@ -23,7 +24,8 @@ export function matchesReviewedIdentity(
   const repositoryPath = entry.install?.repositoryPath ?? entry.installRepositoryPath ?? null;
   // Unbound historical records cannot establish the identity of an installed package.
   if (!sourceInstall) return packageName === null && repositoryPath === null;
-  return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath;
+  return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath
+    && (!sourceInstall.functionEvidence || !!entry.install?.discovery?.evidence.includes(`reviewed-function-sha256:${sourceInstall.functionEvidence}`));
 }
 export interface DescriptionContext { snapshotId?: string; }
 export interface ReviewedDescription {
@@ -38,6 +40,14 @@ export interface ReviewedDescription {
 }
 export type ReviewedDescriptions = Record<string, ReviewedDescription>;
 export const PENDING_DESCRIPTION_ZH = '中文简介待生成。';
+
+/** A leading language switch is navigation, not a change to reviewed functionality.
+ * Keep the rest of the source exact, including numbers, versions and missing text.
+ */
+export function matchesReviewedReadme(current: string, reviewed: string): boolean {
+  const withoutLanguageSwitch = (value: string) => value.replace(/^(?:中文\s*\|\s*English|English\s*\|\s*中文)\s+/, '');
+  return withoutLanguageSwitch(current) === withoutLanguageSwitch(reviewed);
+}
 
 /** Allow product names, but a few Chinese words must not validate an English paragraph. */
 export function isChineseDescription(value: string): boolean {
@@ -66,7 +76,7 @@ export function descriptionFor(entry: DescriptionEntry, reviewed: ReviewedDescri
   const review = reviewed[String(entry.fullName || '').toLowerCase()];
   // Invalidate editorial text when its evidence changes, rather than pinning stale claims.
   if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || '') && (
-    review.sourceReadme === (entry.readmeSummary || '')
+    matchesReviewedReadme(entry.readmeSummary || '', review.sourceReadme)
     || (entry.readmeSummary === undefined && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)
   )) {
     if (review.suspended) return PENDING_DESCRIPTION_ZH;

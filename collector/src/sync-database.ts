@@ -1,4 +1,5 @@
 import { modelRequestsEnabled } from "./model-requests.js";
+import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
 /** Import collector JSON into SQLite and publish atomic frontend snapshots. */
 
 import "./env.js";
@@ -77,7 +78,7 @@ async function classifyRepositories(
   carryForwardDailyCategories(market.plugins, previousSources);
   const plan = planDailyCategories(market.plugins, { previous, priority });
   const apiKey = process.env.DEEPSEEK_API_KEY;
-  const model = process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
+  const model = process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL;
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
   const batchSize = Number(process.env.DEEPSEEK_CATEGORY_BATCH_SIZE ?? "200");
   if (!Number.isInteger(batchSize) || batchSize < 0 || batchSize > 2000) {
@@ -86,7 +87,7 @@ async function classifyRepositories(
   atomicJson(statePath, plan.state);
   const result = await runDailyCategories(plan, {
     worker: dailyCategoryWorker({ apiKey: apiKey ?? "", baseURL, model }),
-    model, limit: modelRequestsEnabled() && apiKey ? batchSize : 0, concurrency: 5,
+    model, limit: modelRequestsEnabled() && apiKey ? batchSize : 0, concurrency: DEFAULT_MODEL_CONCURRENCY,
     onProgress: () => atomicJson(statePath, plan.state),
   });
   atomicJson(statePath, plan.state);
@@ -149,7 +150,7 @@ async function main(): Promise<void> {
     await classifyRepositories(market, database, join(dirname(sourcePath), "category-jobs.json"), priority);
     atomicJson(sourcePath, market);
     const imported = importMarketData(database, market, {
-      model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro",
+      model: process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL,
       timeZone: process.env.TZ ?? "Asia/Shanghai",
     });
     const rankings = buildRankings(

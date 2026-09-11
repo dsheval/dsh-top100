@@ -38,11 +38,16 @@ export function catalogInstallCapability(entry) {
 export function catalogPresentation(entry) {
   const type = String(entry?.type ?? "").toLowerCase();
   const target = resolveInstallTarget(entry);
+  const discovery = entry?.install?.discovery ?? entry?.discovery;
   const structured = !discoveryNeedsReview(entry) && (type === "skill" || type === "cordis-plugin" || type === "cordis");
   const formFactor = type === "skill"
     ? "Skill"
     : structured
-      ? "DSH Bundle"
+      ? discovery?.status === "verified" && discovery.kind === "bundle"
+        ? "DSH Bundle"
+        : discovery?.status === "verified" && discovery.kind === "client"
+          ? "DSH 客户端插件"
+          : "DSH 插件"
       : "生态项目";
   return {
     formFactor,

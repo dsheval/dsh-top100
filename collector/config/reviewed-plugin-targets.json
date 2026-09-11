@@ -1,0 +1,30 @@
+{
+  "livxue/dsh-plugin-shop": {
+    "packageName": "dsh-plugin-shop",
+    "repositoryPath": "packages/dsh-plugin-shop",
+    "sourceCommit": "2b84734032028800744da48c29f31ad29255345a",
+    "sourceUrl": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/package.json",
+    "reason": "package.json name/repository/dsh.bundle、README 安装 dsh-plugin-shop@0.8.1、bundle 加载同名 Host 入口相互对应。vendored 协议不应作为该仓库产品身份。"
+  },
+  "see-sol-lab/deepseekgui": {
+    "packageName": "@see-sol-lab/deepseekgui-workbench",
+    "repositoryPath": "apps/desktop/workbench-plugin",
+    "sourceCommit": "000d003a6e9a0464dbf6a740694f569f3cc0b21f",
+    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/package.json#L2",
+    "reason": "原 @deepseek-ai/dsh-root 是 private 多工作区根且无插件入口，不能分类。作者自有 workbench 子包有 dsh.client/exports、Host apply、Client slots 与专用 README；提供 Changes/Git/Worktrees/Memory 业务视图和 Git/PR 卡片，归编程而不是仅外观。"
+  },
+  "tao716/ai-mini-game": {
+    "packageName": "@deepseek-ai/dsh-client-ui-midnight-game",
+    "repositoryPath": "packages/client/ui-midnight-game",
+    "sourceCommit": "825d4b5cf7cc575dd8bdc37b39b201898bece30c",
+    "sourceUrl": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/packages/client/ui-midnight-game/package.json#L2",
+    "reason": "根 package.json 同样是 private dsh-root。实际 packages/client/ui-midnight-game 是带 dsh.client 和 exports 的作者游戏客户端，注册 conversation.input.dock，读取 Host game_* 结果并提交按钮动作；属于游戏业务工具界面。另有 scratch-game/src/plugin.ts 注册五个游戏工具和持久状态，是实际 Host 引擎。"
+  },
+  "zhu1090093659/dsh-trading": {
+    "packageName": "@dshtrading/base",
+    "repositoryPath": "packages/base",
+    "sourceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
+    "sourceUrl": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/package.json",
+    "reason": "作者根 README 快速开始明确直接安装 @dshtrading/base + 市场包，架构段将 base 指定为共享核心。base 自身清单具有 bundle/真实入口，src/index.ts 实现统一订单审批；cordis.patch.yml 实际挂载路由、watchlist、holdings、market-tools、知识、策略和业务界面，不是单纯依赖声明。src/market-tools.ts 在 registry 中注册只读账户/市场工具。作为共享交易操作工作台归 tools，研究只是组合功能之一；不能声称单独 base 就有四市场数据或下单连接器。"
+  }
+}

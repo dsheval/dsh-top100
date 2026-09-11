@@ -33,6 +33,23 @@ function entry(extra: Partial<RankingEntry> = {}): RankingEntry {
 }
 
 describe("catalog evidence", () => {
+  it.each([
+    ["client", "dsh-client", "客户端插件"],
+    ["host", "dsh-plugin", "宿主插件"],
+    ["bundle", "dsh-bundle", "Bundle"],
+  ] as const)("uses verified %s structure ahead of root-product and theme wording", (kind, formFactor, signal) => {
+    const plugin = entry({ type: "cordis-plugin", name: "desktop-theme",
+      description: "Root desktop workbench and theme product",
+      install: { method: "pnpm-profile", packageName: "@acme/example", commands: [],
+        discovery: { status: "verified", kind, evidence: [], checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6 },
+      },
+    });
+    expect(catalogEvidence(plugin)).toMatchObject({ formFactor, compatible: true,
+      trustLevel: "structured", signalCodes: ["indexed", formFactor] });
+    expect(catalogEvidence(plugin).signals[1]).toContain(signal);
+    if (kind !== "bundle") expect(catalogEvidence(plugin).signals.join(" ")).not.toContain("Bundle");
+  });
+
   it("keeps retained history in the ecosystem until its structure is rechecked", () => {
     const historical = entry({ type: "cordis-plugin", install: {
       method: "pnpm-profile", packageName: "@acme/example", commands: [],

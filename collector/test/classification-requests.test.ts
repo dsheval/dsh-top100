@@ -13,6 +13,7 @@ describe("bounded classification requests", () => {
     expect(result.map(item => item.id)).toEqual(["tools"]);
     const body = JSON.parse(String(fetchMock.mock.calls[0][1]?.body));
     expect(body.thinking).toEqual({ type: "disabled" });
+    expect(body.max_tokens).toBe(256);
     expect(body.messages[1].content).toContain("@test/usage");
     expect(body.messages[1].content).toContain("packages/usage");
     expect(body.messages[1].content).not.toContain(input.description);
@@ -24,12 +25,12 @@ describe("bounded classification requests", () => {
     expect(await classifyWithDeepSeek(input, { ...options, maxAttempts: 1 })).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
-  it("keeps the default three attempts and supplies a bounded AbortSignal", async () => {
+  it("allows only one default retry and supplies a bounded AbortSignal", async () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     const timeout = vi.spyOn(AbortSignal, "timeout");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new TypeError("offline"));
     expect(await classifyWithDeepSeek(input, options)).toEqual([]);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(timeout).toHaveBeenCalledWith(45_000);
     expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
   });
@@ -48,6 +49,7 @@ describe("bounded classification requests", () => {
   it("rejects invalid attempt and timeout settings before network access", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected request"));
     await expect(classifyWithDeepSeek(input, { ...options, maxAttempts: 0 })).rejects.toThrow("maxAttempts");
+    await expect(classifyWithDeepSeek(input, { ...options, maxTokens: 0 })).rejects.toThrow("maxTokens");
     await expect(classifyWithDeepSeek(input, { ...options, timeoutMs: 0 })).rejects.toThrow("timeoutMs");
     expect(fetchMock).not.toHaveBeenCalled();
   });

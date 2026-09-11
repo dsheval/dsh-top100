@@ -1,4 +1,11 @@
 {
+  "excludedRepositories": {
+    "zuorn/tydora": {
+      "reason": "The DSH entry is an empty skeleton with no registered capability; the standalone editor is not plugin functionality. Re-review implementation before restoring ranking eligibility.",
+      "reviewedAt": "2026-09-11",
+      "sourceUrl": "https://github.com/zuorn/Tydora/blob/75a65227021920c76119d5e0e5138f9c033480f7/dsh/index.ts"
+    }
+  },
   "limits": {
     "rising": 100,
     "hot": 100

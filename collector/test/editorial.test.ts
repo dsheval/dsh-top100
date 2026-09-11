@@ -9,11 +9,26 @@ function source(fullName: keyof typeof categories) {
   const review = categories[fullName];
   return { name: fullName.split("/")[1], fullName,
     type: review.sourceType,
-    install: { packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined },
+    install: { packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined,
+      ...("functionEvidence" in review.sourceInstall ? { discovery: { status: "verified" as const, kind: "bundle" as const,
+        checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6, sourceRevision: "fixture",
+        evidence: [`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`] } } : {}) },
     description: review.sourceDescription, readmeSummary: review.sourceReadme, topics: [] as string[] };
 }
 
 describe("current priority editorial review", () => {
+  it("rebinds a fixed category after language-navigation changes without relaxing identity or body checks", () => {
+    const entry = source("nexu-io/open-design");
+    const original = reviewedCategories(entry)!;
+    const changed = { ...entry, readmeSummary: `中文 | English ${entry.readmeSummary}` };
+    const rebound = reviewedCategories(changed)!;
+    expect(rebound.map(category => category.id)).toEqual(original.map(category => category.id));
+    expect(rebound[0].sourceHash).toBe(categorySourceHash(changed));
+    expect(rebound[0].sourceHash).not.toBe(original[0].sourceHash);
+    expect(reviewedCategories({ ...changed, readmeSummary: `${changed.readmeSummary} New behavior.` })).toBeNull();
+    expect(reviewedCategories({ ...changed, install: { ...entry.install, packageName: "different" } })).toBeNull();
+  });
+
   it("covers 174 priority and 84 high-star reviews with Chinese descriptions and matching source evidence", () => {
     const priorityReview = (review: (typeof categories)[keyof typeof categories]) => !("reviewScope" in review) || review.reviewScope === "production-package-followup";
     const baseline = Object.entries(categories).filter(([, review]) => priorityReview(review) || ("reviewScope" in review && review.reviewScope === "highstar-longtail"));
@@ -57,8 +72,9 @@ describe("current priority editorial review", () => {
         { ...entry, type: entry.type === "skill" ? "cordis-plugin" : "skill" },
         { ...entry, type: undefined },
       ]) {
-        expect(reviewedDescription(changed), fullName).toBeNull();
-        expect(reviewedCategories(changed), fullName).toBeNull();
+        const guarded = "functionEvidence" in categories[fullName as keyof typeof categories].sourceInstall;
+        expect(reviewedDescription(changed), fullName).toBe(guarded ? "中文简介待生成。" : null);
+        expect(reviewedCategories(changed), fullName).toEqual(guarded ? [] : null);
       }
     }
   });
@@ -100,7 +116,7 @@ describe("current priority editorial review", () => {
       for (const changed of [
         { ...entry, description: `${entry.description} Changed project purpose.` },
         { ...entry, readmeSummary: `${entry.readmeSummary} Changed behavior.` },
-        { ...entry, readmeSummary: undefined },
+        ...(entry.readmeSummary ? [{ ...entry, readmeSummary: undefined }] : []),
       ]) {
         expect(reviewedDescription(changed), fullName).toBeNull();
         expect(reviewedCategories(changed), fullName).toBeNull();

@@ -4,9 +4,13 @@ function matchesReviewedIdentity(entry, sourceInstall, sourceType) {
   const packageName = entry.install?.packageName ?? entry.installPackageName ?? null;
   const repositoryPath = entry.install?.repositoryPath ?? entry.installRepositoryPath ?? null;
   if (!sourceInstall) return packageName === null && repositoryPath === null;
-  return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath;
+  return sourceInstall.packageName === packageName && sourceInstall.repositoryPath === repositoryPath && (!sourceInstall.functionEvidence || !!entry.install?.discovery?.evidence.includes(`reviewed-function-sha256:${sourceInstall.functionEvidence}`));
 }
 var PENDING_DESCRIPTION_ZH = "\u4E2D\u6587\u7B80\u4ECB\u5F85\u751F\u6210\u3002";
+function matchesReviewedReadme(current, reviewed) {
+  const withoutLanguageSwitch = (value) => value.replace(/^(?:中文\s*\|\s*English|English\s*\|\s*中文)\s+/, "");
+  return withoutLanguageSwitch(current) === withoutLanguageSwitch(reviewed);
+}
 function isChineseDescription(value) {
   const hanCount = (value.match(/[\u4e00-\u9fff]/g) || []).length;
   const latinCount = (value.match(/[a-z]/gi) || []).length;
@@ -20,7 +24,7 @@ function isPlaceholder(value) {
 }
 function descriptionFor(entry, reviewed = {}, context = {}) {
   const review = reviewed[String(entry.fullName || "").toLowerCase()];
-  if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (review.sourceReadme === (entry.readmeSummary || "") || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
+  if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (matchesReviewedReadme(entry.readmeSummary || "", review.sourceReadme) || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
     if (review.suspended) return PENDING_DESCRIPTION_ZH;
     const chinese2 = cleanDescription(review.descriptionZh);
     if (!isPlaceholder(chinese2) && isChineseDescription(chinese2)) return chinese2;
@@ -38,5 +42,6 @@ export {
   descriptionFor,
   isChineseDescription,
   isPlaceholder,
-  matchesReviewedIdentity
+  matchesReviewedIdentity,
+  matchesReviewedReadme
 };

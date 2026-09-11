@@ -121,23 +121,49 @@
   },
   "zhu1090093659/dsh-web": {
     "sourceDescription": "DeepSeek Harness (DSH) Web Plugin Aggregation Ecosystem · Everything is a plugin, distributed via the Creative Workshop",
-    "sourceReadme": "中文 | English &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; DeepSeek Harness（DSH）Web 的插件聚合生态包 · 一切皆插件 创意工坊 · 任务看板 · 移动端远程 · SSH 运维 · 图像理解 是什么 · 创意工坊 · 功能插件 · 皮肤 · 快速上手 · 常见问题 · 已知限制 · 社区 dsh-web 是 DeepSeek Harness（DSH）Web GUI 的插件聚合生态包（DSH Web plugin ecosystem），也是「一切皆开发、一切皆插件」理念在 Web 端最完整的落地：…",
-    "sourceUrl": "https://github.com/zhu1090093659/dsh-web",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 将其定义为插件聚合生态包，列出任务、远程、运维与视觉等多用途功能。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "dsh-web 是 DeepSeek Harness（DSH）Web GUI 的开源插件集合，为 AI 编程工作台提供任务自动化、手机远程控制、SSH 终端、Git 可视化和自定义主题。既可将插件全家桶安装到 dsh web，也可下载内置运行时与插件的 macOS / Windows 桌面客户端 DSH Desktop。 &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;…",
     "sourceInstall": {
       "packageName": "dsh-web",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/zhu1090093659/dsh-web",
+    "sourceEvidenceCommit": "b33fbe233a43eb6fddaeac02f11b0d41f1a9e6d7",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-web/b33fbe233a43eb6fddaeac02f11b0d41f1a9e6d7/package.json",
+        "path": "package.json",
+        "sha256": "da3d9715ba26198f190b07ad4806c32dfc89e47e18b32c9721caa752a59ef154"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-web/b33fbe233a43eb6fddaeac02f11b0d41f1a9e6d7/README.md",
+        "path": "README.md",
+        "sha256": "6618afdfb0540793f409e5e54d621e25c29f1d3bbaad720eac3e8c28129a819e"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-web/b33fbe233a43eb6fddaeac02f11b0d41f1a9e6d7/packages/dsh-web-all/cordis.patch.yml",
+        "path": "packages/dsh-web-all/cordis.patch.yml",
+        "sha256": "9a4809e2c6c0fc701c89aaed54b4b88626e11245c3b366669cfc8cc780d059fe"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-web/b33fbe233a43eb6fddaeac02f11b0d41f1a9e6d7/packages/dsh-web-all/package.json",
+        "path": "packages/dsh-web-all/package.json",
+        "sha256": "e6ec00b5b0fbb57a203a15e9911fa5296dea8ea07d25f7072b4ec4d5be86827a"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.97,
+        "evidence": "聚合插件管理、任务、远程访问、SSH、会话与界面工具。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "yjh051108/dsh-routing-suite": {
     "sourceDescription": "dsh-routing-suite — injector + router-standard kit: install the runtime injector first, then the task-aware reasoning-mode router preset (measured P1-P23).",
@@ -201,23 +227,41 @@
   },
   "dataelement/dsh-desktop": {
     "sourceDescription": "DSHDesktop：DeepSeek Harness Desktop / DeepSeek Harness 桌面版",
-    "sourceReadme": "DSH Desktop A local-first, cross-platform desktop app for DeepSeek Harness . English · 简体中文 · 日本語 · Русский · Español · Português Use official DeepSeek models or mainstream third-party providers, manage portable Agent presets, continue Harness sessions from your phone, and turn source material into editable PPTX decks. DSH Desktop packages the local DeepSeek Harness experience as an installed desktop application.…",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "packageName": "dsh-desktop-client-ui",
+      "repositoryPath": "packages/dsh-desktop-client-ui",
+      "functionEvidence": "eb704a5fc3393a193e7f091b865a357452da858e28477525f390d920906b2350"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/dataelement/dsh-desktop",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "f7aebb5c68a1e9182a0e2a425bd13b63236ea703",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/package.json#L2",
+        "path": "packages/dsh-desktop-client-ui/package.json"
+      },
+      {
+        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/index.js#L1",
+        "path": "packages/dsh-desktop-client-ui/index.js"
+      },
+      {
+        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/client.js#L69",
+        "path": "packages/dsh-desktop-client-ui/client.js"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
     "categories": [
       {
         "id": "appearance",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确独立跨平台桌面应用，模型及文稿属于其配套功能。",
+        "confidence": 0.98,
+        "evidence": "当前 dsh-desktop-client-ui 的 client.js 只注册 sidebar.brand.mark/name、conversation.hero.brand.mark，并根据明暗主题切换 Logo。不是整个 deskto",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "dsh-desktop",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "hisn00w/asu-skills": {
     "sourceDescription": "简历包装",
@@ -281,23 +325,44 @@
   },
   "omdsh-dev/dsh-better-sidebar": {
     "sourceDescription": "Sidebar: file rendering/terminal/Git/subagents/custom APIs.",
-    "sourceReadme": "一个服务化的侧边栏框架，一套开箱即用的完整工作台 右侧栏 + 底部面板双工作台 ，并把 ctx.betterSidebar 服务开放给所有插件—— 通过 registerTab / registerFileViewer 注册新的侧边栏页面与文件预览器。 🌏 中文 · English - ✨ 功能一览 - 🚀 安装 - 🖼️ 特性巡礼 - 🌐 插件生态 - 🆕 最近更新 - ⌨️ 快捷键 - 🔌 服务化扩展 - 🛠️ 开发与构建 - 🔐 安全 · ⚠️ 已知限制 · 🖥️ 平台支持 - 💬 社区 · 🤝 参与贡献 · ⭐ Star History · 🔗 友情链接 - 🗂️ 文件工作台：资源管理器（懒加载目录树；软链接按目标类型展示——目录软链接可展开、失效链接标红）+ CodeMirror 编辑器；图片 / Markdown（含 Mermaid 图表，strict 安全渲染 + 点击放大；…",
-    "sourceUrl": "https://github.com/omdsh-dev/DSH-better-sidebar",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "coding",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确代码编辑器、终端、Git 和可扩展开发工作台。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "> [!IMPORTANT] > 已适配 DSH 原生侧边栏 API（v0.19.0 起，DSH 0.1.5-rc.1+）：右列就是 DSH 自己的右侧栏——插件的每个 tab 类型与 tab 体通过 ctx.sidebarRightTabs / ctx.sidebarRight 注册与打开，聊天里的文件打开统一走 ctx.sidebarRight.openResource('dsh-resource://file/…')，插件不再自绘右侧面板（旧的浮窗能力同步移除）。自绘的底部工作台与开放给其他插件的 ctx.betterSidebar 服务保持不变，接入方式见插件接入指南。 一个服务化的侧边栏框架，一套开箱即用的完整工作台 右侧栏 + 底部面板双工作台 ，并把 ctx.betterSidebar 服务开放给所有插件—— 通过 registerTab / registerFileViewer 注册新的侧边栏页面与文件预览器。…",
     "sourceInstall": {
       "packageName": "dsh-better-sidebar",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/omdsh-dev/DSH-better-sidebar",
+    "sourceEvidenceCommit": "e786d8f11258783b3294b7ad98471196181f6968",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/omdsh-dev/DSH-better-sidebar/e786d8f11258783b3294b7ad98471196181f6968/package.json",
+        "path": "package.json",
+        "sha256": "93fd52993f06f8ec55ca6345a7527ceadcd9d4036da9c106d1c696b43b006f85"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/omdsh-dev/DSH-better-sidebar/e786d8f11258783b3294b7ad98471196181f6968/README.md",
+        "path": "README.md",
+        "sha256": "47029ca18620e3a5e871db6210d00b1b720815dcd779f59bb2c0307cd1736fa8"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/omdsh-dev/DSH-better-sidebar/e786d8f11258783b3294b7ad98471196181f6968/src/index.ts",
+        "path": "src/index.ts",
+        "sha256": "0154468729b33691c2b3e439ff11edb72149ba2dc368ef258e1dad6a11ffe67e"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "coding",
+        "confidence": 0.97,
+        "evidence": "集成代码编辑、真实终端、Git 差异和提交的开发工作台。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "ccch1mneyyy/dsh-tui": {
     "sourceDescription": "A Claude Code-style full-screen terminal interface with streaming thought display, rollback controls, and context/TPS indicators.",
@@ -401,23 +466,49 @@
   },
   "dsh-tauri-desk/deepseek-harness-desktop": {
     "sourceDescription": "One-click Tauri 2 desktop distribution of DeepSeek Harness: bundled runtime, no Node.js/pnpm/Docker required, native macOS/Windows/Linux packages.",
-    "sourceReadme": "DeepSeek Harness 桌面版 在桌面上一键运行 DeepSeek Harness —— 无需 Node.js、无需 pnpm、无需 Docker，下载即用。 English · 文档 · 中文 - 🧩 插件管理 — 插件面板管理已安装插件，出现异常时提供升级 / 卸载入口，错误详情。 - 🎁 内置插件 — 随安装包内置插件，以及将来引入更多高质量的内置插件。 - 🪶 原生轻量 — Tauri 2 外壳（非 Electron）：更小的安装包、更低的内存占用、原生窗口。 - ⌨️ 命令行集成 — 安装自动注册 dsh 命令，新开终端即用；不覆盖你已有 shell 配置。 - 🧭 启动引导 — 首次启动可选推荐插件，也可在配置中重新选择。 - 🚀 自更新 — 应用内更新，不需要重新下载；…",
+    "sourceReadme": "dsh-tauri 是 DSH Tauri 桌面壳的基础插件。它提供一个无宿主行为的 host half，以及运行在 DSH iframe 中的客户端消息桥。 - 将宿主导航栏的侧边栏开关转发至 layout.toggleSidebar。 - 将后退、前进命令转发至浏览器历史记录。 - 向宿主回报侧边栏折叠状态和历史边界。 - 隐藏与桌面导航栏重复的官方折叠控件。 - 在插件自身异常时向宿主报告，避免静默失败。 - dsh-tauri-ui：桌面化 UI。 - dsh-tauri-worktree：会话级 Git worktree。",
+    "sourceInstall": {
+      "packageName": "dsh-tauri",
+      "repositoryPath": "packages/dsh-tauri"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/dsh-tauri-desk/deepseek-harness-desktop",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "5bd03da3de1de02549b2f9b37fcd80d6115b1d94",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/dsh-tauri-desk/deepseek-harness-desktop/5bd03da3de1de02549b2f9b37fcd80d6115b1d94/packages/dsh-tauri/package.json",
+        "path": "packages/dsh-tauri/package.json",
+        "sha256": "b816724477d7fc4024c561684d22c7244747987d6d83bfb94295cc7b18af280d"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/dsh-tauri-desk/deepseek-harness-desktop/5bd03da3de1de02549b2f9b37fcd80d6115b1d94/packages/dsh-tauri/README.md",
+        "path": "packages/dsh-tauri/README.md",
+        "sha256": "4d2d15e33c215f1bf7c0c12088f6d9ae2806de3277aa2b0a5b5d6c9fb3ddb52a"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/dsh-tauri-desk/deepseek-harness-desktop/5bd03da3de1de02549b2f9b37fcd80d6115b1d94/packages/dsh-tauri/src/client/apply.ts",
+        "path": "packages/dsh-tauri/src/client/apply.ts",
+        "sha256": "199c26ee55dc5b9ea30efb97154dd9ec6bd201425967cec64ca6456d466b7926"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/dsh-tauri-desk/deepseek-harness-desktop/5bd03da3de1de02549b2f9b37fcd80d6115b1d94/packages/dsh-tauri/src/index.ts",
+        "path": "packages/dsh-tauri/src/index.ts",
+        "sha256": "7bc886bbf20793040fc41718f2d5f915cd41343c0394d7ed0bf62f79b681c0df"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
     "categories": [
       {
         "id": "appearance",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确自包含桌面发行版和原生窗口。",
+        "confidence": 0.97,
+        "evidence": "连接桌面导航栏与 DSH 侧栏、历史导航并调整重复控件。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "deepseek-harness-desktop",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "zouyuxuan122/dsh-desktop-eac": {
     "sourceDescription": "DeepSeek Harness Desktop (dsh-desktop). EAC: Embracing All Creation (揽尽万象). Bundled Node.js runtime with full dsh-CLI kernel, one-click startup, 10 built-in UI themes.",
@@ -461,59 +552,96 @@
   },
   "bowenliang123/dsh-context": {
     "sourceDescription": "Context insight panel: see what the model's context window is made of and how it evolves — composition vs. window size, per-request history, compression/injection events, and per-message token stats.",
-    "sourceReadme": "The best DeepSeek Harness plugin for Agent's context insights and management. dsh-context provides full context lifecycle management features. - Context tab — an UI context dashboard for DeepSeek Harness's context stats, composition, trend, events, and messages. - Context panel — the same dashboard as a right-sidebar tab (dsh 0.1.5-alpha.2+):…",
-    "sourceUrl": "https://github.com/bowenliang123/dsh-context",
-    "reviewedAt": "2026-09-10T07:54:45.301Z",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.97,
-        "evidence": "仪表盘与命令用于查看上下文、用量和事件，未说明修改上下文机制。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T07:54:45.301Z"
-      }
-    ],
+    "sourceReadme": "The best DeepSeek Harness plugin for Agent's context insights and management. dsh-context provides full context lifecycle management features. - Context tab — an UI context dashboard for DeepSeek Harness's context stats, composition, trend, events, and messages. - Context panel — the same dashboard as a right-sidebar tab (dsh 0.1.5-rc.1+): pick Context on the sidebar's guide page and the panel opens beside the chat.…",
     "sourceInstall": {
       "packageName": "dsh-context",
       "repositoryPath": null
     },
     "sourceType": "cordis-plugin",
-    "sourceEvidenceUrl": "https://raw.githubusercontent.com/bowenliang123/dsh-context/40bb97c5633eabbdf1c22c77a3a0f1e10c6d8108/README.md",
-    "sourceEvidenceCommit": "40bb97c5633eabbdf1c22c77a3a0f1e10c6d8108",
+    "sourceUrl": "https://github.com/bowenliang123/dsh-context",
+    "sourceEvidenceCommit": "e6e406c8036e64e62a1521875e679eb3bfbfb8f5",
     "sourceEvidence": [
       {
-        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/40bb97c5633eabbdf1c22c77a3a0f1e10c6d8108/package.json",
-        "sha256": "a769cac5b76dec941f672d43f84b407ea4bdd909a4c1a304c454100d0cc9afee",
-        "path": "package.json"
+        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/e6e406c8036e64e62a1521875e679eb3bfbfb8f5/package.json",
+        "path": "package.json",
+        "sha256": "d13bb6e512c9c10627322fbb67b351c38b87600d8259bee92e6c96065b5e4fd2"
       },
       {
-        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/40bb97c5633eabbdf1c22c77a3a0f1e10c6d8108/README.md",
-        "sha256": "fd3249b216444549de709a40ba7fac003b1e67a0b0f3cd82b2307f5952683dfb",
-        "path": "README.md"
+        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/e6e406c8036e64e62a1521875e679eb3bfbfb8f5/README.md",
+        "path": "README.md",
+        "sha256": "fd3249b216444549de709a40ba7fac003b1e67a0b0f3cd82b2307f5952683dfb"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/e6e406c8036e64e62a1521875e679eb3bfbfb8f5/src/host/index.ts",
+        "path": "src/host/index.ts",
+        "sha256": "435119b5eb5a40da945032647948586d53a6f53365b4dffe97ff82871dd8a700"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/bowenliang123/dsh-context/e6e406c8036e64e62a1521875e679eb3bfbfb8f5/src/client/index.ts",
+        "path": "src/client/index.ts",
+        "sha256": "19174255684f5b02b189b1b158fc015f9f4cc188f1147bb492c2957274934d48"
       }
     ],
-    "reviewNotes": "完整 README 的 /context 打开与面板相同的上下文浏览器；压缩、注入、裁剪等是事件标记，Agent Network 展示现有会话关系及跳转。没有发现压缩执行、上下文改写或代理创建与控制入口，故 tools，中文删除可能暗示主动控制的“管理”。",
-    "reviewScope": "production-package-followup"
-  },
-  "superdesigndev/treg": {
-    "sourceDescription": "OpenRouter for agent tools. Join community here: https://discord.gg/6mQYYfFMAn",
-    "sourceReadme": "OpenRouter, but for agent tools instead of models. Point an agent at one base URL with one token and it can do the job: 2,896 catalogued endpoints across 60 providers — SEO and backlinks, social and trends, people and company enrichment, ads, scraping — priced per call, from a cent, with no provider signup.…",
-    "sourceUrl": "https://github.com/superdesigndev/treg",
-    "reviewedAt": "2026-09-10",
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "reviewScope": "production-package-followup",
     "categories": [
       {
         "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 明确跨供应商的工具端点聚合，覆盖搜索、营销、社交和企业数据等多用途服务。",
+        "confidence": 0.97,
+        "evidence": "以面板和命令查看上下文组成、请求历史、令牌统计与事件。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
+    ]
+  },
+  "superdesigndev/treg": {
+    "sourceDescription": "OpenRouter for agent tools. Join community here: https://discord.gg/6mQYYfFMAn",
+    "sourceReadme": "OpenRouter, but for agent tools instead of models. Point an agent at one base URL with one token and it can do the job: 3,000+ catalogued endpoints across 60+ providers — SEO and backlinks, social and trends, people and company enrichment, ads, scraping — priced per call, from a cent, with no provider signup.…",
     "sourceInstall": {
       "packageName": "treg-dsh",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/superdesigndev/treg",
+    "sourceEvidenceCommit": "7c18043a8e6afe64147de11d60acfb2d18e098aa",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/superdesigndev/treg/7c18043a8e6afe64147de11d60acfb2d18e098aa/package.json",
+        "path": "package.json",
+        "sha256": "4b88581e3b5a8f9734f9069d1fcd3d7b0f161897ff8af6b9700058508a8edd81"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/superdesigndev/treg/7c18043a8e6afe64147de11d60acfb2d18e098aa/dsh/index.js",
+        "path": "dsh/index.js",
+        "sha256": "ffdf33257b9fcc31a72ecae76aedca12494fdcc49b52e4cc11f980b894eaa554"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/superdesigndev/treg/7c18043a8e6afe64147de11d60acfb2d18e098aa/dsh/cordis.patch.yml",
+        "path": "dsh/cordis.patch.yml",
+        "sha256": "19cc7f93148b534353e0c3d35a52a0934721aac91e610c4fe3037ef868847d92"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/superdesigndev/treg/7c18043a8e6afe64147de11d60acfb2d18e098aa/dsh/skills/treg/SKILL.md",
+        "path": "dsh/skills/treg/SKILL.md",
+        "sha256": "30a4761579f73051ad9dcdfcdc3d68f5f7b451d5f96eece5e7204c3c6861b49b"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.97,
+        "evidence": "通过技能说明与可选 MCP 连接器接入多供应商工具服务。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "xmanrui/dsh-im": {
     "sourceDescription": "通过扫码或机器人凭据把IM机器人接入DeepSeek Harness（支持飞书、微信、钉钉、企业微信、QQ、Slack、Telegram、Discord和WhatsApp）。 Connect IM bots to DeepSeek Harness via QR code or credentials (9 channels).",
@@ -858,43 +986,100 @@
   },
   "ayuayue/pideck": {
     "sourceDescription": "PiDeck 是一个开源的桌面工作台，用于在本地项目目录中统一管理 pi Agent 会话，并支持导入 Codex、Claude 本地会话以便统一浏览和恢复。支持多项目工作区、会话历史、Git 集成、内置终端、模型配置和插件管理，基于 Electron 构建。",
-    "sourceReadme": "English · LinuxDO 友链 一个用于管理多个 Pi和DSH编码 Agent 会话的开源桌面工作台。 国内 AtomGit 托管：https://atomgit.com/ayuayue/PiDeck --> 国内 AtomGit 托管：https://atomgit.com/ayuayue/PiDeck --> --- PiDeck 是一个开源的 pi 和 DSH 桌面工作台，用于在本地项目目录中统一管理 pi Agent 会话，并支持导入 Codex、Claude 本地会话以便统一浏览和恢复。基于 Electron + TypeScript 构建，提供多项目工作区、AI 会话管理、Git 集成、内置终端、模型配置和插件扩展能力，让本地 AI 编码助手在多项目环境中保持统一、可追溯、可配置。 适合谁用：…",
+    "sourceReadme": "中文 Persistent PowerShell tool for DSH. Do not npm install the tarball into the PiDeck repo, and do not dsh plugin add dsh-tool-pwsh-persistent (that hits the npm registry → 404). From the directory that contains the tarball: dsh plugin is a pnpm forwarder into ~/.dsh/profiles/web. The spec must be a path to the tgz, not the bare package name.…",
+    "sourceInstall": {
+      "packageName": "dsh-tool-pwsh-persistent",
+      "repositoryPath": "packages/dsh-tool-pwsh-persistent"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/ayuayue/PiDeck",
-    "reviewedAt": "2026-09-10",
-    "categories": [
+    "sourceEvidenceCommit": "b16631f753f08f1b8b305185871c0107c451b557",
+    "sourceEvidence": [
       {
-        "id": "appearance",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确基于 Electron 的桌面工作台。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/package.json#L2",
+        "path": "packages/dsh-tool-pwsh-persistent/package.json",
+        "sha256": "89f8b2cfa1094c54d009c78a6bca79576ab4423374b5667a1d80171d1143e513"
+      },
+      {
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/README.md#L5",
+        "path": "packages/dsh-tool-pwsh-persistent/README.md",
+        "sha256": "a8931aafd452bbf830375293be8215e0e032c146c78556d7fe64137f649d5c00"
+      },
+      {
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/README.md#L7",
+        "path": "packages/dsh-tool-pwsh-persistent/README.md",
+        "sha256": "a8931aafd452bbf830375293be8215e0e032c146c78556d7fe64137f649d5c00"
+      },
+      {
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/cordis.patch.yml#L5",
+        "path": "packages/dsh-tool-pwsh-persistent/cordis.patch.yml",
+        "sha256": "9fdc274df003d594c7c1e6dc9afbcbfe5b6fffbb134e44ac79539ef66ed0af66"
+      },
+      {
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/src/index.ts#L38",
+        "path": "packages/dsh-tool-pwsh-persistent/src/index.ts",
+        "sha256": "c0cce06670145ce5818b2084f76373b1afd85bc1fc4f80da4594df20b8aed3be"
+      },
+      {
+        "url": "https://github.com/ayuayue/PiDeck/blob/b16631f753f08f1b8b305185871c0107c451b557/packages/dsh-tool-pwsh-persistent/src/index.ts#L320",
+        "path": "packages/dsh-tool-pwsh-persistent/src/index.ts",
+        "sha256": "c0cce06670145ce5818b2084f76373b1afd85bc1fc4f80da4594df20b8aed3be"
       }
     ],
-    "sourceInstall": {
-      "packageName": "pi-desktop",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "coding",
+        "confidence": 0.99,
+        "evidence": "当前 packages/dsh-tool-pwsh-persistent 包 manifest 明确 bundle.patch、lib/index.js，补丁加载该包。src/index.ts 注册 pwsh_persistent 工具，用",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "ethanyoq/ai-novel-writer": {
-    "sourceDescription": "AI 小说创作软件：把灵感、角色、世界观、大纲、章节写作、审稿和修稿组织成可控流程；提供 Windows/macOS 桌面版、Ollama 与 DSH 插件预览。",
+    "sourceDescription": "AI 小说创作软件：把灵感、角色、世界观、大纲、章节写作、审稿和修稿组织成可控流程；提供 Windows/macOS 桌面版、Ollama 与 DSH 插件预览。AI Novel Writing Software: Organizes inspirations, characters, worldbuilding, outlines, chapter drafting, review, and revision into a controllable workflow. Features desktop apps for Windows/macOS, Ollama integration, and a DeepSeek Harness (DSH) plugin preview.",
     "sourceReadme": "> Maintenance status: the 0.1.0 preview is frozen, with no short-term feature work planned. Existing documentation remains for current users and maintainers; resuming development requires a new, explicitly scoped plan. The desktop application remains active. This out-of-tree bundle adds a revisioned, local-first novel project format to DeepSeek Harness.…",
-    "sourceUrl": "https://github.com/EthanYoQ/AI-Novel-Writer",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "原始描述与插件 README 明确小说创作与本地作品项目格式；插件预览已冻结。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
     "sourceInstall": {
       "packageName": "@ethanyoq/dsh-ai-novel-writer",
       "repositoryPath": "plugins/dsh-ai-novel-writer"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/EthanYoQ/AI-Novel-Writer",
+    "sourceEvidenceCommit": "952a5e5583b501b5d8c2f7e827bec571336e51af",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/EthanYoQ/AI-Novel-Writer/952a5e5583b501b5d8c2f7e827bec571336e51af/plugins/dsh-ai-novel-writer/package.json",
+        "path": "plugins/dsh-ai-novel-writer/package.json",
+        "sha256": "2778c107a4b2b71b2762e0eaf4f3ba33125e6fe20d5bbad9768bb1e6d0114ba7"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/EthanYoQ/AI-Novel-Writer/952a5e5583b501b5d8c2f7e827bec571336e51af/plugins/dsh-ai-novel-writer/README.md",
+        "path": "plugins/dsh-ai-novel-writer/README.md",
+        "sha256": "8d2ef1b4853c56cea116c6c782641b85b8c78f53a044d0ac9ce8992c0820179a"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/EthanYoQ/AI-Novel-Writer/952a5e5583b501b5d8c2f7e827bec571336e51af/plugins/dsh-ai-novel-writer/src/index.ts",
+        "path": "plugins/dsh-ai-novel-writer/src/index.ts",
+        "sha256": "9dbe903dc891d40acb7ccaecb0f48b05b8845ef19d18c2727bf34e90de90d662"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.97,
+        "evidence": "提供本地小说项目、角色大纲章节与经确认应用的写作修改。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "whitelonng/dshcode": {
     "sourceDescription": "Community desktop companion for DeepSeek Harness — one-click Electron app for macOS and Windows",
@@ -1022,23 +1207,59 @@
   },
   "lum1104/dsh-browser": {
     "sourceDescription": "Chrome sidebar extension.",
-    "sourceReadme": "English | 中文 Connect DeepSeek Harness to the Chrome or Firefox tabs you are already using. The model can read page content, operate controls, navigate, and manage tabs while preserving your login state, session, and cookies. A side panel or sidebar provides the conversation UI. dsh is DeepSeek AI's open-source, plugin-based agent harness.…",
+    "sourceReadme": "The browser-operation bridge for dsh: mounts a token-authenticated WebSocket carrier (/ext/bridge) that the Chrome extension connects to, projects its calls onto dsh 0.1.2 Typert Remotes, follows Session and Remote Event streams per connection, and registers the text-only browser_ tool set that reads and operates the user's active tab through the extension — click elements, fill forms, scroll, and navigate in the rea…",
+    "sourceInstall": {
+      "packageName": "@yuxianglin/dsh-bridge-browser",
+      "repositoryPath": "packages/browser/bridge-browser"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/Lum1104/dsh-browser",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "782c61d39cd71394c9901174b09f69cfd4a041ab",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/README.zh.md",
+        "path": "packages/browser/bridge-browser/README.zh.md",
+        "sha256": "fcfd44da07dd027e56cabb9dd81de9c7d76b0d49dc3da1f5bf9d3414556f32a1"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/cordis.patch.yml",
+        "path": "packages/browser/bridge-browser/cordis.patch.yml",
+        "sha256": "165d5ace550adb0c22475be84f29366e4d2c45e46520fb181a8893d45e3a6aeb"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/README.md",
+        "path": "packages/browser/bridge-browser/README.md",
+        "sha256": "caa3876fefb877cc8b13b96e2d5385b212d3e9aaea4022779d78a6f0e8dbad6d"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/package.json",
+        "path": "packages/browser/bridge-browser/package.json",
+        "sha256": "da875e80a893f8241deb4ff1abbfb6dc677dfb4130d148f578fbe256e1770bb0"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/src/tools.ts",
+        "path": "packages/browser/bridge-browser/src/tools.ts",
+        "sha256": "4a1c73f690d8c7494b2cc50da731f9aefd69c8a2f4d126a78e7f65d9ac7df5b6"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/Lum1104/dsh-browser/782c61d39cd71394c9901174b09f69cfd4a041ab/packages/browser/bridge-browser/src/index.ts",
+        "path": "packages/browser/bridge-browser/src/index.ts",
+        "sha256": "eeb799257629c3ecbf494128f9184fcf26fc6c731234c11e29db2f5d3c711ab1"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
     "categories": [
       {
         "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 明确对现有浏览器标签页进行读取、导航和控件操作。",
+        "confidence": 0.98,
+        "evidence": "浏览器桥注册页面读取、点击、输入、导航与标签页工具。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "dsh-browser",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "adoresever/graph-memory": {
     "sourceDescription": "Deepseek Harness、Openclaw知识图谱记忆插件。2026年4月受邀发布在清华大学讨论会。Knowledge Graph + Memory；Knowledge Graph Context Engine for OpenClaw — extracts structured triples from conversations, compresses context 75%, enables cross-session experience reuse",
@@ -1303,22 +1524,68 @@
   "livxue/dsh-plugin-shop": {
     "sourceDescription": "The most comprehensive DeepSeek Harness plugin market — refreshed daily, sourced across the Internet, reviewed before publishing.",
     "sourceReadme": "The plugin shop for DeepSeek Harness — browse a catalog of dsh plugins, install one with a single confirmation, and manage what you have, from a tab inside Settings. English | 中文 --- Two tracks below. They do the same thing; pick the one that matches who is reading. Prerequisites: Node.js. Running the harness itself needs no install — the upstream-documented form is npx -y @deepseek-ai/dsh web.…",
-    "sourceUrl": "https://github.com/LivXue/dsh-plugin-shop",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "插件 README 明确设置内插件目录、确认安装与已装插件管理。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
     "sourceInstall": {
       "packageName": "dsh-plugin-shop",
       "repositoryPath": "packages/dsh-plugin-shop"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/LivXue/dsh-plugin-shop",
+    "sourceEvidenceCommit": "2b84734032028800744da48c29f31ad29255345a",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-typert-protocol/package.json",
+        "path": "packages/dsh-typert-protocol/package.json",
+        "sha256": "5ebe4f1b969eed288fcc6601c138456bdc5d5cb206849bb370ca43a4e05b9f7b"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-typert-protocol/VENDORED.md",
+        "path": "packages/dsh-typert-protocol/VENDORED.md",
+        "sha256": "f7027f189222f0c7630fc1e85f8ff17e72db259b31d3082586d8478ab1ee86bb"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-typert-protocol/lib/index.js",
+        "path": "packages/dsh-typert-protocol/lib/index.js",
+        "sha256": "1dcb0e6772c59f038fedb10bfcdf8cab8fac28113c44de9e736ccbb1579efb18"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/package.json",
+        "path": "packages/dsh-plugin-shop/package.json",
+        "sha256": "c18172b2d4a329b6982a094c379d024b98b7f5b8a0fe3c5aa67c5b8d70dbd02f"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/README.md",
+        "path": "packages/dsh-plugin-shop/README.md",
+        "sha256": "e3a1ffca513d7435261595b084cf370b4a2ed1792ce9113c17a31b72aa5df729"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/src/index.ts",
+        "path": "packages/dsh-plugin-shop/src/index.ts",
+        "sha256": "1de87f5e5eda5f96c89fe0e0573a0e5ade952c1caa51525c6c9168f47373b81a"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/src/host/index.ts",
+        "path": "packages/dsh-plugin-shop/src/host/index.ts",
+        "sha256": "4f2fb65f315a9b2a37a602c087445f0419757d0cce364c4b5f1aec3e2bebce5b"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/LivXue/dsh-plugin-shop/2b84734032028800744da48c29f31ad29255345a/packages/dsh-plugin-shop/cordis.patch.yml",
+        "path": "packages/dsh-plugin-shop/cordis.patch.yml",
+        "sha256": "7c791d30c2d684de7fd5b55d9d0373eb9bc2ded76a0c853410925061caafd5c2"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.99,
+        "evidence": "插件商店可浏览目录、确认安装、启停与升级已装插件。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "ningbainb/deepseek-harness-desktop": {
     "sourceDescription": "Open-source Windows desktop client and GUI for DeepSeek Harness — zero-setup installer with Codex, plugins, skills, SSH, mobile remote access, and 11 skins.",
@@ -1622,23 +1889,44 @@
   },
   "kelai141/dsh-mobile-apk": {
     "sourceDescription": "dsh 安卓壳 APK——WebView UI + 内嵌 Termux 运行时快照（解压即跑），为dsh本地运行设计的高性能方案",
-    "sourceReadme": "🌐 中文说明 / 中文 README > dsh-mobile 生态 · dsh-mobile-apk（壳 APK）· dsh-shell-termux（shell）· dsh-host-web-compat（浏览器兼容）· dsh-mobile（协调仓库，private） Mobile-responsive AppFrame for the DeepSeek Harness web UI. A drop-in replacement for the upstream ui-layout that adds a proper Mobile form (<640px):…",
-    "sourceUrl": "https://github.com/kelai141/dsh-mobile-apk",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "appearance",
-        "confidence": 0.93,
-        "evidence": "替换 DSH 网页 AppFrame，提供适合小于 640 像素窄屏的布局。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T07:45:00.000Z"
-      }
-    ],
+    "sourceReadme": "🌐 中文说明 / 中文 README > dsh-mobile 生态 · dsh-mobile-apk（壳 APK）· dsh-shell-termux（shell）· dsh-host-web-compat（浏览器兼容）· dsh-mobile（协调仓库，private） Android mobile adaptation layer for the DeepSeek Harness web UI. 0.2.0 de-forked the plugin. Up to 0.1.14 it replaced the upstream ui-layout frame with a mobile fork of its own.…",
     "sourceInstall": {
       "packageName": "@dsh-android/dsh-client-ui-responsive",
       "repositoryPath": "dsh-client-ui-responsive"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/kelai141/dsh-mobile-apk",
+    "sourceEvidenceCommit": "002973a80ec930a87970f25d648fa10d3506cd21",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/kelai141/dsh-mobile-apk/002973a80ec930a87970f25d648fa10d3506cd21/dsh-client-ui-responsive/package.json",
+        "path": "dsh-client-ui-responsive/package.json",
+        "sha256": "55b40e65453ca1079bbb892d8ef54f696cdba27816a5d631b1ffc729916bf93c"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/kelai141/dsh-mobile-apk/002973a80ec930a87970f25d648fa10d3506cd21/dsh-client-ui-responsive/README.md",
+        "path": "dsh-client-ui-responsive/README.md",
+        "sha256": "b7f912b9a4b4d4340fc5eabfa5bcea484863f7ab75e480a8c414d7ba327cb771"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/kelai141/dsh-mobile-apk/002973a80ec930a87970f25d648fa10d3506cd21/dsh-client-ui-responsive/src/client/index.ts",
+        "path": "dsh-client-ui-responsive/src/client/index.ts",
+        "sha256": "2701fcb2fcd3bde4a987a550e0cfbd88067fc0fd8cc9b5316ae1645fe5770520"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "appearance",
+        "confidence": 0.97,
+        "evidence": "为 DSH 安卓窄屏提供侧栏抽屉、安全区和键盘布局适配。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "v1ki/dsh-plugin-subscriptions": {
     "sourceDescription": "Use ChatGPT (Codex), Claude, and Grok (X Premium) subscriptions as DeepSeek Harness LLM providers — OAuth login in the web UI, no API keys",
@@ -1662,23 +1950,44 @@
   },
   "zenstory-ai/oh-story-dsh": {
     "sourceDescription": "A DSH plugin for novel writing and short-drama production, powered by Oh Story and Drama Skills.",
-    "sourceReadme": "GitHub · DeepSeek Harness · MIT oh-story-dsh 是基于 DeepSeek Harness（DSH）构建的社区小说、短剧、互动游戏与视频解说创作插件，提供： - 13 个 Oh Story 小说 Skills 与 7 个专业 Roles； - 10 个 Drama Skills 0.6.5 短剧流程，每集按请求维护最多五份 creator-first Markdown； - 7 个 NovelToGame 0.3.0 Skills、game-adaptations/ 产物协议与《金瓶梅 · 风月总账》可玩构建； - 6 个 video-recap-skills 0.4.0 Skills、video-recaps/ 项目约定与轻量视频预览工作台； - 小说协议 hooks 与安全的 Session workspace 文件路由；…",
-    "sourceUrl": "https://github.com/zenstory-ai/oh-story-dsh",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 明确小说、短剧、小说改游戏和视频解说的创作技能与项目协议。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "GitHub · DeepSeek Harness · MIT oh-story-dsh 是基于 DeepSeek Harness（DSH）构建的社区小说、短剧、互动游戏与视频解说创作插件，提供： - 13 个 Oh Story 小说 Skills 与 7 个专业 Roles； - 11 个 Drama Skills 0.7.0 短剧流程，每集按请求维护最多五份 creator-first Markdown，成片装配另写《剪辑单.md》； - 7 个 NovelToGame 0.3.1 Skills、game-adaptations/ 产物协议与《金瓶梅 · 风月总账》可玩构建； - 6 个 video-recap-skills 0.5.0 Skills、video-recaps/ 项目约定与轻量视频预览工作台； - 小说协议 hooks 与安全的 Session workspace 文件路由；…",
     "sourceInstall": {
       "packageName": "@oh-story/dsh",
       "repositoryPath": "packages/dsh-plugin"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/zenstory-ai/oh-story-dsh",
+    "sourceEvidenceCommit": "eb6d11929056c429e47d26f53a0e26371f1aa69a",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/zenstory-ai/oh-story-dsh/eb6d11929056c429e47d26f53a0e26371f1aa69a/packages/dsh-plugin/package.json",
+        "path": "packages/dsh-plugin/package.json",
+        "sha256": "7793828fdf3334c751cd2575ac20bb06f3026a3113d96a6ec9f11043393ca78c"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zenstory-ai/oh-story-dsh/eb6d11929056c429e47d26f53a0e26371f1aa69a/packages/dsh-plugin/README.md",
+        "path": "packages/dsh-plugin/README.md",
+        "sha256": "b485c405acbe2bf3f33c536df5e1a7c7e0b795bd1d461419d3387d5fae2bd7b1"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zenstory-ai/oh-story-dsh/eb6d11929056c429e47d26f53a0e26371f1aa69a/packages/dsh-plugin/src/index.ts",
+        "path": "packages/dsh-plugin/src/index.ts",
+        "sha256": "8d48b73aaf644863420e16ff168db942eeabefccd449ffb981b50893b8fce6dc"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.97,
+        "evidence": "提供小说、短剧、互动游戏与视频解说创作技能和工作台。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "modelstudioai/cli": {
     "sourceDescription": "Official Model Studio CLI（阿里云百炼 CLI）built for AI Agent frameworks, exposing models, search, multimodal, and workflow capabilities as structured tool calls.",
@@ -1781,24 +2090,65 @@
     "sourceType": "cordis-plugin"
   },
   "ilyautov/humanizer-ru": {
-    "sourceDescription": "humanizer-ru: очеловечить русский AI-текст для Claude Code, Cursor, Codex и других AI-агентов",
+    "sourceDescription": "humanizer-ru: очеловечить русский AI-текст для Claude Code, Cursor, Codex и других AI-агентов. 64 признака нейросети, 21 жёсткий бан, сканер в комплекте. | Remove AI-generation markers from Russian text: open-source skill for Claude Code, Cursor, Codex and other agents.",
     "sourceReadme": "> Скилл для Claude. Убирает 64 признака нейросети в русском тексте: канцелярит, кальки, фингерпринты ChatGPT и Claude. Метит в то, что измеряют GPTZero, DivEye, RuBERT: поднимает perplexity и burstiness. 21 жёстких банов, quad-pass аудит, калибровка под голос автора, eval-харнес с метриками до/после. Живое демо сканера на сайте. > English version · 中文 > Было:…",
-    "sourceUrl": "https://github.com/ilyautov/humanizer-ru",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "俄文 README 明确俄语文本去官腔、直译和机器表达，含作者声音校准及多轮审查。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
     "sourceInstall": {
       "packageName": "humanizer-ru",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/ilyautov/humanizer-ru",
+    "sourceEvidenceCommit": "ded9318c49e11e4554b7569284e9ce3784e32056",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/README.zh.md",
+        "path": "README.zh.md",
+        "sha256": "a61b8809c4af43c5f40685867dbeccc88edba5163e0b30c8db783bbc00cfad5e"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/README.en.md",
+        "path": "README.en.md",
+        "sha256": "7ad38fb14d75a0f2ae338df14820e3103bb88f471e0ee0be093c0141b0e003e1"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/cordis.patch.yml",
+        "path": "cordis.patch.yml",
+        "sha256": "462ebb4d2281fa50b88615caccf012b98908a8b5bac7df2ffaf556c3a41ba6b9"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/README.md",
+        "path": "README.md",
+        "sha256": "46e8aa8533a95c5863882bd4bd78640a72f6c5926d376fdab87de610df928cff"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/package.json",
+        "path": "package.json",
+        "sha256": "67fade6c88206e9c5ad641e1c400927241c3013f3407a334388f2fb2670486a5"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/skills/humanizer-ru/SKILL.md",
+        "path": "skills/humanizer-ru/SKILL.md",
+        "sha256": "127e27dcfae475743bea63742c433f916a1a6cb776e39b807fae7958d7dd580d"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/ilyautov/humanizer-ru/ded9318c49e11e4554b7569284e9ce3784e32056/skills/humanizer-ru/scripts/scan.py",
+        "path": "skills/humanizer-ru/scripts/scan.py",
+        "sha256": "e3e86193206dcbdcab4b6bf88fc910990276700de0821dbd1244f7ce2d4ed2a8"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.98,
+        "evidence": "俄语文本润色、特征审计、局部改写与作者语气校准。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "hust-open-atom-club/oh-dsh": {
     "sourceDescription": " 一套 DSH runtime，Desktop、Web 与 TUI 三种开发体验。",
@@ -1874,23 +2224,44 @@
   },
   "1692775560/dsh-mimir-academic-research": {
     "sourceDescription": "Research-lifecycle workbench (7-view web panel): arXiv search/import/subscriptions with AI relevance scoring, Zotero import, experiment tracking with SSH/GPU remote jobs, LaTeX write-compile-snapshot studio with 11 venue templates, figure management, and one-click group-meeting PPT decks with real paper figures; 10 bundled research skills (npm: `dsh-mimir`).",
-    "sourceReadme": "Mimir The research-lifecycle copilot inside DeepSeek Harness : literature · experiments &amp; remote GPUs · figures · LaTeX writing → compile → preview · group-meeting decks — one workbench, driven by your agent. English · 中文 · Website Mimir is a single npm package (dsh-mimir) that plugs into dsh and gives you: - Nine-view web workbench (sidebar toggle → overlay, dark/light, 中/EN):…",
+    "sourceReadme": "Mimir is the research-assistant plugin suite for the DeepSeek Harness: an arXiv literature surface, a persistent research wiki, a LaTeX compile tool, and an independent fresh-reviewer loop. It ports the ARIS workflow mechanisms (failed-ideas memory, reviewer independence, compile-driven writing) into one dsh plugin. Function plugin (name/inject/Config/apply).…",
+    "sourceInstall": {
+      "packageName": "dsh-mimir",
+      "repositoryPath": "packages/mimir"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/1692775560/dsh-Mimir-Academic-research",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "0c53e45ac13e309308a3632284a055586a66f97e",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/1692775560/dsh-Mimir-Academic-research/0c53e45ac13e309308a3632284a055586a66f97e/packages/mimir/package.json",
+        "path": "packages/mimir/package.json",
+        "sha256": "e6d46bf8ad0fe21819f6c714a9b74e6f613faab9baa3b5b2c2374c8c71116057"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/1692775560/dsh-Mimir-Academic-research/0c53e45ac13e309308a3632284a055586a66f97e/packages/mimir/README.md",
+        "path": "packages/mimir/README.md",
+        "sha256": "331b696ab01345db29a6ba815dc6edc98988fd20936a425d976424754a5420d6"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/1692775560/dsh-Mimir-Academic-research/0c53e45ac13e309308a3632284a055586a66f97e/packages/mimir/src/index.ts",
+        "path": "packages/mimir/src/index.ts",
+        "sha256": "e91044e6c2bd702bfb79c9c82918461581b538b916abacc2e9ea9d98bb87f2c2"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
     "categories": [
       {
         "id": "knowledge",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确覆盖文献、实验、论文与组会的研究生命周期工作台。",
+        "confidence": 0.97,
+        "evidence": "提供论文检索、研究知识库、LaTeX 编译和独立论文复核。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "mimir-monorepo",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "huiliyi37/dsh-tianshu-tui": {
     "sourceDescription": "官方 DeepSeek Harness 的交互式终端 UI 插件：自研 ANSI 极简交互渲染、流式 Markdown/工具卡、16+ 主题、slash 命令与选择器、输入历史与本地偏好持久化、LSP 诊断、memory记忆，很丝滑的开发体验。",
@@ -2033,24 +2404,46 @@
     "sourceType": "cordis-plugin"
   },
   "jingyunstudio/jingyun-dsh": {
-    "sourceDescription": "基于 Jingyun Studio + DeepSeek Harness (DSH) 打造的一站式 AI 商业化桌面客户端",
-    "sourceReadme": "让每一个 AI 创业者都拥有自己的商业闭环 基于 Jingyun Studio + DeepSeek Harness (DSH) 打造的一站式 AI 商业化桌面客户端 官网 · 开发文档 · 加入社群 --- Jingyun DSH Client 不只是一个 AI 对话客户端。 它是 Jingyun Studio（井云） 与 DeepSeek Harness（DSH） 深度融合的产物 —— 一个将 AI 智能体 / 技能 / 工作流转化为可交易商品的完整商业化平台客户端。 > 井云为 DSH 注入了完整的商业闭环：会员体系 → 订阅支付 → 算力管控 → 资产分发 → 私域运营，让 AI 开发者 30 分钟内将自己的智能体封装为独立的商业产品。…",
+    "sourceDescription": "基于 Jingyun Studio + DeepSeek Harness (DSH) 打造的一站式 AI 商业化桌面客户端，一个将 AI 智能体 / 技能 / 工作流转化为可交易商品的完整商业化平台客户端。  井云为 DSH 注入了完整的商业闭环：登录注册 → 会员体系 → 订阅支付 → 云端资产 → 多端同步，让 AI 开发者 30 分钟内将自己的智能体封装为独立的商业产品。",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "packageName": "@jingyun-ai/jingyun-dsh",
+      "repositoryPath": "packages/jingyun-dsh",
+      "functionEvidence": "f292ffbe540803d32d7d627f2ee5cb7a6ab0ab2cb04f35e7c0f452eaf08cd63f"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/jingyunstudio/jingyun-dsh",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "0d1eedd693aa8d0d30d0561850f985f473aa9949",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/package.json#L2",
+        "path": "packages/jingyun-dsh/package.json"
+      },
+      {
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/cordis.patch.yml#L3",
+        "path": "packages/jingyun-dsh/cordis.patch.yml"
+      },
+      {
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/src/client/index.tsx#L121",
+        "path": "packages/jingyun-dsh/src/client/index.tsx"
+      },
+      {
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/src/index.ts#L112",
+        "path": "packages/jingyun-dsh/src/index.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
     "categories": [
       {
         "id": "tools",
-        "confidence": 0.93,
-        "evidence": "提供会员订阅、支付、算力管控及智能体资产分发的商业工作台。",
+        "confidence": 0.98,
+        "evidence": "当前 @jingyun-ai/jingyun-dsh 同时实现品牌替换、智能体选择、技能列表、社区插件市场和产物面板；以扩展和业务功能管理为主，按本项目定义归工具，不能只凭包描述 Branding 归外观。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T07:45:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "jingyun-dsh",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "antibrow/dsh-antibrow": {
     "sourceDescription": "DeepSeek Harness plugin: give your agent a browser with a persistent identity - engine-level fingerprint spoofing, unlimited free local profiles, Android device emulation, passkeys that survive, and residential proxy egress.",
@@ -2114,15 +2507,53 @@
   },
   "see-sol-lab/deepseekgui": {
     "sourceDescription": "Windows desktop workbench with a bundled DSH runtime and app-local settings and sessions, Changes / Git / Worktrees / Memory views, approval-gated Git/PR tools, and global and project memory. Experimental Linux AppImage.",
-    "sourceReadme": "English | 中文 在本地工作台中，与 DeepSeek 一起完成项目。 基于 DeepSeek Harness ，面向 Windows 与 Linux 的本地桌面工作台。 --> DeepSeekGUI 是基于 DeepSeek Harness 的本地 AI 工作台。选择项目文件夹，在会话中让助手读取代码、修改文件、运行命令和浏览网页；通过「改动」「Git」「并行工作区」「记忆」视图检查项目状态，用专用工具完成提交、推送与 Pull Request，并通过全局记忆和项目记忆延续协作。 发行包自带运行时，配置模型 API key 后即可开始。 非官方产品： 基于 DeepSeek Harness 构建，由第三方独立开发，与 DeepSeek 无隶属关系，未获官方背书。 许可分层： DeepSeekGUI 原创产品层采用 PolyForm Perimeter License 1.0.1；…",
-    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI",
-    "reviewedAt": "2026-09-10",
-    "categories": [],
+    "sourceReadme": "DeepSeekGUI's Workbench product plugin (B3-P1 Direct Composition Spike; B3-P2 Workbench Shell; B5-P1 remounted on the official 0.1.2 client modules after the B4 conversation-view tabs and their APIProxy RPC surface were retired; B5-P5 added the tool-result cards; the 2026-09-06 acceptance rework replaced the header inspector popover with four conversation views).…",
     "sourceInstall": {
-      "packageName": "@deepseek-ai/dsh-root",
-      "repositoryPath": null
+      "packageName": "@see-sol-lab/deepseekgui-workbench",
+      "repositoryPath": "apps/desktop/workbench-plugin"
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI",
+    "sourceEvidenceCommit": "000d003a6e9a0464dbf6a740694f569f3cc0b21f",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/package.json#L5",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/package.json#L2",
+        "path": "apps/desktop/workbench-plugin/package.json"
+      },
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/README.md#L7",
+        "path": "apps/desktop/workbench-plugin/README.md"
+      },
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/src/client/index.ts#L67",
+        "path": "apps/desktop/workbench-plugin/src/client/index.ts"
+      },
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/src/index.ts#L18",
+        "path": "apps/desktop/workbench-plugin/src/index.ts"
+      },
+      {
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/src/dsh-service.ts#L467",
+        "path": "apps/desktop/src/dsh-service.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "coding",
+        "confidence": 0.98,
+        "evidence": "原 @deepseek-ai/dsh-root 是 private 多工作区根且无插件入口，不能分类。作者自有 workbench 子包有 dsh.client/exports、Host apply、Client slots 与专用 REA",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "amakurai/dsh-liketavern": {
     "sourceDescription": "A DeepSeek Harness (dsh) plugin — turns dsh web into a SillyTavern-style roleplay frontend: character cards, prompt presets, lorebooks, personas, BM25 long-term memory, world-state deltas, and rollback-able floor operations, all on the dsh agent runtime.",
@@ -2146,23 +2577,41 @@
   },
   "danceiny/gotry": {
     "sourceDescription": "GoTry — 从出发到下一次出发的 AI 旅行 Agent(dsh 插件)",
-    "sourceReadme": "English | 简体中文 > Body and soul — more travel, less tourism. > 身体和灵魂,更多旅行,更少旅游。 GoTry is an AI travel agent for \"departure to next departure.\" You tell it where you want to go and why; it interviews you about your working hours and existing bookings, then hands you a formally verified itinerary — computed by a Z3 solver, not guessed by a model.…",
-    "sourceUrl": "https://github.com/Danceiny/gotry",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 明确旅行规划与 Z3 求解器验证行程，而非通用模型增强。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "English | 简体中文 > Body and soul — more travel, less tourism. > 身体和灵魂,更多旅行,更少旅游。 GoTry is an AI travel agent for \"departure to next departure.\" You say where you want to go and why; it asks what needs asking, then lets code — not the model — make the call: can you go, how, and at what true cost. Every number comes with a source; nothing is hallucinated.…",
     "sourceInstall": {
       "packageName": "@danceiny/gotry",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/Danceiny/gotry",
+    "sourceEvidenceCommit": "33cd4f8207e6b024fab56d977780620b95bfe105",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/Danceiny/gotry/blob/33cd4f8207e6b024fab56d977780620b95bfe105/package.json#L2",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/Danceiny/gotry/blob/33cd4f8207e6b024fab56d977780620b95bfe105/README.zh-CN.md#L19",
+        "path": "README.zh-CN.md"
+      },
+      {
+        "url": "https://github.com/Danceiny/gotry/blob/33cd4f8207e6b024fab56d977780620b95bfe105/ts/src/index.ts#L427",
+        "path": "ts/src/index.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.98,
+        "evidence": "根包 @danceiny/gotry 入口 ts/src/index.ts 注册旅行候选评估与行程工具；作者中文 README 明确日期、出发地、预算和旅行真实成本等业务工作流。不是通用 Agent 编排。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "perrylink/dsh-industry-research": {
     "sourceDescription": "Industry and company research domain pack: industry_map chain maps, public-source policy/news tracking over ctx.web (industry_track), company_scan cards from user data files, and industry_report with an optional ctx.researchReport sealing bridge and a builtin-fallback renderer, plus two methodology skills.",
@@ -2186,23 +2635,45 @@
   },
   "furongjun-1999/dsh-memory": {
     "sourceDescription": "白箱AGI架构探索：元认知（自我认知循环）、持续学习（知识飞轮）、世界模型（条件空间+语义时空图）、自我改进（自举纪律）、零LLM白箱管线与可审计信任护栏。",
-    "sourceReadme": "> 上排徽章：Awesome DSH Plugin 官方列表收录 · dsh.so 静态安全扫描 100/100（Trust: Gold, L1-L3 verified）· npm 版本 · 要求 DSH 内核 ≥ 0.1.2-rc.1（0.4.x 用新版 dsh-tools 调度器；旧内核 0.1.1-rc.2 不兼容，请用 DSH ≥ 0.1.2-rc.1 或回退 0.4.2）· MIT License > 一句话：dsh-memory 把灵枢（AEIS）的白箱智能（条件路由表 → 组合生成 → 自校验 → 知识固化 → LLM 降级外部校验器）与 AGI 级长期记忆（跨会话、自演化、可审计）接入 DeepSeek Harness。 项目定位：个人的大型研究项目——目标用户是对 AGI 有需要的研究人员（白箱智能 / 可解释性 / 协议工程 / 记忆机制 / 扮演论研究者），不是面向普通用户的消费级插件。…",
-    "sourceUrl": "https://github.com/FuRongJun-1999/dsh-memory",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "ai",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确白箱智能及长期记忆研究，不将研究目标表述为已实现通用智能。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "灵枢（Lingshu / AEIS）× DeepSeek Harness —— 白箱智能 + AGI 级长期记忆插件（v0.4.5） > 一句话：不是「又一个记忆插件」，而是一个记忆操作系统——对话自动沉淀为纯文本认知图（md 文档）， > 用确定性白箱完成条件路由、检索、判断与演化，让每次对话都是同一段生命的延续。 定位：面向 AGI 研究者（白箱智能 / 可解释性 / 协议工程 / 记忆机制 / 扮演论）的大型研究项目，不是消费级插件。 dsh.so 静态安全扫描 100/100（Trust: Gold, L1–L3 verified）。 --- - 前置：Node ≥ 22.19 · DSH 内核 ≥ 0.1.2-rc.1 · 大脑零安装（md_cg 随包自带，无需 pip 装任何引擎） - 写权限默认关闭：不配凭据即以只读 guest 运行（读 / 召回 / 时间线可用，写入不落盘）。…",
     "sourceInstall": {
       "packageName": "@furongjun1999/dsh-memory",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/FuRongJun-1999/dsh-memory",
+    "sourceEvidenceCommit": "18667731fe231cc2caaa206d6c6ede5f29851b48",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/FuRongJun-1999/dsh-memory/blob/18667731fe231cc2caaa206d6c6ede5f29851b48/package.json#L2",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/FuRongJun-1999/dsh-memory/blob/18667731fe231cc2caaa206d6c6ede5f29851b48/README.md#L7",
+        "path": "README.md"
+      },
+      {
+        "url": "https://github.com/FuRongJun-1999/dsh-memory/blob/18667731fe231cc2caaa206d6c6ede5f29851b48/src/index.ts#L344",
+        "path": "src/index.ts"
+      },
+      {
+        "url": "https://github.com/FuRongJun-1999/dsh-memory/blob/18667731fe231cc2caaa206d6c6ede5f29851b48/cordis.patch.yml#L3",
+        "path": "cordis.patch.yml"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": [
+      {
+        "id": "ai",
+        "confidence": 0.98,
+        "evidence": "README 明确长期记忆及纯文本认知图；src/index.ts 注册 Lingshu 工具并调用 installMemoryHooks。记忆和上下文是 Agent 增强，安全评分不能作为主要用途。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "saya-ch/dsh-mobile": {
     "sourceDescription": "DeepSeek Harness 的 Android App 与安全远程访问插件，支持局域网/远程连接和高度自定义的移动界面与扩展能力。",
@@ -2422,23 +2893,45 @@
   },
   "derpyu520/qq-bridge": {
     "sourceDescription": "Bridge between QQ (SnowLuma OneBot v11) and DeepSeek Harness agents: social simulation, safe MCP tools, slang learning and more.",
-    "sourceReadme": "English: README.en.md | 中文: README.md > 📘 详细内外核说明书见 docs/PROJECT_GUIDE.md（架构、数据流、配置全解、调试与改进指南）。 把 QQ 消息接入 DSH agent：QQ 好友/群发来的消息会变成 DSH 会话里的用户消息，agent 的回复（含提问、工具审批）会发回 QQ。 📽️ AI 仿真群友 - 项目介绍视频 > 视频文件位于 assets/project-intro.mp4，可直接下载观看。 - QQ 侧：@snowluma/sdk 的 SnowLumaWebSocketClient（OneBot v11 WebSocket 客户端，自动重连） - DSH 侧：…",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "packageName": "qq-mode-console",
+      "repositoryPath": "plugins/qq-mode-console",
+      "functionEvidence": "5c2b4383064c98cd928bfa3d321b4ecb908f21bf86fc28eb25ea814c74c4778f"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/Derpyu520/qq-bridge",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/Derpyu520/qq-bridge/blob/c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f/plugins/qq-mode-console/package.json#L2",
+        "path": "plugins/qq-mode-console/package.json"
+      },
+      {
+        "url": "https://github.com/Derpyu520/qq-bridge/blob/c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f/plugins/qq-mode-console/cordis.patch.yml#L3",
+        "path": "plugins/qq-mode-console/cordis.patch.yml"
+      },
+      {
+        "url": "https://github.com/Derpyu520/qq-bridge/blob/c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f/plugins/qq-mode-console/lib/index.js#L27",
+        "path": "plugins/qq-mode-console/lib/index.js"
+      },
+      {
+        "url": "https://github.com/Derpyu520/qq-bridge/blob/c9e1f2791c4cd9ddaafa5b9b8ebd8b833258ac8f/plugins/qq-mode-console/lib/index.js#L3",
+        "path": "plugins/qq-mode-console/lib/index.js"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
     "categories": [
       {
         "id": "tools",
-        "confidence": 0.96,
-        "evidence": "README 明确 QQ 消息进入 DSH 会话及回复、提问、审批回传。",
+        "confidence": 0.98,
+        "evidence": "qq-mode-console 的入口仅通过 settings.register 建立 qq-mode 设置卡，供桥接进程轮询模式，含 chat/closed-agent/reserved/reserved2 和 ownerQQ。属于连接器",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "qq-bridge",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "sandbaseai/sandbase-skills": {
     "sourceDescription": "Verified SKILL.md catalog and installer with 88 installable skill bundles for DSH and compatible agents.",
@@ -2522,23 +3015,33 @@
   },
   "zuorn/tydora": {
     "sourceDescription": "Let Your Ideas Flow — Tydora is a modern desktop Markdown editor combining WYSIWYG editing, bidirectional links, mind maps, and an infinite canvas — empowering deep thinking and effortless expression.",
-    "sourceReadme": "中文 | English --- I spent a long time settling into focused writing in Typora, organizing my thoughts before the graphs of Obsidian. Yet somewhere deep down, I always felt something was missing — a touch of absolute smoothness when your fingertips meet your thoughts, and the freedom to let knowledge unfold directly onto a canvas. So I decided to build one myself. Its name is Tydora.…",
-    "sourceUrl": "https://github.com/zuorn/Tydora",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 定位为 Markdown 编辑器与知识表达工具，桌面是交付形式。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "--- I spent a long time settling into focused writing in Typora, organizing my thoughts before the graphs of Obsidian. Yet somewhere deep down, I always felt something was missing — a touch of absolute smoothness when your fingertips meet your thoughts, and the freedom to let knowledge unfold directly onto a canvas. So I decided to build one myself. Its name is Tydora.…",
     "sourceInstall": {
       "packageName": "tydora",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/zuorn/Tydora",
+    "sourceEvidenceCommit": "75a65227021920c76119d5e0e5138f9c033480f7",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/zuorn/Tydora/blob/75a65227021920c76119d5e0e5138f9c033480f7/package.json#L6",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/zuorn/Tydora/blob/75a65227021920c76119d5e0e5138f9c033480f7/cordis.patch.yml#L6",
+        "path": "cordis.patch.yml"
+      },
+      {
+        "url": "https://github.com/zuorn/Tydora/blob/75a65227021920c76119d5e0e5138f9c033480f7/dsh/index.ts#L14",
+        "path": "dsh/index.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "categories": []
   },
   "rain-kl/dsh-preset-plus": {
     "sourceDescription": "DSH 预设编辑器插件, 支持一键破甲.",
@@ -3338,23 +3841,99 @@
   },
   "zhu1090093659/dsh-trading": {
     "sourceDescription": "Agent-native trading terminal built on DeepSeek Harness. Crypto, US, CN and HK in one three-column GUI, 19+ hot-swappable connectors, dry-run by default with human approval on every live order. BYOK, no data redistribution.",
-    "sourceReadme": "> Your next trading terminal can also be your AI agent. > No chumps for the slaughter, just everyday traders. First, a question for you: Of the money you've lost trading, how much of it was lost before you had truly thought it through? You chase a rally and become the exit liquidity. You buy the dip, and it keeps dipping. You cut the loss, and it bounces the moment you're out;…",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "packageName": "@dshtrading/base",
+      "repositoryPath": "packages/base",
+      "functionEvidence": "efa2a06917551249126b4c05bab9bffcbd0957af5f3c055dbc76032659338d98"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/zhu1090093659/dsh-trading",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
+    "sourceEvidence": [
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/README.md",
+        "path": "README.md",
+        "sha256": "57ad7e4495ec0cc9e9da87e3b165c29bab8e4b0f757758f2424610a64c89384c"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/README_zh.md",
+        "path": "README_zh.md",
+        "sha256": "91918d698068e0ba53e96bf53f7d534206c1376f6fce7f66a6868904691e4249"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/cordis.patch.yml",
+        "path": "packages/all/cordis.patch.yml",
+        "sha256": "8f8e5fdb514cac50f7cdd44e22892f68c0621f24be491772ee8da55114212137"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/CHANGELOG.md",
+        "path": "packages/all/CHANGELOG.md",
+        "sha256": "8aa573694f6100cc1c7ac0803e259016cf89da217e650dbec3bb51baf4447398"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/package.json",
+        "path": "packages/all/package.json",
+        "sha256": "151ece22b8154ab70afe3354b03e072e33387fb46289f7036a122b038e838aaf"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/tsconfig.json",
+        "path": "packages/all/tsconfig.json",
+        "sha256": "a889cc640f135bf8c0eb8e9e04e2016b0b4d669c4cafb30c5546379036b37fcf"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/tsdown.config.ts",
+        "path": "packages/all/tsdown.config.ts",
+        "sha256": "6b6567e12899db7703717a95045d8b2cf0c9e12f611afb3fb396ae8a5c345c0d"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/cordis.patch.yml",
+        "path": "packages/base/cordis.patch.yml",
+        "sha256": "5fd74407232369bbf695b2178c924cbd4d491d31d7fcd53a983b2f83896eab98"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/CHANGELOG.md",
+        "path": "packages/base/CHANGELOG.md",
+        "sha256": "ab61018fab7bcc3a9f553949a33f992542d36e7c9fe0b943d8378f83d46a386f"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/package.json",
+        "path": "packages/base/package.json",
+        "sha256": "dd38b5aca8b698e67b99a5bfb1b2452a272c9ee5f093040613d7337762e776cb"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/presets.ts",
+        "path": "packages/base/src/presets.ts",
+        "sha256": "6878617e97ed01ea83102ab4b89b6e1574d7f87ee11866daf751cd948dc02dc1"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/index.ts",
+        "path": "packages/base/src/index.ts",
+        "sha256": "6c45ad8d24e3b5efa3fc465e7c18b7331bf3962510ca01ab631e20eda217d032"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/market-tools.ts",
+        "path": "packages/base/src/market-tools.ts",
+        "sha256": "9c485d3151d00d107e9f16383e7ac5c1d6d71476f2a10a199127ce74c9e29395"
+      },
+      {
+        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/src/index.ts",
+        "path": "packages/all/src/index.ts",
+        "sha256": "e88de67f497c125f32a44b2c763b0095a61988c57f3c28b38307f48c6aa119b8"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
     "categories": [
       {
         "id": "tools",
-        "confidence": 0.96,
-        "evidence": "原始描述明确交易终端、多市场连接器、默认 dry-run 与每笔真实订单人工审批。",
+        "confidence": 0.97,
+        "evidence": "交易工作台公共层挂载界面、自选、资产台账和订单审批。",
         "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "@dshtrading/root",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "kingofsoysauce/dsh-skin-market": {
     "sourceDescription": "DeepSeek Harness skin market 皮肤市场 已收录200+DSH 皮肤 完善评分系统加人工审核，有便捷的社区收录入口；有在线页面方便在线浏览，也有插件方便管理本地皮肤",
@@ -3454,23 +4033,53 @@
   },
   "nwflower/dsh-chat-import": {
     "sourceDescription": "Import full-fidelity conversation histories from 13 coding agents (Claude Code / Codex / ChatGPT / Cursor / Gemini / Reasonix / opencode / ZCode / Grok Build / OpenClaw / Pi / Hermes / Kimi) as resumable DeepSeek Harness sessions, with reverse export/sync back to Claude Code.",
-    "sourceReadme": "A DeepSeek Harness plugin that imports conversation history from 18+ AI coding tools, so you can continue right where you left off. > All sessions, continued in DSH. DSH Chat Import imports conversation history with full context from other agents, turning it into a seamlessly resumable DeepSeek Harness session. Now covers import from 20 agents:…",
-    "sourceUrl": "https://github.com/Nwflower/dsh-chat-import",
-    "reviewedAt": "2026-09-10",
-    "categories": [
-      {
-        "id": "tools",
-        "confidence": 0.96,
-        "evidence": "原始描述与 README 明确会话历史导入续接及向 Claude Code 反向导出同步。",
-        "source": "manual",
-        "classifiedAt": "2026-09-10T00:00:00.000Z"
-      }
-    ],
+    "sourceReadme": "A DeepSeek Harness plugin that imports conversation history from 18+ AI coding tools, so you can continue right where you left off. > All sessions, continued in DSH. DSH Chat Import imports conversation history with full context from other agents, turning it into a seamlessly resumable DeepSeek Harness session. Now covers import from 21 agents:…",
     "sourceInstall": {
       "packageName": "dsh-chat-import",
       "repositoryPath": null
     },
-    "sourceType": "cordis-plugin"
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/Nwflower/dsh-chat-import",
+    "sourceEvidenceCommit": "ca3470c4490e323028b3fac3eff16cc26f6e1ae5",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/Nwflower/dsh-chat-import/blob/ca3470c4490e323028b3fac3eff16cc26f6e1ae5/package.json#L2",
+        "path": "package.json",
+        "sha256": "b484fdf1559f53eed01e48e97ab77d1df5d314d7ad0eac31caeb39332f562285"
+      },
+      {
+        "url": "https://github.com/Nwflower/dsh-chat-import/blob/ca3470c4490e323028b3fac3eff16cc26f6e1ae5/cordis.patch.yml#L3",
+        "path": "cordis.patch.yml",
+        "sha256": "535bd8e40dcb930aa0fba36581fdb8c1d5b3ff4cbaedff101fc55595e2236ccf"
+      },
+      {
+        "url": "https://github.com/Nwflower/dsh-chat-import/blob/ca3470c4490e323028b3fac3eff16cc26f6e1ae5/README.zh-CN.md#L26",
+        "path": "README.zh-CN.md",
+        "sha256": "4fcadd961fa33c83988f629a27b13ea93361ba49ab9b2701a674af98f035266a"
+      },
+      {
+        "url": "https://github.com/Nwflower/dsh-chat-import/blob/ca3470c4490e323028b3fac3eff16cc26f6e1ae5/index.mjs#L55",
+        "path": "index.mjs",
+        "sha256": "a8ec3c0aa2b06d79631b598e47ea5f3b2a18517727d2dc978a7477b1a0d11517"
+      },
+      {
+        "url": "https://github.com/Nwflower/dsh-chat-import/blob/ca3470c4490e323028b3fac3eff16cc26f6e1ae5/index.mjs#L73",
+        "path": "index.mjs",
+        "sha256": "a8ec3c0aa2b06d79631b598e47ea5f3b2a18517727d2dc978a7477b1a0d11517"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.99,
+        "evidence": "根 package.json 确认为 dsh-chat-import，声明 bundle.patch 和 index.mjs；入口 apply 调用 registerTools、registerPanelRoutes、registerSyn",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
   },
   "htian-qwq/prts-terrarchive": {
     "sourceDescription": "为明日方舟的长篇剧情打造的RAG类DSH插件，拥有多种快速检索能力。",
@@ -5985,6 +6594,191 @@
         "confidence": 0.95,
         "source": "manual",
         "classifiedAt": "2026-09-10T06:37:14.881654Z"
+      }
+    ]
+  },
+  "runzhliu/deepseek-harness-docker": {
+    "sourceDescription": "Community Docker and Kubernetes packaging for DeepSeek Harness (@deepseek-ai/dsh), with a hardened image, Compose stack, Helm chart, Web UI, and headless CLI.",
+    "sourceReadme": "A DeepSeek Harness Web plugin that embeds a real Chromium desktop in a movable, resizable noVNC panel. It also registers the browser_open Agent tool so a model can open an HTTP or HTTPS URL and reveal the same interactive browser to the user. The plugin is the Harness integration layer. It expects two companion services:…",
+    "sourceInstall": {
+      "packageName": "@runzhliu/dsh-browser-desktop",
+      "repositoryPath": "plugins/dsh-browser-desktop"
+    },
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/runzhliu/deepseek-harness-docker",
+    "sourceEvidenceCommit": "e7cd98673af2705d1680359cf9f07bcf1d6f9b5b",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/runzhliu/deepseek-harness-docker/blob/e7cd98673af2705d1680359cf9f07bcf1d6f9b5b/plugins/dsh-browser-desktop/package.json#L2",
+        "path": "plugins/dsh-browser-desktop/package.json"
+      },
+      {
+        "url": "https://github.com/runzhliu/deepseek-harness-docker/blob/e7cd98673af2705d1680359cf9f07bcf1d6f9b5b/plugins/dsh-browser-desktop/README.md#L3",
+        "path": "plugins/dsh-browser-desktop/README.md"
+      },
+      {
+        "url": "https://github.com/runzhliu/deepseek-harness-docker/blob/e7cd98673af2705d1680359cf9f07bcf1d6f9b5b/plugins/dsh-browser-desktop/index.js#L122",
+        "path": "plugins/dsh-browser-desktop/index.js"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "reviewScope": "top100-20260911",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.98,
+        "evidence": "子包 README 和 index.js 均证明将真实 Chromium/noVNC 面板嵌入 DSH Web 并注册 browser_open；归浏览器操作工具。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
+  },
+  "gdwhisper/dsh-web-startup-auth": {
+    "sourceDescription": "DSH（DeepSeek Harness）远程 Web 启动 + 用户名/密码认证插件。 |  DeepSeek Harness Remote‑Web‑Launch Plugin with Username/Password Auth",
+    "sourceReadme": "DSH（DeepSeek Harness）远程 Web 启动 + 用户名/密码认证插件。 > ⚠️ 版本跟进声明：本项目只跟进官方 dsh 的正式发布通道（next dist-tag），不跟进 alpha 预览通道（当前基线：dsh 0.1.5-rc.1）。 原版 @deepseek-ai/dsh-web-app/startup 出于安全考虑硬拒绝 --host 0.0.0.0；本插件替换它，并配一个带登录/注册页的认证插件，让 dsh web 可以在局域网（或任何非回环接口）上安全暴露浏览器界面。 - 远程启动：--host 0.0.0.0 可用，替代原版启动器的硬性拒绝。 - 登录/注册页：远程访问首次会引导设置管理员账号密码，之后进入登录页；与 DSH 黑白蓝风格一致。 - 免登录的本地访问：判定依据是请求本身而非启动参数——TCP 对端地址与 Host 头都是回环时才免认证。…",
+    "sourceInstall": {
+      "packageName": "dsh-web-startup-auth",
+      "repositoryPath": null
+    },
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/GDWhisper/dsh-web-startup-auth",
+    "sourceEvidenceCommit": "277cbd810d8be36295b810de4d48f0d613b2e808",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/GDWhisper/dsh-web-startup-auth/blob/277cbd810d8be36295b810de4d48f0d613b2e808/package.json#L2",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/GDWhisper/dsh-web-startup-auth/blob/277cbd810d8be36295b810de4d48f0d613b2e808/cordis.patch.yml#L1",
+        "path": "cordis.patch.yml"
+      },
+      {
+        "url": "https://github.com/GDWhisper/dsh-web-startup-auth/blob/277cbd810d8be36295b810de4d48f0d613b2e808/src/auth.ts#L2",
+        "path": "src/auth.ts"
+      },
+      {
+        "url": "https://github.com/GDWhisper/dsh-web-startup-auth/blob/277cbd810d8be36295b810de4d48f0d613b2e808/README.md#L9",
+        "path": "README.md"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "reviewScope": "top100-20260911",
+    "categories": [
+      {
+        "id": "security",
+        "confidence": 0.98,
+        "evidence": "当前包声明 startup/auth/client 导出及 bundle，auth.ts 通过会话校验保护 Web 路由，并提供登录注册、签名 cookie 与登录失败限制。主要用途访问控制。",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
+  },
+  "tao716/ai-mini-game": {
+    "sourceDescription": "小游戏｜基于 DeepSeek Harness 的可视化 AI 推理游戏",
+    "sourceReadme": "A native DeepSeek Harness Client Slot that adds a clickable action board above the composer for the scratch-game demo. The board reads durable game_ tool results and submits button actions through the Session's public inputActions interface. The deterministic Host game engine remains the sole owner of clues, turns, and win or loss state. The package registers midnight-ledger-game in conversation.input.dock.…",
+    "sourceInstall": {
+      "packageName": "@deepseek-ai/dsh-client-ui-midnight-game",
+      "repositoryPath": "packages/client/ui-midnight-game"
+    },
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/Tao716/ai-mini-game",
+    "sourceEvidenceCommit": "825d4b5cf7cc575dd8bdc37b39b201898bece30c",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/package.json#L5",
+        "path": "package.json"
+      },
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/packages/client/ui-midnight-game/package.json#L2",
+        "path": "packages/client/ui-midnight-game/package.json"
+      },
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/packages/client/ui-midnight-game/README.md#L5",
+        "path": "packages/client/ui-midnight-game/README.md"
+      },
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/packages/client/ui-midnight-game/src/client/index.ts#L7",
+        "path": "packages/client/ui-midnight-game/src/client/index.ts"
+      },
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/scratch-game/cordis.yml#L3",
+        "path": "scratch-game/cordis.yml"
+      },
+      {
+        "url": "https://github.com/Tao716/ai-mini-game/blob/825d4b5cf7cc575dd8bdc37b39b201898bece30c/scratch-game/src/plugin.ts#L23",
+        "path": "scratch-game/src/plugin.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "reviewScope": "top100-20260911",
+    "categories": [
+      {
+        "id": "tools",
+        "confidence": 0.98,
+        "evidence": "根 package.json 同样是 private dsh-root。实际 packages/client/ui-midnight-game 是带 dsh.client 和 exports 的作者游戏客户端，注册 conversation",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
+      }
+    ]
+  },
+  "openguardrails/openguardrails": {
+    "sourceDescription": "The vendor-neutral protocol for AI agent safety & security — and the neutral benchmark that ranks the vendors.",
+    "sourceReadme": "OpenGuardrails for DeepSeek Harness (dsh) — the v1.0 reference agent-direct integration. This plugin implements the recipe of the v1.0 Runtime API — one decision endpoint, two evaluates per model call, no SDK. dsh owns its loop, so the plugin sits on the loop's documented seams (an ordinary Cordis plugin, no core changes) and judges every model call at the moments something can still be refused:…",
+    "sourceInstall": {
+      "packageName": "@openguardrails/dsh",
+      "repositoryPath": "integrations/agent/dsh"
+    },
+    "sourceType": "cordis-plugin",
+    "sourceUrl": "https://github.com/openguardrails/openguardrails",
+    "sourceEvidenceCommit": "4170fdad4c23da441caab28d3ed82ddd9163cbd5",
+    "sourceEvidence": [
+      {
+        "url": "https://github.com/openguardrails/openguardrails/blob/4170fdad4c23da441caab28d3ed82ddd9163cbd5/integrations/agent/dsh/package.json#L2",
+        "path": "integrations/agent/dsh/package.json",
+        "sha256": "a2e6a05a20d3a4454ccfa2ec60e10bbc69a120219705e65e16c42ca9819cce48"
+      },
+      {
+        "url": "https://github.com/openguardrails/openguardrails/blob/4170fdad4c23da441caab28d3ed82ddd9163cbd5/integrations/agent/dsh/cordis.patch.yml#L1",
+        "path": "integrations/agent/dsh/cordis.patch.yml",
+        "sha256": "097305c245a2fb2c2a55b698e6af8897fd77a6c65e1d5ff90ba4cb3e919bdf69"
+      },
+      {
+        "url": "https://github.com/openguardrails/openguardrails/blob/4170fdad4c23da441caab28d3ed82ddd9163cbd5/integrations/agent/dsh/README.md#L14",
+        "path": "integrations/agent/dsh/README.md",
+        "sha256": "1b2eed3b7be6c25194348279db2baf136459a8431db8d75e757090e2a8853d76"
+      },
+      {
+        "url": "https://github.com/openguardrails/openguardrails/blob/4170fdad4c23da441caab28d3ed82ddd9163cbd5/integrations/agent/dsh/src/index.ts#L224",
+        "path": "integrations/agent/dsh/src/index.ts",
+        "sha256": "158a0423f47ebc26e7aba72c6461a9d1100979b5b29c26f41a1f7cabf50e69fe"
+      },
+      {
+        "url": "https://github.com/openguardrails/openguardrails/blob/4170fdad4c23da441caab28d3ed82ddd9163cbd5/integrations/agent/dsh/src/index.ts#L40",
+        "path": "integrations/agent/dsh/src/index.ts",
+        "sha256": "158a0423f47ebc26e7aba72c6461a9d1100979b5b29c26f41a1f7cabf50e69fe"
+      }
+    ],
+    "reviewedAt": "2026-09-11",
+    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewBatch": "top100-20260911",
+    "sourceReadmeNormalization": "language-navigation-v1",
+    "reviewScope": "top100-20260911",
+    "categories": [
+      {
+        "id": "security",
+        "confidence": 0.99,
+        "evidence": "精确 integrations/agent/dsh 包名 @openguardrails/dsh，声明 dsh.bundle、main dist/index.js、src/index.ts 导出 apply；入口监听 llm/stream",
+        "source": "manual",
+        "classifiedAt": "2026-09-11T01:49:05.505Z"
       }
     ]
   }

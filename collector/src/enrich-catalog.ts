@@ -1,4 +1,5 @@
 import { canRequestModel, MODEL_REQUESTS_PAUSED, type ModelRequestControl } from "./model-requests.js";
+import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKING, DEFAULT_MODEL_TIMEOUT_MS } from "./model-defaults.js";
 /** Local, resumable enrichment. Never writes the input snapshot or publishes remotely.
  * node --use-env-proxy --import tsx collector/src/enrich-catalog.ts INPUT OUTPUT_DIR --dry-run
  */
@@ -64,7 +65,7 @@ export async function enrichCatalogCli(args: string[], control: ModelRequestCont
   const { values, positionals } = parseArgs({ args, allowPositionals: true, options: {
     "dry-run": { type: "boolean", default: false },
     kind: { type: "string", default: "all" },
-    limit: { type: "string", default: "100" }, concurrency: { type: "string", default: "3" },
+    limit: { type: "string", default: "100" }, concurrency: { type: "string", default: String(DEFAULT_MODEL_CONCURRENCY) },
     model: { type: "string" }, "base-url": { type: "string" },
   } });
   if (positionals.length !== 2) throw new Error("Usage: enrich-catalog.ts INPUT OUTPUT_DIR [--dry-run] [--kind all|description|categories] [--limit 100] [--concurrency 3] [--model MODEL] [--base-url URL]");
@@ -91,7 +92,7 @@ export async function enrichCatalogCli(args: string[], control: ModelRequestCont
   if (scheduledJobs > 0 && !canRequestModel(control)) throw new Error(MODEL_REQUESTS_PAUSED);
   const apiKey = process.env.DEEPSEEK_API_KEY?.trim();
   if (scheduledJobs > 0 && !apiKey) throw new Error("DEEPSEEK_API_KEY is required for model jobs; use --dry-run for read-only statistics");
-  const model = values.model ?? process.env.DEEPSEEK_MODEL ?? "deepseek-v4-pro";
+  const model = values.model ?? process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL;
   const baseURL = values["base-url"] ?? process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
   const endpoint = new URL(baseURL);
   if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) {
@@ -128,9 +129,10 @@ export async function enrichCatalogCli(args: string[], control: ModelRequestCont
       atomicJson(join(output, "enrichment-progress.json"), { ...metadata, model, updatedAt: new Date().toISOString(), ...enrichmentProgress(plan, Date.now()) });
     };
     persist();
-    const request = { ...control, apiKey: apiKey ?? "", baseURL: baseURL.replace(/\/$/, ""), model, maxAttempts: 1, retryDelayMs: 0, timeoutMs: 45_000, thinking: "disabled" as const };
+    const request = { ...control, apiKey: apiKey ?? "", baseURL: baseURL.replace(/\/$/, ""), model, maxAttempts: 1, retryDelayMs: 0,
+      maxTokens: DEFAULT_MODEL_MAX_TOKENS, timeoutMs: DEFAULT_MODEL_TIMEOUT_MS, thinking: DEFAULT_MODEL_THINKING };
     const result = await runCatalogEnrichment(plan, { kind, limit, concurrency, model,
-      workers: { translate: entry => translateWithDeepSeek(modelInput(entry), request), classify: entry => classifyWithDeepSeek(modelInput(entry), { ...request, thinking: "enabled", maxTokens: 4096, timeoutMs: 120_000 }) },
+      workers: { translate: entry => translateWithDeepSeek(modelInput(entry), request), classify: entry => classifyWithDeepSeek(modelInput(entry), request) },
       onProgress: persist,
     });
     const manifest = publishRankings(enrichedSnapshot(plan), join(output, "snapshot"));

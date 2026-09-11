@@ -16,6 +16,9 @@ import { fetchRepoRoot, fetchFileViaApi, type RepoContentItem } from "./github.j
 export const DISCOVERY_POLICY_VERSION = 6;
 export type DiscoveryKind = "bundle" | "client" | "host" | "skill";
 
+/** Observed structural invalidity, distinct from a temporary fetch failure. */
+export class ReviewedTargetValidationError extends Error {}
+
 export interface Detection {
   kind: DiscoveryKind | null;
   isPlugin: boolean;
@@ -31,6 +34,12 @@ export interface Detection {
   packageName: string | null;
   /** 仓库内通过验证的所有插件目录；根目录表示为 "."。 */
   pluginPaths: string[];
+}
+
+/** A reviewed selection still needs current package and entry evidence. */
+export interface ReviewedPackageTarget {
+  packageName: string;
+  repositoryPath: string | null;
 }
 
 const SKILL_MARKER = "SKILL.md";
@@ -250,8 +259,31 @@ export async function detectPlugin(
   fullName: string,
   rootItems: RepoContentItem[],
   branch?: string | null,
-  options: { primaryOnly?: boolean } = {},
+  options: { primaryOnly?: boolean; reviewedTarget?: ReviewedPackageTarget } = {},
 ): Promise<Detection> {
+  if (options.reviewedTarget) {
+    const target = options.reviewedTarget;
+    const path = target.repositoryPath ?? ".";
+    if ((target.repositoryPath !== null && (!localEntry(path) || path.startsWith("./")
+      || !/^[A-Za-z0-9._@/-]+$/.test(path)))
+      || !target.packageName || target.packageName !== target.packageName.trim()) {
+      throw new ReviewedTargetValidationError("Invalid reviewed package target");
+    }
+    const items = path === "." ? rootItems : await fetchRepoRoot(fullName, branch, path);
+    if (!items.some(item => item.type === "file" && item.name === "package.json")) {
+      throw new ReviewedTargetValidationError(`Reviewed package metadata missing: ${fullName}/${path}`);
+    }
+    const content = await readPackage(fullName, path, branch);
+    if (packageMetadata(content).name !== target.packageName) {
+      throw new ReviewedTargetValidationError(`Reviewed package name mismatch: ${fullName}/${path}`);
+    }
+    const kind = await validatePackage(fullName, path, content, items, branch);
+    if (!kind) throw new ReviewedTargetValidationError(`Reviewed package declaration or entry invalid: ${fullName}/${path}`);
+    return bundleDetection([{
+      path, packageName: target.packageName, kind, priority: -1,
+      evidence: `reviewed ${path}/ validated ${kind} declaration, package name and entry`,
+    }], []);
+  }
   const evidence: string[] = [];
   const skillFiles: string[] = [];
   let skillScanTruncated = false;
