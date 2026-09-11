@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createDesktopPluginRuntime, isCmdSafeProfileName, proxyEnvForPnpm, safeExecArgv, toolSearchDirs } from "../src/install/dsh-cli.js";
+import { createDesktopPluginRuntime, isCmdSafeProfileName, progress, proxyEnvForPnpm, safeExecArgv, toolSearchDirs } from "../src/install/dsh-cli.js";
 
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 
@@ -30,6 +30,35 @@ describe("safeExecArgv", () => {
 });
 
 describe("desktop launch environment", () => {
+  it("keeps progress lines intact across chunks and separate output streams", async () => {
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    let finish!: () => void;
+    const done = new Promise<{ exitCode: number; signal: null }>((resolve) => { finish = () => resolve({ exitCode: 0, signal: null }); });
+    const runtime = createDesktopPluginRuntime({
+      runPlugin: () => ({ stdout, stderr, done, cancel: vi.fn() }),
+    }, mkdtempSync(join(tmpdir(), "dsh-top100-progress-")));
+    const result = runtime.runPlugin("desktop", ["remove", "demo"]);
+    stdout.write("Progress: resolved 174, reused 157, down");
+    stderr.write("Network ");
+    stdout.write("loaded 10, added 167\r");
+    expect(progress.lastLine).toBe("Progress: resolved 174, reused 157, downloaded 10, added 167");
+    stdout.write("\n");
+    expect(progress.lastLine).toContain("Progress:");
+    stderr.write("retry\n");
+    expect(progress.lastLine).toBe("Network retry");
+    const unicode = Buffer.from("依赖已恢复\n");
+    stdout.write(unicode.subarray(0, 2));
+    stdout.write(unicode.subarray(2));
+    expect(progress.lastLine).toBe("依赖已恢复");
+    stdout.write("final output without newline");
+    expect(progress.lastLine).toBe("依赖已恢复");
+    finish();
+    await result;
+    expect(progress.lastLine).toBe("final output without newline");
+    await runtime.dispose?.();
+  });
+
   it("keeps Unicode profile names argv-safe but rejects cmd expansion syntax", () => {
     expect(isCmdSafeProfileName("测试 profile.1")).toBe(true);
     expect(isCmdSafeProfileName("%TEMP%")).toBe(false);

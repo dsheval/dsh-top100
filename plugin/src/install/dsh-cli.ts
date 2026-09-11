@@ -4,6 +4,7 @@ import { spawn, type ChildProcess, type SpawnOptions } from "node:child_process"
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
+import { StringDecoder } from "node:string_decoder";
 import { isDshProfileName, profileDir } from "../host/profile.js";
 import { pluginArgsFor } from "./pnpm-compat.js";
 import { SAFE_TARGET_RE } from "./install-spec.js";
@@ -192,9 +193,35 @@ export function cancelActive(): boolean {
   return true;
 }
 
-function rememberLine(text: string): void {
-  const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length > 0) progress.lastLine = lines[lines.length - 1].slice(0, 200);
+/** Each stream and operation owns its pending line and UTF-8 decoder. */
+function progressLineReader() {
+  const decoder = new StringDecoder("utf8");
+  let pending = "";
+  let ended = false;
+  const publish = (): void => {
+    if (pending.trim()) progress.lastLine = pending.trim();
+    pending = "";
+  };
+  const consume = (text: string): void => {
+    const parts = text.split(/[\r\n]/);
+    for (let index = 0; index < parts.length; index += 1) {
+      // The display has always kept only the first 200 characters; also
+      // bound the buffer when a process emits a very long unfinished line.
+      pending = (pending + parts[index]).slice(0, 200);
+      if (index < parts.length - 1) publish();
+    }
+  };
+  return {
+    write(chunk: string | Buffer): void {
+      if (!ended) consume(decoder.write(typeof chunk === "string" ? Buffer.from(chunk) : chunk));
+    },
+    end(): void {
+      if (ended) return;
+      ended = true;
+      consume(decoder.end());
+      publish();
+    },
+  };
 }
 
 export function runDshPlugin(
@@ -243,6 +270,8 @@ export function runDshPlugin(
     activeChild = child;
     let stdout = "";
     let stderr = "";
+    const stdoutLines = progressLineReader();
+    const stderrLines = progressLineReader();
     let timedOut = false;
     const timer = setTimeout(() => {
       timedOut = true;
@@ -252,15 +281,17 @@ export function runDshPlugin(
     child.stdout?.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       stdout = (stdout + text).slice(-256 * 1024);
-      rememberLine(text);
+      stdoutLines.write(chunk);
     });
     child.stderr?.on("data", (chunk: Buffer) => {
       const text = chunk.toString();
       stderr = (stderr + text).slice(-64 * 1024);
-      rememberLine(text);
+      stderrLines.write(chunk);
     });
     child.on("error", (error) => {
       clearTimeout(timer);
+      stdoutLines.end();
+      stderrLines.end();
       progress.active = false;
       progress.error = error.message;
       if (activeChild === child) activeChild = null;
@@ -274,6 +305,8 @@ export function runDshPlugin(
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      stdoutLines.end();
+      stderrLines.end();
       progress.active = false;
       if (activeChild === child) activeChild = null;
       if (code !== 0 || timedOut) progress.error = stderr.slice(-200) || `exit ${String(code)}`;
@@ -424,8 +457,10 @@ export function createDesktopPluginRuntime(
     let stdout = "";
     let stderr = "";
     let timedOut = false;
-    const onStdout = (chunk: string | Buffer): void => { const text = chunk.toString(); stdout = (stdout + text).slice(-256 * 1024); rememberLine(text); };
-    const onStderr = (chunk: string | Buffer): void => { const text = chunk.toString(); stderr = (stderr + text).slice(-64 * 1024); rememberLine(text); };
+    const stdoutLines = progressLineReader();
+    const stderrLines = progressLineReader();
+    const onStdout = (chunk: string | Buffer): void => { const text = chunk.toString(); stdout = (stdout + text).slice(-256 * 1024); stdoutLines.write(chunk); };
+    const onStderr = (chunk: string | Buffer): void => { const text = chunk.toString(); stderr = (stderr + text).slice(-64 * 1024); stderrLines.write(chunk); };
     const timer = setTimeout(() => {
       timedOut = true;
       abort.abort(new Error("Desktop package operation timed out"));
@@ -460,6 +495,8 @@ export function createDesktopPluginRuntime(
         clearTimeout(timer);
         operation.handle?.stdout.off("data", onStdout);
         operation.handle?.stderr.off("data", onStderr);
+        stdoutLines.end();
+        stderrLines.end();
         progress.active = false;
         if (active === operation) active = null;
       }
