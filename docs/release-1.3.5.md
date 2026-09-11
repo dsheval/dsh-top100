@@ -1,6 +1,6 @@
 # 1.3.5 兼容与发布说明
 
-状态：候选已通过本地自动检查和DSH rc.2隔离宿主验收，待发布；尚未发布npm或切换生产。
+状态：2026-09-11 已发布 npm/GitHub 1.3.5，并完成官网与重点榜单部署。npm 1.3.4 已标为 deprecated，提示升级到 1.3.5。
 
 本版针对 DSH Web 0.1.5-rc.2 更新依赖声明与验证基线。Settings 的旧自由函数在宿主0.1.2起已改为服务方法；插件现在兼容两个入口，避免可选设置模块因缺少导出而失效。客户端信息依赖指向真实的界面、语言和设置服务。
 
@@ -15,3 +15,5 @@
 重点榜单修复覆盖热榜、新锐榜和Stars前100；其中追加纠正mrRisega/dsh-remote旧别名包的维护提示简介与否定句引发的错类。长尾缺项另批处理。33项定向来源复核中31项完善、2项根据明确确认排除，并按既有排序补位。每日仍正常采集与计算排名，日常付费内容生成保持关闭。获准30条Flash试跑产生独立候选，没有合入生产目录。
 
 官方依据：[DSH rc.2 release](https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.1.5-rc.2)、[固定版本Settings接口](https://github.com/deepseek-ai/deepseek-harness/blob/fb2c4b9e698e30edb738bca4cf0618587db7d203/packages/settings/settings/src/index.ts)。
+
+公开 npm 包与 GitHub 附件均匹配已验收的81文件归档；发布代码提交为 `c94355149ff0ac35a859429786f00e1965dd0856`。官网页面和安装指南通过公网逐字节核对，快照 `2026-09-11-7248421e14b93ee9` 的热榜、新锐榜、Stars前100及Skills资源hash与验收产物一致。历史254605行、预算账本及其他服务保持。

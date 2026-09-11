@@ -153,3 +153,9 @@ external actions; local changes do not apply those updates automatically.
 Prefer `DEEPSEEK_API_KEY_FILE` with an absolute runtime path outside the repository (including its resolved path). The file must be a regular, non-symlink file owned by the process user, with mode `0600` and one hard link. Mount it read-only into the container; keep the actual file outside Git and the Docker build context. The loader rejects empty, multiline or oversized content and never includes file contents or paths in errors. A configured file overrides `DEEPSEEK_API_KEY`; any validation or read failure clears the old environment key and stops startup. The environment key remains supported when no file is configured. Neither credential option enables paid requests by itself.
 
 `.dockerignore` excludes `.env` and `.env.*` at the root and in nested directories. Do not put a real credential into `.env.example`, source files, commands, build arguments or committed deployment files.
+
+## Retiring the previous npm release
+
+For each new stable plugin release, record the previous `latest` version before publishing. After the new version and `latest` are public and the downloaded tarball matches the approved artifact, mark that previous version as deprecated with a message naming the exact recommended replacement. Verify the public registry `deprecated` field before marking release work complete. Keep the old package available; do not unpublish it.
+
+Browser or two-factor verification requested by npm is completed by the account owner. Never collect a one-time code or copy credentials into the repository.
