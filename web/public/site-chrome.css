@@ -273,8 +273,8 @@
   border: 0;
   color: var(--site-control-accent);
   background: transparent;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 :is(main#main-content, main#top, main) #ranking-search-clear:hover {
   color: var(--site-control-hover);
