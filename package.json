@@ -30,6 +30,7 @@
     "docker:down": "docker compose down",
     "plugin:build": "npm run build -w @dsheval/dsh-top100-plugin",
     "plugin:check": "npm run typecheck -w @dsheval/dsh-top100-plugin && npm run test -w @dsheval/dsh-top100-plugin",
+    "plugin:pack:check": "node --test scripts/test/plugin-package.test.mjs && node scripts/check-plugin-package.mjs",
     "search:build": "esbuild plugin/src/shared/search.ts --bundle --platform=browser --format=esm --outfile=web/public/search-engine.js && esbuild plugin/src/shared/featured.ts --bundle --platform=browser --format=esm --outfile=web/public/featured-plugin.js && esbuild plugin/src/shared/install-source.ts --bundle --platform=browser --format=esm --outfile=web/public/install-source.js && npm run descriptions:build",
     "descriptions:build": "node scripts/sync-descriptions.mjs",
     "catalog:repair": "node --use-env-proxy --import tsx collector/src/repair-catalog.ts",

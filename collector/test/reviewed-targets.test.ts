@@ -10,7 +10,9 @@ import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
 import { descriptionFor } from "../../plugin/src/shared/description-rules.js";
 
 describe("September 11 source review", () => {
-  const cohort = Object.entries(reviews).filter(([, value]) => "reviewBatch" in value && value.reviewBatch === "top100-20260911");
+  // These two members now carry refreshed source evidence from September 14.
+  const refreshed = new Set(["jingyunstudio/jingyun-dsh", "zhu1090093659/dsh-trading"]);
+  const cohort = Object.entries(reviews).filter(([id, value]) => refreshed.has(id) || "reviewBatch" in value && value.reviewBatch === "top100-20260911");
   const input = ([fullName, value]: (typeof cohort)[number]): DailyCategoryInput => ({
     fullName, name: fullName.split("/")[1], type: value.sourceType,
     description: value.sourceDescription, readmeSummary: value.sourceReadme,
@@ -57,8 +59,8 @@ describe("September 11 source review", () => {
     expect(reviewedCategories(differentPackage)).toBeNull();
   });
 
-  it("rejects caches for the six wrong package identities without invalidating other detection caches", () => {
-    expect(Object.keys(reviewedPluginTargets)).toHaveLength(6);
+  it("rejects caches for the seven wrong package identities without invalidating other detection caches", () => {
+    expect(Object.keys(reviewedPluginTargets)).toHaveLength(7);
     for (const target of Object.values(reviewedPluginTargets)) {
       const correct = { isPlugin: true, packageName: target.packageName, pluginPath: target.repositoryPath };
       expect(matchesReviewedTarget(correct, target)).toBe(true);

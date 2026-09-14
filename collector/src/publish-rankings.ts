@@ -1,6 +1,7 @@
 /** Build and atomically publish immutable, paginated v2 ranking snapshots. */
 
 import { createHash, randomUUID } from "node:crypto";
+import { publishedDescriptionZh } from "./published-description.js";
 import {
   existsSync,
   mkdirSync,
@@ -26,7 +27,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.6";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.7";
 
 export interface RankingPublicationOptions {
   pageSize?: number;
@@ -86,8 +87,8 @@ function toSummaryEntry(entry: RankingEntry, rank = entry.rank): RankingSummaryE
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
-    ...(entry.descriptionZh && entry.descriptionZh !== entry.description
-      ? { descriptionZh: entry.descriptionZh }
+    ...(publishedDescriptionZh(entry)
+      ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),
     ...(entry.readmeSummary ? { readmeSummary: entry.readmeSummary } : {}),
     stars: entry.stars,

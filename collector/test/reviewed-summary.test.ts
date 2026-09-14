@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import reviews from "../../plugin/src/shared/reviewed-descriptions.json";
 import { reviewedReadmeSource, summarizeSelectedReadme } from "../src/reviewed-summary.js";
 import { summarizeReadme, summarizeReviewedReadme } from "../src/summary.js";
-import { contentSourceHash, DESCRIPTION_POLICY_VERSION } from "../src/content-source.js";
+import { matchesContentSourceHash, DESCRIPTION_POLICY_VERSION } from "../src/content-source.js";
 import { CATEGORY_POLICY_VERSION } from "../src/categories.js";
 
 type Review = { sourceReadme: string; sourceReadmeNormalization?: string;
@@ -14,8 +14,8 @@ const prose = "This package organizes reviewed documents and references for a re
 const withNavigation = `中文 | English\n\n${prose}`;
 
 describe("reviewed README normalization scope", () => {
-  it("opts in only the current 21 reviewed identities", () => {
-    expect(scoped).toHaveLength(21);
+  it("opts in only the current 22 reviewed identities", () => {
+    expect(scoped).toHaveLength(22);
     for (const [fullName, review] of entries.filter(([, value]) => value.sourceReadmeNormalization !== "language-navigation-v1")) {
       expect(reviewedReadmeSource(fullName, review.sourceInstall ?? {})).toBeNull();
     }
@@ -43,7 +43,7 @@ describe("reviewed README normalization scope", () => {
       .toContain("中文 | English");
   });
 
-  it.each(["description", "categories"] as const)("preserves the unscoped legacy %s source hash", kind => {
+  it.each(["description", "categories"] as const)("accepts the unscoped legacy %s source hash during migration", kind => {
     const identity = scoped[0][1].sourceInstall!;
     const fullName = "unreviewed/repository";
     const readmeSummary = summarizeSelectedReadme(fullName, identity, withNavigation);
@@ -53,6 +53,6 @@ describe("reviewed README normalization scope", () => {
     const fields = [kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION,
       fullName, source.name, source.type, source.description, readmeSummary, source.topics,
       identity.packageName, identity.repositoryPath];
-    expect(contentSourceHash(source, kind)).toBe(createHash("sha256").update(JSON.stringify(fields)).digest("hex"));
+    expect(matchesContentSourceHash(source, kind, createHash("sha256").update(JSON.stringify(fields)).digest("hex"))).toBe(true);
   });
 });

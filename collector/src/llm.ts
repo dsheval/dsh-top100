@@ -6,7 +6,7 @@ import { DEFAULT_MODEL_ATTEMPTS, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKIN
  */
 
 import { CATEGORY_DEFINITIONS, normalizeCategorySuggestions, type CategorySuggestion } from "./categories.js";
-import { isChineseDescription, isPlaceholder, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isChineseDescription, isPlaceholder, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 export interface ZhResult {
   descriptionZh: string;
@@ -296,6 +296,7 @@ const INSUFFICIENT_SOURCE_SUMMARY =
 
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;
+  if (isPlaceholder(cleanDescription(value))) return true;
   return !isChineseDescription(value) || isPlaceholder(value) || /---\s*name:/i.test(value) || value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
     /中文简介正在生成中|请(?:查看|参考).*(?:README|项目文档|项目说明).*功能/i.test(value) ||

@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck and test
         run: npm run check
 
+      - name: Validate npm plugin package
+        run: npm run plugin:pack:check
+
       - name: Validate runtime publication
         run: |
           cp .env.example .env

@@ -2,12 +2,12 @@
   "dataelement/dsh-desktop": {
     "packageName": "dsh-desktop-client-ui",
     "repositoryPath": "packages/dsh-desktop-client-ui",
-    "sourceCommit": "f7aebb5c68a1e9182a0e2a425bd13b63236ea703",
-    "expectedFingerprint": "eb704a5fc3393a193e7f091b865a357452da858e28477525f390d920906b2350",
+    "sourceCommit": "6a9c6687c14f9d4183d6907935024f9dd804043e",
+    "expectedFingerprint": "a5c7772c85a1e2b7e38e84a9e942e251e2a8d73bffb6a9bff63ac4c026330729",
     "files": [
       {
         "path": "packages/dsh-desktop-client-ui/client.js",
-        "sha256": "dca0360dddffbd407f8f4253ef63f5bbc5c00905e75b5ee9df761d48a565cc32"
+        "sha256": "25f9fd1c382701a64506056b3cf7694b6aaa18db9febe0e66107f3ee1ec2bb15"
       },
       {
         "path": "packages/dsh-desktop-client-ui/index.js",
@@ -15,23 +15,23 @@
       },
       {
         "path": "packages/dsh-desktop-client-ui/package.json",
-        "sha256": "9378a61cf4e5628f628e4afb8fcdc0d08e24f60586c0820353950907dccf6d81"
+        "sha256": "fcbbc41d27c53516dc9939b9000f78167463caa1c8cca37af731b01406e22f4b"
       }
     ]
   },
   "jingyunstudio/jingyun-dsh": {
     "packageName": "@jingyun-ai/jingyun-dsh",
     "repositoryPath": "packages/jingyun-dsh",
-    "sourceCommit": "0d1eedd693aa8d0d30d0561850f985f473aa9949",
-    "expectedFingerprint": "f292ffbe540803d32d7d627f2ee5cb7a6ab0ab2cb04f35e7c0f452eaf08cd63f",
+    "sourceCommit": "b7e1ef2234c1e086b8801b9da26e5ee182a4da1b",
+    "expectedFingerprint": "2d8900a020bb35549bd9772276123bd946b5f686bbbadf6b424a3f8bdd2a0402",
     "files": [
+      {
+        "path": "packages/jingyun-dsh/package.json",
+        "sha256": "79acbf993abcb76dfc25d49aceb8cb72adb6723072f7bb172810bce6f4a19ba7"
+      },
       {
         "path": "packages/jingyun-dsh/cordis.patch.yml",
         "sha256": "dab0ac4f8ba865eda66684417f1f02b198f682c5fc43945c0b83856b6c2a3631"
-      },
-      {
-        "path": "packages/jingyun-dsh/package.json",
-        "sha256": "d7dd2f0cb4ce8534ee9bb0402e0bd2e98ebb9709c2f57305b297f31a86429f80"
       },
       {
         "path": "packages/jingyun-dsh/src/client/index.tsx",
@@ -39,7 +39,7 @@
       },
       {
         "path": "packages/jingyun-dsh/src/index.ts",
-        "sha256": "20efafa5cbb6566d0137aeb3ec21cd4d41b9d9cccea0b516ef014ff89f8a726d"
+        "sha256": "7f09a3cedd871b5262b2c7035e02c15b0948d53dccdbcdc883a9eed503a4617a"
       }
     ]
   },
@@ -66,8 +66,8 @@
   "zhu1090093659/dsh-trading": {
     "packageName": "@dshtrading/base",
     "repositoryPath": "packages/base",
-    "sourceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
-    "expectedFingerprint": "efa2a06917551249126b4c05bab9bffcbd0957af5f3c055dbc76032659338d98",
+    "sourceCommit": "b6cf5535093cdc43fc61a7037d997bace7fb0e6d",
+    "expectedFingerprint": "bee34ec284d5931da0a2c6a14f1d73e7f0b898bb67091660626e0449742c642e",
     "files": [
       {
         "path": "packages/base/cordis.patch.yml",
@@ -79,15 +79,15 @@
       },
       {
         "path": "packages/base/src/index.ts",
-        "sha256": "6c45ad8d24e3b5efa3fc465e7c18b7331bf3962510ca01ab631e20eda217d032"
+        "sha256": "b875bef76d34dd8089e81284b00e037fa4c133fc8e3bee847c130831d3bfec8c"
       },
       {
         "path": "packages/base/src/market-tools.ts",
-        "sha256": "9c485d3151d00d107e9f16383e7ac5c1d6d71476f2a10a199127ce74c9e29395"
+        "sha256": "07818ebd0b3073476be9691059867d9b26fff99da240f9e934371b836e1450b9"
       },
       {
         "path": "packages/base/src/presets.ts",
-        "sha256": "6878617e97ed01ea83102ab4b89b6e1574d7f87ee11866daf751cd948dc02dc1"
+        "sha256": "3609f680b3684bd4446bbcb198dd07be7fe98cb14b2327b1d11d5e29d9b455d1"
       }
     ]
   },
@@ -116,6 +116,58 @@
       {
         "path": "plugins/about/src/index.ts",
         "sha256": "975ae5c02c710ce5d457f354bf47390d575cfd57f07e87de0d1f0630a0f45a60"
+      }
+    ]
+  },
+  "cherryhq/cherry-studio": {
+    "packageName": "@cherrystudio/dsh-bridge",
+    "repositoryPath": "packages/dsh-bridge",
+    "sourceCommit": "989dfd05ccb802326a1965e78db9f0ab22b427c9",
+    "expectedFingerprint": "445f5cc7931df13b8eb5f48b8e22c139a458b9b2b73add7a2cde76ed156be761",
+    "files": [
+      {
+        "path": "packages/dsh-bridge/package.json",
+        "sha256": "d88c488f2aa6b354f49986a33726fabfe19c4c57dcd3bd0f54413663798c0bc7"
+      },
+      {
+        "path": "packages/dsh-bridge/src/plugin.ts",
+        "sha256": "2f7f366f2b8d3eeb7859272da7f0a12499c1c95f9e7db9fb4ea99d54c56fc995"
+      },
+      {
+        "path": "packages/dsh-bridge/src/runtimeEntries.ts",
+        "sha256": "cd302196b5513f0a334566b1e2be6949750e7efd404c494401046ab7a8e996fc"
+      }
+    ]
+  },
+  "jinghao-leon/dsh-alpha-desk": {
+    "packageName": "@alpha-desk/risk-gate",
+    "repositoryPath": "plugins/risk-gate",
+    "sourceCommit": "5fc89d263077bf421c796d43682a3d9adbbe46d7",
+    "expectedFingerprint": "adc4503059ef16557265dfde2034a603e793137b177fb565eca0c161f8bb9074",
+    "files": [
+      {
+        "path": "plugins/risk-gate/package.json",
+        "sha256": "aa25ab6a94c571a6b52d4f71bffcee7d1af6304342834761abc8f783d5e4390f"
+      },
+      {
+        "path": "plugins/risk-gate/index.ts",
+        "sha256": "eb9285c7a90aa860c666021eaa2e5eabc575183090fc587331d54104cfd4b417"
+      }
+    ]
+  },
+  "woaiys3/deepseek-harness-android-app": {
+    "packageName": "@deepseek-ai/dsh-tool-accessibility",
+    "repositoryPath": "plugins/dsh-tool-accessibility",
+    "sourceCommit": "712c37e74dc576bb5f0f6ab7d84c5c085d5cb39d",
+    "expectedFingerprint": "02bd7633ecfb661f8c9166fdbc8c6fa2b865bf6f74f70f53ff981df5f1d5d447",
+    "files": [
+      {
+        "path": "plugins/dsh-tool-accessibility/package.json",
+        "sha256": "61d63c416ccece0ee7dc3ed4c85c62f12ea08cd1b0ccbd436073c1b621ad4a76"
+      },
+      {
+        "path": "plugins/dsh-tool-accessibility/lib/index.js",
+        "sha256": "c3218f15bc00dedfb6c6ee109127dadbc8c2770ca070ca4133f29795fdff0abc"
       }
     ]
   }

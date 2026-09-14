@@ -5,7 +5,7 @@ import reviews from "../config/reviewed-categories.json";
 import { applyFunctionEvidenceCheck, functionEvidenceMarker, needsFunctionReview } from "../src/reviewed-evidence-state.js";
 import { reviewedFunctionEvidence, FUNCTION_EVIDENCE_MARKER_PREFIX, type FunctionEvidenceCheck } from "../src/reviewed-evidence.js";
 import { CATEGORY_POLICY_VERSION, bindCategoryAssignments } from "../src/categories.js";
-import { contentSourceHash, DESCRIPTION_POLICY_VERSION, matchingEditorialHold } from "../src/content-source.js";
+import { contentSourceHash, matchesContentSourceHash, DESCRIPTION_POLICY_VERSION, matchingEditorialHold } from "../src/content-source.js";
 import { carryForwardDailyCategories, planDailyCategories } from "../src/daily-categories.js";
 import { prepareDailyDescriptions } from "../src/daily-descriptions.js";
 import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
@@ -123,13 +123,13 @@ describe("function-evidence persistence and daily reuse", () => {
     expect(needsFunctionReview(updated)).toBe(false);
   });
 
-  it.each(["description", "categories"] as const)("keeps the legacy %s hash byte-for-byte outside this cohort", kind => {
+  it.each(["description", "categories"] as const)("accepts legacy %s hashes outside the source-file cohort", kind => {
     const unrelated = { ...source(), id: "unrelated/project", fullName: "unrelated/project" };
     const fields = [kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION,
       unrelated.fullName.toLowerCase(), unrelated.name, unrelated.type, unrelated.description ?? "",
       unrelated.readmeSummary ?? "", unrelated.topics ?? [], unrelated.install.packageName ?? null,
       unrelated.install.repositoryPath ?? null];
-    expect(contentSourceHash(unrelated, kind)).toBe(createHash("sha256").update(JSON.stringify(fields)).digest("hex"));
+    expect(matchesContentSourceHash(unrelated, kind, createHash("sha256").update(JSON.stringify(fields)).digest("hex"))).toBe(true);
     expect(contentSourceHash(unrelated, kind)).toBe(contentSourceHash({ ...unrelated,
       install: { ...unrelated.install, discovery: { ...unrelated.install.discovery!, evidence: [] } } }, kind));
     expect(applyFunctionEvidenceCheck(unrelated, undefined, check("not-required"))).toBe(unrelated);

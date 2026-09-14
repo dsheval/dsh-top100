@@ -65,19 +65,35 @@ export function matchingEditorialHold(entry: ContentSource): EditorialHold | nul
   }
   return reason ? { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install, reason } : null;
 }
-export function contentSourceHash(entry: ContentSource, kind: "description" | "categories"): string {
+function sourceHash(entry: ContentSource, kind: "description" | "categories", legacy = false): string {
   const fields: unknown[] = [
     kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION,
-    (entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase(), entry.name ?? (entry.fullName ?? entry.id ?? "").split("/").pop(), entry.type, entry.description ?? "", entry.readmeSummary ?? "", entry.topics ?? [],
+    (entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase(),
+    kind === "description" && !legacy ? null : entry.name ?? (entry.fullName ?? entry.id ?? "").split("/").pop(),
+    entry.type, entry.description ?? "", entry.readmeSummary ?? "",
+    kind === "description" && !legacy ? [] : entry.topics ?? [],
     entry.install?.packageName ?? null, entry.install?.repositoryPath ?? null,
   ];
   if (reviewedFunctionEvidence[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()]) fields.push(functionEvidenceMarker(entry));
   return createHash("sha256").update(JSON.stringify(fields)).digest("hex");
 }
 
+/** Names and discovery topics do not change the selected package's functionality. */
+export function contentSourceHash(entry: ContentSource, kind: "description" | "categories"): string {
+  return sourceHash(entry, kind);
+}
+
+/** Migrate proven same-source records without invalidating the existing catalog. */
+export function matchesContentSourceHash(entry: ContentSource, kind: "description" | "categories", hash?: string): boolean {
+  return !!hash && (hash === contentSourceHash(entry, kind)
+    || kind === "description" && hash === sourceHash(entry, kind, true));
+}
+
 export function hasContentEvidence(entry: ContentSource): boolean {
   return [entry.install?.repositoryPath ? "" : entry.description, entry.readmeSummary ?? ""].some(value => {
     const text = cleanDescription(value).replace(/https?:\/\/\S+/g, "").trim();
+    const names = [entry.name, entry.fullName, entry.id, entry.install?.packageName].filter(Boolean);
+    if (names.some(name => text.toLowerCase() === name!.toLowerCase())) return false;
     return !isPlaceholder(text) && (text.match(/\p{L}/gu)?.length ?? 0) >= 12;
   });
 }

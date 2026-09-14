@@ -212,3 +212,9 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 ### 校对简介的维护
 
 `plugin/src/shared/reviewed-descriptions.json` 是网站、npm 插件和采集器共用的校对源。修改后运行 `npm run descriptions:build` 生成网站的数据与展示规则，再执行 `npm run check`。`web/public/reviewed-descriptions.json` 和 `description-rules.js` 为生成文件，不直接编辑。npm 构建会把校对源打入包内，不依赖网站文案接口。校对内容匹配原始介绍与 README；轻量索引省略 README 时，还必须匹配已校对的快照 ID。
+
+### npm 插件打包检查
+
+安装开发依赖后运行 `npm run plugin:pack:check`，与 CI 使用同一检查。命令通过 `npm pack` 执行插件的 `prepack` 完整构建，并检查实际安装包中的声明入口、类型文件、DSH 前端注册、Bundle 配置、技能文件与中文校对数据。技能、配置和中文数据还会与当前源码比对，防止遗漏或打入旧内容。
+
+该命令会重建 `plugin/lib` 和 `plugin/client`；临时安装包检查后自动清理，不发布到 npm。CI 每次运行都执行该步骤，保留现有安全审计、测试和镜像构建。

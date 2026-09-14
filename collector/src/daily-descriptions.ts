@@ -1,6 +1,6 @@
 /** Daily summaries reuse the same source gates as frozen catalog enrichment. */
 import type { DshPlugin } from "@dsh-top100/schema";
-import { matchingEditorialHold, hasContentEvidence } from "./content-source.js";
+import { matchingEditorialHold, hasContentEvidence, matchesContentSourceHash } from "./content-source.js";
 import { reviewedDescription } from "./editorial.js";
 import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
@@ -11,11 +11,18 @@ export function prepareDailyDescriptions(
   sources: DshPlugin[], previousSources: Map<string, DshPlugin>, cache: Map<string, ZhEntry>,
   previousJobs: Record<string, DescriptionJob>, priority: Set<string>, now: number,
 ) {
+  const migratedJobs = { ...previousJobs };
   for (const source of sources) {
     const hash = descriptionSourceHash(source);
     const previous = previousSources.get(source.id.toLowerCase());
-    const cached = cache.get(source.id);
-    const oldJob = previousJobs[source.id];
+    const previousMatches = !!previous && descriptionSourceHash(previous) === hash;
+    const matches = (oldHash?: string) => matchesContentSourceHash(source, "description", oldHash)
+      || previousMatches && matchesContentSourceHash(previous!, "description", oldHash);
+    const originalCache = cache.get(source.id);
+    const cached = originalCache && matches(originalCache.sourceHash) ? { ...originalCache, sourceHash: hash } : originalCache;
+    const originalJob = previousJobs[source.id];
+    const oldJob = originalJob && matches(originalJob.sourceHash) ? { ...originalJob, sourceHash: hash } : originalJob;
+    if (oldJob && oldJob !== originalJob) migratedJobs[source.id] = oldJob;
     const hold = matchingEditorialHold(source);
     const review = reviewedDescription(source);
     // Fresh collection clears generated fields even when a fixed review supplies
@@ -45,7 +52,7 @@ export function prepareDailyDescriptions(
     }
     if (!hasChineseDescription(source.descriptionZh)) source.descriptionZh = hold ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(source);
   }
-  return planDescriptionJobs(sources, previousJobs, priority, now);
+  return planDescriptionJobs(sources, migratedJobs, priority, now);
 }
 
 export async function runDailyDescriptions(

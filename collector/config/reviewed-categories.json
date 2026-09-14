@@ -21,23 +21,44 @@
   },
   "cherryhq/cherry-studio": {
     "sourceDescription": "AI productivity studio with smart chat, autonomous agents, and 300+ assistants. Unified access to frontier LLMs",
-    "sourceReadme": "[![][deepwiki-shield]][deepwiki-link] [![][twitter-shield]][twitter-link] [![][discord-shield]][discord-link] [![][telegram-shield]][telegram-link] [![][github-release-shield]][github-release-link] [![][github-nightly-shield]][github-nightly-link] [![][github-contributors-shield]][github-contributors-link] [![][license-shield]][license-link] [![][commercial-shield]][commercial-link] [![][sponsor-shield]][sponsor-link…",
+    "sourceReadme": "",
+    "sourceInstall": {
+      "packageName": "@cherrystudio/dsh-bridge",
+      "repositoryPath": "packages/dsh-bridge",
+      "functionEvidence": "445f5cc7931df13b8eb5f48b8e22c139a458b9b2b73add7a2cde76ed156be761"
+    },
+    "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/CherryHQ/cherry-studio",
-    "reviewedAt": "2026-09-10",
+    "sourceEvidenceCommit": "989dfd05ccb802326a1965e78db9f0ab22b427c9",
+    "sourceEvidence": [
+      {
+        "path": "packages/dsh-bridge/package.json",
+        "sha256": "d88c488f2aa6b354f49986a33726fabfe19c4c57dcd3bd0f54413663798c0bc7",
+        "url": "https://github.com/CherryHQ/cherry-studio/blob/989dfd05ccb802326a1965e78db9f0ab22b427c9/packages/dsh-bridge/package.json"
+      },
+      {
+        "path": "packages/dsh-bridge/src/plugin.ts",
+        "sha256": "2f7f366f2b8d3eeb7859272da7f0a12499c1c95f9e7db9fb4ea99d54c56fc995",
+        "url": "https://github.com/CherryHQ/cherry-studio/blob/989dfd05ccb802326a1965e78db9f0ab22b427c9/packages/dsh-bridge/src/plugin.ts"
+      },
+      {
+        "path": "packages/dsh-bridge/src/runtimeEntries.ts",
+        "sha256": "cd302196b5513f0a334566b1e2be6949750e7efd404c494401046ab7a8e996fc",
+        "url": "https://github.com/CherryHQ/cherry-studio/blob/989dfd05ccb802326a1965e78db9f0ab22b427c9/packages/dsh-bridge/src/runtimeEntries.ts"
+      }
+    ],
+    "reviewedAt": "2026-09-14",
+    "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
+    "reviewBatch": "description-repair-20260914",
     "categories": [
       {
         "id": "ai",
         "confidence": 0.96,
-        "evidence": "原始描述明确统一接入大语言模型，并提供智能聊天、自主智能体和助手。",
+        "evidence": "所选 @cherrystudio/dsh-bridge 连接 Cherry Studio 与 DSH 智能体运行时，处理会话与工具调用审批；保留现有 Agent 增强分类。",
         "source": "manual",
         "classifiedAt": "2026-09-10T00:00:00.000Z"
       }
-    ],
-    "sourceInstall": {
-      "packageName": "CherryStudio",
-      "repositoryPath": null
-    },
-    "sourceType": "cordis-plugin"
+    ]
   },
   "amruthpillai/reactive-resume": {
     "sourceDescription": "A one-of-a-kind resume builder that keeps your privacy in mind. Completely secure, customizable, portable, open-source and free forever. Try it out today!",
@@ -231,33 +252,33 @@
     "sourceInstall": {
       "packageName": "dsh-desktop-client-ui",
       "repositoryPath": "packages/dsh-desktop-client-ui",
-      "functionEvidence": "eb704a5fc3393a193e7f091b865a357452da858e28477525f390d920906b2350"
+      "functionEvidence": "a5c7772c85a1e2b7e38e84a9e942e251e2a8d73bffb6a9bff63ac4c026330729"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/dataelement/dsh-desktop",
-    "sourceEvidenceCommit": "f7aebb5c68a1e9182a0e2a425bd13b63236ea703",
+    "sourceEvidenceCommit": "6a9c6687c14f9d4183d6907935024f9dd804043e",
     "sourceEvidence": [
       {
-        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/package.json#L2",
-        "path": "packages/dsh-desktop-client-ui/package.json"
+        "path": "packages/dsh-desktop-client-ui/client.js",
+        "url": "https://github.com/dataelement/dsh-desktop/blob/6a9c6687c14f9d4183d6907935024f9dd804043e/packages/dsh-desktop-client-ui/client.js"
       },
       {
-        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/index.js#L1",
-        "path": "packages/dsh-desktop-client-ui/index.js"
+        "path": "packages/dsh-desktop-client-ui/index.js",
+        "url": "https://github.com/dataelement/dsh-desktop/blob/6a9c6687c14f9d4183d6907935024f9dd804043e/packages/dsh-desktop-client-ui/index.js"
       },
       {
-        "url": "https://github.com/dataelement/dsh-desktop/blob/f7aebb5c68a1e9182a0e2a425bd13b63236ea703/packages/dsh-desktop-client-ui/client.js#L69",
-        "path": "packages/dsh-desktop-client-ui/client.js"
+        "path": "packages/dsh-desktop-client-ui/package.json",
+        "url": "https://github.com/dataelement/dsh-desktop/blob/6a9c6687c14f9d4183d6907935024f9dd804043e/packages/dsh-desktop-client-ui/package.json"
       }
     ],
-    "reviewedAt": "2026-09-11",
-    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewedAt": "2026-09-14",
+    "reviewMethod": "AI review of three source files fetched from one pinned GitHub commit; no code execution or model API call.",
     "reviewBatch": "top100-20260911",
     "categories": [
       {
         "id": "appearance",
         "confidence": 0.98,
-        "evidence": "当前 dsh-desktop-client-ui 的 client.js 只注册 sidebar.brand.mark/name、conversation.hero.brand.mark，并根据明暗主题切换 Logo。不是整个 deskto",
+        "evidence": "当前子包只注册侧边栏与会话欢迎区域的品牌图标和名称，属于界面外观定制。",
         "source": "manual",
         "classifiedAt": "2026-09-11T02:15:32.599Z"
       }
@@ -2616,32 +2637,36 @@
     "sourceInstall": {
       "packageName": "@jingyun-ai/jingyun-dsh",
       "repositoryPath": "packages/jingyun-dsh",
-      "functionEvidence": "f292ffbe540803d32d7d627f2ee5cb7a6ab0ab2cb04f35e7c0f452eaf08cd63f"
+      "functionEvidence": "2d8900a020bb35549bd9772276123bd946b5f686bbbadf6b424a3f8bdd2a0402"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/jingyunstudio/jingyun-dsh",
-    "sourceEvidenceCommit": "0d1eedd693aa8d0d30d0561850f985f473aa9949",
+    "sourceEvidenceCommit": "b7e1ef2234c1e086b8801b9da26e5ee182a4da1b",
     "sourceEvidence": [
       {
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/package.json#L2",
-        "path": "packages/jingyun-dsh/package.json"
+        "path": "packages/jingyun-dsh/package.json",
+        "sha256": "79acbf993abcb76dfc25d49aceb8cb72adb6723072f7bb172810bce6f4a19ba7",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/package.json"
       },
       {
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/cordis.patch.yml#L3",
-        "path": "packages/jingyun-dsh/cordis.patch.yml"
+        "path": "packages/jingyun-dsh/cordis.patch.yml",
+        "sha256": "dab0ac4f8ba865eda66684417f1f02b198f682c5fc43945c0b83856b6c2a3631",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/cordis.patch.yml"
       },
       {
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/src/client/index.tsx#L121",
-        "path": "packages/jingyun-dsh/src/client/index.tsx"
+        "path": "packages/jingyun-dsh/src/client/index.tsx",
+        "sha256": "acf02fa9d9232ba25f968cc744d6ff26433e9acbfc32e1a1718bce4d7773cafd",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/src/client/index.tsx"
       },
       {
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/0d1eedd693aa8d0d30d0561850f985f473aa9949/packages/jingyun-dsh/src/index.ts#L112",
-        "path": "packages/jingyun-dsh/src/index.ts"
+        "path": "packages/jingyun-dsh/src/index.ts",
+        "sha256": "7f09a3cedd871b5262b2c7035e02c15b0948d53dccdbcdc883a9eed503a4617a",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/src/index.ts"
       }
     ],
-    "reviewedAt": "2026-09-11",
-    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
-    "reviewBatch": "top100-20260911",
+    "reviewedAt": "2026-09-14",
+    "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
+    "reviewBatch": "description-repair-20260914",
     "categories": [
       {
         "id": "tools",
@@ -2717,39 +2742,45 @@
     "sourceReadme": "DeepSeekGUI's Workbench product plugin (B3-P1 Direct Composition Spike; B3-P2 Workbench Shell; B5-P1 remounted on the official 0.1.2 client modules after the B4 conversation-view tabs and their APIProxy RPC surface were retired; B5-P5 added the tool-result cards; the 2026-09-06 acceptance rework replaced the header inspector popover with four conversation views).…",
     "sourceInstall": {
       "packageName": "@see-sol-lab/deepseekgui-workbench",
-      "repositoryPath": "apps/desktop/workbench-plugin"
+      "repositoryPath": "apps/deepseekgui/workbench-plugin"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI",
-    "sourceEvidenceCommit": "000d003a6e9a0464dbf6a740694f569f3cc0b21f",
+    "sourceEvidenceCommit": "f8fae741698467d001e73dab9f46355ead23a716",
     "sourceEvidence": [
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/package.json#L5",
-        "path": "package.json"
+        "path": "apps/deepseekgui/workbench-plugin/package.json",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/package.json",
+        "sha256": "c09a5b59ad52ed581e003b71c7a648b97287699d793b495f95c30537db51fba8"
       },
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/package.json#L2",
-        "path": "apps/desktop/workbench-plugin/package.json"
+        "path": "apps/deepseekgui/workbench-plugin/README.md",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/README.md",
+        "sha256": "8de348ea664487eab5ea27096a13505da0bd6b95792331990e2de84c0bdd6226"
       },
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/README.md#L7",
-        "path": "apps/desktop/workbench-plugin/README.md"
+        "path": "apps/deepseekgui/workbench-plugin/deepseekgui-workbench.patch.yml",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/deepseekgui-workbench.patch.yml",
+        "sha256": "a925cd769187f03a597538cc26182e802f2f56ddb7b2e73294885c1739902a40"
       },
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/src/client/index.ts#L67",
-        "path": "apps/desktop/workbench-plugin/src/client/index.ts"
+        "path": "apps/deepseekgui/workbench-plugin/src/index.ts",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/src/index.ts",
+        "sha256": "b823c97d5f6fbfebd1947a3ff494c7f00a5fc277a9ff32f7cc6acd150dc49e45"
       },
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/src/index.ts#L18",
-        "path": "apps/desktop/workbench-plugin/src/index.ts"
+        "path": "apps/deepseekgui/workbench-plugin/src/client/index.ts",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/src/client/index.ts",
+        "sha256": "efa54b686534ddf8aea67999e3a8c3e723103ba08ea6eec3943c33c4e48cec60"
       },
       {
-        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/src/dsh-service.ts#L467",
-        "path": "apps/desktop/src/dsh-service.ts"
+        "path": "apps/deepseekgui/src/dsh-service.ts",
+        "url": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/src/dsh-service.ts",
+        "sha256": "b5e9081315a0bcfaffe71d07bc5916f4f75702c4681bc88f5e50f9d1a2bb89ad"
       }
     ],
-    "reviewedAt": "2026-09-11",
-    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
+    "reviewedAt": "2026-09-14",
+    "reviewMethod": "AI source review of package documentation, declared entries and loader integration at a pinned commit; no runtime execution or paid model API.",
     "reviewBatch": "top100-20260911",
     "sourceReadmeNormalization": "language-navigation-v1",
     "categories": [
@@ -2760,7 +2791,8 @@
         "source": "manual",
         "classifiedAt": "2026-09-11T02:15:32.599Z"
       }
-    ]
+    ],
+    "evidenceReviewBatch": "hot-two-20260914"
   },
   "amakurai/dsh-liketavern": {
     "sourceDescription": "A DeepSeek Harness (dsh) plugin — turns dsh web into a SillyTavern-style roleplay frontend: character cards, prompt presets, lorebooks, personas, BM25 long-term memory, world-state deltas, and rollback-able floor operations, all on the dsh agent runtime.",
@@ -2904,9 +2936,9 @@
   },
   "jinghao-leon/dsh-alpha-desk": {
     "sourceDescription": "Alpha Desk — a deepseek-harness (dsh) skill pack that turns an agent session into a compliance-first AI investment desk: multi-strategy fund backtesting via ai-hedge-fund, a tools/pre-execute risk gate, cron monitoring and thesis memory. 把 dsh 会话变成合规、可复现、可追责的 AI 投研工作台。",
-    "sourceReadme": "English | 中文 > 把 deepseek-harness（dsh）会话变成一个投研交易台： > 多策略 AI 基金回测 + A股/港股技术分析 + 风控合规门禁 + 定时盯盘 + 投资记忆复盘。 > 本仓库是一个可直接安装的 dsh skill 包，也是 dsh 微内核扩展点（skill / hook / cron / memory）的完整示范。 免责声明：本项目仅供学习研究，不构成投资建议，暂不执行真实交易。 通用 agent 框架能\"聊天\"，但做投研缺四样东西： 1. 可复现的引擎 —— 结论不能是模型即兴编的，必须来自真实数据与真实计算 2. 合规边界 —— agent 权限越来越大，\"永远碰不到真钱\"要是架构保证，不是提示词约定 3. 持续性 —— 投资观点要被记录、被定时检验、被事后追责 4. 多市场 —— 美股、A股、港股各一套数据与逻辑 Alpha Desk 用 dsh 的四个扩展点各解决一个问题：…",
+    "sourceReadme": "",
     "sourceUrl": "https://github.com/JingHao-Leon/dsh-alpha-desk",
-    "reviewedAt": "2026-09-10T07:54:45.301Z",
+    "reviewedAt": "2026-09-14",
     "categories": [
       {
         "id": "security",
@@ -2918,25 +2950,27 @@
     ],
     "sourceInstall": {
       "packageName": "@alpha-desk/risk-gate",
-      "repositoryPath": "plugins/risk-gate"
+      "repositoryPath": "plugins/risk-gate",
+      "functionEvidence": "adc4503059ef16557265dfde2034a603e793137b177fb565eca0c161f8bb9074"
     },
     "sourceType": "cordis-plugin",
-    "sourceEvidenceUrl": "https://raw.githubusercontent.com/JingHao-Leon/dsh-alpha-desk/5fc89d263077bf421c796d43682a3d9adbbe46d7/plugins/risk-gate/package.json",
     "sourceEvidenceCommit": "5fc89d263077bf421c796d43682a3d9adbbe46d7",
     "sourceEvidence": [
       {
-        "url": "https://raw.githubusercontent.com/JingHao-Leon/dsh-alpha-desk/5fc89d263077bf421c796d43682a3d9adbbe46d7/plugins/risk-gate/package.json",
+        "path": "plugins/risk-gate/package.json",
         "sha256": "aa25ab6a94c571a6b52d4f71bffcee7d1af6304342834761abc8f783d5e4390f",
-        "path": "plugins/risk-gate/package.json"
+        "url": "https://github.com/JingHao-Leon/dsh-alpha-desk/blob/5fc89d263077bf421c796d43682a3d9adbbe46d7/plugins/risk-gate/package.json"
       },
       {
-        "url": "https://raw.githubusercontent.com/JingHao-Leon/dsh-alpha-desk/5fc89d263077bf421c796d43682a3d9adbbe46d7/README.md",
-        "sha256": "a91c13e81ca400226f0ef32e6ba71cc8f45b99e8b49a477ce07743a7284bd4f4",
-        "path": "README.md"
+        "path": "plugins/risk-gate/index.ts",
+        "sha256": "eb9285c7a90aa860c666021eaa2e5eabc575183090fc587331d54104cfd4b417",
+        "url": "https://github.com/JingHao-Leon/dsh-alpha-desk/blob/5fc89d263077bf421c796d43682a3d9adbbe46d7/plugins/risk-gate/index.ts"
       }
     ],
     "reviewNotes": "所选包 package.json 的 description 直接定义风险门控用途；根 README 的架构表精确关联 plugins/risk-gate 到执行前拒绝钩子。它不是仓库的整套投研技能，应删除回测、技术分析、定时跟踪、投资记忆等归属。",
-    "reviewScope": "production-package-followup"
+    "reviewScope": "production-package-followup",
+    "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
+    "reviewBatch": "description-repair-20260914"
   },
   "polinnizhong/dsh-personal-center": {
     "sourceDescription": "DSH 个人配置:Token 用量统计 / 成本估算 / 自定义指令 / 外观全局字号 / 桌面宠物(含会话状态概览),纯本地不联网。Personal center for DSH: usage stats, cost estimation, custom instructions, global font size & desktop pet with session overview — all local & offline.",
@@ -4083,86 +4117,41 @@
     "sourceInstall": {
       "packageName": "@dshtrading/base",
       "repositoryPath": "packages/base",
-      "functionEvidence": "efa2a06917551249126b4c05bab9bffcbd0957af5f3c055dbc76032659338d98"
+      "functionEvidence": "bee34ec284d5931da0a2c6a14f1d73e7f0b898bb67091660626e0449742c642e"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/zhu1090093659/dsh-trading",
-    "sourceEvidenceCommit": "aa143eaafec090d4eb8d996a14d7f671485be70a",
+    "sourceEvidenceCommit": "b6cf5535093cdc43fc61a7037d997bace7fb0e6d",
     "sourceEvidence": [
       {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/README.md",
-        "path": "README.md",
-        "sha256": "57ad7e4495ec0cc9e9da87e3b165c29bab8e4b0f757758f2424610a64c89384c"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/README_zh.md",
-        "path": "README_zh.md",
-        "sha256": "91918d698068e0ba53e96bf53f7d534206c1376f6fce7f66a6868904691e4249"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/cordis.patch.yml",
-        "path": "packages/all/cordis.patch.yml",
-        "sha256": "8f8e5fdb514cac50f7cdd44e22892f68c0621f24be491772ee8da55114212137"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/CHANGELOG.md",
-        "path": "packages/all/CHANGELOG.md",
-        "sha256": "8aa573694f6100cc1c7ac0803e259016cf89da217e650dbec3bb51baf4447398"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/package.json",
-        "path": "packages/all/package.json",
-        "sha256": "151ece22b8154ab70afe3354b03e072e33387fb46289f7036a122b038e838aaf"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/tsconfig.json",
-        "path": "packages/all/tsconfig.json",
-        "sha256": "a889cc640f135bf8c0eb8e9e04e2016b0b4d669c4cafb30c5546379036b37fcf"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/tsdown.config.ts",
-        "path": "packages/all/tsdown.config.ts",
-        "sha256": "6b6567e12899db7703717a95045d8b2cf0c9e12f611afb3fb396ae8a5c345c0d"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/cordis.patch.yml",
         "path": "packages/base/cordis.patch.yml",
-        "sha256": "5fd74407232369bbf695b2178c924cbd4d491d31d7fcd53a983b2f83896eab98"
+        "sha256": "5fd74407232369bbf695b2178c924cbd4d491d31d7fcd53a983b2f83896eab98",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/cordis.patch.yml"
       },
       {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/CHANGELOG.md",
-        "path": "packages/base/CHANGELOG.md",
-        "sha256": "ab61018fab7bcc3a9f553949a33f992542d36e7c9fe0b943d8378f83d46a386f"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/package.json",
         "path": "packages/base/package.json",
-        "sha256": "dd38b5aca8b698e67b99a5bfb1b2452a272c9ee5f093040613d7337762e776cb"
+        "sha256": "dd38b5aca8b698e67b99a5bfb1b2452a272c9ee5f093040613d7337762e776cb",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/package.json"
       },
       {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/presets.ts",
-        "path": "packages/base/src/presets.ts",
-        "sha256": "6878617e97ed01ea83102ab4b89b6e1574d7f87ee11866daf751cd948dc02dc1"
-      },
-      {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/index.ts",
         "path": "packages/base/src/index.ts",
-        "sha256": "6c45ad8d24e3b5efa3fc465e7c18b7331bf3962510ca01ab631e20eda217d032"
+        "sha256": "b875bef76d34dd8089e81284b00e037fa4c133fc8e3bee847c130831d3bfec8c",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/index.ts"
       },
       {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/base/src/market-tools.ts",
         "path": "packages/base/src/market-tools.ts",
-        "sha256": "9c485d3151d00d107e9f16383e7ac5c1d6d71476f2a10a199127ce74c9e29395"
+        "sha256": "07818ebd0b3073476be9691059867d9b26fff99da240f9e934371b836e1450b9",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/market-tools.ts"
       },
       {
-        "url": "https://raw.githubusercontent.com/zhu1090093659/dsh-trading/aa143eaafec090d4eb8d996a14d7f671485be70a/packages/all/src/index.ts",
-        "path": "packages/all/src/index.ts",
-        "sha256": "e88de67f497c125f32a44b2c763b0095a61988c57f3c28b38307f48c6aa119b8"
+        "path": "packages/base/src/presets.ts",
+        "sha256": "3609f680b3684bd4446bbcb198dd07be7fe98cb14b2327b1d11d5e29d9b455d1",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/presets.ts"
       }
     ],
-    "reviewedAt": "2026-09-11",
-    "reviewMethod": "AI source review of author documentation and entry code; no model API or runtime execution",
-    "reviewBatch": "top100-20260911",
+    "reviewedAt": "2026-09-14",
+    "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
+    "reviewBatch": "description-repair-20260914",
     "categories": [
       {
         "id": "tools",
@@ -4215,9 +4204,9 @@
   },
   "woaiys3/deepseek-harness-android-app": {
     "sourceDescription": "DeepSeek Harness 手机版：可直接安装的 Android APK，AI 免 Root 操作手机（Shizuku/root 可选），文件编辑只需所有文件访问权限，前台保活 + AI 通知",
-    "sourceReadme": "> 把 DeepSeek Harness（DSH）打包成可直接安装的 Android APK —— 装上就能用，还能让 AI 免 Root 真正操作手机。 - 📦 APK 一键安装：不用 Termux、不用敲命令，下载安装即用（包名 com.deepseek.harness） - 🔓 免 Root 系统特权：通过 Shizuku 打通系统 shell —— AI 能装应用、点屏幕、改系统设置、截图、模拟输入，这是\"手机上的 AI Agent\"，不只是聊天窗口 - 🟢 可选特权，不授予也能正常用（v1.4.0）：不装 Shizuku/无 root 也能用——文件读写、预览、编辑只需「所有文件访问」权限；未授权时 AI 不会反复尝试系统操作，需要时会引导你授权 - 🔀 Root 优先，Shizuku 备用（v1.4.0）：…",
+    "sourceReadme": "",
     "sourceUrl": "https://github.com/woaiys3/deepseek-harness-android-app",
-    "reviewedAt": "2026-09-10T07:54:45.301Z",
+    "reviewedAt": "2026-09-14",
     "categories": [
       {
         "id": "tools",
@@ -4229,25 +4218,27 @@
     ],
     "sourceInstall": {
       "packageName": "@deepseek-ai/dsh-tool-accessibility",
-      "repositoryPath": "plugins/dsh-tool-accessibility"
+      "repositoryPath": "plugins/dsh-tool-accessibility",
+      "functionEvidence": "02bd7633ecfb661f8c9166fdbc8c6fa2b865bf6f74f70f53ff981df5f1d5d447"
     },
     "sourceType": "cordis-plugin",
-    "sourceEvidenceUrl": "https://raw.githubusercontent.com/woaiys3/deepseek-harness-android-app/b676164b59a9e8aaf4e5687d1e21095742acb043/plugins/dsh-tool-accessibility/package.json",
-    "sourceEvidenceCommit": "b676164b59a9e8aaf4e5687d1e21095742acb043",
+    "sourceEvidenceCommit": "712c37e74dc576bb5f0f6ab7d84c5c085d5cb39d",
     "sourceEvidence": [
       {
-        "url": "https://raw.githubusercontent.com/woaiys3/deepseek-harness-android-app/b676164b59a9e8aaf4e5687d1e21095742acb043/plugins/dsh-tool-accessibility/package.json",
+        "path": "plugins/dsh-tool-accessibility/package.json",
         "sha256": "61d63c416ccece0ee7dc3ed4c85c62f12ea08cd1b0ccbd436073c1b621ad4a76",
-        "path": "plugins/dsh-tool-accessibility/package.json"
+        "url": "https://github.com/woaiys3/deepseek-harness-android-app/blob/712c37e74dc576bb5f0f6ab7d84c5c085d5cb39d/plugins/dsh-tool-accessibility/package.json"
       },
       {
-        "url": "https://raw.githubusercontent.com/woaiys3/deepseek-harness-android-app/b676164b59a9e8aaf4e5687d1e21095742acb043/README.md",
-        "sha256": "035a1b82b5a291bcf4f878e7c522fc0afd94189ae385acd7e59c6b2d302dc5ba",
-        "path": "README.md"
+        "path": "plugins/dsh-tool-accessibility/lib/index.js",
+        "sha256": "c3218f15bc00dedfb6c6ee109127dadbc8c2770ca070ca4133f29795fdff0abc",
+        "url": "https://github.com/woaiys3/deepseek-harness-android-app/blob/712c37e74dc576bb5f0f6ab7d84c5c085d5cb39d/plugins/dsh-tool-accessibility/lib/index.js"
       }
     ],
     "reviewNotes": "package.json 直接说明模型侧 Android accessibility 工具；根 README 的插件表与目录结构明确命名 dsh-tool-accessibility，并说明需启用宿主屏幕助手。没有 dsh.bundle 元数据，内容身份可确认，但独立 profile 安装有效性仍须预检；不能描述成 APK、内置运行时、文件处理、前台保活或通知产品。",
-    "reviewScope": "production-package-followup"
+    "reviewScope": "production-package-followup",
+    "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
+    "reviewBatch": "description-repair-20260914"
   },
   "thebiggavin/marketingdashboard": {
     "sourceDescription": "面向金融与产业研究的一屏式实时行情大屏：A股/港股/美股指数、大宗商品、美债收益率、板块热点、主力资金流、7×24 快讯、产业链自选股、AI 大模型 Token 追踪。A real-time market research cockpit on a single screen: CN/HK/US indices, commodities, treasury yields, sector hotspots, capital flows, 7×24 news, industry-chain watchlists and AI token usage trends. ",

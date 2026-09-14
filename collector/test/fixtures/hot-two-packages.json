@@ -1,0 +1,68 @@
+[
+  {
+    "fullName": "See-Sol-Lab/DeepSeekGUI",
+    "commit": "f8fae741698467d001e73dab9f46355ead23a716",
+    "repositoryPath": "apps/deepseekgui/workbench-plugin",
+    "package": {
+      "name": "@see-sol-lab/deepseekgui-workbench",
+      "private": true,
+      "main": "lib/index.js",
+      "exports": {
+        ".": "./lib/index.js",
+        "./client": "./lib/client.js",
+        "./package.json": "./package.json"
+      },
+      "dsh": {
+        "client": {
+          "inject": [
+            "@deepseek-ai/dsh-client-locale",
+            "@deepseek-ai/dsh-client-ui-renderer",
+            "@deepseek-ai/dsh-client-ui-slots",
+            "@deepseek-ai/dsh-client-ui-session",
+            "@deepseek-ai/dsh-client-ui-sidebar",
+            "@deepseek-ai/dsh-client-ui-layout",
+            "@deepseek-ai/dsh-client-ui-sidebar-right",
+            "@deepseek-ai/dsh-client-ui-conversation",
+            "@deepseek-ai/dsh-client-ui-chat",
+            "@deepseek-ai/dsh-client-ui-tool",
+            "@deepseek-ai/dsh-api-session-controller",
+            "@deepseek-ai/dsh-session-stats",
+            "@deepseek-ai/dsh-token-meter"
+          ],
+          "platform": "web"
+        }
+      }
+    }
+  },
+  {
+    "fullName": "SuperJJ007/papermachine",
+    "commit": "b7f095ed665d3c0693006d20fbf0ad33f061cf82",
+    "repositoryPath": "packages/client/ui-brand-papermachine",
+    "package": {
+      "name": "@deepseek-ai/dsh-client-ui-brand-papermachine",
+      "main": "lib/index.js",
+      "exports": {
+        ".": {
+          "types": "./lib/types/index.d.ts",
+          "default": "./lib/index.js"
+        },
+        "./client": {
+          "types": "./lib/types/client/index.d.ts",
+          "default": "./lib/client.js"
+        },
+        "./src/*": "./src/*",
+        "./package.json": "./package.json"
+      },
+      "dsh": {
+        "client": {
+          "inject": [
+            "@deepseek-ai/dsh-client-ui-conversation",
+            "@deepseek-ai/dsh-client-ui-sidebar",
+            "@deepseek-ai/dsh-client-locale"
+          ],
+          "platform": "web"
+        }
+      }
+    }
+  }
+]

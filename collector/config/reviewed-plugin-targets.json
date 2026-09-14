@@ -8,10 +8,10 @@
   },
   "see-sol-lab/deepseekgui": {
     "packageName": "@see-sol-lab/deepseekgui-workbench",
-    "repositoryPath": "apps/desktop/workbench-plugin",
-    "sourceCommit": "000d003a6e9a0464dbf6a740694f569f3cc0b21f",
-    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/000d003a6e9a0464dbf6a740694f569f3cc0b21f/apps/desktop/workbench-plugin/package.json#L2",
-    "reason": "原 @deepseek-ai/dsh-root 是 private 多工作区根且无插件入口，不能分类。作者自有 workbench 子包有 dsh.client/exports、Host apply、Client slots 与专用 README；提供 Changes/Git/Worktrees/Memory 业务视图和 Git/PR 卡片，归编程而不是仅外观。"
+    "repositoryPath": "apps/deepseekgui/workbench-plugin",
+    "sourceCommit": "f8fae741698467d001e73dab9f46355ead23a716",
+    "sourceUrl": "https://github.com/See-Sol-Lab/DeepSeekGUI/blob/f8fae741698467d001e73dab9f46355ead23a716/apps/deepseekgui/workbench-plugin/package.json",
+    "reason": "同一 Workbench 包迁移至 apps/deepseekgui/workbench-plugin；清单声明 dsh.client 和客户端导出，Host/Client 源码与启动器 overlay 均对应同名包。private 包随 DeepSeekGUI 加载，不是已确认的独立 npm 安装源。"
   },
   "tao716/ai-mini-game": {
     "packageName": "@deepseek-ai/dsh-client-ui-midnight-game",
@@ -40,5 +40,12 @@
     "sourceCommit": "d1fa9c15fc00c05ea6931aafd724554ca34d5a6d",
     "sourceUrl": "https://github.com/op7418/pilot-harness/blob/d1fa9c15fc00c05ea6931aafd724554ca34d5a6d/packages/client/ui-codepilot-theme/package.json#L2",
     "reason": "原@deepseek-ai/dsh-root为private无入口工作区根。实际packages/client/ui-codepilot-theme是作者维护的主题包，repository.url指向op7418/pilot-harness，dsh.bundle指向精确补丁并有dsh.client。客户端导入品牌/主题CSS、注册data-codepilot-theme激活标识与清理、同步theme/change至可选桌面桥。单一主类appearance。"
+  },
+  "superjj007/papermachine": {
+    "packageName": "@deepseek-ai/dsh-client-ui-brand-papermachine",
+    "repositoryPath": "packages/client/ui-brand-papermachine",
+    "sourceCommit": "b7f095ed665d3c0693006d20fbf0ad33f061cf82",
+    "sourceUrl": "https://github.com/SuperJJ007/papermachine/blob/b7f095ed665d3c0693006d20fbf0ad33f061cf82/packages/client/ui-brand-papermachine/package.json",
+    "reason": "根包是宿主工作区。作者专有 ui-brand-papermachine 子包声明 dsh.client 和客户端导出；独立 README 与入口只证明品牌槽位功能，且仅在 papermachine 构建配置下生效；不继承科研分析产品功能，也不据包名推断 npm 可安装。"
   }
 }

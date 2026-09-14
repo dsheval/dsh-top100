@@ -36,14 +36,17 @@ describe("current priority editorial review", () => {
     expect(baseline.filter(([, review]) => priorityReview(review))).toHaveLength(173);
     expect(baseline.filter(([, review]) => "reviewScope" in review && review.reviewScope === "highstar-longtail")).toHaveLength(84);
     for (const [fullName, review] of baseline) {
-      const entry = source(fullName as keyof typeof categories);
+      let entry = source(fullName as keyof typeof categories);
       const description = descriptions[fullName as keyof typeof descriptions];
       expect(fullName).toBe(fullName.toLowerCase());
       expect(description, fullName).toBeDefined();
-      expect(description.sourceDescription, fullName).toBe(review.sourceDescription);
-      expect(description.sourceReadme, fullName).toBe(review.sourceReadme);
+      // Chinese and category reviews can be refreshed independently. Exercise
+      // each description against its own bound source, rather than an old category input.
+      entry = { ...entry, description: description.sourceDescription, readmeSummary: description.sourceReadme,
+        type: description.sourceType, install: { ...entry.install,
+          packageName: description.sourceInstall.packageName ?? undefined,
+          repositoryPath: description.sourceInstall.repositoryPath ?? undefined } };
       expect(description.sourceUrl, fullName).toBe(review.sourceUrl);
-      expect(description.reviewedAt, fullName).toBe(review.reviewedAt);
       expect(description, fullName).not.toHaveProperty("snapshotId");
       const chinese = reviewedDescription(entry);
       expect(chinese, fullName).toBe(description.descriptionZh);

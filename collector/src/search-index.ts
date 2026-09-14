@@ -2,6 +2,7 @@
 
 import type { RankingSearchEntry } from "@dsh-top100/schema";
 import type { RankingsDocument } from "./rankings.js";
+import { publishedDescriptionZh } from "./published-description.js";
 
 import { NPM_SPEC_RE, resolveCatalogInstallTarget } from "../../plugin/src/shared/install-source.js";
 
@@ -37,8 +38,8 @@ export function toSearchEntry(
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
-    ...(entry.descriptionZh && entry.descriptionZh !== entry.description
-      ? { descriptionZh: entry.descriptionZh }
+    ...(publishedDescriptionZh(entry)
+      ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),
     stars: entry.stars,
     dailyStars: entry.dailyStars,
@@ -62,8 +63,8 @@ export function toSnapshotSearchEntry(
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
-    ...(entry.descriptionZh && entry.descriptionZh !== entry.description
-      ? { descriptionZh: entry.descriptionZh }
+    ...(publishedDescriptionZh(entry)
+      ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),
     stars: entry.stars,
     tags: entry.tags,
@@ -72,12 +73,12 @@ export function toSnapshotSearchEntry(
     ...(entry.install.discovery ? { discovery: entry.install.discovery } : {}),
     ...(entry.install.assessment ? { installAssessment: entry.install.assessment } : {}),
     ...(entry.install.repositoryPath ? { installRepositoryPath: entry.install.repositoryPath } : {}),
+    // Source-bound descriptions need package identity even without an install command.
+    // Keeping this field does not establish an installTarget or installation eligibility.
+    ...(entry.install.packageName ? { installPackageName: entry.install.packageName } : {}),
     ...(installTarget ? {
       installTarget,
       ...(typeof entry.install.needsConfig === "boolean" ? { needsConfig: entry.install.needsConfig } : {}),
-      // Compact consumers must retain the selected package identity. A legacy
-      // installTarget alone only proves syntax, not which project it installs.
-      ...(entry.install.packageName ? { installPackageName: entry.install.packageName } : {}),
     } : {}),
   };
 }

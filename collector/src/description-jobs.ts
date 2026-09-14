@@ -1,4 +1,4 @@
-import { contentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt, type ContentSource } from './content-source.js';
+import { contentSourceHash, matchesContentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt, type ContentSource } from './content-source.js';
 import { isGenericDescriptionZh } from './llm.js';
 
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
@@ -24,7 +24,7 @@ export function planDescriptionJobs(sources: DescriptionSource[], previous: Reco
   for (const source of sources) {
     const sourceHash = descriptionSourceHash(source);
     const old = previous[source.id];
-    const unchanged = old?.sourceHash === sourceHash;
+    const unchanged = matchesContentSourceHash(source, 'description', old?.sourceHash);
     const complete = hasChineseDescription(source.descriptionZh);
     const hold = matchingEditorialHold(source);
     const job: DescriptionJob = complete
@@ -34,7 +34,7 @@ export function planDescriptionJobs(sources: DescriptionSource[], previous: Reco
       : !hasContentEvidence(source)
         ? { sourceHash, status: 'missing-source', attempts: 0 }
         : unchanged && old.status === 'retry'
-          ? { ...old }
+          ? { ...old, sourceHash }
           : { sourceHash, status: 'pending', attempts: 0 };
     jobs[source.id] = job;
     const next = job.nextAttemptAt ? Date.parse(job.nextAttemptAt) : 0;

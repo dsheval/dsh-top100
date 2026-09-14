@@ -10,7 +10,7 @@ import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
 import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 import type { RankingEntry, RankingsDocument } from "./rankings.js";
 
-import { DESCRIPTION_POLICY_VERSION, contentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt } from "./content-source.js";
+import { DESCRIPTION_POLICY_VERSION, contentSourceHash, matchesContentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt } from "./content-source.js";
 export { DESCRIPTION_POLICY_VERSION } from "./content-source.js";
 export type EnrichmentKind = "description" | "categories";
 export type EnrichmentStatus = "pending" | "retry" | "missing-source" | "review-required" | "complete";
@@ -63,7 +63,7 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
     // Only discard text known to come from the old source. Independently supplied
     // Chinese and a matching editorial review may already describe the new source.
     const staleChinese = oldDescription?.policyVersion === DESCRIPTION_POLICY_VERSION
-      && oldDescription.sourceHash !== enrichmentSourceHash(entry, "description")
+      && !matchesContentSourceHash(entry, "description", oldDescription.sourceHash)
       && oldDescription.descriptionZh === entry.descriptionZh;
     const existingChinese = !staleChinese && hasChineseDescription(entry.descriptionZh);
     entry.descriptionZh = reviewZh ?? (existingChinese ? entry.descriptionZh : hold ? PENDING_DESCRIPTION_ZH
@@ -80,7 +80,7 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
       const sourceHash = enrichmentSourceHash(entry, kind);
       const policyVersion = kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION;
       const cached = old?.[kind];
-      const reusable = cached?.sourceHash === sourceHash && cached.policyVersion === policyVersion;
+      const reusable = !!cached && matchesContentSourceHash(entry, kind, cached.sourceHash) && cached.policyVersion === policyVersion;
       if (reusable && cached.status === "complete" && !hold && hasContentEvidence(entry)) {
         if (kind === "description" && !reviewZh && !existingChinese && hasChineseDescription(cached.descriptionZh)) {
           entry.descriptionZh = cached.descriptionZh!;
@@ -100,7 +100,7 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
           : !hasContentEvidence(entry)
           ? { sourceHash, policyVersion, status: "missing-source", attempts: 0 }
           : reusable && cached.status === "retry"
-            ? { ...cached }
+            ? { ...cached, sourceHash }
             : { sourceHash, policyVersion, status: "pending", attempts: 0 };
       jobs[kind] = job;
       const nextAttemptAt = job.nextAttemptAt ? Date.parse(job.nextAttemptAt) : 0;

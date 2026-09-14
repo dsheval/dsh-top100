@@ -1,4 +1,5 @@
 import { catalogSourceStatus, installSourceKey } from "../../plugin/src/shared/install-assessment.js";
+import { descriptionFor } from "../../plugin/src/shared/description-rules.js";
 import { describe, expect, it } from "vitest";
 import {
   buildSearchIndex,
@@ -8,6 +9,27 @@ import {
 import type { RankingsDocument } from "../src/rankings.js";
 
 describe("compact search index", () => {
+  it("preserves reviewed description identity without making a source installable", () => {
+    const entry = {
+      rank: 1, fullName: "acme/composition", name: "composition", type: "cordis-plugin",
+      description: "Desktop composition", readmeSummary: "App-managed composition bundle.",
+      descriptionZh: "中文简介待生成。", tags: [], categories: [],
+      install: { method: "pnpm-profile", packageName: "@acme/composition", repositoryPath: "packages/composition" },
+    } as RankingsDocument["rankings"]["total"][number];
+    const context = { snapshotId: "reviewed-snapshot" };
+    const reviews = { [entry.fullName]: {
+      sourceDescription: entry.description, sourceReadme: entry.readmeSummary!, sourceType: entry.type,
+      sourceInstall: { packageName: entry.install.packageName!, repositoryPath: entry.install.repositoryPath! },
+      descriptionZh: "为桌面应用组合所需服务，并保留可选的连接配置。", snapshotId: context.snapshotId,
+    } };
+    const compact = toSnapshotSearchEntry(entry);
+    expect(descriptionFor(compact, reviews, context)).toBe(descriptionFor(entry, reviews, context));
+    expect(compact).not.toHaveProperty("installTarget");
+    expect(resolveSearchInstallTarget(entry)).toBeNull();
+    expect(catalogSourceStatus(compact)).toBe("unidentified");
+    expect(descriptionFor({ ...compact, installPackageName: "other" }, reviews, context)).toBe("中文简介待生成。");
+    expect(descriptionFor(compact, reviews, { snapshotId: "changed" })).toBe("中文简介待生成。");
+  });
   it("publishes the project's own source instead of a prerequisite marketplace", () => {
     const entry = {
       fullName: "e2mcc/dsh-popout-sidebar",

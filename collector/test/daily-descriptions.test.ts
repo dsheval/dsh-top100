@@ -228,12 +228,11 @@ describe("daily description cache migration and identity", () => {
     expect(entry.descriptionZh).toBe(currentText);
   });
 
-  it.each(["description", "readme", "topics", "type", "package", "directory"])("does not retain copied Chinese after %s changes", field => {
+  it.each(["description", "readme", "type", "package", "directory"])("does not retain copied Chinese after %s changes", field => {
     const previous = source(1, { descriptionZh: older });
     const entry = structuredClone(previous);
     if (field === "description") entry.description += " A changed capability.";
     if (field === "readme") entry.readmeSummary += " A changed feature.";
-    if (field === "topics") entry.topics.push("new-topic");
     if (field === "type") entry.type = "skill";
     if (field === "package") entry.install.packageName = "different-package";
     if (field === "directory") entry.install.repositoryPath = "packages/another";
@@ -241,6 +240,51 @@ describe("daily description cache migration and identity", () => {
     expect(entry.descriptionZh).not.toBe(older);
     expect(plan.jobs[entry.id].status).not.toBe("complete");
     expect(plan.jobs[entry.id].sourceHash).not.toBe(descriptionSourceHash(previous));
+  });
+
+  it.each(["name", "topics"])("retains Chinese and completed jobs when only %s changes", field => {
+    const previous = source(1, { descriptionZh: older });
+    const entry = source();
+    if (field === "name") entry.name = "A new display name";
+    else entry.topics = ["new-discovery-topic"];
+    const plan = prepare([entry], [previous], cached(previous));
+    expect(entry.descriptionZh).toBe(older);
+    expect(plan.ready).toHaveLength(0);
+    expect(plan.jobs[entry.id].sourceHash).toBe(descriptionSourceHash(previous));
+  });
+
+  it("migrates a pre-fix cache using the full previous source without sending work", () => {
+    const previous = source();
+    const entry = source(1, { name: "Renamed", topics: ["changed-topic"] });
+    // Recorded from the old hash format for source(), before names/topics were excluded.
+    const legacyHash = "4e6c4ba549ca3bed10686a34b85ad9501e20545d0adcc1a4c18935c3c5a90af0";
+    const cache = new Map([[entry.id, { descriptionZh: older, tagsZh: [], sourceHash: legacyHash }]]);
+    const jobs = { [entry.id]: { sourceHash: legacyHash, status: "complete" as const, attempts: 1, descriptionZh: older } };
+    const plan = prepare([entry], [previous], cache, jobs);
+    expect(entry.descriptionZh).toBe(older);
+    expect(plan.ready).toHaveLength(0);
+    expect(plan.jobs[entry.id]).toMatchObject({ sourceHash: descriptionSourceHash(entry), attempts: 1 });
+    expect(jobs[entry.id].sourceHash).toBe(legacyHash);
+    const changed = source(1, { description: "An entirely different capability." });
+    expect(prepare([changed], [previous], cache, jobs).ready).toHaveLength(1);
+    expect(changed.descriptionZh).not.toBe(older);
+  });
+
+  it("retains legacy retry backoff when migrating the hash format", () => {
+    const entry = source();
+    const jobs = { [entry.id]: { sourceHash: "4e6c4ba549ca3bed10686a34b85ad9501e20545d0adcc1a4c18935c3c5a90af0",
+      status: "retry" as const, attempts: 2, nextAttemptAt: new Date(now + day).toISOString() } };
+    const plan = prepare([entry], [], new Map(), jobs);
+    expect(plan.ready).toHaveLength(0);
+    expect(plan.jobs[entry.id]).toMatchObject({ sourceHash: descriptionSourceHash(entry), attempts: 2, nextAttemptAt: jobs[entry.id].nextAttemptAt });
+  });
+
+  it("does not generate from a package name or retain a cleaned navigation notice", () => {
+    const named = source(1, { description: "research-1", readmeSummary: null });
+    expect(prepare([named]).jobs[named.id].status).toBe("missing-source");
+    const notice = source(2, { descriptionZh: "--- > 🚨 【国内用户核心前置：必须开启系统代理 / TUN 模式！" });
+    expect(prepare([notice]).jobs[notice.id].status).toBe("pending");
+    expect(notice.descriptionZh).toBe("中文简介待生成。");
   });
 
   it("never reuses legacy cache just because its README is identical", () => {
