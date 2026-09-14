@@ -43,6 +43,11 @@ describe("authorized daily source changes", () => {
       expect(bindDailySourceJob(entry, previous(), undefined, {})).toBe(false);
     }
   });
+  it("does not reset the retry allowance when category metadata changes", () => {
+    const entry = { ...source(), topics: ["updated-topic"] };
+    const marker = { dailySourceHash: contentSourceHash(entry, "description"), attempts: 2 };
+    expect(bindDailySourceJob(entry, previous(), marker, { attempts: 0 })).toBe(false);
+  });
   it("fails closed without a full previous catalog or with a stale eligibility marker", () => {
     const entry = source();
     expect(bindDailySourceJob(entry, new Map(), undefined, {})).toBe(false);

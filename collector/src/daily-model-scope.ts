@@ -22,6 +22,10 @@ export function bindDailySourceJob(entry: ContentSource, previousSources: Readon
   const hash = contentSourceHash(entry, "description");
   const changed = !previous || contentSourceHash(previous, "description") !== hash;
   if (!changed && previousJob?.dailySourceHash !== hash) return false;
+  if (previousJob?.dailySourceHash === hash) {
+    job.attempts = Math.max(job.attempts ?? 0, previousJob.attempts ?? 0);
+    if (job.attempts >= 2) return false;
+  }
   job.dailySourceHash = hash;
   return true;
 }
