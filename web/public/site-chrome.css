@@ -267,19 +267,19 @@
   font-size: 12px;
 }
 :is(main#main-content, main#top, main) #ranking-search-clear {
-  min-width: 64px;
+  min-width: 44px;
   min-height: 44px;
-  padding-inline: 12px;
-  border: 1px solid var(--site-control-line);
+  padding-inline: 8px;
+  border: 0;
   color: var(--site-control-accent);
-  background: var(--site-control-soft);
+  background: transparent;
   font-size: 15px;
   font-weight: 700;
 }
 :is(main#main-content, main#top, main) #ranking-search-clear:hover {
-  color: #fff;
-  background: var(--site-control-accent);
-  border-color: var(--site-control-accent);
+  color: var(--site-control-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 :is(main#main-content, main#top, main) :is(.release-badge, .trust-pill, .type-pill, .skill-kind, .result-report-status, .verification-current-marker, .research-task-status, .dossier-head > span:last-child) {
   box-sizing: border-box;

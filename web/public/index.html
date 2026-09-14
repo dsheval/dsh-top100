@@ -702,7 +702,10 @@
       }
 
       .search-sort > span {
+        display: inline-flex;
+        align-items: center;
         margin-right: 3px;
+        color: var(--accent);
         white-space: nowrap;
       }
 
@@ -3049,7 +3052,7 @@
     <link rel="stylesheet" href="./ranking-method.css" />
     <link rel="stylesheet" href="./ranking-rows.css" />
     <link rel="stylesheet" href="./site-controls.css?v=20260908-section-nav2" />
-    <link rel="stylesheet" href="./site-chrome.css?v=20260914-search-controls" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260914-search-controls2" />
   </head>
   <body>
     <header class="dsh-site-header dsh-nav-emphasis">
@@ -3243,7 +3246,7 @@
               <div class="search-status-row">
                 <p class="search-result" id="ranking-search-result" data-site-copy="note">等待插件数据</p>
                 <div class="search-sort" id="ranking-search-sort" role="group" aria-label="搜索结果排序" hidden>
-                  <span>排序</span>
+                  <span title="排序" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v16m-4-4 4 4 4-4M17 20V4m-4 4 4-4 4 4" /></svg></span>
                   <button type="button" data-search-sort="relevance" aria-pressed="true">相关度</button>
                   <button type="button" data-search-sort="rank" aria-pressed="false">Stars 总榜顺序</button>
                 </div>
