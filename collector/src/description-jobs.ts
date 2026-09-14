@@ -3,6 +3,7 @@ import { isGenericDescriptionZh } from './llm.js';
 
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
 export interface DescriptionJob {
+  dailySourceHash?: string;
   sourceHash: string;
   status: 'pending' | 'retry' | 'missing-source' | 'review-required' | 'complete';
   reviewReason?: string;

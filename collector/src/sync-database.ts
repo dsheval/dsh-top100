@@ -1,4 +1,5 @@
-import { modelRequestsEnabled } from "./model-requests.js";
+import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
+import { bindDailySourceJob } from "./daily-model-scope.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
 /** Import collector JSON into SQLite and publish atomic frontend snapshots. */
 
@@ -8,7 +9,7 @@ import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { DshPlugin, MarketData } from "@dsh-top100/schema";
-import { fallbackDescriptionZh } from "./llm.js";
+import { fallbackDescriptionZh, buildClassificationRequest } from "./llm.js";
 import {
   carryForwardDailyCategories, dailyCategoryWorker, planDailyCategories, runDailyCategories,
   type DailyCategoryState,
@@ -77,6 +78,8 @@ async function classifyRepositories(
   ]));
   carryForwardDailyCategories(market.plugins, previousSources);
   const plan = planDailyCategories(market.plugins, { previous, priority });
+  const dailyScope = dailySourceChangesOnly();
+  if (dailyScope) plan.ready = plan.ready.filter(task => bindDailySourceJob(task.entry, previousSources, previous?.jobs[task.fullName], task.job));
   const apiKey = process.env.DEEPSEEK_API_KEY;
   const model = process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL;
   const baseURL = process.env.DEEPSEEK_API_BASE ?? "https://api.deepseek.com";
@@ -85,8 +88,12 @@ async function classifyRepositories(
     throw new Error("DEEPSEEK_CATEGORY_BATCH_SIZE must be an integer from 0 to 2000");
   }
   atomicJson(statePath, plan.state);
+  const worker = dailyCategoryWorker({ apiKey: apiKey ?? "", baseURL, model });
   const result = await runDailyCategories(plan, {
-    worker: dailyCategoryWorker({ apiKey: apiKey ?? "", baseURL, model }),
+    worker: entry => dailyScope ? withDailyModelRequest(buildClassificationRequest({
+      name: entry.fullName, type: entry.type, packageName: entry.install?.packageName, repositoryPath: entry.install?.repositoryPath,
+      description: entry.description ?? "", readmeSummary: entry.readmeSummary ?? null, topics: entry.topics ?? [],
+    }, model), () => worker(entry)) : worker(entry),
     model, limit: modelRequestsEnabled() && apiKey ? batchSize : 0, concurrency: DEFAULT_MODEL_CONCURRENCY,
     onProgress: () => atomicJson(statePath, plan.state),
   });

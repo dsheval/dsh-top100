@@ -21,7 +21,15 @@ Usage settlement records cache hits, misses, output tokens, model, and the origi
 
 The same exact request can be reserved at most twice across batches, and only after an explicitly usage-accounted retryable failure. A successful or unknown request cannot be replayed by changing output directories or batch IDs. Reusing a batch ID with different request scope, limits or prices is rejected. Price or model changes do not invalidate content caches or enqueue the full catalog.
 
-## Trial workflow
+## Daily source-change processing
+
+A separately approved private configuration may set `scope: "daily-source-changes"` with the same required schema, model, monetary limits and current prices. Its base `approvedRequestHashes` contains a SHA256 policy marker; this marker does not authorize a provider request. For each eligible daily task, the transport binds the exact request body inside an asynchronous scope and derives a unique request batch. All such batches still use the existing shared project ledger.
+
+Only new entries or changed source facts compared with the previous complete catalog can gain a persistent daily eligibility marker. Existing planners must first accept their evidence and check fixed reviews, withdrawals, valid results and retry backoff. Metadata such as stars, display names and discovery topics does not grant eligibility. A changed package name, selected path or entry type requires review. Missing baselines fail closed. Deferred eligible tasks retain their marker; each source has at most two job attempts. Unchanged backlog stays excluded even if derived caches are cleared.
+
+This mode scopes daily descriptions and categories only. Manual enrichment, trials, global tag normalization and bundle descriptions cannot use the daily authorization. Existing valid results are reused. No full catalog catch-up runs on activation. Price approval still expires within seven days; review current official prices before replacing the private configuration, without resetting the ledger.
+
+## Fixed trial workflow
 
 Prepare and review a frozen plan first. Each of up to 30 projects has one request containing only its selected package identity and source facts. The approved config must match exactly the plan's batch ID and request hashes, plus `approvedPlanHash` binding project names, task kinds, request hashes and bounds in order. Changing a result label cannot silently attach a request to another project. Existing completed/fixed content is not part of the trial.
 

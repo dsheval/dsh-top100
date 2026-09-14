@@ -1,9 +1,10 @@
 import { reviewedReadmeSource, summarizeSelectedReadme } from "./reviewed-summary.js";
 import { reviewedFunctionEvidence, checkReviewedFunctionEvidence } from "./reviewed-evidence.js";
 import { applyFunctionEvidenceCheck } from "./reviewed-evidence-state.js";
-import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
+import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS } from "./model-defaults.js";
 import { refreshCachedInstallEvidence } from "./install-cache.js";
-import { modelRequestsEnabled } from "./model-requests.js";
+import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
+import { bindDailySourceJob } from "./daily-model-scope.js";
 /**
  * collector 主流程（v2：并发 + 缓存）
  * 扫描 → 去重合并 → 特征检测 → 元数据+README → 实用五维评分 → 输出 data/plugins.json
@@ -41,6 +42,7 @@ import {
   fallbackDescriptionZh,
   isGenericDescriptionZh,
   translateWithDeepSeek,
+  buildTranslationRequest,
 } from "./llm.js";
 import { INSTALL_PARSER_VERSION, parseInstallCommands } from "./install-parse.js";
 import { normalizeTags } from "./tag-normalize.js";
@@ -631,7 +633,11 @@ async function main() {
   } catch { /* first publication has no growth history */ }
   const now = Date.now();
   carryForwardDailyCategories(detected.map(d => d.plugin), prevPlugins);
-  const { jobs, ready } = prepareDailyDescriptions(detected.map(d => d.plugin), prevPlugins, zhCache, previousJobs, priority, now);
+  const descriptionPlan = prepareDailyDescriptions(detected.map(d => d.plugin), prevPlugins, zhCache, previousJobs, priority, now);
+  const { jobs } = descriptionPlan;
+  const dailyScope = dailySourceChangesOnly();
+  const ready = dailyScope ? descriptionPlan.ready.filter(p => bindDailySourceJob(p, prevPlugins, previousJobs[p.id], jobs[p.id])) : descriptionPlan.ready;
+  if (dailyScope) console.log(`  日常付费范围：${ready.length} 个新增或资料变化任务；其余存量不进入付费队列`);
   const saveDescriptionJobs = () => {
     mkdirSync(DATA_DIR, { recursive: true });
     const temporary = `${jobsPath}.${process.pid}.tmp`;
@@ -651,9 +657,13 @@ async function main() {
   const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);
   const summaryResult = await runDailyDescriptions(detected.map(d => d.plugin), { jobs, ready }, {
     limit: modelsEnabled ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
-    worker: p => translateWithDeepSeek({ name: p.fullName, type: p.type, packageName: p.install?.packageName, repositoryPath: p.install?.repositoryPath,
-      description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags },
-      { apiKey: apiKey!, baseURL, model, maxAttempts: 1, retryDelayMs: 0, timeoutMs: 45_000, thinking: "disabled" }),
+    worker: p => {
+      const input = { name: p.fullName, type: p.type, packageName: p.install?.packageName, repositoryPath: p.install?.repositoryPath,
+        description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags };
+      const run = () => translateWithDeepSeek(input,
+        { apiKey: apiKey!, baseURL, model, maxTokens: DEFAULT_MODEL_MAX_TOKENS, maxAttempts: 1, retryDelayMs: 0, timeoutMs: 45_000, thinking: "disabled" });
+      return dailyScope ? withDailyModelRequest(buildTranslationRequest(input, model), run) : run();
+    },
   });
   updateDailyDescriptionCache(detected.map(d => d.plugin), zhCache);
   saveZhCache(zhCache);
@@ -661,7 +671,7 @@ async function main() {
   console.log(`  summaries: ${summaryResult.attempted} attempted, ${ready.length - summaryResult.attempted} deferred; retry state saved`);
 
   console.log("[3.6/5] 标签归一化（合并同义词 + 移除宽泛标签）...");
-  if (modelsEnabled) {
+  if (modelsEnabled && !dailyScope) {
     // 读取历史 alias（持久化复用，避免 LLM 输出波动导致合并丢失）
     let prevAlias: Record<string, string> = {};
     try {
@@ -699,7 +709,7 @@ async function main() {
       "utf-8"
     );
   } else {
-    console.log("  跳过（模型请求已暂停或未配置 API key）");
+    console.log("  跳过（模型请求已暂停、未配置 API key，或日常付费范围不包含全库标签归一化）");
   }
 
   console.log("[3.7/5] 整合包收集...");

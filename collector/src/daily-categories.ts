@@ -18,6 +18,7 @@ export interface DailyCategoryInput extends ContentSource {
   categories?: PluginCategoryAssignment[];
 }
 export interface DailyCategoryJob {
+  dailySourceHash?: string;
   sourceHash: string;
   policyVersion: number;
   status: "pending" | "retry" | "missing-source" | "review-required" | "complete";

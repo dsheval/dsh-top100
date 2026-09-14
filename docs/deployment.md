@@ -8,9 +8,9 @@
 - A GitHub token with public repository metadata and contents read access.
 - Model credentials are not needed while paid enrichment remains paused.
 
-Model enrichment is paused in 1.3.4 until shared monetary budget protection is implemented and verified. GitHub collection, local ranking calculations and valid existing content reuse continue without model requests. Do not restore paid generation merely by providing an API key or increasing request limits.
+Model enrichment is disabled by default. GitHub collection, local ranking calculations and valid existing content reuse continue without model requests. Enabling paid work requires an explicitly approved private scope and current price/budget configuration; a key or request-count limit alone is insufficient. See [model budget](model-budget.md) for fixed trials and daily source-change processing.
 
-Request defaults use `deepseek-flash` (V4.1 Flash, released 2026-09-10 and verified against the [official change log](https://api-docs.deepseek.com/updates/) on 2026-09-11), disabled thinking, 256 output tokens and three workers. Restoring requests requires a separate review of the actual model, price and approved scope. These defaults and the hard pause do not implement monetary budget accounting.
+Requests use `deepseek-flash`, explicit disabled thinking, at most 256 output tokens and three concurrent requests. The shared persistent ledger enforces CNY 5/day and CNY 50/month, including in-flight reservations and retries. Keep its runtime mount across deployments; expired prices pause paid work. Leave `RUN_COLLECT_ON_STARTUP=false` so a service restart does not trigger collection.
 
 ## CI checks
 
@@ -25,6 +25,7 @@ five-minute timeout and one retry. Docker builds do not repeat this audit;
 manual releases must also have a successful audit for the target commit.
 
 Typechecks, all tests, runtime publication and Compose validation are retained.
+`npm run plugin:pack:check` also builds the actual npm tarball and verifies its entry points, types, skills and reviewed descriptions.
 Both web and scheduler images are built using separate GitHub Actions cache
 scopes, loaded locally on the runner and never pushed. No path-based skipping
 is enabled in this first optimization pass.

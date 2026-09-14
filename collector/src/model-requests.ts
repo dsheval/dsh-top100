@@ -1,5 +1,6 @@
 /** Every real model request shares one persistent, scope-bound budget. */
 import { createHash } from "node:crypto";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { constants, closeSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +19,25 @@ export interface ApprovedModelBudget extends BudgetConfig {
   schemaVersion: 1;
   approval: "approved";
   protectionVersion: "model-budget-v1";
+  /** Explicit standing authorization; callers still bind each eligible daily request. */
+  scope?: "daily-source-changes";
+}
+const dailyRequest = new AsyncLocalStorage<string>();
+
+export function withDailyModelRequest<T>(body: unknown, operation: () => T): T {
+  const { requestHash } = inspectModelRequest("https://api.deepseek.com/chat/completions", { method: "POST", body: JSON.stringify(body) });
+  return dailyRequest.run(requestHash, operation);
+}
+
+/** Keep daily authorization out of auxiliary tasks and manual bulk entry points. */
+export function bindModelBudget(config: ApprovedModelBudget, requestHash: string, dailyHash?: string): ApprovedModelBudget {
+  if (config.scope !== "daily-source-changes") return config;
+  if (requestHash !== dailyHash) throw new Error("daily-model-request-outside-scope");
+  return { ...config, batchId: `daily-${requestHash}`, approvedRequestHashes: [requestHash], approvedPlanHash: requestHash };
+}
+
+export function dailySourceChangesOnly(): boolean {
+  try { return loadApprovedModelBudget().scope === "daily-source-changes"; } catch { return false; }
 }
 function outsideRepository(path: string): boolean {
   const part = relative(realpathSync(projectRoot), realpathSync(path));
@@ -37,6 +57,7 @@ export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
     if (opened.ino !== stat.ino || opened.dev !== stat.dev || opened.size > 200_000) throw new Error();
     const config = JSON.parse(readFileSync(fd, "utf8")) as ApprovedModelBudget;
     if (config.schemaVersion !== 1 || config.approval !== "approved" || config.protectionVersion !== "model-budget-v1") throw new Error();
+    if (config.scope !== undefined && config.scope !== "daily-source-changes") throw new Error();
     validateBudgetConfig(config, now);
     validateBudgetConfig(config, now + 45_000);
     return config;
@@ -51,7 +72,7 @@ function offlineTransport(control: ModelRequestControl): typeof fetch | undefine
   return process.env.NODE_ENV === "test" && control.requestMode === "offline-test" ? control.offlineTransport : undefined;
 }
 export function canRequestModel(control: ModelRequestControl = {}): boolean {
-  return !!offlineTransport(control) || modelRequestsEnabled();
+  return !!offlineTransport(control) || modelRequestsEnabled() && (!dailySourceChangesOnly() || !!dailyRequest.getStore());
 }
 export function inspectModelRequest(url: string, init: RequestInit) {
   if (url !== "https://api.deepseek.com/chat/completions" || init.method !== "POST" || typeof init.body !== "string") throw new Error("model-request-not-approved");
@@ -116,7 +137,7 @@ export async function requestModel(control: ModelRequestControl, url: string, in
   const offline = offlineTransport(control);
   if (offline) return offline(url, init);
   if (!modelRequestsEnabled()) throw new Error(MODEL_REQUESTS_PAUSED);
-  const config = loadApprovedModelBudget();
+  const config = bindModelBudget(loadApprovedModelBudget(), inspectModelRequest(url, init).requestHash, dailyRequest.getStore());
   const authorization = new Headers(init.headers).get("Authorization");
   if (authorization !== `Bearer ${process.env.DEEPSEEK_API_KEY!.trim()}`) throw new Error("model-credential-not-approved");
   const ledger = new BudgetLedger(MODEL_LEDGER_PATH, config);
