@@ -26,6 +26,20 @@ function configure() {
 }
 afterEach(() => { vi.restoreAllMocks();vi.unstubAllEnvs();for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 describe("daily requests share the existing money guard", () => {
+  it("blocks a scoped classification request during scheduler startup before transport", async () => {
+    configure();vi.stubEnv("DSH_DAILY_UPDATE", "0");
+    const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network"));
+    const classification = buildClassificationRequest(input, "deepseek-flash");
+    expect(modelRequestsEnabled()).toBe(false);
+    expect(withDailyModelRequest(classification, () => canRequestModel())).toBe(false);
+    await expect(withDailyModelRequest(classification, () => requestModel({}, "https://api.deepseek.com/chat/completions", {
+      method: "POST", body: JSON.stringify(classification),
+    }))).rejects.toThrow("Model requests are paused");
+    expect(fetch).not.toHaveBeenCalled();
+    vi.stubEnv("DSH_DAILY_UPDATE", "1");
+    expect(modelRequestsEnabled()).toBe(true);
+    expect(withDailyModelRequest(classification, () => canRequestModel())).toBe(true);
+  });
   it("requires explicit board policy and a scheduled run; startup and auxiliary work stay blocked", () => {
     const { dir, config } = configure();
     vi.stubEnv("DSH_DAILY_UPDATE", "1"); expect(isDailyBoardRun()).toBe(false);

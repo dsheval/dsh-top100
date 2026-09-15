@@ -80,7 +80,12 @@ export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
 }
 export function modelRequestsEnabled(): boolean {
   if (process.env.DSH_MODEL_REQUESTS_ENABLED !== "1" || !process.env.DEEPSEEK_API_KEY?.trim()) return false;
-  try { loadApprovedModelBudget(); return true; } catch { return false; }
+  try {
+    const config = loadApprovedModelBudget();
+    // Scheduler startup explicitly uses 0: block every paid entry point before
+    // it can reserve budget, including newly eligible classification jobs.
+    return config.scope !== "daily-source-changes" || process.env.DSH_DAILY_UPDATE !== "0";
+  } catch { return false; }
 }
 function offlineTransport(control: ModelRequestControl): typeof fetch | undefined {
   return process.env.NODE_ENV === "test" && control.requestMode === "offline-test" ? control.offlineTransport : undefined;
