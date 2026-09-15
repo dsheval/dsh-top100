@@ -1,9 +1,10 @@
+import { selectedReadmeEvidence } from "./readme-evidence.js";
 import { reviewedReadmeSource, summarizeSelectedReadme } from "./reviewed-summary.js";
 import { reviewedFunctionEvidence, checkReviewedFunctionEvidence } from "./reviewed-evidence.js";
 import { applyFunctionEvidenceCheck } from "./reviewed-evidence-state.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS } from "./model-defaults.js";
 import { refreshCachedInstallEvidence } from "./install-cache.js";
-import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
+import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest, isDailyBoardRun } from "./model-requests.js";
 import { bindDailySourceJob } from "./daily-model-scope.js";
 /**
  * collector 主流程（v2：并发 + 缓存）
@@ -56,6 +57,8 @@ interface DetectCache {
   checkedAt: string;
   installParserVersion?: number;
   sourceDocumentVersion?: number;
+  hostDetectionVersion?: number;
+  readmeEvidence?: import("@dsh-top100/schema").ReadmeEvidence;
   pushedAt: string;
   detection: Detection;
   isCordis: boolean;
@@ -275,8 +278,11 @@ async function main() {
       let readmeContent: string | null;
       let subdir: string | null = null;
       let checkedAt = new Date().toISOString();
+      const readmeProof = () => readmeContent !== null && readmeSummary !== null && !hasSkillMd
+        ? selectedReadmeEvidence(repo!.full_name, detection.packageName, detection.pluginPath, repo!.pushed_at, readmeContent, readmeSummary)
+        : cachedDetect?.readmeEvidence;
 
-      if (cachedDetect && matchesReviewedTarget(cachedDetect.detection, reviewedTarget)
+      if (cachedDetect && (cachedDetect.detection.kind !== "host" || cachedDetect.hostDetectionVersion === 1) && matchesReviewedTarget(cachedDetect.detection, reviewedTarget)
         && canReuseDetectionCache(cachedDetect, repo.pushed_at, INSTALL_PARSER_VERSION)) {
         checkedAt = cachedDetect.checkedAt;
         // 命中：仓库未变化，直接复用检测产物（零网络调用）
@@ -335,7 +341,7 @@ async function main() {
           schemaVersion: DISCOVERY_POLICY_VERSION,
           checkedAt,
           installParserVersion: INSTALL_PARSER_VERSION,
-          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION,
+          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, hostDetectionVersion: 1, readmeEvidence: readmeProof(),
           pushedAt: repo.pushed_at,
           detection,
           isCordis,
@@ -363,7 +369,7 @@ async function main() {
           readmeSummary = normalized;
           cacheSet<DetectCache>("detect", candidate.fullName, {
             schemaVersion: DISCOVERY_POLICY_VERSION, checkedAt, installParserVersion: INSTALL_PARSER_VERSION,
-            sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, pushedAt: repo.pushed_at,
+            sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, hostDetectionVersion: 1, readmeEvidence: readmeProof(), pushedAt: repo.pushed_at,
             detection, isCordis, needsConfig, readmeSummary, installParsed, hasSkillMd, subdir,
           });
         }
@@ -380,7 +386,7 @@ async function main() {
         installParsed = refreshedInstall.installParsed;
         cacheSet<DetectCache>("detect", candidate.fullName, {
           schemaVersion: DISCOVERY_POLICY_VERSION, checkedAt, installParserVersion: INSTALL_PARSER_VERSION,
-          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, pushedAt: repo.pushed_at,
+          sourceDocumentVersion: SOURCE_DOCUMENT_CACHE_VERSION, hostDetectionVersion: 1, readmeEvidence: readmeProof(), pushedAt: repo.pushed_at,
           detection, isCordis, needsConfig, readmeSummary, installParsed, hasSkillMd, subdir,
         });
       }
@@ -421,6 +427,7 @@ async function main() {
             checkedAt,
             policyVersion: DISCOVERY_POLICY_VERSION,
             sourceRevision: repo.pushed_at,
+            ...(readmeProof() ? { readme: readmeProof() } : {}),
           },
           target: detection.type === "skill" ? "~/.agents/skills" : undefined,
           repositoryPath: detection.pluginPath ?? undefined,
@@ -656,7 +663,7 @@ async function main() {
   if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
   const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);
   const summaryResult = await runDailyDescriptions(detected.map(d => d.plugin), { jobs, ready }, {
-    limit: modelsEnabled ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
+    limit: modelsEnabled && !isDailyBoardRun() ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
     worker: p => {
       const input = { name: p.fullName, type: p.type, packageName: p.install?.packageName, repositoryPath: p.install?.repositoryPath,
         description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags };
@@ -669,6 +676,7 @@ async function main() {
   saveZhCache(zhCache);
   saveDescriptionJobs();
   console.log(`  summaries: ${summaryResult.attempted} attempted, ${ready.length - summaryResult.attempted} deferred; retry state saved`);
+  if (isDailyBoardRun()) console.log("  中文生成移至当天榜单计算之后，先处理热榜和涨榜前 100，再处理其他日常任务");
 
   console.log("[3.6/5] 标签归一化（合并同义词 + 移除宽泛标签）...");
   if (modelsEnabled && !dailyScope) {

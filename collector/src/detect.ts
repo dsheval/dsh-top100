@@ -433,6 +433,11 @@ function packageKind(pkg: Record<string, unknown>, marker = false): DiscoveryKin
   const deps = { ...record(pkg.dependencies), ...record(pkg.peerDependencies) };
   const allDeps = { ...deps, ...record(pkg.devDependencies) };
   if (pkg.bin || allDeps.electron || allDeps["@tauri-apps/api"] || allDeps["@tauri-apps/cli"]) return null;
+  // SDK consumers can depend on attachment/session libraries without being a
+  // mountable plugin. Require an explicit declaration/marker or Cordis peer.
+  const sdkConsumer = Object.keys(deps).some(name => /^@deepseek-ai\/dsh-sdk(?:-|$)/.test(name));
+  const cordisDependency = Object.keys(deps).some(name => /^(?:cordis|@cordisjs\/[^/]+|@deepseek-ai\/cordis)$/.test(name));
+  if (sdkConsumer && !marker && !cordisDependency) return null;
   const ecosystem = Object.keys(deps).some((name) =>
     /^(?:cordis|@cordisjs\/[^/]+|@deepseek-ai\/(?:cordis|dsh-[a-z0-9-]+)|dsh-base)$/.test(name));
   if (hasEntry && (marker || ecosystem)) return marker ? "bundle" : "host";

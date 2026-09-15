@@ -29,6 +29,16 @@ Only new entries or changed source facts compared with the previous complete cat
 
 This mode scopes daily descriptions and categories only. Manual enrichment, trials, global tag normalization and bundle descriptions cannot use the daily authorization. Existing valid results are reused. No full catalog catch-up runs on activation. Price approval still expires within seven days; review current official prices before replacing the private configuration, without resetting the ledger.
 
+## Optional coverage for the two daily Top100 lists
+
+After explicit authorization, a daily policy can additionally set `boardDescriptions: "hot-rising-top100"`. The scheduler marks scheduled collection with `DSH_DAILY_UPDATE=1`; its startup `db:sync` is explicitly marked `0`. The opt-in does not enable manual enrichment, classification of unchanged backlog, or global tag processing.
+
+With this option, collection preserves/plans descriptions but defers paid work to the publication step. That step computes **today’s** hot and rising lists against existing Stars history without importing early. It deduplicates the first 100 of each list and processes eligible missing descriptions before other source-change descriptions and categories. A reliable unchanged board source may be filled; unchanged sources outside the two lists cannot use this exception. Valid Chinese and completed same-source jobs are reused. Selected identity changes, fixed holds, insufficient functional evidence, unverified discovery, retry backoff and the two-attempt ceiling still block work. This step uses existing collected evidence; it does not certify missing package/source evidence or fetch arbitrary extra README content.
+
+All requests use the existing Flash/non-thinking limits and persistent shared budget. The summary request cap also covers the board work; a 200-entry union does not authorize spending beyond the configured budget. No budget ledger is copied, reset or replaced on activation.
+
+Before every publication, `board-description-report.json` in collector data records the actual displayed Chinese coverage, missing names/ranks and reasons. Missing results do **not** suppress new rankings. Ranked/detail/search records carry an optional `descriptionStatus` for UI display, kept separate from `descriptionZh` so status text cannot count as a completed summary. Previously released clients may still show the old generic placeholder until upgraded.
+
 ## Fixed trial workflow
 
 Prepare and review a frozen plan first. Each of up to 30 projects has one request containing only its selected package identity and source facts. The approved config must match exactly the plan's batch ID and request hashes, plus `approvedPlanHash` binding project names, task kinds, request hashes and bounds in order. Changing a result label cannot silently attach a request to another project. Existing completed/fixed content is not part of the trial.
@@ -48,3 +58,11 @@ The trial runs sequentially, without automatic retry, and stops on uncertain bil
 The current implementation has offline tests for transport and cross-process accounting. A successful mock run is not evidence of a real API response or provider-side billing reconciliation. Provider price/alias changes still require a fresh review; `deepseek-flash` is a provider alias, not an immutable model-weight identifier.
 
 Sources: [official release](https://api-docs.deepseek.com/updates/), [CNY pricing](https://api-docs.deepseek.com/zh-cn/quick_start/pricing/).
+
+### 两榜生成前的来源复核
+
+开启两榜日常开关后，先按当天预计算的热榜、涨榜各前 100 去重，定向复核中文缺口、历史待复核条目与缺少来源绑定的子包。每轮最多检查 200 个项目、并发 3；不在启动同步中触发。仓库不再公开或不再符合收录条件时移出当前来源，并在总检查上限内继续检查新入榜项目。
+
+复核读取一个固定提交上的所选包清单、README 和已配置的功能证据文件，不执行第三方代码，不调用模型，也不自动从根 README 推断子包能力。读取失败保留历史证据和已有有效中文；确认所选包无效时撤回该对象的内容与安装声明，留下身份待纠正原因。结果写入 `board-source-report.json`，随后才进入中文优先队列与共用金额预算。
+
+所选 README 的包身份、路径、来源版本和摘要指纹被保存，不再要求摘要必须重复完整包名。源文档没变化时，已证明来自子包的简介不会仅因根仓库营销文字变化而重复生成。SDK 消费端的依赖不足以证明可挂载插件身份；已知 SDK 库需显式插件声明、标记或 Cordis 依赖证据。固定复核源码发生变化仍暂停原结果，只有定向复核后才更新证据，不能自动改写哈希放行。

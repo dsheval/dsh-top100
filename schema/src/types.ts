@@ -60,7 +60,17 @@ export interface PracticalScore {
   explanation: string;
 }
 
+export interface ReadmeEvidence {
+  fullName: string;
+  packageName: string | null;
+  path: string;
+  sourceRevision: string;
+  documentSha256: string;
+  summarySha256: string;
+}
+
 export interface DiscoveryEvidence {
+  readme?: ReadmeEvidence;
   status: "verified" | "review-required";
   kind: "bundle" | "client" | "host" | "skill";
   evidence: string[];
@@ -229,6 +239,7 @@ export interface RankingSummaryEntry {
   name: string;
   description: string;
   descriptionZh?: string;
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   /** README-derived excerpt, loaded only with a ranked page rather than the search index. */
   readmeSummary?: string;
   stars: number;
@@ -255,6 +266,7 @@ export interface RankingSearchEntry {
   name: string;
   description: string;
   descriptionZh?: string;
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   stars: number;
   tags: string[];
   categories: PluginCategoryId[];

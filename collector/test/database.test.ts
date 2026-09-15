@@ -58,6 +58,28 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
+  it("previews today's entrants against real history without changing SQLite and matches the published ranking", () => {
+    const directory = mkdtempSync(join(tmpdir(), "dsh-board-preview-"));
+    temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, "market.sqlite") });
+    try {
+      const old = Array.from({ length: 110 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index));
+      importMarketData(database, market(old), { snapshotDate: "2026-08-20" });
+      const today = structuredClone(old);
+      today[109].stars += 500;
+      today.push(plugin('fixture/new', 10));
+      const config = resolve('../config/ranking.json'), options = { now: new Date('2026-08-21T00:00:00Z') };
+      const before = database.prepare('SELECT * FROM repository_daily_stats').all();
+      const preview = buildRankings(database, '2026-08-21', config, { ...options, sources: today });
+      expect(preview.rankings.rising[0].fullName).toBe('fixture/plugin-109');
+      expect(database.prepare('SELECT * FROM repository_daily_stats').all()).toEqual(before);
+      expect(readActiveRepositories(database)).toHaveLength(110);
+      importMarketData(database, market(today), { snapshotDate: '2026-08-21' });
+      const published = buildRankings(database, '2026-08-21', config, options);
+      expect(preview.rankings).toEqual(published.rankings);
+      expect(preview.directories).toEqual(published.directories);
+    } finally { database.close(); }
+  });
   it("keeps our editorial project out of positions, category counts and score normalization while filling Top100", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-self-exclusion-"));
     temporaryDirectories.push(directory);
@@ -83,12 +105,12 @@ describe("SQLite history and rankings", () => {
     } finally { database.close(); control.close(); }
   });
 
-  it("excludes reviewed empty skeletons before scoring and fills both Top100 lists without deleting history", () => {
+  it("excludes reviewed empty skeletons and SDK applications before scoring and fills both Top100 lists without deleting history", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-exclusions-"));
     temporaryDirectories.push(directory);
     const database = openDatabase({ path: join(directory, "market.sqlite") });
     try {
-      const sources = [plugin("Zuorn/Tydora", 999999), ...Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index)), plugin("fixture/skill", 1000, "skill")];
+      const sources = [plugin("Zuorn/Tydora", 999999), plugin("eleckoi/ElecKoi", 888888), ...Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index)), plugin("fixture/skill", 1000, "skill")];
       importMarketData(database, market(sources), { snapshotDate: "2026-08-20" });
       importMarketData(database, market(sources), { snapshotDate: "2026-08-21" });
       const first = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
@@ -98,13 +120,13 @@ describe("SQLite history and rankings", () => {
         expect(rankings.rankings.hot).toHaveLength(100);
         expect(rankings.rankings.rising).toHaveLength(100);
         for (const entries of Object.values(rankings.rankings)) {
-          expect(entries.some(entry => entry.fullName.toLowerCase() === "zuorn/tydora")).toBe(false);
+          expect(entries.some(entry => ["zuorn/tydora", "eleckoi/eleckoi"].includes(entry.fullName.toLowerCase()))).toBe(false);
           expect(entries.map(entry => entry.rank)).toEqual(entries.map((_, index) => index + 1));
         }
         expect(rankings.directories.skills).toHaveLength(1);
       }
-      expect(readActiveRepositories(database)).toHaveLength(103);
-      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(206);
+      expect(readActiveRepositories(database)).toHaveLength(104);
+      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(208);
     } finally { database.close(); }
   });
 

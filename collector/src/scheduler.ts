@@ -59,7 +59,7 @@ async function runScript(
     await new Promise<void>((resolve, reject) => {
       const child = spawn("npm", ["run", script], {
         cwd: projectRoot,
-        env: { ...process.env, ...environment },
+        env: { ...process.env, ...environment, DSH_DAILY_UPDATE: script === "update:once" ? "1" : "0" },
         stdio: "inherit",
       });
       child.once("error", reject);

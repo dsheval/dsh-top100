@@ -21,6 +21,8 @@ export interface ApprovedModelBudget extends BudgetConfig {
   protectionVersion: "model-budget-v1";
   /** Explicit standing authorization; callers still bind each eligible daily request. */
   scope?: "daily-source-changes";
+  /** Optional standing scope for missing descriptions in today's two Top100 lists. */
+  boardDescriptions?: "hot-rising-top100";
 }
 const dailyRequest = new AsyncLocalStorage<string>();
 
@@ -38,6 +40,17 @@ export function bindModelBudget(config: ApprovedModelBudget, requestHash: string
 
 export function dailySourceChangesOnly(): boolean {
   try { return loadApprovedModelBudget().scope === "daily-source-changes"; } catch { return false; }
+}
+export function dailyBoardDescriptionsEnabled(): boolean {
+  try {
+    const config = loadApprovedModelBudget();
+    return config.scope === "daily-source-changes" && config.boardDescriptions === "hot-rising-top100";
+  } catch { return false; }
+}
+
+/** Scheduler startup db:sync and auxiliary commands must not start board work. */
+export function isDailyBoardRun(): boolean {
+  return process.env.DSH_DAILY_UPDATE === "1" && dailyBoardDescriptionsEnabled();
 }
 function outsideRepository(path: string): boolean {
   const part = relative(realpathSync(projectRoot), realpathSync(path));
@@ -58,6 +71,7 @@ export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
     const config = JSON.parse(readFileSync(fd, "utf8")) as ApprovedModelBudget;
     if (config.schemaVersion !== 1 || config.approval !== "approved" || config.protectionVersion !== "model-budget-v1") throw new Error();
     if (config.scope !== undefined && config.scope !== "daily-source-changes") throw new Error();
+    if (config.boardDescriptions !== undefined && (config.scope !== "daily-source-changes" || config.boardDescriptions !== "hot-rising-top100")) throw new Error();
     validateBudgetConfig(config, now);
     validateBudgetConfig(config, now + 45_000);
     return config;

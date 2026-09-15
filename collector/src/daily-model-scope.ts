@@ -1,4 +1,4 @@
-import { contentSourceHash, type ContentSource } from "./content-source.js";
+import { contentSourceHash, sameDescriptionSource, type ContentSource } from "./content-source.js";
 
 export interface DailyScopeJob {
   /** Only a newly observed or changed source may create this persistent eligibility marker. */
@@ -12,7 +12,7 @@ export interface DailyScopeJob {
  */
 export function bindDailySourceJob(entry: ContentSource, previousSources: ReadonlyMap<string, ContentSource>,
   previousJob: DailyScopeJob | undefined, job: DailyScopeJob): boolean {
-  if (!previousSources.size) return false;
+  if (!previousSources.size || entry.install?.discovery?.status === "review-required") return false;
   if ((job.attempts ?? 0) >= 2) return false;
   const id = (entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase();
   const previous = previousSources.get(id);
@@ -20,7 +20,7 @@ export function bindDailySourceJob(entry: ContentSource, previousSources: Readon
   if (previous && [previous.type, previous.install?.packageName ?? null, previous.install?.repositoryPath ?? null].join("\n")
     !== [entry.type, entry.install?.packageName ?? null, entry.install?.repositoryPath ?? null].join("\n")) return false;
   const hash = contentSourceHash(entry, "description");
-  const changed = !previous || contentSourceHash(previous, "description") !== hash;
+  const changed = !previous || !sameDescriptionSource(entry, previous);
   if (!changed && previousJob?.dailySourceHash !== hash) return false;
   if (previousJob?.dailySourceHash === hash) {
     job.attempts = Math.max(job.attempts ?? 0, previousJob.attempts ?? 0);

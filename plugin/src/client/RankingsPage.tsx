@@ -12,7 +12,7 @@ import type {
 } from "../shared/types.js";
 import type { Translate } from "./locales.js";
 import { DescriptionPreview } from "./DescriptionPreview.js";
-import { descriptionFor } from "../shared/description-rules.js";
+import { descriptionDisplayFor } from "../shared/description-rules.js";
 import { LatestRequest } from "./latest-request.js";
 import { deltaLabel, scoreLabel } from "./metric-presentation.js";
 import { DiagnosticsPage } from "./DiagnosticsPage.js";
@@ -643,7 +643,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
                     </a>
                   </h3>
                 </div>
-                <DescriptionPreview text={descriptionFor(item)} t={t} />
+                <DescriptionPreview text={descriptionDisplayFor(item)} t={t} />
               </div>
               <div className="card-footer">
                 <div className="facts">

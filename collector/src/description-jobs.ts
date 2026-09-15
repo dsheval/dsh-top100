@@ -4,9 +4,11 @@ import { isGenericDescriptionZh } from './llm.js';
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
 export interface DescriptionJob {
   dailySourceHash?: string;
+  boardSourceHash?: string;
   sourceHash: string;
   status: 'pending' | 'retry' | 'missing-source' | 'review-required' | 'complete';
   reviewReason?: string;
+  reviewLocked?: boolean;
   descriptionZh?: string;
   tagsZh?: string[];
   lastAttemptAt?: string;
@@ -19,9 +21,9 @@ export function descriptionSourceHash(source: ContentSource): string {
 export function hasChineseDescription(value: string | null | undefined): boolean {
   return Boolean(value && !isGenericDescriptionZh(value));
 }
-export function planDescriptionJobs(sources: DescriptionSource[], previous: Record<string, DescriptionJob>, priority: Set<string>, now: number) {
+export function planDescriptionJobs<T extends DescriptionSource>(sources: T[], previous: Record<string, DescriptionJob>, priority: Set<string>, now: number) {
   const jobs: Record<string, DescriptionJob> = {};
-  const ready: DescriptionSource[] = [];
+  const ready: T[] = [];
   for (const source of sources) {
     const sourceHash = descriptionSourceHash(source);
     const old = previous[source.id];
@@ -32,6 +34,8 @@ export function planDescriptionJobs(sources: DescriptionSource[], previous: Reco
       ? { sourceHash, status: 'complete', attempts: unchanged ? old.attempts : 0, descriptionZh: source.descriptionZh!, tagsZh: source.tags ?? [] }
       : hold
         ? { sourceHash, status: 'review-required', attempts: unchanged ? old.attempts : 0, reviewReason: hold.reason }
+      : unchanged && old.reviewLocked
+        ? { ...old, sourceHash, status: 'review-required' }
       : !hasContentEvidence(source)
         ? { sourceHash, status: 'missing-source', attempts: 0 }
         : unchanged && old.status === 'retry'

@@ -34,6 +34,8 @@ export interface DeepSeekRequestOptions extends ModelRequestControl {
   retryDelayMs?: number;
   timeoutMs?: number;
   thinking?: "disabled";
+  /** Distinguish content rejection from a transient transport failure, without provider text. */
+  onInvalidOutput?: () => void;
 }
 
 /** Only these locally generated codes may reach logs; provider bodies may echo secrets. */
@@ -174,9 +176,10 @@ export async function translateWithDeepSeek(
       }
       const data = await res.json();
       const content = data.choices?.[0]?.message?.content;
-      if (!content) return null;
+      if (!content) { opts.onInvalidOutput?.(); return null; }
       const result = extractJson(content);
       if (!result) {
+        opts.onInvalidOutput?.();
         console.warn("    [llm] invalid-summary-response");
         return null;
       }

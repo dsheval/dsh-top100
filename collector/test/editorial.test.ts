@@ -121,7 +121,13 @@ describe("current priority editorial review", () => {
         { ...entry, readmeSummary: `${entry.readmeSummary} Changed behavior.` },
         ...(entry.readmeSummary ? [{ ...entry, readmeSummary: undefined }] : []),
       ]) {
-        expect(reviewedDescription(changed), fullName).toBeNull();
+        const descriptionReview = descriptions[fullName as keyof typeof descriptions];
+        const scopedFunctionReview = !!descriptionReview && "sourceScope" in descriptionReview && descriptionReview.sourceScope === "selected-package"
+          && "functionEvidence" in descriptionReview.sourceInstall;
+        // Root marketing is independent of a source-verified subpackage. Changed
+        // functional documents still invalidate every review.
+        expect(reviewedDescription(changed), fullName).toBe(scopedFunctionReview
+          && changed.readmeSummary === entry.readmeSummary ? descriptionReview.descriptionZh : null);
         expect(reviewedCategories(changed), fullName).toBeNull();
         expect(currentCategoryAssignments(changed, reviewedCategories(entry)), fullName).toEqual([]);
       }

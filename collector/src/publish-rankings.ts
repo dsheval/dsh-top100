@@ -27,7 +27,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.7";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.8";
 
 export interface RankingPublicationOptions {
   pageSize?: number;
@@ -87,6 +87,7 @@ function toSummaryEntry(entry: RankingEntry, rank = entry.rank): RankingSummaryE
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
+    ...(entry.descriptionStatus ? { descriptionStatus: entry.descriptionStatus } : {}),
     ...(publishedDescriptionZh(entry)
       ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),

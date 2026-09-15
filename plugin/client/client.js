@@ -100,7 +100,11 @@ function cleanDescription(value) {
 function isPlaceholder(value) {
 	return !value || /^(?:版本更新提示[：:]|本次版本变化较大|较早的.+宿主请使用|[-\s🚨【]*国内用户核心前置)/u.test(value) || /资料不足|暂无.*简介|简介(?:正在生成|待生成)|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
 }
+function hasInvalidSelectedPackage(entry) {
+	return !!entry.install?.discovery?.evidence.some((value) => value.startsWith("selected-package-invalid:"));
+}
 function descriptionFor(entry, reviewed = {}, context = {}) {
+	if (hasInvalidSelectedPackage(entry)) return PENDING_DESCRIPTION_ZH;
 	const review = reviewed[String(entry.fullName || "").toLowerCase()];
 	if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || "") && (matchesReviewedReadme(entry.readmeSummary || "", review.sourceReadme) || entry.readmeSummary === void 0 && Boolean(context.snapshotId) && review.snapshotId === context.snapshotId)) {
 		if (review.suspended) return PENDING_DESCRIPTION_ZH;
@@ -113,6 +117,18 @@ function descriptionFor(entry, reviewed = {}, context = {}) {
 	if (entry.install?.repositoryPath || entry.installRepositoryPath) return PENDING_DESCRIPTION_ZH;
 	const original = cleanDescription(entry.description);
 	return !isPlaceholder(original) && isChineseDescription(original) ? original : PENDING_DESCRIPTION_ZH;
+}
+/** Status text is for display only; it must never count as a completed summary. */
+function descriptionDisplayFor(entry, reviewed = {}, context = {}) {
+	const description = descriptionFor(entry, reviewed, context);
+	if (description !== PENDING_DESCRIPTION_ZH || !entry.descriptionStatus) return description;
+	const label = {
+		"pending": "中文简介待生成",
+		"review-required": "中文简介待复核",
+		"missing-source": "中文简介资料不足",
+		"retry": "中文简介生成未完成"
+	}[entry.descriptionStatus.state];
+	return label ? `${label}：${cleanDescription(entry.descriptionStatus.reason).slice(0, 200)}` : description;
 }
 
 //#endregion
@@ -3379,7 +3395,7 @@ function RankingsPage({ t }) {
 										})]
 									}) })]
 								}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)(DescriptionPreview, {
-									text: descriptionFor(item),
+									text: descriptionDisplayFor(item),
 									t
 								})]
 							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {

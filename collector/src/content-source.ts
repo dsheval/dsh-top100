@@ -1,3 +1,4 @@
+import { hasSelectedReadmeEvidence } from "./readme-evidence.js";
 import { functionEvidenceMarker, needsFunctionReview } from "./reviewed-evidence-state.js";
 import { reviewedFunctionEvidence } from "./reviewed-evidence.js";
 /** Source identity and eligibility shared by daily collection and frozen batches. */
@@ -5,7 +6,7 @@ import { createHash } from "node:crypto";
 import type { InstallInfo } from "@dsh-top100/schema";
 import { CATEGORY_POLICY_VERSION } from "./categories.js";
 import editorialHolds from "../config/editorial-holds.json";
-import { cleanDescription, isPlaceholder, matchesReviewedIdentity, matchesReviewedReadme, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isPlaceholder, hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
 import reviewedDescriptions from "../../plugin/src/shared/reviewed-descriptions.json";
 import { reviewedPluginTargets } from "./reviewed-targets.js";
 
@@ -32,6 +33,10 @@ function installEvidence(install: ContentSource["install"]): string {
     install?.repositoryPath ?? null, install?.commands ?? [], install?.commandSource ?? null]);
 }
 export function matchingEditorialHold(entry: ContentSource): EditorialHold | null {
+  if (hasInvalidSelectedPackage({ install: entry.install ?? undefined })) return {
+    sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+    reason: "当前所选包未通过插件身份核验，需纠正收录对象。",
+  };
   if (needsFunctionReview(entry)) return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
     reason: "已复核的功能源码尚未通过当前核验，旧简介和分类暂停使用。" };
   const hold = (editorialHolds as Record<string, EditorialHold>)[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()];
@@ -53,7 +58,8 @@ export function matchingEditorialHold(entry: ContentSource): EditorialHold | nul
   let reason: string | undefined;
   if (packageName === "@deepseek-ai/dsh-root") {
     reason = "收录目标仍为 DSH 根运行时包，需先确认具体插件及其作者资料。";
-  } else if (repositoryPath) {
+  } else if (repositoryPath && !hasSelectedReadmeEvidence(entry)
+    && !reviewedFunctionEvidence[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()]) {
     const readme = (entry.readmeSummary ?? "").toLowerCase();
     const leaf = packageName.split("/").pop() ?? "";
     const generic = new Set(["core", "client", "server", "runtime", "plugin", "plugins", "index", "main", "dsh", "dsh-root"]);
@@ -100,4 +106,11 @@ export function hasContentEvidence(entry: ContentSource): boolean {
 
 export function nextContentAttemptAt(attempts: number, now: number): string {
   return new Date(now + Math.min(7, 2 ** Math.min(Math.max(0, attempts - 1), 3)) * 86_400_000).toISOString();
+}
+
+/** Root marketing metadata cannot change the function evidence of a proven subpackage. */
+export function sameDescriptionSource(current: ContentSource, previous: ContentSource): boolean {
+  return contentSourceHash(current, "description") === contentSourceHash(previous, "description")
+    || !!current.install?.repositoryPath && hasSelectedReadmeEvidence(current)
+      && contentSourceHash(current, "description") === contentSourceHash({ ...previous, description: current.description }, "description");
 }

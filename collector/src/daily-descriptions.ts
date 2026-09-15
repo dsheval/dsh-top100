@@ -1,6 +1,6 @@
 /** Daily summaries reuse the same source gates as frozen catalog enrichment. */
 import type { DshPlugin } from "@dsh-top100/schema";
-import { matchingEditorialHold, hasContentEvidence, matchesContentSourceHash } from "./content-source.js";
+import { matchingEditorialHold, hasContentEvidence, matchesContentSourceHash, sameDescriptionSource } from "./content-source.js";
 import { reviewedDescription } from "./editorial.js";
 import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
@@ -15,7 +15,7 @@ export function prepareDailyDescriptions(
   for (const source of sources) {
     const hash = descriptionSourceHash(source);
     const previous = previousSources.get(source.id.toLowerCase());
-    const previousMatches = !!previous && descriptionSourceHash(previous) === hash;
+    const previousMatches = !!previous && sameDescriptionSource(source, previous);
     const matches = (oldHash?: string) => matchesContentSourceHash(source, "description", oldHash)
       || previousMatches && matchesContentSourceHash(previous!, "description", oldHash);
     const originalCache = cache.get(source.id);
@@ -27,15 +27,15 @@ export function prepareDailyDescriptions(
     const review = reviewedDescription(source);
     // Fresh collection clears generated fields even when a fixed review supplies
     // the summary. Carry tags from the full same-source market in that path too.
-    if (previous && descriptionSourceHash(previous) === hash && !hasChineseDescription(source.descriptionZh)) {
+    if (previous && sameDescriptionSource(source, previous) && !hasChineseDescription(source.descriptionZh)) {
       source.tags = [...new Set([...source.tags, ...previous.tags])];
     }
     // Collection can carry forward an old record; do not mistake that copy for a new edit.
-    if (previous && descriptionSourceHash(previous) !== hash && source.descriptionZh === previous.descriptionZh) source.descriptionZh = null;
+    if (previous && !sameDescriptionSource(source, previous) && source.descriptionZh === previous.descriptionZh) source.descriptionZh = null;
     if (cached?.sourceHash && cached.sourceHash !== hash && source.descriptionZh === cached.descriptionZh) source.descriptionZh = null;
     if (oldJob && oldJob.sourceHash !== hash && source.descriptionZh === oldJob.descriptionZh) source.descriptionZh = null;
     if (review) source.descriptionZh = review;
-    else if (previous && descriptionSourceHash(previous) === hash && hasChineseDescription(previous.descriptionZh)) {
+    else if (previous && sameDescriptionSource(source, previous) && hasChineseDescription(previous.descriptionZh)) {
       // The current market source is newer than its derived cache (e.g. a reviewed merge).
       if (!hasChineseDescription(source.descriptionZh) || (cached && source.descriptionZh === cached.descriptionZh && source.descriptionZh !== previous.descriptionZh)) {
         source.descriptionZh = previous.descriptionZh;

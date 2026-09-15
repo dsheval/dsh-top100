@@ -9,6 +9,11 @@
       "reason": "The selected workspace root is not a DSH plugin; the author product is a standalone Electron desktop application. Re-review a concrete plugin identity before restoring ranking eligibility.",
       "reviewedAt": "2026-09-11",
       "sourceUrl": "https://github.com/whitelonng/dshcode/blob/db823cece8666e8450708ee6fd044e6257ca473f/apps/desktop/package.json"
+    },
+    "eleckoi/eleckoi": {
+      "reason": "The selected @eleckoi/dsh-runtime package is an SDK consumer library, not a mountable DSH plugin. Re-review a concrete plugin identity before restoring ranking eligibility.",
+      "reviewedAt": "2026-09-15",
+      "sourceUrl": "https://github.com/eleckoi/ElecKoi/blob/37aeb07fcd43a2123604d13aa9ea528adf6ed1c9/packages/dsh-runtime/src/index.ts"
     }
   },
   "limits": {

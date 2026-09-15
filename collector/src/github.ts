@@ -70,6 +70,7 @@ export async function githubFetch<T>(
 
       const res = await fetch(url, {
         method: opts.method ?? "GET",
+        signal: AbortSignal.timeout(30_000),
         headers,
         body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       });

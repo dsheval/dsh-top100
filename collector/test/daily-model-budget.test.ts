@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bindModelBudget, canRequestModel, inspectModelRequest, loadApprovedModelBudget, modelRequestsEnabled,
-  requestModel, withDailyModelRequest, type ApprovedModelBudget } from "../src/model-requests.js";
+  requestModel, withDailyModelRequest, isDailyBoardRun, dailyBoardDescriptionsEnabled, type ApprovedModelBudget } from "../src/model-requests.js";
 import { BudgetLedger } from "../src/model-budget.js";
 import { buildTranslationRequest, buildClassificationRequest } from "../src/llm.js";
 
@@ -26,6 +26,16 @@ function configure() {
 }
 afterEach(() => { vi.restoreAllMocks();vi.unstubAllEnvs();for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 describe("daily requests share the existing money guard", () => {
+  it("requires explicit board policy and a scheduled run; startup and auxiliary work stay blocked", () => {
+    const { dir, config } = configure();
+    vi.stubEnv("DSH_DAILY_UPDATE", "1"); expect(isDailyBoardRun()).toBe(false);
+    writeFileSync(join(dir, "config.json"), JSON.stringify({ ...config, boardDescriptions: "hot-rising-top100" }));
+    expect(dailyBoardDescriptionsEnabled()).toBe(true); expect(isDailyBoardRun()).toBe(true);
+    expect(canRequestModel()).toBe(false);
+    vi.stubEnv("DSH_DAILY_UPDATE", "0"); expect(isDailyBoardRun()).toBe(false);
+    writeFileSync(join(dir, "config.json"), JSON.stringify({ ...config, boardDescriptions: "all-catalog" }));
+    expect(dailyBoardDescriptionsEnabled()).toBe(false);
+  });
   it("requires private approved policy and a scoped callback", () => {
     configure();expect(loadApprovedModelBudget().scope).toBe("daily-source-changes");expect(modelRequestsEnabled()).toBe(true);
     expect(canRequestModel()).toBe(false);

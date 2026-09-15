@@ -182,7 +182,21 @@ describe("v2 ranking publication", () => {
       });
     }
     expect(publication.manifest.snapshotId).toMatch(/^2026-08-31-[a-f0-9]{16}$/);
-    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.7");
+    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.8");
+  });
+
+  it("preserves missing-description reasons in ranked pages and compact search without treating them as Chinese", () => {
+    const rankings = rankingsDocument(3);
+    const status = { state: 'review-required' as const, reason: '待核对所选子包的功能资料。' };
+    for (const rows of Object.values(rankings.rankings)) {
+      for (const entry of rows) { entry.descriptionZh = '中文简介待生成。'; entry.descriptionStatus = status; }
+    }
+    const publication = buildRankingPublication(rankings);
+    for (const reference of [publication.manifest.datasets.hot, publication.manifest.datasets.rising,
+      publication.manifest.datasets.search, publication.manifest.datasets.total.pages[0]]) {
+      const rows = payloadForUrl(publication, reference.url).rankings as Array<Record<string, unknown>>;
+      expect(rows[0]).toMatchObject({ descriptionZh: '中文简介待生成。', descriptionStatus: status });
+    }
   });
 
   it("omits full-catalog-only fields from ranking pages and further trims search entries", () => {

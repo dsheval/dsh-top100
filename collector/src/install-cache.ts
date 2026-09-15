@@ -35,6 +35,13 @@ export function refreshCachedInstallEvidence(
   previous: ParsedInstall,
   selectedReadme: string | null,
 ): { installParsed: ParsedInstall; needsReadmeRefresh: boolean } {
+  if (identity.fullName.toLowerCase() === "lencx/minke"
+    && identity.packageName === "@lencx/minke-harness-overlay"
+    && identity.repositoryPath === "packages/harness-overlay") {
+    const parsed = selectedReadme === null ? previous : parseInstallCommands(selectedReadme);
+    const commands = parsed.commands.filter(command => !/@deepseek-ai\/dsh-subagent-(?:codex|claude-code)(?:@|\s|$)/.test(command));
+    return { installParsed: { commands, source: commands.length ? parsed.source : "template" }, needsReadmeRefresh: false };
+  }
   if (selectedReadme !== null) {
     return { installParsed: parseInstallCommands(selectedReadme), needsReadmeRefresh: false };
   }

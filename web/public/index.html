@@ -3369,7 +3369,7 @@
       import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
       import { enhanceDescriptions } from "./description-preview.js";
       import { initializeInstallGuide } from "./install-guide.js";
-      import { descriptionFor, loadReviewedDescriptions } from "./description-presentation.js";
+      import { descriptionDisplayFor, loadReviewedDescriptions } from "./description-presentation.js";
       const reviewedDescriptions = await loadReviewedDescriptions();
       import { showFeaturedPlugin, isFeaturedRepository } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
@@ -3964,7 +3964,7 @@
           )
           .map((plugin, index) => {
             const name = plugin.name || plugin.fullName.split("/").pop() || plugin.fullName;
-            const descriptionZh = descriptionFor(plugin, reviewedDescriptions, manifest ?? {});
+            const descriptionZh = descriptionDisplayFor(plugin, reviewedDescriptions, manifest ?? {});
             const categoryValues = (plugin.categories ?? []).map((item) =>
               typeof item === "string" ? item : item?.id
             ).filter(Boolean);

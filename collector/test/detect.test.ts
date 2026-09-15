@@ -649,3 +649,13 @@ describe("discovery structure policy", () => {
     expect((await detectPlugin("acme/demo", [rootItem("SKILL.md", "dir")] as never)).isPlugin).toBe(false);
   });
 });
+
+it('does not treat an SDK runtime wrapper as a host plugin based on attachment/session dependencies', () => {
+  const sdk = { name: '@eleckoi/dsh-runtime', main: './dist/index.cjs', dependencies: {
+    '@deepseek-ai/dsh-sdk-client': '*', '@deepseek-ai/dsh-sdk-jsonrpc-demo': '*',
+    '@deepseek-ai/dsh-attachment': '*', '@deepseek-ai/dsh-attachment-local': '*', '@deepseek-ai/dsh-session': '*',
+  } };
+  expect(isCordisPackageJson(JSON.stringify(sdk))).toBe(false);
+  // A real plugin can also use the SDK when it explicitly declares its mount.
+  expect(isCordisPackageJson(JSON.stringify({ ...sdk, dsh: { bundle: { patch: './cordis.patch.yml' } } }))).toBe(true);
+});

@@ -2,6 +2,7 @@ export interface DescriptionEntry {
     fullName?: string;
     description?: string;
     descriptionZh?: string;
+    descriptionStatus?: DescriptionStatus;
     readmeSummary?: string;
     type?: string;
     install?: {
@@ -14,6 +15,10 @@ export interface DescriptionEntry {
     installPackageName?: string | null;
     installRepositoryPath?: string | null;
 }
+export interface DescriptionStatus {
+    state: 'pending' | 'review-required' | 'missing-source' | 'retry';
+    reason: string;
+}
 export interface ReviewedInstallIdentity {
     packageName: string | null;
     repositoryPath: string | null;
@@ -25,6 +30,7 @@ export interface DescriptionContext {
     snapshotId?: string;
 }
 export interface ReviewedDescription {
+    sourceScope?: string;
     descriptionZh: string;
     /** Withdraw a known incorrect description until this exact source is reviewed again. */
     suspended?: boolean;
@@ -45,4 +51,7 @@ export declare function isChineseDescription(value: string): boolean;
 /** Shared display rules; raw repository text is always rendered via textContent. */
 export declare function cleanDescription(value: unknown): string;
 export declare function isPlaceholder(value: string): boolean;
+export declare function hasInvalidSelectedPackage(entry: Pick<DescriptionEntry, 'install'>): boolean;
 export declare function descriptionFor(entry: DescriptionEntry, reviewed?: ReviewedDescriptions, context?: DescriptionContext): string;
+/** Status text is for display only; it must never count as a completed summary. */
+export declare function descriptionDisplayFor(entry: DescriptionEntry, reviewed?: ReviewedDescriptions, context?: DescriptionContext): string;

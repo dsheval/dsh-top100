@@ -1,7 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { descriptionFor } from '../public/description-presentation.js';
+import { descriptionFor, descriptionDisplayFor } from '../public/description-presentation.js';
+test('missing reasons are displayed separately and cannot pass Chinese coverage checks', () => {
+  const entry={description:'Browser automation',descriptionZh:'中文简介待生成。',
+    descriptionStatus:{state:'review-required',reason:'待核对所选子包的功能资料。'}};
+  assert.equal(descriptionFor(entry),'中文简介待生成。');
+  assert.equal(descriptionDisplayFor(entry),'中文简介待复核：待核对所选子包的功能资料。');
+  assert.equal(descriptionDisplayFor({...entry,descriptionZh:'读取浏览器页面并自动填写表单。'}),'读取浏览器页面并自动填写表单。');
+  assert.equal(descriptionDisplayFor({...entry,descriptionStatus:{state:'unexpected',reason:'test'}}),'中文简介待生成。');
+});
 test('missing translations stay in Chinese without fabricating capabilities', () => {
   assert.equal(descriptionFor({descriptionZh:'demo：现有项目资料不足以生成可靠的功能简介。',description:'Browser automation for agents.'}), '中文简介待生成。');
   assert.equal(descriptionFor({descriptionZh:'顺手留颗 Star，作者能高兴一整天',description:''}), '中文简介待生成。');

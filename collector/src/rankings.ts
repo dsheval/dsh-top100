@@ -4,6 +4,7 @@ import { needsFunctionReview } from "./reviewed-evidence-state.js";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import type { DshPlugin } from "@dsh-top100/schema";
 import {
   previousSnapshot,
   readActiveRepositories,
@@ -40,6 +41,7 @@ export interface RankingEntry {
   owner: string;
   description: string;
   descriptionZh: string;
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   readmeSummary?: string;
   stars: number;
   dailyStars: number;
@@ -164,16 +166,25 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
 export function buildRankings(
   database: DatabaseSync,
   snapshotDate: string,
-  configPath = resolve("config/ranking.json")
+  configPath = resolve("config/ranking.json"),
+  options: { sources?: DshPlugin[]; now?: Date } = {},
 ): RankingsDocument {
   const config = JSON.parse(readFileSync(configPath, "utf8")) as RankingConfig;
-  const activeRepositories = readActiveRepositories(database);
+  let activeRepositories = readActiveRepositories(database);
+  if (options.sources) {
+    const ids = new Map(activeRepositories.map(row => [row.fullName.toLowerCase(), row.id]));
+    // Read today's metadata against existing history without importing it early.
+    activeRepositories = options.sources.map((source, index): RepositoryRow => ({
+      ...source, id: ids.get(source.fullName.toLowerCase()) ?? -(index + 1),
+      categories: source.categories ?? [], raw: source,
+    })).sort((a, b) => b.stars - a.stars || (a.fullName < b.fullName ? -1 : a.fullName > b.fullName ? 1 : 0));
+  }
   const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin"
     && !isFeaturedRepository(repository)
     && !Object.hasOwn(config.excludedRepositories ?? {}, repository.fullName.toLowerCase()));
   const skills = activeRepositories.filter((repository) => repository.type === "skill");
   const weekDate = subtractDays(snapshotDate, 7);
-  const now = new Date();
+  const now = options.now ?? new Date();
 
   const scored: ScoredRepository[] = repositories.map((repository, index) => {
     const yesterday = previousSnapshot(database, repository.id, snapshotDate, false);

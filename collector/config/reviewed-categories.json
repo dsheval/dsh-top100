@@ -761,9 +761,9 @@
   },
   "openpetshq/openpets": {
     "sourceDescription": "Local first, desktop companion platform with animated pets, plugin SDK and coding-agent integrations.",
-    "sourceReadme": "A desktop companion platform with pets, plugins, and optional local agent integrations. OpenPets puts an animated companion on your desktop, then lets plugins turn it into a focus buddy, reminder system, tiny game, launcher, or coding-agent sidekick. by Boring Dystopia Development &nbsp; &nbsp; &nbsp; --- Download the latest OpenPets desktop release and launch it. A pet appears immediately; no agent setup required.…",
+    "sourceReadme": "",
     "sourceUrl": "https://github.com/OpenPetsHQ/openpets",
-    "reviewedAt": "2026-09-10T07:54:45.301Z",
+    "reviewedAt": "2026-09-15",
     "categories": [
       {
         "id": "appearance",
@@ -775,26 +775,32 @@
     ],
     "sourceInstall": {
       "packageName": "@open-pets/dsh",
-      "repositoryPath": "packages/dsh"
+      "repositoryPath": "packages/dsh",
+      "functionEvidence": "fa025cb40b7dbe9f586fa19adc556ec0fc3800a3d6995ad6342e93d415cd9f99"
     },
     "sourceType": "cordis-plugin",
-    "sourceEvidenceUrl": "https://raw.githubusercontent.com/OpenPetsHQ/openpets/18fd4ed2a9cb52e2b29fe2fa3b4fa42b6d483028/docs/agent-integrations.md",
-    "sourceEvidenceCommit": "18fd4ed2a9cb52e2b29fe2fa3b4fa42b6d483028",
+    "sourceEvidenceUrl": "https://github.com/OpenPetsHQ/openpets/blob/9fcb457e2c9985849b8fd97393a376efc7613d02/packages/dsh/src/index.ts",
+    "sourceEvidenceCommit": "9fcb457e2c9985849b8fd97393a376efc7613d02",
     "sourceEvidence": [
       {
-        "url": "https://raw.githubusercontent.com/OpenPetsHQ/openpets/18fd4ed2a9cb52e2b29fe2fa3b4fa42b6d483028/packages/dsh/package.json",
+        "path": "packages/dsh/package.json",
         "sha256": "4902d16dc308f942ecb11198a2bbd540740f5900974af91ef29e97a2c0f29e16",
-        "path": "packages/dsh/package.json"
+        "url": "https://github.com/OpenPetsHQ/openpets/blob/9fcb457e2c9985849b8fd97393a376efc7613d02/packages/dsh/package.json"
       },
       {
-        "url": "https://raw.githubusercontent.com/OpenPetsHQ/openpets/18fd4ed2a9cb52e2b29fe2fa3b4fa42b6d483028/README.md",
-        "sha256": "e9ffb875d3c1c63881ccca03672b8f7b527d71de22255559b709935276bfcce9",
-        "path": "README.md"
+        "path": "packages/dsh/cordis.patch.yml",
+        "sha256": "9f90e96989b3f8343d6595c41c86acb53e90f352b01fda16ec072fc46f2b1c9d",
+        "url": "https://github.com/OpenPetsHQ/openpets/blob/9fcb457e2c9985849b8fd97393a376efc7613d02/packages/dsh/cordis.patch.yml"
       },
       {
-        "url": "https://raw.githubusercontent.com/OpenPetsHQ/openpets/18fd4ed2a9cb52e2b29fe2fa3b4fa42b6d483028/docs/agent-integrations.md",
-        "sha256": "64932674109bc0aff24559262512ce967133da8ba8fada1b6f6120538d80b538",
-        "path": "docs/agent-integrations.md"
+        "path": "packages/dsh/src/index.ts",
+        "sha256": "550fc19aeca4eff6b8e654ea4b0ad1ef70954835962da7f1a8c0588edf6f86f5",
+        "url": "https://github.com/OpenPetsHQ/openpets/blob/9fcb457e2c9985849b8fd97393a376efc7613d02/packages/dsh/src/index.ts"
+      },
+      {
+        "path": "packages/dsh/src/runtime.ts",
+        "sha256": "32d20007218fa4bd78d862878152d1b1217892ef5e473fe69f674ac1432848c1",
+        "url": "https://github.com/OpenPetsHQ/openpets/blob/9fcb457e2c9985849b8fd97393a376efc7613d02/packages/dsh/src/runtime.ts"
       }
     ],
     "reviewNotes": "所选包 README 不存在，但作者集成文档有精确 @open-pets/dsh 专节，说明按 profile 安装的 Cordis bundle、本地 IPC、默认宠物、状态映射；明确不添加模型工具或 MCP。外观类可保留，不能继续把平台 SDK、游戏、提醒、启动器能力归给该子包。",
@@ -2637,34 +2643,39 @@
     "sourceInstall": {
       "packageName": "@jingyun-ai/jingyun-dsh",
       "repositoryPath": "packages/jingyun-dsh",
-      "functionEvidence": "2d8900a020bb35549bd9772276123bd946b5f686bbbadf6b424a3f8bdd2a0402"
+      "functionEvidence": "4701fe09179dd94348cb871fc44476b9f6ff05bd6993de6e5c46f5f3aeaadbde"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/jingyunstudio/jingyun-dsh",
-    "sourceEvidenceCommit": "b7e1ef2234c1e086b8801b9da26e5ee182a4da1b",
+    "sourceEvidenceCommit": "fee2a1740120d7a6ffa1dac3e9553db5267c752a",
     "sourceEvidence": [
       {
         "path": "packages/jingyun-dsh/package.json",
-        "sha256": "79acbf993abcb76dfc25d49aceb8cb72adb6723072f7bb172810bce6f4a19ba7",
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/package.json"
+        "sha256": "f70dacd32120da88d9714ffa844ee90ab237e5ebc66b1993163ce599607ee2b2",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/fee2a1740120d7a6ffa1dac3e9553db5267c752a/packages/jingyun-dsh/package.json"
       },
       {
         "path": "packages/jingyun-dsh/cordis.patch.yml",
         "sha256": "dab0ac4f8ba865eda66684417f1f02b198f682c5fc43945c0b83856b6c2a3631",
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/cordis.patch.yml"
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/fee2a1740120d7a6ffa1dac3e9553db5267c752a/packages/jingyun-dsh/cordis.patch.yml"
+      },
+      {
+        "path": "packages/jingyun-dsh/src/index.ts",
+        "sha256": "9bea36308ad42b404b6fa077b43a643a18ac3beaddf4ec3b4b19c6516c0ffea5",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/fee2a1740120d7a6ffa1dac3e9553db5267c752a/packages/jingyun-dsh/src/index.ts"
       },
       {
         "path": "packages/jingyun-dsh/src/client/index.tsx",
         "sha256": "acf02fa9d9232ba25f968cc744d6ff26433e9acbfc32e1a1718bce4d7773cafd",
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/src/client/index.tsx"
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/fee2a1740120d7a6ffa1dac3e9553db5267c752a/packages/jingyun-dsh/src/client/index.tsx"
       },
       {
-        "path": "packages/jingyun-dsh/src/index.ts",
-        "sha256": "7f09a3cedd871b5262b2c7035e02c15b0948d53dccdbcdc883a9eed503a4617a",
-        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/b7e1ef2234c1e086b8801b9da26e5ee182a4da1b/packages/jingyun-dsh/src/index.ts"
+        "path": "packages/jingyun-dsh/src/connectors/index.ts",
+        "sha256": "06823a9e8295a0c8dbeda9173d29218ff770a4038e1280934f05b24d8ccba630",
+        "url": "https://github.com/jingyunstudio/jingyun-dsh/blob/fee2a1740120d7a6ffa1dac3e9553db5267c752a/packages/jingyun-dsh/src/connectors/index.ts"
       }
     ],
-    "reviewedAt": "2026-09-14",
+    "reviewedAt": "2026-09-15",
     "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
     "reviewBatch": "description-repair-20260914",
     "categories": [
@@ -4117,39 +4128,39 @@
     "sourceInstall": {
       "packageName": "@dshtrading/base",
       "repositoryPath": "packages/base",
-      "functionEvidence": "bee34ec284d5931da0a2c6a14f1d73e7f0b898bb67091660626e0449742c642e"
+      "functionEvidence": "c3ca88a9d60a1442d14c16986bcbdce3ff37bab737d54144c318cdf2666363a1"
     },
     "sourceType": "cordis-plugin",
     "sourceUrl": "https://github.com/zhu1090093659/dsh-trading",
-    "sourceEvidenceCommit": "b6cf5535093cdc43fc61a7037d997bace7fb0e6d",
+    "sourceEvidenceCommit": "f762ffc9938c30ce26b964efb46b73c517339989",
     "sourceEvidence": [
       {
-        "path": "packages/base/cordis.patch.yml",
-        "sha256": "5fd74407232369bbf695b2178c924cbd4d491d31d7fcd53a983b2f83896eab98",
-        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/cordis.patch.yml"
+        "path": "packages/base/package.json",
+        "sha256": "f7e680e7370241218cc3747e92bbf420f3d7d6cce6c1a09e02f9b4e2b012c7f3",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/f762ffc9938c30ce26b964efb46b73c517339989/packages/base/package.json"
       },
       {
-        "path": "packages/base/package.json",
-        "sha256": "dd38b5aca8b698e67b99a5bfb1b2452a272c9ee5f093040613d7337762e776cb",
-        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/package.json"
+        "path": "packages/base/cordis.patch.yml",
+        "sha256": "ca2497bb9d6d024fee7edfd51fba4b76f772e3eb38bf11911203e8b2d0f03d34",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/f762ffc9938c30ce26b964efb46b73c517339989/packages/base/cordis.patch.yml"
       },
       {
         "path": "packages/base/src/index.ts",
         "sha256": "b875bef76d34dd8089e81284b00e037fa4c133fc8e3bee847c130831d3bfec8c",
-        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/index.ts"
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/f762ffc9938c30ce26b964efb46b73c517339989/packages/base/src/index.ts"
       },
       {
         "path": "packages/base/src/market-tools.ts",
         "sha256": "07818ebd0b3073476be9691059867d9b26fff99da240f9e934371b836e1450b9",
-        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/market-tools.ts"
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/f762ffc9938c30ce26b964efb46b73c517339989/packages/base/src/market-tools.ts"
       },
       {
         "path": "packages/base/src/presets.ts",
-        "sha256": "3609f680b3684bd4446bbcb198dd07be7fe98cb14b2327b1d11d5e29d9b455d1",
-        "url": "https://github.com/zhu1090093659/dsh-trading/blob/b6cf5535093cdc43fc61a7037d997bace7fb0e6d/packages/base/src/presets.ts"
+        "sha256": "75ec3626c14f049d93d2430f60038dac7301618cdf9b11f40b54f6fb9a42e643",
+        "url": "https://github.com/zhu1090093659/dsh-trading/blob/f762ffc9938c30ce26b964efb46b73c517339989/packages/base/src/presets.ts"
       }
     ],
-    "reviewedAt": "2026-09-14",
+    "reviewedAt": "2026-09-15",
     "reviewMethod": "AI review of selected package source at one pinned commit; no runtime execution or model API call.",
     "reviewBatch": "description-repair-20260914",
     "categories": [

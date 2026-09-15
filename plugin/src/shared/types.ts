@@ -67,6 +67,7 @@ export interface RankingEntry {
   owner: string;
   description: string;
   descriptionZh: string;
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   /** README-derived excerpt, present in authoritative detail pages when published. */
   readmeSummary?: string;
   stars: number;

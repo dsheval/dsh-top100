@@ -77,3 +77,11 @@ describe("cached installation evidence repair", () => {
       .toEqual({ installParsed: { commands: [], source: "template" }, needsReadmeRefresh: false });
   });
 });
+
+it('does not present Minke sibling subagent examples as overlay installation instructions', () => {
+  const overlay = { fullName: 'lencx/Minke', packageName: '@lencx/minke-harness-overlay', repositoryPath: 'packages/harness-overlay' };
+  const examples = { commands: ['dsh plugin --profile web add @deepseek-ai/dsh-subagent-codex', 'dsh plugin --profile web add @deepseek-ai/dsh-subagent-claude-code'], source: 'README' };
+  for (const text of [null, examples.commands.map(command => `\`\`\`sh\n${command}\n\`\`\``).join('\n')]) {
+    expect(refreshCachedInstallEvidence(overlay, examples, text).installParsed).toEqual({ commands: [], source: 'template' });
+  }
+});

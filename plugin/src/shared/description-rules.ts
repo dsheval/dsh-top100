@@ -2,11 +2,16 @@ export interface DescriptionEntry {
   fullName?: string;
   description?: string;
   descriptionZh?: string;
+  descriptionStatus?: DescriptionStatus;
   readmeSummary?: string;
   type?: string;
   install?: { packageName?: string | null; repositoryPath?: string | null; discovery?: { evidence: string[] } };
   installPackageName?: string | null;
   installRepositoryPath?: string | null;
+}
+export interface DescriptionStatus {
+  state: 'pending' | 'review-required' | 'missing-source' | 'retry';
+  reason: string;
 }
 export interface ReviewedInstallIdentity {
   packageName: string | null;
@@ -29,6 +34,7 @@ export function matchesReviewedIdentity(
 }
 export interface DescriptionContext { snapshotId?: string; }
 export interface ReviewedDescription {
+  sourceScope?: string;
   descriptionZh: string;
   /** Withdraw a known incorrect description until this exact source is reviewed again. */
   suspended?: boolean;
@@ -72,7 +78,11 @@ export function cleanDescription(value: unknown): string {
 export function isPlaceholder(value: string): boolean {
   return !value || /^(?:版本更新提示[：:]|本次版本变化较大|较早的.+宿主请使用|[-\s🚨【]*国内用户核心前置)/u.test(value) || /资料不足|暂无.*简介|简介(?:正在生成|待生成)|用于扩展 DeepSeek Harness 能力|请(?:查看|参考).*(?:README|项目说明|项目文档)|求\s*Star|留颗\s*Star|顺手.*Star|欢迎.*(?:使用|贡献)|\|.*\|/i.test(value);
 }
+export function hasInvalidSelectedPackage(entry: Pick<DescriptionEntry, 'install'>): boolean {
+  return !!entry.install?.discovery?.evidence.some(value => value.startsWith('selected-package-invalid:'));
+}
 export function descriptionFor(entry: DescriptionEntry, reviewed: ReviewedDescriptions = {}, context: DescriptionContext = {}): string {
+  if (hasInvalidSelectedPackage(entry)) return PENDING_DESCRIPTION_ZH;
   const review = reviewed[String(entry.fullName || '').toLowerCase()];
   // Invalidate editorial text when its evidence changes, rather than pinning stale claims.
   if (review && matchesReviewedIdentity(entry, review.sourceInstall, review.sourceType) && review.sourceDescription === (entry.description || '') && (
@@ -91,4 +101,14 @@ export function descriptionFor(entry: DescriptionEntry, reviewed: ReviewedDescri
   if (entry.install?.repositoryPath || entry.installRepositoryPath) return PENDING_DESCRIPTION_ZH;
   const original = cleanDescription(entry.description);
   return !isPlaceholder(original) && isChineseDescription(original) ? original : PENDING_DESCRIPTION_ZH;
+}
+
+/** Status text is for display only; it must never count as a completed summary. */
+export function descriptionDisplayFor(entry: DescriptionEntry, reviewed: ReviewedDescriptions = {}, context: DescriptionContext = {}): string {
+  const description = descriptionFor(entry, reviewed, context);
+  if (description !== PENDING_DESCRIPTION_ZH || !entry.descriptionStatus) return description;
+  const labels = { 'pending': '中文简介待生成', 'review-required': '中文简介待复核',
+    'missing-source': '中文简介资料不足', 'retry': '中文简介生成未完成' };
+  const label = labels[entry.descriptionStatus.state];
+  return label ? `${label}：${cleanDescription(entry.descriptionStatus.reason).slice(0, 200)}` : description;
 }

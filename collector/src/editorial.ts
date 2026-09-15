@@ -1,11 +1,13 @@
+import { hasSelectedReadmeEvidence } from "./readme-evidence.js";
 import { needsFunctionReview } from "./reviewed-evidence-state.js";
 import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
 import categories from "../config/reviewed-categories.json";
 import { bindCategoryAssignments, normalizeCategoryAssignments, type CategoryInput } from "./categories.js";
 import { hasChineseDescription } from "./description-jobs.js";
-import { matchesReviewedIdentity, matchesReviewedReadme, PENDING_DESCRIPTION_ZH, type ReviewedInstallIdentity } from "../../plugin/src/shared/description-rules.js";
+import { hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, PENDING_DESCRIPTION_ZH, type ReviewedInstallIdentity } from "../../plugin/src/shared/description-rules.js";
 
 interface ReviewedEntry {
+  sourceScope?: string;
   sourceDescription: string;
   sourceReadme: string;
   sourceInstall?: ReviewedInstallIdentity;
@@ -17,16 +19,18 @@ interface ReviewedEntry {
 function matchingReview(input: CategoryInput, reviews: Record<string, ReviewedEntry>): ReviewedEntry | null {
   const review = reviews[(input.fullName || input.name).toLowerCase()];
   return review && matchesReviewedIdentity(input, review.sourceInstall, review.sourceType)
-    && review.sourceDescription === (input.description || "") && matchesReviewedReadme(input.readmeSummary || "", review.sourceReadme) ? review : null;
+    && (review.sourceDescription === (input.description || "")
+      || review.sourceScope === "selected-package" && !!input.install?.repositoryPath
+        && (hasSelectedReadmeEvidence(input) || !!review.sourceInstall?.functionEvidence)) && matchesReviewedReadme(input.readmeSummary || "", review.sourceReadme) ? review : null;
 }
 export function reviewedDescription(input: CategoryInput): string | null {
-  if (needsFunctionReview(input)) return PENDING_DESCRIPTION_ZH;
+  if (hasInvalidSelectedPackage(input) || needsFunctionReview(input)) return PENDING_DESCRIPTION_ZH;
   const review = matchingReview(input, descriptions);
   if (review?.suspended) return PENDING_DESCRIPTION_ZH;
   return review && hasChineseDescription(review.descriptionZh) ? review.descriptionZh! : null;
 }
 export function reviewedCategories(input: CategoryInput) {
-  if (needsFunctionReview(input)) return [];
+  if (hasInvalidSelectedPackage(input) || needsFunctionReview(input)) return [];
   const review = matchingReview(input, categories);
   if (!review) return null;
   return bindCategoryAssignments(input, normalizeCategoryAssignments(review.categories));

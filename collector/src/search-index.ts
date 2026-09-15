@@ -38,6 +38,7 @@ export function toSearchEntry(
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
+    ...(entry.descriptionStatus ? { descriptionStatus: entry.descriptionStatus } : {}),
     ...(publishedDescriptionZh(entry)
       ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),
@@ -63,6 +64,7 @@ export function toSnapshotSearchEntry(
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
+    ...(entry.descriptionStatus ? { descriptionStatus: entry.descriptionStatus } : {}),
     ...(publishedDescriptionZh(entry)
       ? { descriptionZh: publishedDescriptionZh(entry) }
       : {}),

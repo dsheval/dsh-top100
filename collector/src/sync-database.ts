@@ -1,3 +1,5 @@
+import { refreshBoardSources } from "./board-source-refresh.js";
+import { isDailyBoardRun } from "./model-requests.js";
 import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
 import { bindDailySourceJob } from "./daily-model-scope.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
@@ -16,10 +18,13 @@ import {
 } from "./daily-categories.js";
 import { publishRankings } from "./publish-rankings.js";
 import { buildRankings } from "./rankings.js";
+import { completeDailyBoardDescriptions, readDescriptionJobs } from "./daily-board-descriptions.js";
+import { attachDescriptionCoverage } from "./board-descriptions.js";
 import {
   importMarketData,
   openDatabase,
   readActiveRepositories,
+  dateInTimeZone,
 } from "./database.js";
 
 import { reviewedDescription } from "./editorial.js";
@@ -154,22 +159,39 @@ async function main(): Promise<void> {
 
   const database = openDatabase({ path: databasePath });
   try {
+    const rankingNow = new Date();
+    const snapshotDate = dateInTimeZone(rankingNow, process.env.TZ ?? "Asia/Shanghai");
+    const rankingConfig = resolve(projectRoot, "config/ranking.json");
+    const previousSources = new Map(readActiveRepositories(database).map(row => [row.fullName.toLowerCase(), row.raw]));
+    const sourceRefresh = await refreshBoardSources(market.plugins,
+      () => buildRankings(database, snapshotDate, rankingConfig, { sources: market.plugins, now: rankingNow }),
+      { enabled: isDailyBoardRun(), now: rankingNow.getTime() });
+    if (sourceRefresh.length) {
+      atomicJson(join(dirname(sourcePath), "board-source-report.json"), { snapshotDate, entries: sourceRefresh });
+      console.log(`Board source refresh: ${sourceRefresh.length} checked before descriptions`);
+    }
+    await completeDailyBoardDescriptions(market.plugins, previousSources, dirname(sourcePath),
+      () => buildRankings(database, snapshotDate, rankingConfig, { sources: market.plugins, now: rankingNow }), rankingNow.getTime());
     await classifyRepositories(market, database, join(dirname(sourcePath), "category-jobs.json"), priority);
     atomicJson(sourcePath, market);
     const imported = importMarketData(database, market, {
       model: process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL,
       timeZone: process.env.TZ ?? "Asia/Shanghai",
+      snapshotDate,
     });
     const rankings = buildRankings(
       database,
       imported.snapshotDate,
-      resolve(projectRoot, "config/ranking.json")
+      rankingConfig, { now: rankingNow },
     );
+    const coverage = attachDescriptionCoverage(rankings, readDescriptionJobs(dirname(sourcePath)));
     const plugins = publicPlugins(database, rankings.generatedAt);
 
     const manifest = publishRankings(rankings, publicDirectory, {
       publicUrlPrefix: process.env.PUBLIC_DATA_URL_PREFIX ?? "/data",
     });
+    atomicJson(join(dirname(sourcePath), "board-description-report.json"), { snapshotId: manifest.snapshotId, ...coverage });
+    console.log(`[board-description-coverage] ${JSON.stringify({ snapshotId: manifest.snapshotId, ...coverage })}`);
     atomicJson(resolve(publicDirectory, "top-stars.json"), {
       schemaVersion: 2,
       generatedAt: rankings.generatedAt,

@@ -769,6 +769,10 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     owner: typeof entry.owner === "string" ? entry.owner : owner,
     description: typeof entry.description === "string" ? entry.description : "",
     descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
+    ...(entry.descriptionStatus && ['pending', 'review-required', 'missing-source', 'retry'].includes(entry.descriptionStatus.state)
+      && typeof entry.descriptionStatus.reason === 'string' ? { descriptionStatus: {
+        state: entry.descriptionStatus.state, reason: entry.descriptionStatus.reason.slice(0, 200),
+      } } : {}),
     ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
     stars: Number(entry.stars) || 0,
     dailyStars: typeof entry.dailyStars === "number" && Number.isFinite(entry.dailyStars) ? entry.dailyStars : null,
