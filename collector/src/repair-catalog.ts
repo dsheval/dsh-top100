@@ -7,6 +7,8 @@ import { CATEGORY_DEFINITIONS, fallbackCategoryAssignments, currentCategoryAssig
 import { reviewedCategories, reviewedDescription } from "./editorial.js";
 import { hasChineseDescription, planDescriptionJobs } from "./description-jobs.js";
 import { fallbackDescriptionZh } from "./llm.js";
+import { matchingDescriptionHold } from "./content-source.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 import { refreshInstallAssessments, type AssessmentCache } from "./install-assessment.js";
 import { publishRankings } from "./publish-rankings.js";
 import type { RankingsDocument } from "./rankings.js";
@@ -23,7 +25,9 @@ const entries = [...document.rankings.total, ...document.directories?.skills ?? 
 const changes: unknown[] = [];
 for (const entry of entries) {
   const before = { descriptionZh: entry.descriptionZh, categories: entry.categories.map(category => category.id) };
-  entry.descriptionZh = reviewedDescription(entry) ?? (hasChineseDescription(entry.descriptionZh) ? entry.descriptionZh : fallbackDescriptionZh({ ...entry, readmeSummary: entry.readmeSummary ?? null }));
+  entry.descriptionZh = reviewedDescription(entry) ?? (hasChineseDescription(entry.descriptionZh) ? entry.descriptionZh
+    : descriptionQualityIssue(entry.descriptionZh) || matchingDescriptionHold(entry) ? PENDING_DESCRIPTION_ZH
+      : fallbackDescriptionZh({ ...entry, readmeSummary: entry.readmeSummary ?? null }));
   const existing = currentCategoryAssignments(entry, entry.categories);
   entry.categories = reviewedCategories(entry) ?? (hasAuthoritativeCategories(existing) ? existing : fallbackCategoryAssignments(entry));
   const after = { descriptionZh: entry.descriptionZh, categories: entry.categories.map(category => category.id) };

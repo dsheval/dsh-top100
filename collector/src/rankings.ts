@@ -14,7 +14,8 @@ import { CATEGORY_DEFINITIONS } from "./categories.js";
 import { fallbackDescriptionZh } from "./llm.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { reviewedDescription } from "./editorial.js";
-import { matchingEditorialHold } from "./content-source.js";
+import { matchingDescriptionHold } from "./content-source.js";
+import { descriptionQualityIssue } from "../../plugin/src/shared/description-rules.js";
 import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 import { isFeaturedRepository } from "../../plugin/src/shared/featured.js";
 
@@ -138,7 +139,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     description: repository.description,
     descriptionZh:
       reviewedDescription(repository) ?? (hasChineseDescription(repository.descriptionZh) ? repository.descriptionZh!
-        : matchingEditorialHold({ ...repository, id: repository.fullName }) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(repository)),
+        : descriptionQualityIssue(repository.descriptionZh) || matchingDescriptionHold({ ...repository, id: repository.fullName }) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(repository)),
     ...(repository.readmeSummary ? { readmeSummary: repository.readmeSummary } : {}),
     stars: repository.stars,
     dailyStars: scored.dailyStars,

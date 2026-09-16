@@ -41,9 +41,17 @@ test('reviewed summaries are source-bound and safe to display', () => {
     for (const changed of [{...entry,description:'New functionality.'},{...entry,readmeSummary:'Updated behavior.'},
       {...entry,install:{...entry.install,packageName:'fixture-changed-package'}},
       {...entry,install:{...entry.install,repositoryPath:'packages/changed'}}]) {
-      // An invalidated review must use ordinary fallback; the author's Chinese
-      // description can legitimately be identical to the previously reviewed text.
-      assert.equal(descriptionFor(changed,reviews),descriptionFor(changed,{}));
+      // Strict migrations withhold stale claims; legacy reviews retain their
+      // fallback behavior. Source-verified subpackages ignore root marketing.
+      const sameIdentity = changed.install?.packageName === entry.install?.packageName
+        && changed.install?.repositoryPath === entry.install?.repositoryPath;
+      const rootOnly = sameIdentity && changed.readmeSummary === entry.readmeSummary;
+      const verifiedFunction = review.sourceScope === "verified-function" ||
+        review.sourceScope === "selected-package" && review.sourceInstall?.functionEvidence && rootOnly;
+      const expected = review.reviewRequiredReason ? "中文简介待生成。"
+        : sameIdentity && verifiedFunction ? review.descriptionZh
+        : review.enforceSourceMatch ? "中文简介待生成。" : descriptionFor(changed,{});
+      assert.equal(descriptionFor(changed,reviews),expected,fullName);
     }
   }
 });
@@ -99,7 +107,7 @@ test('explicit publisher withholding survives compact data without the review ev
     const compact={fullName,description:full.description,type:full.type,descriptionZh:'中文简介待生成。'};
     assert.equal(descriptionFor(compact,reviews,{snapshotId:'new-data-snapshot'}),'中文简介待生成。',fullName);
     assert.equal(descriptionFor(compact),'中文简介待生成。',fullName);
-    assert.equal(descriptionFor({...compact,descriptionZh:full.descriptionZh},reviews,{snapshotId:'old-cache'}),full.descriptionZh,fullName);
+    assert.equal(descriptionFor({...compact,descriptionZh:full.descriptionZh},reviews,{snapshotId:'old-cache'}),review.reviewRequiredReason ? '中文简介待生成。' : full.descriptionZh,fullName);
   }
   assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。'}),'自动生成研究报告并管理企业知识库。');
   assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。',descriptionZh:' **中文简介待生成。** '}),'中文简介待生成。');

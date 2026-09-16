@@ -32,8 +32,8 @@ import {
 import { reviewedDescription } from "./editorial.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { refreshInstallAssessments, type AssessmentCache } from "./install-assessment.js";
-import { matchingEditorialHold } from "./content-source.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { matchingDescriptionHold } from "./content-source.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -133,7 +133,10 @@ async function main(): Promise<void> {
     const reviewed = reviewedDescription(plugin);
     if (reviewed) plugin.descriptionZh = reviewed;
     if (hasChineseDescription(plugin.descriptionZh)) continue;
-    plugin.descriptionZh = matchingEditorialHold(plugin) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh({
+    // Preserve rejected input until the daily planner records its review hold.
+    // Publication rejects it independently, including a non-daily sync.
+    if (descriptionQualityIssue(plugin.descriptionZh)) continue;
+    plugin.descriptionZh = matchingDescriptionHold(plugin) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh({
       name: plugin.name,
       repositoryPath: plugin.install?.repositoryPath,
       description: plugin.description,

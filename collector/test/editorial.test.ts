@@ -47,19 +47,21 @@ describe("current priority editorial review", () => {
           packageName: description.sourceInstall.packageName ?? undefined,
           repositoryPath: description.sourceInstall.repositoryPath ?? undefined } };
       expect(description.sourceUrl, fullName).toBe(review.sourceUrl);
-      expect(description, fullName).not.toHaveProperty("snapshotId");
+      if ("enforceSourceMatch" in description && description.enforceSourceMatch)
+        expect(description.snapshotId, fullName).toBe("2026-09-16-10c17709d0632ece");
+      else expect(description, fullName).not.toHaveProperty("snapshotId");
       const chinese = reviewedDescription(entry);
       expect(chinese, fullName).toBe(description.descriptionZh);
       if ("suspended" in description && description.suspended) {
         expect(chinese).toBe("中文简介待生成。");
         expect(hasChineseDescription(chinese)).toBe(false);
-        expect(reviewedCategories(entry)).toEqual([]);
+        if (!("reviewRequiredReason" in description)) expect(reviewedCategories(entry)).toEqual([]);
         continue;
       }
       expect(hasChineseDescription(chinese), fullName).toBe(true);
       const chineseLength = (chinese!.match(/[\u3400-\u9fff]/g) || []).length;
       // Preserve already accurate shorter descriptions in the long-tail batch.
-      expect(chineseLength, fullName).toBeGreaterThanOrEqual("reviewScope" in review ? 6 : 30);
+      expect(chineseLength, fullName).toBeGreaterThanOrEqual("reviewScope" in review || "enforceSourceMatch" in description ? 6 : 30);
       expect(chineseLength, fullName).toBeLessThanOrEqual(60);
       expect(chinese, fullName).not.toMatch(/资料不足|简介待生成|求\s*Star|<|>/i);
       expect(reviewedDescription({ ...entry, fullName: fullName.toUpperCase() }), fullName).toBe(chinese);
@@ -76,7 +78,9 @@ describe("current priority editorial review", () => {
         { ...entry, type: undefined },
       ]) {
         const guarded = "functionEvidence" in categories[fullName as keyof typeof categories].sourceInstall;
-        expect(reviewedDescription(changed), fullName).toBe(guarded ? "中文简介待生成。" : null);
+        const description = descriptions[fullName as keyof typeof descriptions];
+        const strictDescription = description && (("enforceSourceMatch" in description && description.enforceSourceMatch) || "reviewRequiredReason" in description);
+        expect(reviewedDescription(changed), fullName).toBe(guarded || strictDescription ? "中文简介待生成。" : null);
         expect(reviewedCategories(changed), fullName).toEqual(guarded ? [] : null);
       }
     }
@@ -98,7 +102,7 @@ describe("current priority editorial review", () => {
       const assignments = reviewedCategories(entry);
       expect(assignments, fullName).toHaveLength(review.categories.length);
       const description = descriptions[fullName as keyof typeof descriptions];
-      if (description && "suspended" in description && description.suspended) expect(assignments, fullName).toEqual([]);
+      if (description && "suspended" in description && description.suspended && !("reviewRequiredReason" in description)) expect(assignments, fullName).toEqual([]);
       else expect(assignments!.length, fullName).toBeGreaterThan(0);
       expect(assignments!.length, fullName).toBeLessThanOrEqual(3);
       for (const [index, assignment] of assignments!.entries()) {
@@ -127,7 +131,8 @@ describe("current priority editorial review", () => {
         // Root marketing is independent of a source-verified subpackage. Changed
         // functional documents still invalidate every review.
         expect(reviewedDescription(changed), fullName).toBe(scopedFunctionReview
-          && changed.readmeSummary === entry.readmeSummary ? descriptionReview.descriptionZh : null);
+          && changed.readmeSummary === entry.readmeSummary ? descriptionReview.descriptionZh
+          : descriptionReview && (("enforceSourceMatch" in descriptionReview && descriptionReview.enforceSourceMatch) || "reviewRequiredReason" in descriptionReview) ? "中文简介待生成。" : null);
         expect(reviewedCategories(changed), fullName).toBeNull();
         expect(currentCategoryAssignments(changed, reviewedCategories(entry)), fullName).toEqual([]);
       }

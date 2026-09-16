@@ -89,7 +89,7 @@ describe("Chinese summary validation", () => {
     expect(isGenericDescriptionZh("ruflo：已收录的 DSH 插件，现有项目资料不足以生成可靠的功能简介。")).toBe(true);
   });
 
-  it("prefers a useful Chinese sentence from README when the repository description is English", () => {
+  it("leaves README evidence for generation instead of automatically approving an extracted sentence", () => {
     expect(
       fallbackDescriptionZh({
         name: "demo",
@@ -97,7 +97,7 @@ describe("Chinese summary validation", () => {
         readmeSummary: "欢迎使用。这个插件支持跨设备同步会话，并自动整理历史记录。安装方法如下。",
         topics: [],
       })
-    ).toBe("这个插件支持跨设备同步会话，并自动整理历史记录。");
+    ).toBe("中文简介待生成。");
   });
 
   it("rejects implementation-only and navigation fragments as summaries", () => {
@@ -125,16 +125,16 @@ describe("Chinese summary validation", () => {
     expect(fallbackDescriptionZh("版本更新提示：本次版本变化较大，老用户请更新至最新版本。")).toBe("中文简介待生成。");
   });
 
-  it("uses complete source sentences without deleting English word boundaries", () => {
+  it("does not extract a shorter sentence from an invalid author description", () => {
     const description = "为 DeepSeek Harness 提供浏览器自动化。" + "说明".repeat(50);
-    expect(fallbackDescriptionZh(description)).toBe("为 DeepSeek Harness 提供浏览器自动化。");
+    expect(fallbackDescriptionZh(description)).toBe("中文简介待生成。");
     expect(extractJson(JSON.stringify({ descriptionZh: "让 DeepSeek Harness 调用 Browser Skill 操作网页。" }))?.descriptionZh)
       .toContain("DeepSeek Harness");
   });
 
-  it("discards markdown tables and uses the next factual sentence", () => {
+  it("does not replace an invalid description with an unreviewed README sentence", () => {
     expect(fallbackDescriptionZh({ name: "demo", description: "中文 | English | 组件 | 说明 | |---|---|", readmeSummary: "# 使用说明\n这个插件支持跨设备同步会话。\n安装步骤如下。", topics: [] }))
-      .toBe("这个插件支持跨设备同步会话。");
+      .toBe("中文简介待生成。");
   });
 
   it("does not spend another request on an empty successful response", async () => {
@@ -182,5 +182,5 @@ describe("Chinese summary validation", () => {
 // Selected package summaries must not borrow the parent product's capabilities.
 it("does not use a Chinese root description as a subpackage fallback", () => {
   expect(fallbackDescriptionZh({ name: "bridge", description: "自动生成研究报告并管理企业知识库。", readmeSummary: null, topics: [], install: { repositoryPath: "packages/bridge" } })).toBe("中文简介待生成。");
-  expect(fallbackDescriptionZh({ name: "bridge", description: "自动生成研究报告并管理企业知识库。", readmeSummary: "在编辑器中展示项目文件与变更记录。", topics: [], install: { repositoryPath: "packages/bridge" } })).toBe("在编辑器中展示项目文件与变更记录。");
+  expect(fallbackDescriptionZh({ name: "bridge", description: "自动生成研究报告并管理企业知识库。", readmeSummary: "在编辑器中展示项目文件与变更记录。", topics: [], install: { repositoryPath: "packages/bridge" } })).toBe("中文简介待生成。");
 });

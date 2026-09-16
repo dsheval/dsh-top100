@@ -7,6 +7,7 @@ import type { PluginCategoryAssignment } from "@dsh-top100/schema";
 
 export interface ZhEntry {
   descriptionZh: string;
+  origin?: 'reviewed' | 'author' | 'model' | 'legacy';
   tagsZh: string[];
   /** DeepSeek 多标签分类；旧缓存缺省时由分类补全流程生成。 */
   categories?: PluginCategoryAssignment[];

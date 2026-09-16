@@ -2,9 +2,9 @@
 import type { DshPlugin } from '@dsh-top100/schema';
 import type { RankingsDocument, RankingEntry } from './rankings.js';
 import { descriptionSourceHash, type DescriptionJob } from './description-jobs.js';
-import { matchingEditorialHold, hasContentEvidence } from './content-source.js';
+import { matchingDescriptionHold, hasContentEvidence } from './content-source.js';
 import { publishedDescriptionZh } from './published-description.js';
-import { descriptionFor, PENDING_DESCRIPTION_ZH, type DescriptionStatus } from '../../plugin/src/shared/description-rules.js';
+import { descriptionFor, descriptionQualityIssue, PENDING_DESCRIPTION_ZH, type DescriptionStatus } from '../../plugin/src/shared/description-rules.js';
 
 export function boardDescriptionScope(rankings: RankingsDocument): Set<string> {
   return new Set(['hot', 'rising'].flatMap(board => rankings.rankings[board as 'hot' | 'rising']
@@ -19,7 +19,7 @@ export function hasPublishedChinese(entry: RankingEntry): boolean {
 export function bindBoardDescriptionJob(entry: DshPlugin, scope: ReadonlySet<string>,
   previous: ReadonlyMap<string, DshPlugin>, old: DescriptionJob | undefined, job: DescriptionJob): boolean {
   if (!scope.has(entry.fullName.toLowerCase()) || job.status !== 'pending' && job.status !== 'retry') return false;
-  if (!previous.size || matchingEditorialHold(entry) || !hasContentEvidence(entry)
+  if (!previous.size || matchingDescriptionHold(entry) || !hasContentEvidence(entry)
     || entry.install.discovery?.status !== 'verified') return false;
   const before = previous.get(entry.fullName.toLowerCase());
   if (before && [before.type, before.install.packageName ?? '', before.install.repositoryPath ?? ''].join('\n')
@@ -37,8 +37,10 @@ export function bindBoardDescriptionJob(entry: DshPlugin, scope: ReadonlySet<str
 
 export function missingDescriptionStatus(entry: RankingEntry, job?: DescriptionJob): DescriptionStatus | undefined {
   if (hasPublishedChinese(entry)) return undefined;
-  const hold = matchingEditorialHold(entry);
+  const hold = matchingDescriptionHold(entry);
   if (hold) return { state: 'review-required', reason: hold.reason };
+  const qualityIssue = descriptionQualityIssue(entry.descriptionZh);
+  if (qualityIssue) return { state: 'review-required', reason: qualityIssue };
   if (!hasContentEvidence(entry)) return { state: 'missing-source', reason: '作者资料尚不足以说明具体功能，待补充来源。' };
   if (entry.install.discovery?.status !== 'verified') return { state: 'review-required', reason: '插件来源或所选包身份尚待核实，暂不生成简介。' };
   if (job?.reviewReason && job.status === 'review-required') return { state: 'review-required', reason: job.reviewReason };

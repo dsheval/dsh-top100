@@ -13,7 +13,7 @@ const review: ReviewedFunctionEvidence = { ...identity, sourceCommit: "fixture-c
 describe("scoped source-file evidence", () => {
   it("checks only the explicitly source-reviewed packages and validates their concrete manifests", () => {
     expect(Object.keys(reviewedFunctionEvidence).sort()).toEqual([
-      "cherryhq/cherry-studio", "dataelement/dsh-desktop", "derpyu520/qq-bridge", "hust-open-atom-club/oh-dsh",
+      "adwmc/helm-d", "cherryhq/cherry-studio", "dataelement/dsh-desktop", "derpyu520/qq-bridge", "hust-open-atom-club/oh-dsh",
       "jinghao-leon/dsh-alpha-desk", "jingyunstudio/jingyun-dsh", "openpetshq/openpets", "woaiys3/deepseek-harness-android-app", "zhu1090093659/dsh-trading",
     ]);
     for (const value of Object.values(reviewedFunctionEvidence)) {

@@ -54,7 +54,8 @@ describe("frozen catalog enrichment jobs", () => {
       const jobs = plan.state.jobs[fullName];
       for (const job of Object.values(jobs)) {
         expect(["complete", "review-required"], fullName).toContain(job.status);
-        if (job.status === "review-required") expect(job.reviewReason).toBe(editorialHolds[fullName].reason);
+        if (job.status === "review-required") expect(job.reviewReason).toBe(fullName === "adwmc/helm-d"
+          ? "已复核的功能源码尚未通过当前核验，旧简介和分类暂停使用。" : editorialHolds[fullName].reason);
       }
       expect(enrichmentProgress(plan, now)).toMatchObject({
         description: { "review-required": Number(jobs.description.status === "review-required"), ready: 0 },

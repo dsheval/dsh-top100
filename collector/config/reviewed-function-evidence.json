@@ -198,5 +198,25 @@
       }
     ],
     "expectedFingerprint": "fa025cb40b7dbe9f586fa19adc556ec0fc3800a3d6995ad6342e93d415cd9f99"
+  },
+  "adwmc/helm-d": {
+    "packageName": "@helm-d/bootstrap",
+    "repositoryPath": "packages/bootstrap",
+    "sourceCommit": "b66ec1bb34df6b7be15084e4a21af79d70a10765",
+    "expectedFingerprint": "5685c1bae361117f711c751375e67867c1b6c742508fa37ce30bfe3f6b7f7c16",
+    "files": [
+      {
+        "path": "packages/bootstrap/cordis.patch.yml",
+        "sha256": "10ecccb299ea008824eb9c53ed7266ce6422fd194b6114cdb6718ac01ce3c1bf"
+      },
+      {
+        "path": "packages/bootstrap/package.json",
+        "sha256": "eb839b161828be9e7253b1b9d9ff80a0c5268b2ad4e095db1880d1760c435621"
+      },
+      {
+        "path": "packages/bootstrap/src/index.ts",
+        "sha256": "aee1f1fa0f679b16b0ef3f772615f3975187c234a0b22867d013862a005751f3"
+      }
+    ]
   }
 }

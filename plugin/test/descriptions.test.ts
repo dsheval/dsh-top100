@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import reviewed from "../src/shared/reviewed-descriptions.json";
-import { descriptionFor, matchesReviewedReadme } from "../src/shared/description-rules.js";
+import { descriptionFor, matchesReviewedReadme, descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../src/shared/description-rules.js";
 import { withReviewedDescription } from "../src/shared/descriptions.js";
 import { filterCatalog } from "../src/host/catalog.js";
 import { recommendationResult } from "../src/host/recommendations.js";
@@ -31,6 +31,23 @@ function document(entry: RankingEntry, snapshotId?: string): RankingsDocument {
 const options = { view: "total" as const, category: null, query: "协议桥接", offset: 0, limit: 10, installed: {} };
 
 describe("shared editorial descriptions", () => {
+  it('withholds irrelevant Chinese in both full and compact listings without borrowing the root description', () => {
+    for (const text of ['感谢官方对本项目的肯定与支持！', '安装后会提供九个可单独调用的入口：…',
+      '中文 · English PATH 上需要官方 dsh 和 pnpm。', '· 右：基于已有结果继续对话修改，在画布中持续迭代创作。',
+      '> 摘一段，生一枝。', '> Mneme（Μνήμη）源自希腊记忆女神 Mnemosyne。',
+      '安装后在会话中调用该插件注册的工具即可。', '纯 Node 实现，无网络、无外部服务。']) {
+      expect(descriptionQualityIssue(text)).toBeTruthy();
+      const entry = { description: '自动生成研究报告并管理企业知识库。', descriptionZh: text };
+      expect(descriptionFor(entry)).toBe(PENDING_DESCRIPTION_ZH);
+      expect(descriptionFor({ ...entry, installRepositoryPath: 'packages/bridge' })).toBe(PENDING_DESCRIPTION_ZH);
+    }
+    expect(descriptionFor({ descriptionZh: '为 DSH 提供离线知识检索，通过本地数据库查找历史记忆。' }))
+      .toBe('为 DSH 提供离线知识检索，通过本地数据库查找历史记忆。');
+    expect(descriptionFor({ descriptionZh: '简体中文 | English 把你正在使用的 DeepSeek Harness（DSH）接进飞书。' }))
+      .toBe('把你正在使用的 DeepSeek Harness（DSH）接进飞书。');
+    expect(descriptionFor({ descriptionZh: 'dsh-share 中文 · English 分享单轮或多轮对话，可导出为图片或 Markdown。' }))
+      .toBe('dsh-share 分享单轮或多轮对话，可导出为图片或 Markdown。');
+  });
   it("ignores only a leading bilingual navigation switch in reviewed sources", () => {
     const body = "--- I spent a long time settling into focused writing in Typora.";
     expect(matchesReviewedReadme(body, `中文 | English ${body}`)).toBe(true);

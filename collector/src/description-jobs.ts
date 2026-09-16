@@ -1,5 +1,6 @@
-import { contentSourceHash, matchesContentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt, type ContentSource } from './content-source.js';
+import { contentSourceHash, matchesContentSourceHash, matchingDescriptionHold, hasContentEvidence, nextContentAttemptAt, type ContentSource } from './content-source.js';
 import { isGenericDescriptionZh } from './llm.js';
+import { descriptionQualityIssue } from '../../plugin/src/shared/description-rules.js';
 
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
 export interface DescriptionJob {
@@ -10,6 +11,9 @@ export interface DescriptionJob {
   reviewReason?: string;
   reviewLocked?: boolean;
   descriptionZh?: string;
+  /** Retained for review; never replayed as a completed result. */
+  rejectedDescriptionZh?: string;
+  origin?: 'reviewed' | 'author' | 'model' | 'legacy';
   tagsZh?: string[];
   lastAttemptAt?: string;
   attempts: number;
@@ -29,11 +33,18 @@ export function planDescriptionJobs<T extends DescriptionSource>(sources: T[], p
     const old = previous[source.id];
     const unchanged = matchesContentSourceHash(source, 'description', old?.sourceHash);
     const complete = hasChineseDescription(source.descriptionZh);
-    const hold = matchingEditorialHold(source);
+    const hold = matchingDescriptionHold(source);
+    const rejected = descriptionQualityIssue(source.descriptionZh) ? source.descriptionZh!
+      : unchanged && descriptionQualityIssue(old.descriptionZh) ? old.descriptionZh! : undefined;
     const job: DescriptionJob = complete
       ? { sourceHash, status: 'complete', attempts: unchanged ? old.attempts : 0, descriptionZh: source.descriptionZh!, tagsZh: source.tags ?? [] }
       : hold
-        ? { sourceHash, status: 'review-required', attempts: unchanged ? old.attempts : 0, reviewReason: hold.reason }
+        ? { ...(unchanged ? old : {}), sourceHash, status: 'review-required', attempts: unchanged ? old.attempts : 0, reviewReason: hold.reason,
+          ...(rejected ? { rejectedDescriptionZh: rejected } : {}) }
+      : rejected
+        ? { ...(unchanged ? old : {}), sourceHash, status: 'review-required', attempts: unchanged ? old.attempts : 0,
+          reviewLocked: true, rejectedDescriptionZh: rejected,
+          reviewReason: `${descriptionQualityIssue(rejected)}存量纠正需定向复核，不自动付费重写。` }
       : unchanged && old.reviewLocked
         ? { ...old, sourceHash, status: 'review-required' }
       : !hasContentEvidence(source)

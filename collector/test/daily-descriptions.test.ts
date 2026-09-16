@@ -61,7 +61,8 @@ describe("daily description source gates", () => {
     expect(plan.ready).toHaveLength(0);
     for (const entry of entries) {
       expect(["review-required", "complete"], entry.id).toContain(plan.jobs[entry.id].status);
-      if (plan.jobs[entry.id].status === "review-required") expect(plan.jobs[entry.id].reviewReason).toBe(holds[entry.id as keyof typeof holds].reason);
+      if (plan.jobs[entry.id].status === "review-required") expect(plan.jobs[entry.id].reviewReason).toBe(entry.id === "adwmc/helm-d"
+          ? "已复核的功能源码尚未通过当前核验，旧简介和分类暂停使用。" : holds[entry.id as keyof typeof holds].reason);
       expect(entry.descriptionZh, entry.id).not.toBe(older);
     }
     const worker = vi.fn(async () => summary);
@@ -317,8 +318,8 @@ describe("daily description cache migration and identity", () => {
     expect(plan.ready.map(value => value.id)).toEqual([fresh.id]);
     const worker = vi.fn(async () => summary);
     expect(await runDailyDescriptions([reused, fresh], plan, { limit: 10, concurrency: 2, worker, now: () => now })).toEqual({ attempted: 1, completed: 1, failed: 0 });
-    updateDailyDescriptionCache([reused, fresh], cache);
-    expect(cache.get(fresh.id)).toEqual({ descriptionZh: summary.descriptionZh, tagsZh: summary.tagsZh, sourceHash: descriptionSourceHash(fresh), summaryKey: fresh.readmeSummary });
+    updateDailyDescriptionCache([reused, fresh], cache, plan.jobs);
+    expect(cache.get(fresh.id)).toEqual({ descriptionZh: summary.descriptionZh, tagsZh: summary.tagsZh, sourceHash: descriptionSourceHash(fresh), summaryKey: fresh.readmeSummary, origin: 'model' });
     const absent = source(3);
     cache.set(absent.id, { descriptionZh: older, tagsZh: [] });
     updateDailyDescriptionCache([absent], cache);

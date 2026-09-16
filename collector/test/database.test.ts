@@ -172,7 +172,7 @@ describe("SQLite history and rankings", () => {
     }
   });
 
-  it("publishes Chinese descriptions for every ranking and the Skills directory", () => {
+  it("publishes complete author descriptions but leaves unreviewed README excerpts pending", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-chinese-"));
     temporaryDirectories.push(directory);
     const database = openDatabase({ path: join(directory, "market.sqlite") });
@@ -188,7 +188,7 @@ describe("SQLite history and rankings", () => {
       const result = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
       for (const entries of Object.values(result.rankings)) {
         for (const entry of entries) {
-          expect(entry.descriptionZh).toBe(["a/chinese", "a/readme"].includes(entry.fullName) ? "搜索网页并整理资料。" : "中文简介待生成。");
+          expect(entry.descriptionZh).toBe(entry.fullName === "a/chinese" ? "搜索网页并整理资料。" : "中文简介待生成。");
           expect(entry.description).toBe(sources.find(source => source.fullName === entry.fullName)!.description);
         }
       }

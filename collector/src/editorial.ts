@@ -4,7 +4,7 @@ import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
 import categories from "../config/reviewed-categories.json";
 import { bindCategoryAssignments, normalizeCategoryAssignments, type CategoryInput } from "./categories.js";
 import { hasChineseDescription } from "./description-jobs.js";
-import { hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, PENDING_DESCRIPTION_ZH, type ReviewedInstallIdentity } from "../../plugin/src/shared/description-rules.js";
+import { hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, PENDING_DESCRIPTION_ZH, type ReviewedDescription, type ReviewedInstallIdentity } from "../../plugin/src/shared/description-rules.js";
 
 interface ReviewedEntry {
   sourceScope?: string;
@@ -25,9 +25,13 @@ function matchingReview(input: CategoryInput, reviews: Record<string, ReviewedEn
 }
 export function reviewedDescription(input: CategoryInput): string | null {
   if (hasInvalidSelectedPackage(input) || needsFunctionReview(input)) return PENDING_DESCRIPTION_ZH;
-  const review = matchingReview(input, descriptions);
-  if (review?.suspended) return PENDING_DESCRIPTION_ZH;
-  return review && hasChineseDescription(review.descriptionZh) ? review.descriptionZh! : null;
+  const review = (descriptions as Record<string, ReviewedDescription>)[(input.fullName || input.name).toLowerCase()];
+  if (review?.reviewRequiredReason) return PENDING_DESCRIPTION_ZH;
+  if (review && matchesReviewedDescriptionSource({ ...input, descriptionZh: input.descriptionZh ?? undefined,
+    readmeSummary: input.readmeSummary ?? '', description: input.description ?? '' }, review, {}, hasSelectedReadmeEvidence(input))) {
+    return review.suspended ? PENDING_DESCRIPTION_ZH : hasChineseDescription(review.descriptionZh) ? review.descriptionZh : null;
+  }
+  return review?.enforceSourceMatch ? PENDING_DESCRIPTION_ZH : null;
 }
 export function reviewedCategories(input: CategoryInput) {
   if (hasInvalidSelectedPackage(input) || needsFunctionReview(input)) return [];

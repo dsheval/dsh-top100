@@ -7,10 +7,10 @@ import {
 import { reviewedCategories, reviewedDescription } from "./editorial.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 import type { RankingEntry, RankingsDocument } from "./rankings.js";
 
-import { DESCRIPTION_POLICY_VERSION, contentSourceHash, matchesContentSourceHash, matchingEditorialHold, hasContentEvidence, nextContentAttemptAt } from "./content-source.js";
+import { DESCRIPTION_POLICY_VERSION, contentSourceHash, matchesContentSourceHash, matchingEditorialHold, matchingDescriptionHold, hasContentEvidence, nextContentAttemptAt } from "./content-source.js";
 export { DESCRIPTION_POLICY_VERSION } from "./content-source.js";
 export type EnrichmentKind = "description" | "categories";
 export type EnrichmentStatus = "pending" | "retry" | "missing-source" | "review-required" | "complete";
@@ -24,6 +24,8 @@ export interface EnrichmentJob {
   failure?: "request-failed" | "empty-or-invalid-result";
   reviewReason?: string;
   descriptionZh?: string;
+  rejectedDescriptionZh?: string;
+  reviewLocked?: boolean;
   tagsZh?: string[];
   categories?: RankingEntry["categories"];
 }
@@ -66,7 +68,12 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
       && !matchesContentSourceHash(entry, "description", oldDescription.sourceHash)
       && oldDescription.descriptionZh === entry.descriptionZh;
     const existingChinese = !staleChinese && hasChineseDescription(entry.descriptionZh);
-    entry.descriptionZh = reviewZh ?? (existingChinese ? entry.descriptionZh : hold ? PENDING_DESCRIPTION_ZH
+    const descriptionHold = matchingDescriptionHold(entry);
+    const descriptionLocked = oldDescription?.reviewLocked && matchesContentSourceHash(entry, 'description', oldDescription.sourceHash);
+    const rejected = descriptionQualityIssue(entry.descriptionZh) ? entry.descriptionZh
+      : oldDescription && matchesContentSourceHash(entry, 'description', oldDescription.sourceHash) && descriptionQualityIssue(oldDescription.descriptionZh)
+        ? oldDescription.descriptionZh : undefined;
+    entry.descriptionZh = reviewZh ?? (existingChinese ? entry.descriptionZh : descriptionHold || rejected || descriptionLocked ? PENDING_DESCRIPTION_ZH
       : fallbackDescriptionZh({ ...entry, readmeSummary: entry.readmeSummary ?? null }));
     const reviewCategories = reviewedCategories(entry);
     let current = currentCategoryAssignments(entry, entry.categories);
@@ -79,9 +86,10 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
     for (const kind of ["description", "categories"] as const) {
       const sourceHash = enrichmentSourceHash(entry, kind);
       const policyVersion = kind === "description" ? DESCRIPTION_POLICY_VERSION : CATEGORY_POLICY_VERSION;
+      const contentHold = kind === 'description' ? descriptionHold : hold;
       const cached = old?.[kind];
       const reusable = !!cached && matchesContentSourceHash(entry, kind, cached.sourceHash) && cached.policyVersion === policyVersion;
-      if (reusable && cached.status === "complete" && !hold && hasContentEvidence(entry)) {
+      if (reusable && cached.status === "complete" && !contentHold && hasContentEvidence(entry)) {
         if (kind === "description" && !reviewZh && !existingChinese && hasChineseDescription(cached.descriptionZh)) {
           entry.descriptionZh = cached.descriptionZh!;
           if (cached.tagsZh) entry.tags = [...cached.tagsZh];
@@ -95,8 +103,15 @@ export function planCatalogEnrichment(input: RankingsDocument, previous: Enrichm
       const job: EnrichmentJob = complete
         ? { sourceHash, policyVersion, status: "complete", attempts: reusable ? cached.attempts : 0,
           ...(kind === "description" ? { descriptionZh: entry.descriptionZh, tagsZh: entry.tags } : { categories: entry.categories }) }
-        : hold
-          ? { sourceHash, policyVersion, status: "review-required", attempts: reusable ? cached.attempts : 0, reviewReason: hold.reason }
+        : contentHold
+          ? { ...(reusable ? cached : {}), sourceHash, policyVersion, status: "review-required", attempts: reusable ? cached.attempts : 0, reviewReason: contentHold.reason,
+            ...(kind === 'description' && rejected ? { rejectedDescriptionZh: rejected } : {}) }
+          : kind === 'description' && rejected
+            ? { ...(reusable ? cached : {}), sourceHash, policyVersion, status: 'review-required', attempts: reusable ? cached.attempts : 0,
+              reviewLocked: true, rejectedDescriptionZh: rejected,
+              reviewReason: `${descriptionQualityIssue(rejected)}存量纠正需定向复核，不自动付费重写。` }
+          : reusable && cached.reviewLocked
+            ? { ...cached, sourceHash, status: 'review-required' }
           : !hasContentEvidence(entry)
           ? { sourceHash, policyVersion, status: "missing-source", attempts: 0 }
           : reusable && cached.status === "retry"

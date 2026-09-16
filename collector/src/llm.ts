@@ -6,7 +6,7 @@ import { DEFAULT_MODEL_ATTEMPTS, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKIN
  */
 
 import { CATEGORY_DEFINITIONS, normalizeCategorySuggestions, type CategorySuggestion } from "./categories.js";
-import { cleanDescription, isChineseDescription, isPlaceholder, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isChineseDescription, isPlaceholder, descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 
 export interface ZhResult {
   descriptionZh: string;
@@ -299,6 +299,7 @@ const INSUFFICIENT_SOURCE_SUMMARY =
 
 export function isGenericDescriptionZh(value: string | null | undefined): boolean {
   if (!value) return false;
+  if (descriptionQualityIssue(value)) return true;
   if (isPlaceholder(cleanDescription(value))) return true;
   return !isChineseDescription(value) || isPlaceholder(value) || /---\s*name:/i.test(value) || value === LEGACY_GENERIC_DESCRIPTION ||
     /^(用于扩展|为.+提供).*(具体功能|安装方式).*(README|项目说明)/i.test(value) ||
@@ -311,7 +312,9 @@ export function isGenericDescriptionZh(value: string | null | undefined): boolea
     /：(提供桌面端使用体验|提供搜索、研究或知识检索能力|提供编程开发辅助|增强 Agent 的上下文|提供自动化与效率工具|提供权限、安全检查或隔离能力|改善界面外观与交互体验)/.test(value);
 }
 
-/** Produce an honest, repository-specific fallback when model output is unavailable or invalid. */
+/** Only reuse a complete author description. Arbitrary README sentences are
+ * evidence for generation/review, never automatically completed summaries.
+ */
 export function fallbackDescriptionZh(
   source: string | (Pick<LlmRepositoryInput, "name" | "description" | "readmeSummary" | "topics" | "repositoryPath"> & { install?: { repositoryPath?: string } }),
   legacyName = "该插件"
@@ -320,18 +323,7 @@ export function fallbackDescriptionZh(
     ? { name: legacyName, description: source, readmeSummary: null, topics: [] as string[] }
     : source;
   const isSubpackage = typeof source !== "string" && Boolean(source.repositoryPath || source.install?.repositoryPath);
-  for (const source of [isSubpackage ? "" : input.description, input.readmeSummary ?? ""]) {
-    // Split before whitespace normalization; headings/tables are not descriptions.
-    const text = source.replace(/```[\s\S]*?```/g, " ").replace(/^\s*#{1,6}\s+.*$/gm, "");
-    const sentences = text.match(/[^。！？!?；;\n]+[。！？!?；;]?/g) ?? [];
-    for (const raw of sentences) {
-      const sentence = sanitizeUntrustedText(raw, 4000).replace(/[*`]/g, "").trim();
-      if (!isChineseDescription(sentence) || [...sentence].length > 60 || isGenericDescriptionZh(sentence)) continue;
-      if (/欢迎|快速跳转|组件入口|安装步骤|安装方法|徽章|^English|^中文\s*\|/i.test(sentence)) continue;
-      return sentence;
-    }
-  }
-  // Keyword-based templates overclaimed capabilities (e.g. browser => knowledge
-  // retrieval). Keep missing evidence explicit and retryable instead.
+  const author = cleanDescription(isSubpackage ? "" : input.description);
+  if ([...author].length <= 160 && isChineseDescription(author) && !isGenericDescriptionZh(author)) return author;
   return PENDING_DESCRIPTION_ZH;
 }

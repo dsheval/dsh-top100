@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import type { InstallInfo } from "@dsh-top100/schema";
 import { CATEGORY_POLICY_VERSION } from "./categories.js";
 import editorialHolds from "../config/editorial-holds.json";
-import { cleanDescription, isPlaceholder, hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isPlaceholder, hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
 import reviewedDescriptions from "../../plugin/src/shared/reviewed-descriptions.json";
 import { reviewedPluginTargets } from "./reviewed-targets.js";
 
@@ -71,6 +71,22 @@ export function matchingEditorialHold(entry: ContentSource): EditorialHold | nul
     }
   }
   return reason ? { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install, reason } : null;
+}
+
+/** A changed fixed description is a review task, not permission to replace it
+ * with a README excerpt or a new model result. Categories retain their own gates.
+ */
+export function matchingDescriptionHold(entry: ContentSource): EditorialHold | null {
+  const review = (reviewedDescriptions as Record<string, ReviewedDescription>)[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()];
+  if (review?.reviewRequiredReason) return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+    reason: review.reviewRequiredReason };
+  const hold = matchingEditorialHold(entry);
+  if (hold) return hold;
+  if (!review) return null;
+  if (matchesReviewedDescriptionSource({ ...entry, description: entry.description ?? undefined,
+    readmeSummary: entry.readmeSummary ?? undefined, install: entry.install ?? undefined }, review, {}, hasSelectedReadmeEvidence(entry))) return null;
+  return { sourceDescription: entry.description ?? "", sourceReadme: entry.readmeSummary ?? "", sourceInstall: entry.install,
+    reason: '固定复核简介的来源或包身份已变化，需核对功能后定向更新，不自动替换文案。' };
 }
 function sourceHash(entry: ContentSource, kind: "description" | "categories", legacy = false): string {
   const fields: unknown[] = [

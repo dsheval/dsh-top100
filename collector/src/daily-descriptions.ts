@@ -1,10 +1,10 @@
 /** Daily summaries reuse the same source gates as frozen catalog enrichment. */
 import type { DshPlugin } from "@dsh-top100/schema";
-import { matchingEditorialHold, hasContentEvidence, matchesContentSourceHash, sameDescriptionSource } from "./content-source.js";
+import { matchingDescriptionHold, hasContentEvidence, matchesContentSourceHash, sameDescriptionSource } from "./content-source.js";
 import { reviewedDescription } from "./editorial.js";
 import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
 import type { ZhEntry } from "./zh-util.js";
 
 export function prepareDailyDescriptions(
@@ -12,6 +12,7 @@ export function prepareDailyDescriptions(
   previousJobs: Record<string, DescriptionJob>, priority: Set<string>, now: number,
 ) {
   const migratedJobs = { ...previousJobs };
+  const origins = new Map<string, DescriptionJob['origin']>();
   for (const source of sources) {
     const hash = descriptionSourceHash(source);
     const previous = previousSources.get(source.id.toLowerCase());
@@ -23,7 +24,7 @@ export function prepareDailyDescriptions(
     const originalJob = previousJobs[source.id];
     const oldJob = originalJob && matches(originalJob.sourceHash) ? { ...originalJob, sourceHash: hash } : originalJob;
     if (oldJob && oldJob !== originalJob) migratedJobs[source.id] = oldJob;
-    const hold = matchingEditorialHold(source);
+    const hold = matchingDescriptionHold(source);
     const review = reviewedDescription(source);
     // Fresh collection clears generated fields even when a fixed review supplies
     // the summary. Carry tags from the full same-source market in that path too.
@@ -34,7 +35,7 @@ export function prepareDailyDescriptions(
     if (previous && !sameDescriptionSource(source, previous) && source.descriptionZh === previous.descriptionZh) source.descriptionZh = null;
     if (cached?.sourceHash && cached.sourceHash !== hash && source.descriptionZh === cached.descriptionZh) source.descriptionZh = null;
     if (oldJob && oldJob.sourceHash !== hash && source.descriptionZh === oldJob.descriptionZh) source.descriptionZh = null;
-    if (review) source.descriptionZh = review;
+    if (review) { source.descriptionZh = review; origins.set(source.id, 'reviewed'); }
     else if (previous && sameDescriptionSource(source, previous) && hasChineseDescription(previous.descriptionZh)) {
       // The current market source is newer than its derived cache (e.g. a reviewed merge).
       if (!hasChineseDescription(source.descriptionZh) || (cached && source.descriptionZh === cached.descriptionZh && source.descriptionZh !== previous.descriptionZh)) {
@@ -50,9 +51,26 @@ export function prepareDailyDescriptions(
       source.descriptionZh = oldJob.descriptionZh!;
       source.tags = [...new Set([...source.tags, ...(oldJob.tagsZh ?? [])])];
     }
-    if (!hasChineseDescription(source.descriptionZh)) source.descriptionZh = hold ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(source);
+    if (!hasChineseDescription(source.descriptionZh)) {
+      const rejected = [source.descriptionZh, previousMatches ? previous?.descriptionZh : null,
+        cached?.sourceHash === hash ? cached.descriptionZh : null, oldJob?.sourceHash === hash ? oldJob.descriptionZh : null]
+        .find(value => descriptionQualityIssue(value));
+      if (rejected) migratedJobs[source.id] = { ...(oldJob?.sourceHash === hash ? oldJob : {}), sourceHash: hash,
+        status: 'review-required', attempts: oldJob?.sourceHash === hash ? oldJob.attempts : 0,
+        reviewLocked: true, rejectedDescriptionZh: rejected,
+        reviewReason: `${descriptionQualityIssue(rejected)}存量纠正需定向复核，不自动付费重写。` };
+      const locked = migratedJobs[source.id]?.sourceHash === hash && migratedJobs[source.id]?.reviewLocked;
+      source.descriptionZh = hold || rejected || locked ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(source);
+      if (hasChineseDescription(source.descriptionZh)) origins.set(source.id, 'author');
+    }
+    if (!origins.has(source.id) && hasChineseDescription(source.descriptionZh)) {
+      origins.set(source.id, oldJob?.sourceHash === hash && oldJob.descriptionZh === source.descriptionZh ? oldJob.origin ?? 'legacy'
+        : cached?.sourceHash === hash && cached.descriptionZh === source.descriptionZh ? cached.origin ?? 'legacy' : 'legacy');
+    }
   }
-  return planDescriptionJobs(sources, migratedJobs, priority, now);
+  const plan = planDescriptionJobs(sources, migratedJobs, priority, now);
+  for (const [id, origin] of origins) if (plan.jobs[id].status === 'complete') plan.jobs[id].origin = origin;
+  return plan;
 }
 
 export async function runDailyDescriptions(
@@ -86,6 +104,7 @@ export async function runDailyDescriptions(
         job.descriptionZh = result.descriptionZh;
         job.tagsZh = [...source.tags];
         job.status = "complete";
+        job.origin = 'model';
         delete job.nextAttemptAt;
         completed++;
       }
@@ -96,10 +115,14 @@ export async function runDailyDescriptions(
   return { attempted: tasks.length, completed, failed: tasks.length - completed };
 }
 
-export function updateDailyDescriptionCache(sources: DshPlugin[], cache: Map<string, ZhEntry>): void {
+export function updateDailyDescriptionCache(sources: DshPlugin[], cache: Map<string, ZhEntry>, jobs?: Record<string, DescriptionJob>): void {
   for (const source of sources) {
     if (!hasChineseDescription(source.descriptionZh)) { cache.delete(source.id); continue; }
+    const previous = cache.get(source.id);
+    const sourceHash = descriptionSourceHash(source);
+    const origin = jobs?.[source.id]?.descriptionZh === source.descriptionZh && jobs[source.id].sourceHash === sourceHash
+      ? jobs[source.id].origin : previous?.descriptionZh === source.descriptionZh && previous.sourceHash === sourceHash ? previous.origin : undefined;
     cache.set(source.id, { descriptionZh: source.descriptionZh!, tagsZh: source.tags.filter(tag => /[\u4e00-\u9fff]/.test(tag)),
-      sourceHash: descriptionSourceHash(source), summaryKey: source.readmeSummary ?? undefined });
+      origin: origin ?? 'legacy', sourceHash, summaryKey: source.readmeSummary ?? undefined });
   }
 }

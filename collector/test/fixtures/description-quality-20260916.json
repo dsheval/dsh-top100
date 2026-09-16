@@ -1,0 +1,467 @@
+{
+  "snapshotId": "2026-09-16-10c17709d0632ece",
+  "cases": [
+    {
+      "rank": 8,
+      "fullName": "Hisn00w/ASu-skills",
+      "name": "ASu-skills",
+      "type": "cordis-plugin",
+      "description": "简历包装",
+      "descriptionZh": "安装后会提供九个可单独调用的入口：…",
+      "readmeSummary": "中文求职工作流插件 用九个独立入口完成开源贡献、证据复盘、项目导学面经、简历提升、简历制作、岗位匹配、简历投递填写、面试准备和校招进度管理。 - 安装 - 第一次使用：从哪个入口开始 - 九个 Skill - /contributor：做真实的开源贡献 - /project-guide：项目导学面经 - /great-resume：简历提升 - /make-resume：制作简历 - /evidence-recap：把 AI 编程对话还原成证据链 - /interview：把简历问穿 - /offer：校招进度管理 - /job-match：岗位匹配分析 - /job-apply：简历投递填写 - 九个入口如何配合 - 事实边界 - 文件结构 - 参与贡献 - 特别感谢 - 致谢 - Contributors - 开源协议 - Star History ASu-skills 现在是一个插件包。安装后会提供九个可单独调用的入口：…",
+      "install": {
+        "method": "pnpm-profile",
+        "packageName": "asu-skills",
+        "needsConfig": false,
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "policyVersion": 6,
+          "checkedAt": "2026-09-15T22:29:22.203Z",
+          "sourceRevision": "fb7f6cc443b3618f1944ff9897597a58e4ca083b",
+          "evidence": [
+            "reviewed ./ validated bundle declaration, package name and entry"
+          ],
+          "readme": {
+            "fullName": "hisn00w/asu-skills",
+            "packageName": "asu-skills",
+            "path": "README.md",
+            "sourceRevision": "fb7f6cc443b3618f1944ff9897597a58e4ca083b",
+            "documentSha256": "6d3878b287e02cdaa9108023b7720eac614cae7d6965a6f98d6fc66f056a9b0d",
+            "summarySha256": "fa5909995284fdae6e05076628ddb5ad987fbd0b65a5605887ed8cacff1bba5c"
+          }
+        }
+      },
+      "topics": [],
+      "tags": [
+        "插件套件",
+        "工作流管理",
+        "技能编排",
+        "求职辅助"
+      ],
+      "stars": 4635
+    },
+    {
+      "rank": 18,
+      "fullName": "dsh-tauri-desk/deepseek-harness-desktop",
+      "name": "DeepSeek Harness Desktop",
+      "type": "cordis-plugin",
+      "description": "One-click Tauri 2 desktop distribution of DeepSeek Harness: bundled runtime, no Node.js/pnpm/Docker required, native macOS/Windows/Linux packages.",
+      "descriptionZh": "dsh-tauri 是 DSH Tauri 桌面壳的基础插件。",
+      "readmeSummary": "dsh-tauri 是 DSH Tauri 桌面壳的基础插件。它提供一个无宿主行为的 host half，以及运行在 DSH iframe 中的客户端消息桥。 - 将宿主导航栏的侧边栏开关转发至 layout.toggleSidebar。 - 将宿主导航栏「文件」菜单的「新聊天」「打开文件夹」转发至官方工作区服务（uiWorkspace.startSession / 选目录 + workspaces.create，能力缺席时退级为点击官方按钮）。 - 将后退、前进命令转发至浏览器历史记录。 - 向宿主回报侧边栏折叠状态和历史边界。 - 隐藏与桌面导航栏重复的官方折叠控件。 - 在插件自身异常时向宿主报告，避免静默失败。 - dsh-tauri-ui：桌面化 UI。 - dsh-tauri-worktree：会话级 Git worktree。",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "subdir packages/dsh-tauri/ validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-15T22:02:10.697Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-15T19:21:35Z",
+          "readme": {
+            "fullName": "dsh-tauri-desk/deepseek-harness-desktop",
+            "packageName": "dsh-tauri",
+            "path": "packages/dsh-tauri/README.md",
+            "sourceRevision": "2026-09-15T19:21:35Z",
+            "documentSha256": "0073f04596b8be9c1679590360e319ed4cfbd3bf9126722300c2cb50b41f5474",
+            "summarySha256": "a8b65b18d525951734dc37cf82f1a3a3ce7bd6b62237e3cca49d2c9f2aae2ec7"
+          }
+        },
+        "repositoryPath": "packages/dsh-tauri",
+        "packageName": "dsh-tauri",
+        "needsConfig": false
+      },
+      "topics": [
+        "deepseek",
+        "deepseek-harness",
+        "desktop",
+        "dsh",
+        "dsh-desktop",
+        "dsh-plugin",
+        "tauri"
+      ],
+      "tags": [
+        "deepseek",
+        "deepseek-harness",
+        "desktop",
+        "dsh",
+        "dsh-desktop",
+        "dsh-plugin",
+        "tauri"
+      ],
+      "stars": 2118
+    },
+    {
+      "rank": 32,
+      "fullName": "xmanrui/dsh-im",
+      "name": "dsh-im",
+      "type": "cordis-plugin",
+      "description": "通过扫码或机器人凭据把IM机器人接入DeepSeek Harness（支持飞书、微信、钉钉、企业微信、QQ、Slack、Telegram、Discord和WhatsApp）。 Connect IM bots to DeepSeek Harness via QR code or credentials (9 channels).",
+      "descriptionZh": "感谢官方对本项目的肯定与支持！",
+      "readmeSummary": "&nbsp;&nbsp; --- 让 DeepSeek Harness 触手可及 Connecting DeepSeek Harness 简体中文 · English --- > [!NOTE] > DSH-IM 已获得 DeepSeek Harness 官方认可，并获得价值 人民币 1,000 元的 Token 额度奖励。感谢官方对本项目的肯定与支持！ 通过扫码、App Manifest 或已有机器人凭据把 IM 机器人接入 DeepSeek Harness，并让本机 Harness 主动连接公网 AI Office。一个插件、一个设置入口，统一管理内置 IM 渠道和 AI Office Connector。每个 IM 渠道都支持接入多个机器人，各机器人的连接状态、工作区、模型和会话绑定彼此独立；iMessage 是本机 Messages.app 身份接入的例外，详见iMessage 渠道说明。…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "root package.json validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-15T22:02:45.334Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-15T17:10:47Z",
+          "readme": {
+            "fullName": "xmanrui/dsh-im",
+            "packageName": "@xmanrui/dsh-im",
+            "path": "README.md",
+            "sourceRevision": "2026-09-15T17:10:47Z",
+            "documentSha256": "5b7dfb5f9811206b76adfb2a9bcbd816d640628f42899395a51a2c6db67cc9cf",
+            "summarySha256": "d3a7316ea292ff55e318f0d597157071675c576cced8b40e9fae6ba95cf7a12e"
+          }
+        },
+        "packageName": "@xmanrui/dsh-im",
+        "needsConfig": false,
+        "commands": [
+          "dsh plugin --profile web add -w @xmanrui/dsh-im"
+        ],
+        "commandSource": "README install section",
+        "assessment": {
+          "sourceKey": "[\"xmanrui/dsh-im\",\"@xmanrui/dsh-im\",\"@xmanrui/dsh-im\",null]",
+          "checkedAt": "2026-09-10T07:33:58.879Z",
+          "status": "verified",
+          "resolvedTarget": "@xmanrui/dsh-im@4.18.1",
+          "integrity": "sha512-M684m3qaFcA9pdrwG+fHcnBliuCLxx3EgJYMfJ+0GY1peEYxoZGNb7C/uN0CoPBn4p44A4+jJ1CuSt9s0O7FAg==",
+          "reason": "已核对清单元数据中的来源身份、Bundle 声明及精确版本；尚未验证发布归档、安装、宿主兼容或业务功能。"
+        }
+      },
+      "topics": [
+        "ai-agents",
+        "chatbot",
+        "cordis",
+        "deepseek",
+        "deepseek-harness",
+        "dingtalk-bot",
+        "discord-bot",
+        "dsh",
+        "dsh-plugin",
+        "feishu-bot",
+        "im-bot",
+        "slack-bot",
+        "telegram-bot",
+        "wechat-bot",
+        "whatsapp-bot"
+      ],
+      "tags": [
+        "ai-agents",
+        "chatbot",
+        "cordis",
+        "deepseek",
+        "deepseek-harness",
+        "dingtalk-bot",
+        "discord-bot",
+        "dsh",
+        "dsh-plugin",
+        "feishu-bot",
+        "im-bot",
+        "slack-bot",
+        "telegram-bot",
+        "wechat-bot",
+        "whatsapp-bot"
+      ],
+      "stars": 1337
+    },
+    {
+      "rank": 38,
+      "fullName": "aa2246740/dsh-watcher",
+      "name": "dsh-watcher",
+      "type": "cordis-plugin",
+      "description": "Read-only Agent work-path observer for DeepSeek Harness",
+      "descriptionZh": "中文 · English PATH 上需要官方 dsh（或 npx @deepseek-ai/dsh）和 pnpm。",
+      "readmeSummary": "中文 · English PATH 上需要官方 dsh（或 npx @deepseek-ai/dsh）和 pnpm。dsh plugin add 会在 $DSH_HOME/profiles/web 里跑 pnpm，并因为本包装了 dsh.bundle.patch 而写入 profile bundles。然后重启这个 Host，再刷新页面。它只写 profile，不会热挂正在跑的进程。 仓库已提交 lib/，git 安装不用再构建，也不走 prepare / allowBuilds。需要 DeepSeek Harness 0.1.5-rc.2，Node ^22.19.0 或 >=24。 DeepSeek Harness Web 的只读插件。点会话标题栏里的眼睛，把 Session 收成一张能折叠的工作路径：这轮走了几步、跑了几次、花了多久；再展开某一步看并行分支、工具结果，或一条默认折着的推理记录。…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "root package.json validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-13T22:02:47.097Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-13T13:04:02Z"
+        },
+        "packageName": "dsh-watcher",
+        "needsConfig": false,
+        "commands": [
+          "dsh plugin --profile web add github:aa2246740/dsh-watcher",
+          "git clone https://github.com/aa2246740/dsh-watcher.git"
+        ],
+        "commandSource": "README"
+      },
+      "topics": [
+        "agent-observability",
+        "deepseek-harness",
+        "dsh",
+        "dsh-plugin",
+        "plugin"
+      ],
+      "tags": [
+        "agent-observability",
+        "deepseek-harness",
+        "dsh",
+        "dsh-plugin",
+        "plugin"
+      ],
+      "stars": 75
+    },
+    {
+      "rank": 46,
+      "fullName": "shanliuling/dsh-image-gen",
+      "name": "dsh-image-gen",
+      "type": "cordis-plugin",
+      "description": "Native image generation for DeepSeek Harness with Google Gemini, OpenAI Images, OpenAI-compatible APIs, and ByteDance Seedream.",
+      "descriptionZh": "· 右：基于已有结果继续对话修改，在画布中持续迭代创作。",
+      "readmeSummary": "简体中文 · English AI 创作画布 · 对话生图与编辑 · Studio 批量创作 · 多模型对比 · 500+ Prompt 灵感 · 图库管理 · 本地 ComfyUI · 订阅免 Key 快速开始 · 核心能力 · Provider 支持 · 常见问题 左：在画布中绘制草稿、摆放参考图，并通过对话生成成图。 · 右：基于已有结果继续对话修改，在画布中持续迭代创作。 左：在对话中直接描述并生成图片。 · 右：工作台批量创作、灵感库与图库等更多功能。 为 DeepSeek Harness 带来完整的 AI 图像创作工作流。 dsh-image-gen 不只是简单的对话生图，而是为 DSH 补齐从 对话生成与连续修图、AI 创作画布、Studio 批量创作、多模型横向对比，到 Prompt 灵感库 与 本地 ComfyUI 的完整图像创作能力。…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "root package.json validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-14T22:02:13.710Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-14T15:26:07Z"
+        },
+        "packageName": "dsh-image-gen",
+        "needsConfig": false,
+        "commands": [
+          "pnpm dsh plugin --profile web add dsh-image-gen@latest",
+          "dsh plugin --profile web add dsh-image-gen@latest",
+          "pnpm dsh plugin --profile web add git+https://github.com/shanliuling/dsh-image-gen.git"
+        ],
+        "commandSource": "README",
+        "assessment": {
+          "sourceKey": "[\"shanliuling/dsh-image-gen\",\"dsh-image-gen@latest\",\"dsh-image-gen\",null]",
+          "checkedAt": "2026-09-10T07:34:01.939Z",
+          "status": "verified",
+          "resolvedTarget": "dsh-image-gen@0.5.1",
+          "integrity": "sha512-FN+2pZ4FrkYjEMrg/uKhLYtxzsfyven/42C7AcAZIRVWfXhmwfzNxDZM6fBEqgYsl5hEOYZcTbxGsOcZ6S+Y/Q==",
+          "reason": "已核对清单元数据中的来源身份、Bundle 声明及精确版本；尚未验证发布归档、安装、宿主兼容或业务功能。"
+        }
+      },
+      "topics": [
+        "ai-agent",
+        "ai-image-generation-api",
+        "comfyui",
+        "deepseek",
+        "deepseek-harness",
+        "dsh-plugin",
+        "gemini",
+        "image-generation",
+        "openai",
+        "prompt-library",
+        "seedream"
+      ],
+      "tags": [
+        "ai-agent",
+        "ai-image-generation-api",
+        "comfyui",
+        "deepseek",
+        "deepseek-harness",
+        "dsh-plugin",
+        "gemini",
+        "image-generation",
+        "openai",
+        "prompt-library",
+        "seedream"
+      ],
+      "stars": 419
+    },
+    {
+      "rank": 59,
+      "fullName": "Tyan66666/billion-context-dsh",
+      "name": "billion-context-dsh",
+      "type": "cordis-plugin",
+      "description": "Model-driven context compression (ACP) for DeepSeek Harness, ported from billion-context-pi — the model decides when and what to compress.",
+      "descriptionZh": "DeepSeek Harness 本身也处于公开测试版阶段。",
+      "readmeSummary": "中文 | English > ⚠️ 测试版声明——请勿用于生产环境 > 本项目（v0.2.23）仍处于开发中的测试版。DeepSeek Harness 本身也处于公开测试版阶段。请勿将两者用于工程化 / 生产环境——预期会有破坏性变更与粗糙之处。 衷心感谢以下项目——请给它们一个 ⭐： DeepSeek Harness · billion-context-pi · acp-kernel · opencode-acp Billion-Context for DeepSeek Harness 由模型决定 何时 压缩、 压缩什么 ——而不是一个硬性上限。 --- npm install billion-context-dsh --- 当对话变长，模型会耗尽上下文。多数工具直接硬截断——悄悄丢弃早期消息。billion-context-dsh 给模型一个 compress 工具：…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "root package.json validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-14T22:01:54.920Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-14T05:32:59Z"
+        },
+        "packageName": "billion-context-dsh",
+        "needsConfig": false,
+        "commands": [
+          "dsh plugin --profile web add billion-context-dsh",
+          "dsh plugin --profile web add github:Tyan66666/billion-context-dsh#v0.2.23",
+          "npm install billion-context-dsh",
+          "npm install"
+        ],
+        "commandSource": "README install section"
+      },
+      "topics": [
+        "acp",
+        "billion-context",
+        "context-management",
+        "dsh-plugin"
+      ],
+      "tags": [
+        "acp",
+        "billion-context",
+        "context-management",
+        "dsh-plugin"
+      ],
+      "stars": 95
+    },
+    {
+      "rank": 66,
+      "fullName": "zaizaizhao/dsh-branchmark",
+      "name": "dsh-branchmark",
+      "type": "cordis-plugin",
+      "description": "While vibe coding, save an answer you may need later, use Side Chat for a question that suddenly comes up, or open a related conversation for deeper work without losing focus on the current task.",
+      "descriptionZh": "> 摘一段，生一枝。",
+      "readmeSummary": "> 摘一段，生一枝。 Excerpt-driven session branching and conversation lineage for DeepSeek Harness. dsh-branchmark 是 BranchMark 的公开安装 Bundle。它为开发过程提供重点知识摘录、可追溯 Session 树和注意力分叉：主 Session 保持当前目标，枝签保存知识锚点，完整分叉沿来源上下文创建子 Session，仅枝签流程用选定知识创建独立 Session，空白分支仅保留会话之间的组织关联。 源码、完整设计与开发文档位于 zaizaizhao/dsh-branchmark。 - 在已完成的用户或助手消息中选择文本，将重点知识保存为来源不可改写、备注和多标签可编辑的枝签。 - 会话私有枝签与项目全局枝签严格分开展示，当前 Session 不读取其他 Session 的私有枝签。…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "policyVersion": 6,
+          "checkedAt": "2026-09-15T22:29:22.203Z",
+          "sourceRevision": "1cee35dba4076f57f8586d1e69d7327fc0b86ee0",
+          "evidence": [
+            "reviewed packages/bundle/ validated bundle declaration, package name and entry"
+          ],
+          "readme": {
+            "fullName": "zaizaizhao/dsh-branchmark",
+            "packageName": "dsh-branchmark",
+            "path": "packages/bundle/README.md",
+            "sourceRevision": "1cee35dba4076f57f8586d1e69d7327fc0b86ee0",
+            "documentSha256": "08985424ef977859d600e1dc5ec2ec7dddbde304f307cc359348ccddd50f3e52",
+            "summarySha256": "ff92941a90105707c481ab640cfed9148a7b4c95e6adef95bade513a5a90e212"
+          }
+        },
+        "repositoryPath": "packages/bundle",
+        "packageName": "dsh-branchmark",
+        "needsConfig": false,
+        "commands": [
+          "dsh plugin --profile web add dsh-branchmark@0.1.2-rc.2",
+          "npm install --global @deepseek-ai/dsh@0.1.2-rc.1"
+        ],
+        "commandSource": "README install section"
+      },
+      "topics": [
+        "deepseek-harness",
+        "deepseek-harness-plugin",
+        "dsh-plugin",
+        "harness-framework"
+      ],
+      "tags": [
+        "deepseek-harness",
+        "deepseek-harness-plugin",
+        "dsh-plugin",
+        "harness-framework"
+      ],
+      "stars": 23
+    },
+    {
+      "rank": 79,
+      "fullName": "modusensus/dsh-mneme",
+      "name": "dsh-mneme",
+      "type": "cordis-plugin",
+      "description": "Cross-session memory for DeepSeek Harness: SQLite + human-editable Markdown mirror, autoDream consolidation, six memory tools, and fully-offline semantic search (local embedding / rerank / clustering), 198 tests.",
+      "descriptionZh": "> Mneme（Μνήμη）源自希腊记忆女神 Mnemosyne。",
+      "readmeSummary": "dsh-mneme 🌏 简体中文 · English --- dsh-mneme 是 DeepSeek Harness (DSH) 的跨会话记忆插件。它不只「存得下」，更「管得好」：后台自动去重合并、矛盾先冻结等你裁决、全程可回放审计、默认全离线，还支持导出成人可读的 Markdown。 > Mneme（Μνήμη）源自希腊记忆女神 Mnemosyne。她掌管记忆与梦境——正如 autoDream 在后台默默巩固你的记忆库。 每次新开对话，AI 都像第一次认识你？ dsh-mneme 给 DeepSeek Harness 装上跨会话记忆。 你聊过的项目、提过的偏好、做过的决定，AI 都记得——即使关掉了窗口，下次打开还在。 > 但 dsh-mneme 的可信之处，恰恰在你看不见的后台。下面这些，才是它和「一个会存东西的插件」的本质区别。 - 🧾 可回放、可追责 — 每次自动整理都留一张「决策凭证」：…",
+      "install": {
+        "method": "pnpm-profile",
+        "discovery": {
+          "status": "verified",
+          "kind": "bundle",
+          "evidence": [
+            "has package.json",
+            "root package.json validated bundle declaration and entry"
+          ],
+          "checkedAt": "2026-09-15T22:01:58.029Z",
+          "policyVersion": 6,
+          "sourceRevision": "2026-09-15T11:27:29Z",
+          "readme": {
+            "fullName": "modusensus/dsh-mneme",
+            "packageName": "@modusensus/dsh-mneme",
+            "path": "README.md",
+            "sourceRevision": "2026-09-15T11:27:29Z",
+            "documentSha256": "56bbe54ac13b239a091bc5c93eb021aea771ac1e567fc43f2f0690d3820208c9",
+            "summarySha256": "def02ee0f55c02fae8e7cd367892d4e9b968ed02aa1986e963f8ceea684264b6"
+          }
+        },
+        "packageName": "@modusensus/dsh-mneme",
+        "needsConfig": false,
+        "commands": [
+          "dsh plugin --profile web add @modusensus/dsh-mneme"
+        ],
+        "commandSource": "README",
+        "assessment": {
+          "sourceKey": "[\"modusensus/dsh-mneme\",\"@modusensus/dsh-mneme\",\"@modusensus/dsh-mneme\",null]",
+          "checkedAt": "2026-09-10T07:34:05.816Z",
+          "status": "verified",
+          "resolvedTarget": "@modusensus/dsh-mneme@0.7.29",
+          "integrity": "sha512-M9qgSjGIDHoDGYKrSeoXy+Ys+NvQBkqoJ8g0N9x8xbXVVLQdLnmjGQIn7WiIbhP4V8XZ8WcrOLJx6cdtImUu7g==",
+          "reason": "已核对清单元数据中的来源身份、Bundle 声明及精确版本；尚未验证发布归档、安装、宿主兼容或业务功能。"
+        }
+      },
+      "topics": [
+        "agent-memory",
+        "agent-memory-system",
+        "autodream",
+        "context-management",
+        "context-management-system",
+        "deepseek-harness",
+        "dsh-better-sidebar",
+        "dsh-plugin",
+        "heat-memory",
+        "knowledge-management",
+        "llm-memory",
+        "memory-consolidation",
+        "memory-evolution",
+        "persistent-memory",
+        "semantic-search",
+        "vector-search"
+      ],
+      "tags": [
+        "agent-memory",
+        "agent-memory-system",
+        "autodream",
+        "context-management",
+        "context-management-system",
+        "deepseek-harness",
+        "dsh-better-sidebar",
+        "dsh-plugin",
+        "heat-memory",
+        "knowledge-management",
+        "llm-memory",
+        "memory-consolidation",
+        "memory-evolution",
+        "persistent-memory",
+        "semantic-search",
+        "vector-search"
+      ],
+      "stars": 104
+    }
+  ]
+}

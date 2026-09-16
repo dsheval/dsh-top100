@@ -38,7 +38,7 @@ export async function runBoardFirstDescriptions(sources: DshPlugin[], previous: 
   });
   const boards = await run(first, Math.min(options.limit, first.length));
   const daily = await run(second, Math.max(0, options.limit - boards.attempted));
-  updateDailyDescriptionCache(sources, cache);
+  updateDailyDescriptionCache(sources, cache, plan.jobs);
   persist();
   return { jobs: plan.jobs, scope, boardsReady: first.length, dailyReady: second.length, boards, daily };
 }

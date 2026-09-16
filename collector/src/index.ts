@@ -679,7 +679,7 @@ async function main() {
       return dailyScope ? withDailyModelRequest(buildTranslationRequest(input, model), run) : run();
     },
   });
-  updateDailyDescriptionCache(detected.map(d => d.plugin), zhCache);
+  updateDailyDescriptionCache(detected.map(d => d.plugin), zhCache, jobs);
   saveZhCache(zhCache);
   saveDescriptionJobs();
   console.log(`  summaries: ${summaryResult.attempted} attempted, ${ready.length - summaryResult.attempted} deferred; retry state saved`);
