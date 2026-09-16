@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 
 export const stages = ['collect', 'publish', 'verify'] as const;
 export type Stage = typeof stages[number];
+export const stageAttemptLimits: Readonly<Record<Stage, number>> = { collect: 3, publish: 3, verify: 6 };
 export interface StageProgress {
   status: 'pending' | 'running' | 'failed' | 'complete';
   attempts: number;
@@ -64,9 +65,13 @@ export function nextStage(state: DailyOperation, now: number): Stage | undefined
   const stage = stages.find(stage => state.stages[stage].status !== 'complete');
   if (!stage) return undefined;
   const progress = state.stages[stage];
-  if (progress.attempts >= (stage === 'verify' ? 6 : 3)) return undefined;
+  if (progress.attempts >= stageAttemptLimits[stage]) return undefined;
   if (progress.nextAttemptAt && Date.parse(progress.nextAttemptAt) > now) return undefined;
   return stage;
+}
+export function hasExhaustedStage(state: DailyOperation): boolean {
+  return stages.some(stage => state.stages[stage].status === 'failed'
+    && state.stages[stage].attempts >= stageAttemptLimits[stage]);
 }
 export function failStage(state: DailyOperation, stage: Stage, now: number, code: string): void {
   const progress = state.stages[stage];

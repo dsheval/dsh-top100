@@ -3,7 +3,7 @@ import { fstatSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { auditPublication, readBudgetHealth, type OperationIssue } from './operation-audit.js';
-import { atomicOperationJson, loadOperation, localDay, readOperationJson, type DailyOperation } from './operation-state.js';
+import { atomicOperationJson, hasExhaustedStage, loadOperation, localDay, readOperationJson, type DailyOperation } from './operation-state.js';
 import { reconcileIncidents, type IncidentState } from './operation-incidents.js';
 import { modelPolicyHealth } from './model-requests.js';
 import { loadSourceRecovery } from './source-recovery.js';
@@ -32,7 +32,7 @@ async function tick() {
       const due = dueDate === today.date ? operation : loadOperation(directory, dueDate, now);
       if (due?.stages.verify.status !== 'complete') issues.push({ key: 'daily-update', severity: 'critical', code: 'daily-update-overdue' });
     }
-    if (operation && Object.values(operation.stages).some(stage => stage.status === 'failed' && stage.attempts >= 3)) issues.push({ key: 'daily-stage', severity: 'critical', code: 'daily-stage-retries-exhausted' });
+    if (operation && hasExhaustedStage(operation)) issues.push({ key: 'daily-stage', severity: 'critical', code: 'daily-stage-retries-exhausted' });
     const previous = readOperationJson<IncidentState>(join(directory, 'incidents.json'));
     const unobservedKeys = new Set<string>();
     const preserve = (incident: NonNullable<IncidentState['incidents'][string]>) => {

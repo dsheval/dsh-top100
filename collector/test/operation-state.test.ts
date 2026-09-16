@@ -2,13 +2,26 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { advanceOperation, atomicOperationJson, dailyOperationDue, loadOperation, localDay, nextStage, operationPath, type Stage } from '../src/operation-state.js';
+import { advanceOperation, atomicOperationJson, dailyOperationDue, hasExhaustedStage, loadOperation, localDay, nextStage, operationPath, type Stage } from '../src/operation-state.js';
 import { reconcileIncidents } from '../src/operation-incidents.js';
 const dirs: string[] = [];
 const now = Date.parse('2026-09-16T00:00:00Z');
 function fixture() { const dir = mkdtempSync(join(tmpdir(), 'operation-')); dirs.push(dir); return { dir, state: loadOperation(dir, '2026-09-16', now) }; }
 afterEach(() => dirs.splice(0).forEach(dir => rmSync(dir, { recursive: true, force: true })));
 describe('durable daily operation', () => {
+  it('allows all six verification attempts before reporting exhaustion, while collection remains capped at three', () => {
+    const { state } = fixture();
+    state.stages.collect = { status: 'complete', attempts: 1 };
+    state.stages.publish = { status: 'complete', attempts: 1 };
+    for (const attempts of [3, 4, 5]) {
+      state.stages.verify = { status: 'failed', attempts };
+      expect(hasExhaustedStage(state)).toBe(false); expect(nextStage(state, now)).toBe('verify');
+    }
+    state.stages.verify.attempts = 6;
+    expect(hasExhaustedStage(state)).toBe(true); expect(nextStage(state, now)).toBeUndefined();
+    const collection = fixture().state; collection.stages.collect = { status: 'failed', attempts: 3 };
+    expect(hasExhaustedStage(collection)).toBe(true); expect(nextStage(collection, now)).toBeUndefined();
+  });
   it('waits for activation day and collection hour, then permits catch-up all day', () => {
     expect(dailyOperationDue(now, 6, 'Asia/Shanghai', '2026-09-17')).toBe(false);
     expect(dailyOperationDue(Date.parse('2026-09-15T21:59:00Z'), 6)).toBe(false);
