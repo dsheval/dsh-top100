@@ -155,3 +155,22 @@ describe("managed plugin Chinese summaries", () => {
     })).toBe("已安装的本地技能（Skill）：daily-report。暂无中文简介。");
   });
 });
+
+it('managed catalog summaries follow server updates and cannot recover installed stale prose', async () => {
+  const directory=mkdtempSync(join(tmpdir(),'managed-description-'));
+  vi.stubEnv('DSH_HOME',directory);
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({version:'1.0.0'}))));
+  const name='managed-description-fixture';
+  try {
+    mkdirSync(join(directory,'node_modules',name),{recursive:true});
+    writeFileSync(join(directory,'package.json'),JSON.stringify({dependencies:{[name]:'1.0.0'}}));
+    writeFileSync(join(directory,'node_modules',name,'package.json'),JSON.stringify({name,version:'1.0.0',description:'旧的插件描述会恢复已经撤回的功能。'}));
+    const entry={...catalogEntry('fixture/managed',name),descriptionPolicy:'server-v1' as const,descriptionZh:'服务端更新的插件介绍，可读取网页内容。'};
+    expect((await listManagedPlugins('web',catalog(entry),directory))[0].descriptionZh).toBe(entry.descriptionZh);
+    entry.descriptionZh='';
+    expect((await listManagedPlugins('web',catalog(entry),directory))[0].descriptionZh).toBe('中文简介待生成。');
+    expect((await listManagedPlugins('web',null,directory))[0].descriptionZh).toContain('暂无中文简介');
+    const held={...entry,descriptionZh:'已撤回的旧介绍。',descriptionStatus:{state:'review-required' as const,reason:'正在复核'}};
+    expect((await listManagedPlugins('web',catalog(held),directory))[0].descriptionZh).toBe('中文简介待复核：正在复核');
+  } finally {rmSync(directory,{recursive:true,force:true});}
+});

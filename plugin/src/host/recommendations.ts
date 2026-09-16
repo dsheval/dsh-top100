@@ -138,7 +138,7 @@ export function recommendationResult(
       fullName: item.fullName,
       name: item.name,
       type: item.type,
-      description: item.descriptionZh || item.description,
+      description: item.descriptionZh,
       stars: item.stars,
       ...(item.dailyStars == null ? {} : { dailyStars: item.dailyStars }),
       ...(item.weeklyStars == null ? {} : { weeklyStars: item.weeklyStars }),

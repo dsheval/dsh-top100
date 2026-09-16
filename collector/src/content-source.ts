@@ -7,8 +7,8 @@ import { createHash } from "node:crypto";
 import type { InstallInfo } from "@dsh-top100/schema";
 import { CATEGORY_POLICY_VERSION } from "./categories.js";
 import editorialHolds from "../config/editorial-holds.json";
-import { cleanDescription, isPlaceholder, hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, type ReviewedDescription } from "../../plugin/src/shared/description-rules.js";
-import reviewedDescriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import { cleanDescription, isPlaceholder, hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, type ReviewedDescription } from "./description-rules.js";
+import reviewedDescriptions from "../config/reviewed-descriptions.json";
 import { reviewedPluginTargets } from "./reviewed-targets.js";
 
 export const DESCRIPTION_POLICY_VERSION = 3;

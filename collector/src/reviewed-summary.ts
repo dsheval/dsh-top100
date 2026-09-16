@@ -1,4 +1,4 @@
-import reviews from "../../plugin/src/shared/reviewed-descriptions.json";
+import reviews from "../config/reviewed-descriptions.json";
 import { summarizeReadme, summarizeReviewedReadme } from "./summary.js";
 
 type Identity = { packageName?: string | null; repositoryPath?: string | null };

@@ -7,7 +7,7 @@ import {
 import { reviewedCategories, reviewedDescription } from "./editorial.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
-import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 import type { RankingEntry, RankingsDocument } from "./rankings.js";
 
 import { DESCRIPTION_POLICY_VERSION, contentSourceHash, matchesContentSourceHash, matchingEditorialHold, matchingDescriptionHold, hasContentEvidence, nextContentAttemptAt } from "./content-source.js";

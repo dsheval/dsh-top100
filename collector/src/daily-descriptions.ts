@@ -4,7 +4,7 @@ import { matchingDescriptionHold, hasContentEvidence, matchesContentSourceHash, 
 import { reviewedDescription } from "./editorial.js";
 import { descriptionSourceHash, hasChineseDescription, planDescriptionJobs, recordDescriptionAttempt, type DescriptionJob } from "./description-jobs.js";
 import { extractJson, fallbackDescriptionZh, type ZhResult } from "./llm.js";
-import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 import type { ZhEntry } from "./zh-util.js";
 
 export function prepareDailyDescriptions(

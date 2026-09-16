@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import packages from "./fixtures/hot-two-packages.json";
-import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import descriptions from "../config/reviewed-descriptions.json";
 import { detectPlugin } from "../src/detect.js";
 import { fetchFileViaApi, fetchRepoRoot } from "../src/github.js";
 import { reviewedPluginTargets, quarantineUnreviewedTarget } from "../src/reviewed-targets.js";
 import { reviewedDescription } from "../src/editorial.js";
-import { descriptionFor, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionFor, PENDING_DESCRIPTION_ZH } from "../src/description-rules.js";
 import { resolveCatalogInstallTarget } from "../../plugin/src/shared/install-source.js";
 import { toSnapshotSearchEntry } from "../src/search-index.js";
 vi.mock("../src/github.js", () => ({ fetchFileViaApi: vi.fn(), fetchRepoRoot: vi.fn() }));

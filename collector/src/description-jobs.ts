@@ -1,6 +1,6 @@
 import { contentSourceHash, matchesContentSourceHash, matchingDescriptionHold, hasContentEvidence, nextContentAttemptAt, type ContentSource } from './content-source.js';
 import { isGenericDescriptionZh } from './llm.js';
-import { descriptionQualityIssue } from '../../plugin/src/shared/description-rules.js';
+import { descriptionQualityIssue } from './description-rules.js';
 
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
 export interface DescriptionJob {

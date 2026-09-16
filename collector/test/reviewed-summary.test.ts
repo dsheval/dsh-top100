@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import reviews from "../../plugin/src/shared/reviewed-descriptions.json";
+import reviews from "../config/reviewed-descriptions.json";
 import { reviewedReadmeSource, summarizeSelectedReadme } from "../src/reviewed-summary.js";
 import { summarizeReadme, summarizeReviewedReadme } from "../src/summary.js";
 import { matchesContentSourceHash, DESCRIPTION_POLICY_VERSION } from "../src/content-source.js";

@@ -2,7 +2,8 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { withReviewedDescription } from "../shared/descriptions.js";
+import { descriptionDisplayFor } from "../shared/description-rules.js";
+import { withPublishedDescription } from "../shared/descriptions.js";
 import { npmPackageSpec, resolveInstallSpec } from "../install/install-spec.js";
 import { fetchNpmManifest } from "../install/install-verify.js";
 import { isProtectedPackage, packageIsDisabled, removeRowBlocks, rowIdsForPackage, userPatchPath } from "./patch-toggle.js";
@@ -126,7 +127,7 @@ export async function listManagedPlugins(profile, document, explicitDir, refresh
         const source = parseGitHubSource(spec);
         const fullName = source?.repository ?? githubRepositoryIdentity(manifest?.repository);
         const matched = matchCatalogEntry(document, name, spec, fullName);
-        const catalog = matched ? withReviewedDescription(matched, document ?? {}) : undefined;
+        const catalog = matched ? withPublishedDescription(matched) : undefined;
         const version = readInstalledVersion(profile, name, explicitDir);
         const local = spec.startsWith("link:") || spec.startsWith("file:");
         let updateTarget = null;
@@ -168,8 +169,9 @@ export async function listManagedPlugins(profile, document, explicitDir, refresh
             descriptionZh: managedDescriptionZh({
                 kind: "bundle",
                 name,
-                descriptionZh: catalog?.descriptionZh,
-                descriptions: [catalog?.description, manifest?.description],
+                descriptionZh: catalog ? descriptionDisplayFor(catalog) : undefined,
+                // Installed package metadata is not a published Chinese summary.
+                // A missing current catalog row must not recover withdrawn local prose.
             }),
             fullName: catalog?.fullName ?? fullName,
             url: catalog?.url ?? (fullName ? `https://github.com/${fullName}` : manifest?.homepage ?? null),

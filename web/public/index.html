@@ -42,8 +42,8 @@
           "name": "dsh-top100",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Cross-platform",
-          "softwareVersion": "1.3.7",
-          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.7",
+          "softwareVersion": "1.3.8",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.8",
           "license": "https://opensource.org/license/mit"
         }
       }
@@ -3125,15 +3125,15 @@
                 <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>插件版本</dt><dd>v1.3.7</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.8</dd></div>
                 <div><dt>指南使用 DSH</dt><dd>0.1.5-rc.2</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.7</code>
+                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.7"
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8"
                   data-analytics="install-command"
                 >复制安装命令</button>
               </div>
@@ -3369,8 +3369,7 @@
       import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
       import { enhanceDescriptions } from "./description-preview.js";
       import { initializeInstallGuide } from "./install-guide.js";
-      import { descriptionDisplayFor, loadReviewedDescriptions } from "./description-presentation.js";
-      const reviewedDescriptions = await loadReviewedDescriptions();
+      import { descriptionDisplayFor } from "./description-presentation.js";
       import { showFeaturedPlugin, isFeaturedRepository } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
       import { track, trackPageView } from "./analytics.js";
@@ -3939,9 +3938,9 @@
 
       async function fetchJson(url, { manifestRequest = false } = {}) {
         if (dataLoadPromises.has(url)) return dataLoadPromises.get(url);
-        const promise = fetch(url, { cache: manifestRequest ? "no-cache" : "force-cache" })
+        const promise = fetch(url, { cache: manifestRequest || !String(url).includes("/snapshots/") ? "no-cache" : "force-cache" })
           .then((response) => {
-            if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+            if (!response.ok) throw Object.assign(new Error(`${url} returned HTTP ${response.status}`), { status: response.status });
             const type = response.headers.get("content-type") ?? "";
             if (!type.includes("json")) throw new Error(`${url} returned ${type || "unknown content"}`);
             return response.json();
@@ -3964,7 +3963,7 @@
           )
           .map((plugin, index) => {
             const name = plugin.name || plugin.fullName.split("/").pop() || plugin.fullName;
-            const descriptionZh = descriptionDisplayFor(plugin, reviewedDescriptions, manifest ?? {});
+            const descriptionZh = descriptionDisplayFor(plugin);
             const categoryValues = (plugin.categories ?? []).map((item) =>
               typeof item === "string" ? item : item?.id
             ).filter(Boolean);
@@ -4003,6 +4002,7 @@
           updateCategoryCounts();
           return;
         } catch (manifestError) {
+          if (manifest || manifestError.status !== 404) throw manifestError;
           console.warn("Manifest unavailable; falling back to the lightweight legacy hot list.", manifestError);
         }
 
@@ -4125,10 +4125,6 @@
         if (!searchLoadPromise) {
           const primaryUrl = manifest?.datasets?.search?.url ?? LEGACY_URLS.search;
           searchLoadPromise = fetchJson(primaryUrl)
-            .catch((primaryError) => {
-              if (!manifest || primaryUrl === LEGACY_URLS.search) throw primaryError;
-              return fetchJson(LEGACY_URLS.search);
-            })
             .then((payload) => {
               const entries = makeEntries(payload.rankings);
               if (entries.length === 0) throw new Error("搜索索引为空");

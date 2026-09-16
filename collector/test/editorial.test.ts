@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import descriptions from "../config/reviewed-descriptions.json";
 import categories from "../config/reviewed-categories.json";
 import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
 import { CATEGORY_POLICY_VERSION, categorySourceHash, currentCategoryAssignments } from "../src/categories.js";

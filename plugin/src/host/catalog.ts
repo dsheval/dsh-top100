@@ -9,7 +9,7 @@ import { promisify } from "node:util";
 import { isInstalledEntry, parseInstallSpec, resolveInstallSpec, type InstalledEntryEvidence } from "../install/install-spec.js";
 import { catalogCategories, categoryDisplayLabel, entryMatchesCategory, isPluginCategoryId } from "../shared/categories.js";
 import { createSearchScorer, matchesSearchQuery, tokenizeSearchQuery } from "../shared/search.js";
-import { withReviewedDescription } from "../shared/descriptions.js";
+import { withPublishedDescription } from "../shared/descriptions.js";
 import { catalogEvidence } from "../shared/evidence.js";
 import { isFeaturedRepository } from "../shared/featured.js";
 import type {
@@ -110,6 +110,15 @@ const inFlight = new Map<string, Promise<RankingsDocument>>();
 const fallbackReasons = new Map<string, string>();
 const manifestCaches = new Map<string, RankingManifestCache>();
 const manifestInFlight = new Map<string, Promise<RankingManifestV2>>();
+const diskWrites = new Map<string, Promise<void>>();
+let cacheGeneration = 0;
+
+function serializeDiskWrite(path: string, write: () => Promise<void>): Promise<void> {
+  const task = (diskWrites.get(path) ?? Promise.resolve()).then(write, write);
+  diskWrites.set(path, task);
+  void task.finally(() => { if (diskWrites.get(path) === task) diskWrites.delete(path); });
+  return task;
+}
 
 export function normalizeDataUrl(raw: string): string {
   const parsed = new URL(raw);
@@ -260,7 +269,7 @@ export function isInstallAvailability(value: string | null): value is InstallAva
 }
 
 export function matchesQuery(entry: RankingEntry, query: string): boolean {
-  return matchesSearchQuery(withReviewedDescription(entry), query);
+  return matchesSearchQuery(withPublishedDescription(entry), query);
 }
 
 function annotate(entry: RankingEntry, installed: Record<string, string>, profile = "web", evidence?: Record<string, InstalledEntryEvidence>): CatalogItem {
@@ -378,7 +387,7 @@ export function filterCatalog(
   const scored = source
     // Older snapshots may still contain our editorial #000 project as a ranked entry.
     .filter((entry) => !isFeaturedRepository(entry))
-    .map((entry) => withReviewedDescription(entry, document))
+    .map((entry) => withPublishedDescription(entry))
     .filter((entry) => !options.compatibleOnly || catalogEvidence(entry).compatible)
     .filter((entry) => !options.catalogScope || entryMatchesCatalogScope(entry, options.catalogScope))
     .filter((entry) => options.category === null || entryMatchesCategory(entry, options.category))
@@ -436,6 +445,8 @@ export function filteredCatalogCategories(
 }
 
 export function invalidateCatalog(): void {
+  cacheGeneration += 1;
+  inFlight.clear();
   caches.clear();
   fallbackReasons.clear();
   manifestCaches.clear();
@@ -502,28 +513,32 @@ async function readManifestDiskCache(dataUrl: string): Promise<RankingManifestCa
 
 async function writeDiskCache(value: CatalogCache): Promise<void> {
   const path = catalogCachePath(value.dataUrl);
-  const temporary = `${path}.${process.pid}.tmp`;
-  try {
-    await mkdir(catalogCacheDirectory(), { recursive: true });
-    const payload: CatalogDiskCache = { schemaVersion: 2, ...value };
-    await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
+  const generation = cacheGeneration;
+  return serializeDiskWrite(path, async () => {
+    if (generation !== cacheGeneration) return;
+    const temporary = `${path}.${process.pid}.tmp`;
     try {
-      await rename(temporary, path);
-    } catch {
-      // Windows does not replace an existing destination with rename(). Keep a restorable last-good copy.
-      const backup = `${path}.${process.pid}.${Date.now()}.bak`;
-      await rename(path, backup);
+      await mkdir(catalogCacheDirectory(), { recursive: true });
+      const payload: CatalogDiskCache = { schemaVersion: 2, ...value };
+      await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
       try {
         await rename(temporary, path);
-      } catch (replacementError) {
-        await rename(backup, path).catch(() => undefined);
-        throw replacementError;
+      } catch {
+        // Windows does not replace an existing destination with rename(). Keep a restorable last-good copy.
+        const backup = `${path}.${process.pid}.${Date.now()}.bak`;
+        await rename(path, backup);
+        try {
+          await rename(temporary, path);
+        } catch (replacementError) {
+          await rename(backup, path).catch(() => undefined);
+          throw replacementError;
+        }
+        await rm(backup, { force: true }).catch(() => undefined);
       }
-      await rm(backup, { force: true }).catch(() => undefined);
+    } catch {
+      await rm(temporary, { force: true }).catch(() => undefined);
     }
-  } catch {
-    await rm(temporary, { force: true }).catch(() => undefined);
-  }
+  });
 }
 
 async function writeManifestDiskCache(
@@ -531,27 +546,31 @@ async function writeManifestDiskCache(
   value: RankingManifestCache,
 ): Promise<void> {
   const path = manifestCachePath(dataUrl);
-  const temporary = `${path}.${process.pid}.tmp`;
-  try {
-    await mkdir(catalogCacheDirectory(), { recursive: true });
-    const payload: RankingManifestDiskCache = { schemaVersion: 1, dataUrl, ...value };
-    await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
+  const generation = cacheGeneration;
+  return serializeDiskWrite(path, async () => {
+    if (generation !== cacheGeneration) return;
+    const temporary = `${path}.${process.pid}.tmp`;
     try {
-      await rename(temporary, path);
-    } catch {
-      const backup = `${path}.${process.pid}.${Date.now()}.bak`;
-      await rename(path, backup);
+      await mkdir(catalogCacheDirectory(), { recursive: true });
+      const payload: RankingManifestDiskCache = { schemaVersion: 1, dataUrl, ...value };
+      await writeFile(temporary, `${JSON.stringify(payload)}\n`, "utf8");
       try {
         await rename(temporary, path);
-      } catch (replacementError) {
-        await rename(backup, path).catch(() => undefined);
-        throw replacementError;
+      } catch {
+        const backup = `${path}.${process.pid}.${Date.now()}.bak`;
+        await rename(path, backup);
+        try {
+          await rename(temporary, path);
+        } catch (replacementError) {
+          await rename(backup, path).catch(() => undefined);
+          throw replacementError;
+        }
+        await rm(backup, { force: true }).catch(() => undefined);
       }
-      await rm(backup, { force: true }).catch(() => undefined);
+    } catch {
+      await rm(temporary, { force: true }).catch(() => undefined);
     }
-  } catch {
-    await rm(temporary, { force: true }).catch(() => undefined);
-  }
+  });
 }
 
 function fetchCause(error: unknown): { message: string; code?: string } {
@@ -641,6 +660,7 @@ function manifestReferences(manifest: RankingManifestV2): RankingFileReferenceV2
 }
 
 async function downloadRankingManifest(baseUrl: string): Promise<RankingManifestV2> {
+  const generation = cacheGeneration;
   const url = `${baseUrl}/manifest.json`;
   let raw: string;
   try {
@@ -654,9 +674,15 @@ async function downloadRankingManifest(baseUrl: string): Promise<RankingManifest
   }
   const manifest = parseRankingManifest(raw);
   for (const reference of manifestReferences(manifest)) manifestFileUrl(baseUrl, reference);
+  if (generation !== cacheGeneration) throw new Error("榜单缓存已刷新，请重试");
+  const current = manifestCaches.get(baseUrl);
+  if (current && Date.parse(manifest.generatedAt) < Date.parse(current.manifest.generatedAt)) {
+    throw new Error("榜单服务器返回了过期快照");
+  }
   const value = { fetchedAt: Date.now(), manifest };
   manifestCaches.set(baseUrl, value);
   await writeManifestDiskCache(baseUrl, value);
+  if (generation !== cacheGeneration) throw new Error("榜单缓存已刷新，请重试");
   fallbackReasons.delete(url);
   return manifest;
 }
@@ -678,17 +704,38 @@ export async function loadRankingManifest(
   force = false,
 ): Promise<RankingManifestV2> {
   const baseUrl = normalizeDataUrl(dataUrl);
-  const cached = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
-  if (cached) manifestCaches.set(baseUrl, cached);
-  if (!force && cached) {
-    if (Date.now() - cached.fetchedAt >= CACHE_MS) {
-      void refreshRankingManifest(baseUrl).catch((error: unknown) => {
-        fallbackReasons.set(`${baseUrl}/manifest.json`, describeCatalogFetchError(error));
-      });
-    }
-    return cached.manifest;
-  }
+  const cached = await cachedManifest(baseUrl);
+  // Recheck after the disk/memory await: a parallel forced reader may have
+  // started a refresh while this reader still holds the previous snapshot.
+  const pending = manifestInFlight.get(baseUrl);
+  if (pending) return pending;
+  if (!force && cached && Date.now() - cached.fetchedAt < CACHE_MS) return cached.manifest;
   return refreshRankingManifest(baseUrl);
+}
+
+async function cachedManifest(baseUrl: string): Promise<RankingManifestCache | null> {
+  const memory = manifestCaches.get(baseUrl);
+  if (memory) return memory;
+  const generation = cacheGeneration;
+  const disk = await readManifestDiskCache(baseUrl);
+  if (generation !== cacheGeneration) return cachedManifest(baseUrl);
+  const current = manifestCaches.get(baseUrl) ?? disk;
+  if (current) manifestCaches.set(baseUrl, current);
+  return current;
+}
+
+/** Offline discovery stays on the last observed snapshot; it never downgrades v2 to legacy. */
+async function discoveryManifest(baseUrl: string, force: boolean): Promise<RankingManifestV2 | null> {
+  try { return await loadRankingManifest(baseUrl, force); }
+  catch (error) {
+    const cached = await cachedManifest(baseUrl);
+    if (cached) {
+      fallbackReasons.set(`${baseUrl}/manifest.json`, describeCatalogFetchError(error));
+      return cached.manifest;
+    }
+    if (error instanceof CatalogSourceError && error.status === 404) return null;
+    throw error;
+  }
 }
 
 export function parseRankingsDocument(raw: string): RankingsDocument {
@@ -768,11 +815,14 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     name: typeof entry.name === "string" ? entry.name : repositoryName,
     owner: typeof entry.owner === "string" ? entry.owner : owner,
     description: typeof entry.description === "string" ? entry.description : "",
+    ...(entry.descriptionPolicy === 'server-v1' ? { descriptionPolicy: entry.descriptionPolicy } : {}),
     descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
-    ...(entry.descriptionStatus && ['pending', 'review-required', 'missing-source', 'retry'].includes(entry.descriptionStatus.state)
-      && typeof entry.descriptionStatus.reason === 'string' ? { descriptionStatus: {
-        state: entry.descriptionStatus.state, reason: entry.descriptionStatus.reason.slice(0, 200),
-      } } : {}),
+    ...(entry.descriptionStatus !== undefined ? { descriptionStatus:
+      entry.descriptionStatus && ['pending', 'review-required', 'missing-source', 'retry'].includes(entry.descriptionStatus.state)
+        && typeof entry.descriptionStatus.reason === 'string'
+        ? { state: entry.descriptionStatus.state, reason: entry.descriptionStatus.reason.slice(0, 200) }
+        : { state: 'review-required' as const, reason: '服务端简介状态无效，等待复核。' },
+    } : {}),
     ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
     stars: Number(entry.stars) || 0,
     dailyStars: typeof entry.dailyStars === "number" && Number.isFinite(entry.dailyStars) ? entry.dailyStars : null,
@@ -866,6 +916,7 @@ function snapshotDocument(
 }
 
 async function downloadCatalog(url: string, parser: CatalogParser): Promise<RankingsDocument> {
+  const generation = cacheGeneration;
   let raw: string;
   try {
     raw = await fetchCatalogText(url);
@@ -881,10 +932,16 @@ async function downloadCatalog(url: string, parser: CatalogParser): Promise<Rank
     }
   }
   const document = parser(raw);
+  if (generation !== cacheGeneration) throw new Error("榜单缓存已刷新，请重试");
+  const current = caches.get(url);
+  if (current && Date.parse(document.generatedAt) < Date.parse(current.document.generatedAt)) {
+    throw new Error("榜单服务器返回了过期快照");
+  }
   fallbackReasons.delete(url);
   const value: CatalogCache = { dataUrl: url, fetchedAt: Date.now(), document };
   caches.set(url, value);
   await writeDiskCache(value);
+  if (generation !== cacheGeneration) throw new Error("榜单缓存已刷新，请重试");
   return document;
 }
 
@@ -906,22 +963,18 @@ async function loadCatalogDocument(
   force: boolean,
   fallbackToCache = true,
 ): Promise<RankingsDocument> {
+  const generation = cacheGeneration;
   const cached = await cachedCatalog(url);
-  if (!force && cached) {
-    if (Date.now() - cached.fetchedAt >= CACHE_MS) {
-      // Stale-while-revalidate: keep the page responsive and refresh the last-good snapshot off-screen.
-      void refreshCatalog(url, parser).catch((error: unknown) => {
-        fallbackReasons.set(url, describeCatalogFetchError(error));
-      });
-    }
-    return cached.document;
-  }
+  if (!force && !inFlight.has(url) && cached && Date.now() - cached.fetchedAt < CACHE_MS) return cached.document;
   try {
     return await refreshCatalog(url, parser);
   } catch (error) {
-    if (cached && fallbackToCache) {
-      fallbackReasons.set(url, describeCatalogFetchError(error));
-      return cached.document;
+    if (fallbackToCache) {
+      const current = caches.get(url) ?? (generation === cacheGeneration ? cached : null);
+      if (current) {
+        fallbackReasons.set(url, describeCatalogFetchError(error));
+        return current.document;
+      }
     }
     throw error;
   }
@@ -935,10 +988,15 @@ async function loadManifestDataset(
   force = false,
 ): Promise<RankingsDocument> {
   const url = manifestFileUrl(dataUrl, reference);
-  return loadCatalogDocument(url, (raw) => {
+  const document = await loadCatalogDocument(url, (raw) => {
     verifySnapshot(raw, reference);
     return snapshotDocument(raw, manifest, dataset);
   }, force);
+  const current = await cachedManifest(normalizeDataUrl(dataUrl));
+  if (document.snapshotId !== manifest.snapshotId || (current && current.manifest.snapshotId !== manifest.snapshotId)) {
+    throw new Error("榜单快照已更新，请重试");
+  }
+  return document;
 }
 
 export async function loadRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
@@ -950,13 +1008,9 @@ export async function loadRankings(dataUrl: string, force = false): Promise<Rank
 export async function loadSearchRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const url = `${baseUrl}/rankings-search.json`;
-  let manifestError: unknown = null;
-  try {
-    const manifest = await loadRankingManifest(baseUrl, force);
-    return await loadManifestDataset(baseUrl, manifest, manifest.datasets.search, "search", force);
-  } catch (error) {
-    manifestError = error;
-  }
+  const manifest = await discoveryManifest(baseUrl, force);
+  if (manifest) return loadManifestDataset(baseUrl, manifest, manifest.datasets.search, "search", force);
+  const manifestError = new Error("服务器未提供 manifest，使用旧版目录");
   try {
     const document = await loadCatalogDocument(url, parseRankingSearchDocument, force);
     fallbackReasons.set(url, `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`);
@@ -985,16 +1039,10 @@ export async function loadSearchRankings(dataUrl: string, force = false): Promis
 export async function loadSkillRankings(dataUrl: string, force = false): Promise<RankingsDocument> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const url = `${baseUrl}/rankings-skills.json`;
-  let manifestError: unknown = null;
-  try {
-    const manifest = await loadRankingManifest(baseUrl, force);
-    if (!manifest.datasets.skills) {
-      throw new CatalogSourceError("榜单 manifest 尚未提供 Skills 目录", { fallbackToFull: true });
-    }
-    return await loadManifestDataset(baseUrl, manifest, manifest.datasets.skills, "skills", force);
-  } catch (error) {
-    manifestError = error;
-  }
+  const manifest = await discoveryManifest(baseUrl, force);
+  if (manifest?.datasets.skills) return loadManifestDataset(baseUrl, manifest, manifest.datasets.skills, "skills", force);
+  // Older v2 publications did not include a Skills directory at all.
+  const manifestError = new Error(manifest ? "榜单 manifest 尚未提供 Skills 目录" : "服务器未提供 manifest，使用旧版目录");
   try {
     const document = await loadCatalogDocument(url, parseSkillDirectoryDocument, force);
     fallbackReasons.set(url, `manifest v2 Skills 目录不可用：${describeCatalogFetchError(manifestError)}`);
@@ -1018,8 +1066,7 @@ export async function catalogCacheStatus(
   view?: "hot" | "rising",
 ): Promise<CatalogCacheStatus> {
   const baseUrl = normalizeDataUrl(dataUrl);
-  const manifestCache = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
-  if (manifestCache) manifestCaches.set(baseUrl, manifestCache);
+  const manifestCache = await cachedManifest(baseUrl);
   const manifest = manifestCache?.manifest;
   const candidates: Array<{ url: string; dataset: CatalogCacheStatus["dataset"] }> = [];
   if (manifest && dataset === "view-shard" && view) {
@@ -1029,43 +1076,51 @@ export async function catalogCacheStatus(
   } else if (manifest && dataset === "skill-directory" && manifest.datasets.skills) {
     candidates.push({ url: manifestFileUrl(baseUrl, manifest.datasets.skills), dataset });
   }
-  if (dataset === "view-shard" && view) {
-    candidates.push({ url: `${baseUrl}/rankings-${view}.json`, dataset });
-  } else if (dataset === "search-index") {
-    candidates.push({ url: `${baseUrl}/rankings-search.json`, dataset });
-  } else if (dataset === "skill-directory") {
-    candidates.push({ url: `${baseUrl}/rankings-skills.json`, dataset });
+  if (!manifest) {
+    if (dataset === "view-shard" && view) {
+      candidates.push({ url: `${baseUrl}/rankings-${view}.json`, dataset });
+    } else if (dataset === "search-index") {
+      candidates.push({ url: `${baseUrl}/rankings-search.json`, dataset });
+    } else if (dataset === "skill-directory") {
+      candidates.push({ url: `${baseUrl}/rankings-skills.json`, dataset });
+    }
+    candidates.push({ url: `${baseUrl}/rankings.json`, dataset: "full-catalog" });
   }
-  candidates.push({ url: `${baseUrl}/rankings.json`, dataset: "full-catalog" });
+  const manifestReason = fallbackReasons.get(`${baseUrl}/manifest.json`);
+  const manifestStale = Boolean(manifestReason) || Boolean(manifestCache && Date.now() - manifestCache.fetchedAt >= CACHE_MS);
   for (const candidate of candidates) {
     const cached = await cachedCatalog(candidate.url);
-    if (!cached) continue;
+    if (manifestCaches.get(baseUrl)?.manifest.snapshotId !== manifest?.snapshotId) return catalogCacheStatus(dataUrl, dataset, view);
+    if (!cached || (manifest && cached.document.snapshotId !== manifest.snapshotId)) continue;
     const ageMs = Math.max(0, Date.now() - cached.fetchedAt);
+    const reason = [manifestReason, fallbackReasons.get(candidate.url)].filter(Boolean).join("；") || null;
     return {
       fetchedAt: cached.fetchedAt,
       ageMs,
-      stale: ageMs >= CACHE_MS,
-      reason: fallbackReasons.get(candidate.url) ?? null,
+      stale: manifestStale || ageMs >= CACHE_MS || Boolean(reason),
+      reason,
       source: "network-or-cache",
       dataset: candidate.dataset,
     };
   }
-  return { fetchedAt: null, ageMs: null, stale: false, reason: null, source: "unknown", dataset };
+  return { fetchedAt: null, ageMs: null, stale: manifestStale, reason: manifestReason ?? null, source: "unknown", dataset };
 }
 
 async function cachedCatalog(url: string): Promise<CatalogCache | null> {
   const memory = caches.get(url);
   if (memory) return memory;
+  const generation = cacheGeneration;
   const disk = await readDiskCache(url);
-  if (disk) caches.set(url, disk);
-  return disk;
+  if (generation !== cacheGeneration) return cachedCatalog(url);
+  const current = caches.get(url) ?? disk;
+  if (current) caches.set(url, current);
+  return current;
 }
 
 /** Return a last-good full or view cache without ever delaying local management on the network. */
 export async function loadCachedRankings(dataUrl: string): Promise<RankingsDocument | null> {
   const baseUrl = normalizeDataUrl(dataUrl);
-  const manifestCache = manifestCaches.get(baseUrl) ?? await readManifestDiskCache(baseUrl);
-  if (manifestCache) manifestCaches.set(baseUrl, manifestCache);
+  const manifestCache = await cachedManifest(baseUrl);
   const manifest = manifestCache?.manifest;
   const urls = manifest ? [
     manifestFileUrl(baseUrl, manifest.datasets.search),
@@ -1073,17 +1128,23 @@ export async function loadCachedRankings(dataUrl: string): Promise<RankingsDocum
     manifestFileUrl(baseUrl, manifest.datasets.rising),
     ...(manifest.datasets.skills ? [manifestFileUrl(baseUrl, manifest.datasets.skills)] : []),
   ] : [];
-  urls.push(
+  if (!manifest) urls.push(
     `${baseUrl}/rankings-search.json`,
     `${baseUrl}/rankings-hot.json`,
     `${baseUrl}/rankings-rising.json`,
     `${baseUrl}/rankings.json`,
   );
+  let newest: CatalogCache | null = null;
   for (const url of urls) {
     const cached = await cachedCatalog(url);
-    if (cached) return cached.document;
+    if (manifestCaches.get(baseUrl)?.manifest.snapshotId !== manifest?.snapshotId) return loadCachedRankings(dataUrl);
+    if (!cached || (manifest && cached.document.snapshotId !== manifest.snapshotId)) continue;
+    // All v2 candidates share one publication; prefer the complete search index.
+    if (manifest) return cached.document;
+    if (!newest || catalogSnapshotTime(cached) > catalogSnapshotTime(newest)
+      || (catalogSnapshotTime(cached) === catalogSnapshotTime(newest) && cached.fetchedAt > newest.fetchedAt)) newest = cached;
   }
-  return null;
+  return newest?.document ?? null;
 }
 
 function catalogSnapshotTime(value: CatalogCache): number {
@@ -1200,13 +1261,9 @@ export async function loadRankingView(
 ): Promise<RankingsDocument> {
   const baseUrl = normalizeDataUrl(dataUrl);
   const url = `${baseUrl}/rankings-${view}.json`;
-  let manifestError: unknown = null;
-  try {
-    const manifest = await loadRankingManifest(baseUrl, force);
-    return await loadManifestDataset(baseUrl, manifest, manifest.datasets[view], view, force);
-  } catch (error) {
-    manifestError = error;
-  }
+  const manifest = await discoveryManifest(baseUrl, force);
+  if (manifest) return loadManifestDataset(baseUrl, manifest, manifest.datasets[view], view, force);
+  const manifestError = new Error("服务器未提供 manifest，使用旧版目录");
   try {
     const document = await loadCatalogDocument(url, (raw) => parseRankingViewDocument(raw, view), force);
     fallbackReasons.set(url, `manifest v2 不可用：${describeCatalogFetchError(manifestError)}`);

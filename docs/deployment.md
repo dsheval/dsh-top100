@@ -25,7 +25,7 @@ five-minute timeout and one retry. Docker builds do not repeat this audit;
 manual releases must also have a successful audit for the target commit.
 
 Typechecks, all tests, runtime publication and Compose validation are retained.
-`npm run plugin:pack:check` also builds the actual npm tarball and verifies its entry points, types, skills and reviewed descriptions.
+`npm run plugin:pack:check` also builds the actual npm tarball and verifies its entry points, types and skills, and ensures server editorial data and semantic policy are absent from the plugin archive.
 Both web and scheduler images are built using separate GitHub Actions cache
 scopes, loaded locally on the runner and never pushed. No path-based skipping
 is enabled in this first optimization pass.
@@ -145,7 +145,7 @@ gateway/browser. Root query/hash links are handled by the DSH-Eval landing page.
 Repository About and npm public metadata should use:
 - Website: `https://www.dsheval.ai/top100/`
 - Repository description: `DSH-Eval 旗下的插件与 Skills 发现栏目，按公开 GitHub 信号持续更新。`
-- This release targets `@dsheval/dsh-top100-plugin@1.3.4`; verify the registry's `latest` tag after publishing.
+- This release targets `@dsheval/dsh-top100-plugin@1.3.8`; verify the registry's `latest` tag after publishing.
   Public metadata and README are published from `plugin/package.json` and `plugin/README.md`.
 
 Updating repository About, publishing npm, and deploying the gateway are separate
@@ -162,3 +162,9 @@ Prefer `DEEPSEEK_API_KEY_FILE` with an absolute runtime path outside the reposit
 For each new stable plugin release, record the previous `latest` version before publishing. After the new version and `latest` are public and the downloaded tarball matches the approved artifact, mark that previous version as deprecated with a message naming the exact recommended replacement. Verify the public registry `deprecated` field before marking release work complete. Keep the old package available; do not unpublish it.
 
 Browser or two-factor verification requested by npm is completed by the account owner. Never collect a one-time code or copy credentials into the repository.
+
+## Server-owned descriptions (1.3.8+)
+
+Deploy the server publisher and website with `descriptionPolicy: "server-v1"` data before rolling out the new plugin. Republish current rankings using the server publication entry point without collection or model work. Preserve ranking metadata, source records, history and the shared model ledger. The fixed editorial table now lives only in `collector/config/reviewed-descriptions.json`. Remove the obsolete website and plugin source review JSON when layering a deployment image over an older image; a Docker COPY alone does not remove deleted files.
+
+After the one-time client upgrade, editorial data or server validation changes do not require npm releases. Keep the contract marker stable for compatible changes. Clients that have observed a current manifest must not recover older prose from legacy endpoints if a current shard fails.

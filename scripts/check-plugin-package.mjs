@@ -26,7 +26,11 @@ export function validatePluginPackage({ manifest, files, readFile, expectedManif
     if (path.endsWith('.json')) assert.deepEqual(JSON.parse(readFile(path)), JSON.parse(source), `Stale package data: ${path}`);
     else assert.equal(readFile(path), source, `Stale package asset: ${path}`);
   }
+  assert(!files.some(path => /reviewed-descriptions|editorial/.test(path)), 'Editorial content must not ship in the plugin');
   const client = readFile('client/client.js');
+  for (const code of [client, ...(paths.has('lib/shared/description-rules.js') ? [readFile('lib/shared/description-rules.js')] : [])]) {
+    assert.doesNotMatch(code, /matchesReviewedDescriptionSource|descriptionQualityIssue|reviewed-descriptions\.json/, 'Server editorial policy must not ship as runtime code');
+  }
   assert(client.includes('window.__ModuleLoader__.load') && client.includes(JSON.stringify(manifest.name)),
     'Client bundle must register the plugin with the DSH module loader');
   return { name: manifest.name, version: manifest.version, files: paths.size };
@@ -44,7 +48,6 @@ function sourceAssets(pluginRoot) {
   walk('skills');
   assert(Object.keys(sources).some(path => path.endsWith('/SKILL.md')), 'No bundled skill found');
   sources['cordis.patch.yml'] = readFileSync(join(pluginRoot, 'cordis.patch.yml'), 'utf8');
-  sources['lib/shared/reviewed-descriptions.json'] = readFileSync(join(pluginRoot, 'src/shared/reviewed-descriptions.json'), 'utf8');
   return sources;
 }
 
@@ -74,7 +77,7 @@ export function checkPluginPackage() {
     };
     const result = validatePluginPackage({ manifest: JSON.parse(readFile('package.json')), files, readFile,
       expectedManifest, sourceFiles: sourceAssets(pluginRoot) });
-    console.log(`Plugin package verified: ${result.name}@${result.version}, ${result.files} files; entries, client, patch, skills and reviewed descriptions present.`);
+    console.log(`Plugin package verified: ${result.name}@${result.version}, ${result.files} files; entries, client, patch, skills present; editorial content absent.`);
   } finally {
     rmSync(temporary, { recursive: true, force: true });
   }

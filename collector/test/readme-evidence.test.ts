@@ -5,7 +5,7 @@ import { summarizeReadme } from '../src/summary.js';
 import { prepareDailyDescriptions } from '../src/daily-descriptions.js';
 import { bindDailySourceJob } from '../src/daily-model-scope.js';
 import { reviewedDescription } from '../src/editorial.js';
-import reviews from '../../plugin/src/shared/reviewed-descriptions.json';
+import reviews from '../config/reviewed-descriptions.json';
 import type { DshPlugin } from '@dsh-top100/schema';
 
 const document = '# dsh-selected\n\nSearch project files and organize search results in the sidebar.';

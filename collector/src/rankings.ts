@@ -15,8 +15,8 @@ import { fallbackDescriptionZh } from "./llm.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { reviewedDescription } from "./editorial.js";
 import { matchingDescriptionHold } from "./content-source.js";
-import { descriptionQualityIssue } from "../../plugin/src/shared/description-rules.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue } from "./description-rules.js";
+import { PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 import { isFeaturedRepository } from "../../plugin/src/shared/featured.js";
 
 interface RankingConfig {
@@ -42,6 +42,7 @@ export interface RankingEntry {
   owner: string;
   description: string;
   descriptionZh: string;
+  descriptionPolicy?: 'server-v1';
   descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   readmeSummary?: string;
   stars: number;

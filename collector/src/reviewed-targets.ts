@@ -1,7 +1,7 @@
 import targets from "../config/reviewed-plugin-targets.json";
 import type { Detection, ReviewedPackageTarget } from "./detect.js";
 import type { DshPlugin } from "@dsh-top100/schema";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 
 /** These records select an audited package; the detector must still validate it. */
 export const reviewedPluginTargets: Readonly<Record<string, ReviewedPackageTarget>> = targets;

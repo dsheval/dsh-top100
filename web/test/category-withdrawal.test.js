@@ -8,7 +8,7 @@ const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf
 const keywords = html.match(/const categoryKeywords = (\{[\s\S]*?\n      \});/)[1];
 const source = html.match(/function entryMatchesCategory\(entry, category\) \{[\s\S]*?\n      \}/)[0];
 const matches = new Function('normalizeSearchText', `const categoryKeywords = ${keywords}; ${source}; return entryMatchesCategory;`)(normalizeSearchText);
-const reviews = JSON.parse(readFileSync(new URL('../../plugin/src/shared/reviewed-descriptions.json', import.meta.url), 'utf8'));
+const reviews = JSON.parse(readFileSync(new URL('../../collector/config/reviewed-descriptions.json', import.meta.url), 'utf8'));
 function row(description, categories) {
   const searchText = normalizeSearchText(description);
   return { plugin: categories === undefined ? {} : { categories }, searchText, searchWords: searchText.split(/\s+/) };

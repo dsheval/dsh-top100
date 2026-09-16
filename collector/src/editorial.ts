@@ -1,10 +1,10 @@
 import { hasSelectedReadmeEvidence } from "./readme-evidence.js";
 import { needsFunctionReview } from "./reviewed-evidence-state.js";
-import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import descriptions from "../config/reviewed-descriptions.json";
 import categories from "../config/reviewed-categories.json";
 import { bindCategoryAssignments, normalizeCategoryAssignments, type CategoryInput } from "./categories.js";
 import { hasChineseDescription } from "./description-jobs.js";
-import { hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, PENDING_DESCRIPTION_ZH, type ReviewedDescription, type ReviewedInstallIdentity } from "../../plugin/src/shared/description-rules.js";
+import { hasInvalidSelectedPackage, matchesReviewedIdentity, matchesReviewedReadme, matchesReviewedDescriptionSource, PENDING_DESCRIPTION_ZH, type ReviewedDescription, type ReviewedInstallIdentity } from "./description-rules.js";
 
 interface ReviewedEntry {
   sourceScope?: string;

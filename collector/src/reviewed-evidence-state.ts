@@ -1,6 +1,6 @@
 import type { DshPlugin } from "@dsh-top100/schema";
 import { reviewedFunctionEvidence, FUNCTION_EVIDENCE_MARKER_PREFIX } from "./reviewed-evidence.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 import type { AutomaticFunctionCheck } from './source-change-review.js';
 
 type EvidenceSource = { fullName?: string; id?: string | number; name?: string; type?: string;

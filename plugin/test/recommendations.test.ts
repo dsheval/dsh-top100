@@ -21,6 +21,7 @@ function entry(fullName: string, extra: Partial<RankingEntry> = {}): RankingEntr
     name,
     owner,
     description: extra.description ?? "English summary",
+    descriptionPolicy: 'server-v1',
     descriptionZh: extra.descriptionZh ?? "中文简介",
     stars: extra.stars ?? 10,
     dailyStars: extra.dailyStars ?? 1,

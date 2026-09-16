@@ -4,7 +4,7 @@ import type { RankingEntry, RankingsDocument } from '../src/rankings.js';
 import { boardDescriptionScope, attachDescriptionCoverage } from '../src/board-descriptions.js';
 import { runBoardFirstDescriptions } from '../src/daily-board-descriptions.js';
 import { descriptionSourceHash, type DescriptionJob } from '../src/description-jobs.js';
-import { descriptionDisplayFor, descriptionFor, PENDING_DESCRIPTION_ZH } from '../../plugin/src/shared/description-rules.js';
+import { descriptionDisplayFor, descriptionFor, PENDING_DESCRIPTION_ZH } from '../src/description-rules.js';
 
 const now = Date.parse('2026-09-15T00:00:00Z');
 const result = { descriptionZh: '检索学术论文并提取引用，帮助整理研究资料。', tagsZh: ['文献检索'] };

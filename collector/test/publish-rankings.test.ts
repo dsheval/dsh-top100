@@ -182,7 +182,7 @@ describe("v2 ranking publication", () => {
       });
     }
     expect(publication.manifest.snapshotId).toMatch(/^2026-08-31-[a-f0-9]{16}$/);
-    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.8");
+    expect(RANKING_PUBLICATION_FORMAT).toBe("ranking-static-v2.9");
   });
 
   it("preserves missing-description reasons in ranked pages and compact search without treating them as Chinese", () => {

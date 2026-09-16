@@ -252,6 +252,7 @@ export interface RankingSummaryEntry {
   name: string;
   description: string;
   descriptionZh?: string;
+  descriptionPolicy?: 'server-v1';
   descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   /** README-derived excerpt, loaded only with a ranked page rather than the search index. */
   readmeSummary?: string;
@@ -279,6 +280,7 @@ export interface RankingSearchEntry {
   name: string;
   description: string;
   descriptionZh?: string;
+  descriptionPolicy?: 'server-v1';
   descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
   stars: number;
   tags: string[];

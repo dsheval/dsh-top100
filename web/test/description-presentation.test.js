@@ -1,123 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import { descriptionFor, descriptionDisplayFor } from '../public/description-presentation.js';
-test('missing reasons are displayed separately and cannot pass Chinese coverage checks', () => {
-  const entry={description:'Browser automation',descriptionZh:'中文简介待生成。',
-    descriptionStatus:{state:'review-required',reason:'待核对所选子包的功能资料。'}};
-  assert.equal(descriptionFor(entry),'中文简介待生成。');
-  assert.equal(descriptionDisplayFor(entry),'中文简介待复核：待核对所选子包的功能资料。');
-  assert.equal(descriptionDisplayFor({...entry,descriptionZh:'读取浏览器页面并自动填写表单。'}),'读取浏览器页面并自动填写表单。');
-  assert.equal(descriptionDisplayFor({...entry,descriptionStatus:{state:'unexpected',reason:'test'}}),'中文简介待生成。');
+const pending = '中文简介待生成。';
+const entry = { descriptionPolicy: 'server-v1', descriptionZh: '读取网页内容并整理研究资料。' };
+test('renders the final server text without editorial or semantic overrides', () => {
+  assert.equal(descriptionFor(entry), entry.descriptionZh);
+  assert.equal(descriptionFor({...entry, descriptionZh:'感谢用户帮助我们测试新的功能。'}),'感谢用户帮助我们测试新的功能。');
+  assert.equal(descriptionFor({...entry, descriptionZh:'**读取网页** <script>secret()</script>并整理资料。'}),'读取网页 并整理资料。');
 });
-test('missing translations stay in Chinese without fabricating capabilities', () => {
-  assert.equal(descriptionFor({descriptionZh:'demo：现有项目资料不足以生成可靠的功能简介。',description:'Browser automation for agents.'}), '中文简介待生成。');
-  assert.equal(descriptionFor({descriptionZh:'顺手留颗 Star，作者能高兴一整天',description:''}), '中文简介待生成。');
-  assert.equal(descriptionFor({descriptionZh:'为开发者整理研究资料。',description:'Research helper.'}), '为开发者整理研究资料。');
-  assert.equal(descriptionFor({descriptionZh:'版本更新提示：本次版本变化较大，老用户请更新至最新版本。',description:'Generate images from prompts.'}), '中文简介待生成。');
-  assert.equal(descriptionFor({descriptionZh:'',description:'--- 🚨 【国内用户核心前置：必须开启系统代理 / TUN 模式！'}), '中文简介待生成。');
-  assert.equal(descriptionFor({descriptionZh:'中文简介：Browser automation for agents with persistent browser sessions.',description:'Browser tools'}), '中文简介待生成。');
-  assert.equal(descriptionFor({descriptionZh:'English description',description:'**搜索网页**并整理资料。'}), '搜索网页 并整理资料。');
-  assert.equal(descriptionFor({descriptionZh:'让 DeepSeek Harness 调用 Browser Skill 操作网页。'}), '让 DeepSeek Harness 调用 Browser Skill 操作网页。');
-});
-test('reviewed summaries are source-bound and safe to display', () => {
-  const reviews=JSON.parse(readFileSync(new URL('../public/reviewed-descriptions.json',import.meta.url),'utf8'));
-  assert.ok(Object.keys(reviews).length > 0);
-  for(const [fullName,review] of Object.entries(reviews)) {
-    const entry={fullName,description:review.sourceDescription,readmeSummary:review.sourceReadme,
-      ...(review.sourceInstall ? {install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})}} : {}),
-      ...(review.sourceType !== undefined ? {type:review.sourceType} : {})};
-    assert.equal(descriptionFor(entry,reviews),review.descriptionZh);
-    if (review.suspended) assert.equal(review.descriptionZh,'中文简介待生成。',fullName);
-    else assert.ok([...review.descriptionZh].length>=30,fullName);
-    assert.match(review.descriptionZh,/[\u4e00-\u9fff]/,fullName);
-    if (review.leaderboards) {
-      assert.equal(new Set(review.leaderboards).size,review.leaderboards.length,fullName);
-      assert.ok(review.leaderboards.every(value=>['hot','rising','total','skills'].includes(value)),fullName);
-    }
-    if (review.snapshotId) assert.ok(review.snapshotId.startsWith(`${review.reviewedAt}-`),fullName);
-    assert.match(review.sourceUrl,/^https:\/\/github\.com\//);
-    assert.doesNotMatch(review.descriptionZh,/资料不足|求 Star|<|>/);
-    for (const changed of [{...entry,description:'New functionality.'},{...entry,readmeSummary:'Updated behavior.'},
-      {...entry,install:{...entry.install,packageName:'fixture-changed-package'}},
-      {...entry,install:{...entry.install,repositoryPath:'packages/changed'}}]) {
-      // Strict migrations withhold stale claims; legacy reviews retain their
-      // fallback behavior. Source-verified subpackages ignore root marketing.
-      const sameIdentity = changed.install?.packageName === entry.install?.packageName
-        && changed.install?.repositoryPath === entry.install?.repositoryPath;
-      const rootOnly = sameIdentity && changed.readmeSummary === entry.readmeSummary;
-      const verifiedFunction = review.sourceScope === "verified-function" ||
-        review.sourceScope === "selected-package" && review.sourceInstall?.functionEvidence && rootOnly;
-      const expected = review.reviewRequiredReason ? "中文简介待生成。"
-        : sameIdentity && verifiedFunction ? review.descriptionZh
-        : review.enforceSourceMatch ? "中文简介待生成。" : descriptionFor(changed,{});
-      assert.equal(descriptionFor(changed,reviews),expected,fullName);
-    }
+test('status, empty content, unknown contract and legacy data cannot borrow stale author prose', () => {
+  for (const state of ['pending','review-required','missing-source','retry']) {
+    const value = {...entry, descriptionStatus:{state,reason:'服务端待复核'}};
+    assert.equal(descriptionFor(value),pending);
+    assert.match(descriptionDisplayFor(value), /服务端待复核/);
+  }
+  for (const value of [{...entry,descriptionZh:''}, {...entry,descriptionZh:null},
+    {...entry,descriptionPolicy:undefined},{...entry,descriptionPolicy:'future'}]) {
+    assert.equal(descriptionFor({...value,description:'旧的中文说明用于自动管理项目。',readmeSummary:'旧功能介绍。'}),pending);
   }
 });
-test('compact descriptions enforce reviewed package, subdirectory and type', () => {
-  const review={sourceDescription:'History panel',sourceReadme:'Read project history.',
-    sourceInstall:{packageName:'@fixture/panel',repositoryPath:'packages/panel'},sourceType:'cordis-plugin',
-    descriptionZh:'在面板中查看项目历史与变更记录。',snapshotId:'fixture-snapshot'};
-  const entry={fullName:'fixture/panel',description:review.sourceDescription,type:review.sourceType,
-    installPackageName:review.sourceInstall.packageName,installRepositoryPath:review.sourceInstall.repositoryPath};
-  const reviews={[entry.fullName]:review},context={snapshotId:review.snapshotId};
-  assert.equal(descriptionFor(entry,reviews,context),review.descriptionZh);
-  for (const changed of [{...entry,installPackageName:'other-package'},
-    {...entry,installRepositoryPath:'packages/other'},{...entry,type:'skill'}]) {
-    assert.equal(descriptionFor(changed,reviews,context),descriptionFor(changed,{},context));
+test('website does not fetch or distribute an editorial table', () => {
+  assert.equal(existsSync(new URL('../public/reviewed-descriptions.json',import.meta.url)),false);
+  for (const file of ['index.html','skills.html','description-presentation.js','description-rules.js']) {
+    assert.doesNotMatch(readFileSync(new URL(`../public/${file}`,import.meta.url),'utf8'),/reviewedDescriptions|loadReviewedDescriptions|matchesReviewedDescriptionSource|descriptionQualityIssue/);
   }
-});
-test('website data stays identical to the npm editorial source', () => {
-  const read = path => JSON.parse(readFileSync(new URL(path,import.meta.url),'utf8'));
-  assert.deepEqual(read('../public/reviewed-descriptions.json'),read('../../plugin/src/shared/reviewed-descriptions.json'));
-});
-test('compact search requires the reviewed snapshot and rejects changed evidence', () => {
-  const fullName='fixture/browser';
-  const review={sourceDescription:'Browser automation',sourceReadme:'Browse pages and fill forms.',
-    descriptionZh:'连接浏览器读取页面和填写表单，辅助完成网页操作任务。',snapshotId:'fixture-reviewed-snapshot'};
-  const reviews={[fullName]:review};
-  const entry={fullName,description:review.sourceDescription,descriptionZh:'资料不足'};
-  const context={snapshotId:review.snapshotId};
-  assert.equal(descriptionFor(entry,reviews,context),review.descriptionZh);
-  assert.notEqual(descriptionFor(entry,reviews),review.descriptionZh);
-  assert.notEqual(descriptionFor(entry,reviews,{snapshotId:'changed'}),review.descriptionZh);
-  assert.notEqual(descriptionFor({...entry,readmeSummary:'changed'},reviews,context),review.descriptionZh);
-  assert.notEqual(descriptionFor({...entry,description:'changed'},reviews,context),review.descriptionZh);
-});
-test('current editorial evidence cannot reuse an older compact snapshot', () => {
-  const reviews=JSON.parse(readFileSync(new URL('../public/reviewed-descriptions.json',import.meta.url),'utf8'));
-  const fullName='nexu-io/open-design';
-  const review=reviews[fullName];
-  assert.equal(review.snapshotId,undefined);
-  const entry={fullName,description:review.sourceDescription,descriptionZh:'资料不足'};
-  assert.notEqual(descriptionFor(entry,reviews,{snapshotId:'2026-09-04-5de5fae7706f47b1'}),review.descriptionZh);
-});
-
-test('explicit publisher withholding survives compact data without the review evidence', () => {
-  const reviews=JSON.parse(readFileSync(new URL('../../plugin/src/shared/reviewed-descriptions.json',import.meta.url),'utf8'));
-  const withdrawn=Object.entries(reviews).filter(([,review])=>review.suspended);
-  for (const fullName of ['whitelonng/dshcode','zuorn/tydora']) {
-    assert.ok(withdrawn.some(([id])=>id===fullName),fullName);
-  }
-  for (const [fullName,review] of withdrawn) {
-    const full={fullName,description:review.sourceDescription,readmeSummary:review.sourceReadme,
-      install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})},type:review.sourceType,descriptionZh:'提供桌面界面和插件管理，方便使用智能助手。'};
-    assert.equal(descriptionFor(full,reviews),'中文简介待生成。',fullName);
-    const compact={fullName,description:full.description,type:full.type,descriptionZh:'中文简介待生成。'};
-    assert.equal(descriptionFor(compact,reviews,{snapshotId:'new-data-snapshot'}),'中文简介待生成。',fullName);
-    assert.equal(descriptionFor(compact),'中文简介待生成。',fullName);
-    assert.equal(descriptionFor({...compact,descriptionZh:full.descriptionZh},reviews,{snapshotId:'old-cache'}),review.reviewRequiredReason ? '中文简介待生成。' : full.descriptionZh,fullName);
-  }
-  assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。'}),'自动生成研究报告并管理企业知识库。');
-  assert.equal(descriptionFor({description:'自动生成研究报告并管理企业知识库。',descriptionZh:' **中文简介待生成。** '}),'中文简介待生成。');
-});
-
-test('the new workbench review does not revive DeepSeekGUI workspace-root claims', () => {
-  const reviews=JSON.parse(readFileSync(new URL('../public/reviewed-descriptions.json',import.meta.url),'utf8'));
-  const review=reviews['see-sol-lab/deepseekgui'];
-  const entry={fullName:'see-sol-lab/deepseekgui',description:review.sourceDescription,readmeSummary:review.sourceReadme,
-    type:review.sourceType,install:{...review.sourceInstall,...(review.sourceInstall?.functionEvidence ? {discovery:{evidence:[`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`]}} : {})},descriptionZh:'中文简介待生成。'};
-  assert.equal(descriptionFor(entry,reviews),review.descriptionZh);
-  assert.equal(descriptionFor({...entry,install:{packageName:'@deepseek-ai/dsh-root'}},reviews),'中文简介待生成。');
 });

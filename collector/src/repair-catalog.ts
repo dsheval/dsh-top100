@@ -8,7 +8,7 @@ import { reviewedCategories, reviewedDescription } from "./editorial.js";
 import { hasChineseDescription, planDescriptionJobs } from "./description-jobs.js";
 import { fallbackDescriptionZh } from "./llm.js";
 import { matchingDescriptionHold } from "./content-source.js";
-import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 import { refreshInstallAssessments, type AssessmentCache } from "./install-assessment.js";
 import { publishRankings } from "./publish-rankings.js";
 import type { RankingsDocument } from "./rankings.js";

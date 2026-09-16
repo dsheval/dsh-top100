@@ -33,7 +33,7 @@ import { reviewedDescription } from "./editorial.js";
 import { hasChineseDescription } from "./description-jobs.js";
 import { refreshInstallAssessments, type AssessmentCache } from "./install-assessment.js";
 import { matchingDescriptionHold } from "./content-source.js";
-import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 

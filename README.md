@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.7"><img alt="正式版本 v1.3.7" src="https://img.shields.io/badge/release-v1.3.7-2f6f68?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.8"><img alt="正式版本 v1.3.8" src="https://img.shields.io/badge/release-v1.3.8-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
   <a href="https://www.dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
@@ -72,7 +72,7 @@ Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现�
 建议使用 **Node.js 24 LTS** 和 **DSH Web 0.1.5-rc.2**。本版保留已有旧宿主兼容范围，实际验证与限制见[兼容说明](./docs/release-1.3.5.md)。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
-npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.7
+npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8
 npx @deepseek-ai/dsh@0.1.5-rc.2 web
 ```
 
@@ -83,7 +83,7 @@ npx @deepseek-ai/dsh@0.1.5-rc.2 web
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@dsheval/dsh-top100-plugin@1.3.7'
+  - '@dsheval/dsh-top100-plugin@1.3.8'
 ```
 
 默认文件位于用户主目录下的 `.dsh/profiles/web/pnpm-workspace.yaml`；设置了 `DSH_HOME` 时使用该目录下的 `profiles/web/pnpm-workspace.yaml`。首次安装命令会准备 Profile；尚未创建 Profile 时，可先运行 `npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web list`。若 Profile 已存在但缺少 `pnpm-workspace.yaml`，请在该 Profile 目录中创建此文件，再加入上述配置。全局或源码用户需沿用各自的命令前缀。
@@ -91,7 +91,7 @@ minimumReleaseAgeExclude:
 保存后，用同一种方式重新安装：
 
 ```sh
-npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.7
+npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.8
 ```
 
 该例外只放行这个版本，其他依赖仍遵守原等待期；如果报错指向其他包，应单独核对该包。后续升级须使用新版安装指引，不要沿用旧版本例外。
@@ -211,10 +211,18 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 
 ### 校对简介的维护
 
-`plugin/src/shared/reviewed-descriptions.json` 是网站、npm 插件和采集器共用的校对源。修改后运行 `npm run descriptions:build` 生成网站的数据与展示规则，再执行 `npm run check`。`web/public/reviewed-descriptions.json` 和 `description-rules.js` 为生成文件，不直接编辑。npm 构建会把校对源打入包内，不依赖网站文案接口。校对内容匹配原始介绍与 README；轻量索引省略 README 时，还必须匹配已校对的快照 ID。
+`collector/config/reviewed-descriptions.json` 是服务端的固定复核源；来源绑定、质量判断、待复核和撤回均在采集与发布阶段执行。最终 `descriptionZh`、`descriptionStatus` 与 `descriptionPolicy: "server-v1"` 一起进入所有不可变快照和兼容数据文件，快照 ID 包含最终结果，普通文案修改后重新发布服务端数据即可，官网和新版插件无需重新构建。插件与官网只使用已发布结果并清理展示格式，不打包复核表或从作者描述补写中文。
+
+升级到此架构仍需发布一次新版插件。旧版 1.3.7 及更早版本含本地复核逻辑，无法保证服从后续服务端修订，应提示用户升级；新版遇到无 `descriptionPolicy` 的旧缓存/旧协议仅隐藏简介，保留排名与安装信息。已知 v2 manifest 后不再降级到旧兼容文件；离线只显示当前已知快照的缓存，缺少该分片时报错。缓存有效期仍为 30 分钟，可手动刷新；有效期内或完全离线时无法获知尚未收到的撤回，不承诺即时同步。过期请求等待刷新，失败可使用当前快照并显示缓存状态。
+
+`descriptionPolicy: "server-v1"` 是稳定的数据契约标记，不是文案、prompt、模型或复核规则的版本号；这些服务端内容变化不能改动该标记或要求同步升级 npm 插件。只有不兼容的数据契约、插件功能/UI 或宿主兼容改动才需要评估插件发版。
+
+`npm run descriptions:build` 仅生成官网展示格式与安装评估脚本。修订服务端文案后执行相关离线回归与 `npm run check`，再按部署流程重发服务端数据。无需付费模型或全库重跑。
 
 ### npm 插件打包检查
 
-安装开发依赖后运行 `npm run plugin:pack:check`，与 CI 使用同一检查。命令通过 `npm pack` 执行插件的 `prepack` 完整构建，并检查实际安装包中的声明入口、类型文件、DSH 前端注册、Bundle 配置、技能文件与中文校对数据。技能、配置和中文数据还会与当前源码比对，防止遗漏或打入旧内容。
+安装开发依赖后运行 `npm run plugin:pack:check`，与 CI 使用同一检查。命令通过 `npm pack` 执行插件的 `prepack` 完整构建，并检查实际安装包中的声明入口、类型文件、DSH 前端注册、Bundle 配置、技能文件，并确认安装包不含简介复核表及服务端语义规则。技能与配置会同当前源码比对，防止遗漏或打入旧内容。
 
 该命令会重建 `plugin/lib` 和 `plugin/client`；临时安装包检查后自动清理，不发布到 npm。CI 每次运行都执行该步骤，保留现有安全审计、测试和镜像构建。
+
+用 `node --import tsx scripts/check-description-decoupling.mts /绝对路径/候选包.tgz` 可离线验收文案解耦：脚本解开同一安装包，只连接临时本地 HTTP 服务，发布模拟修订、撤回和待复核快照；检查网站与包内宿主代码同步、离线缓存不复活旧文案，并输出安装包哈希。模拟文案仅存在测试进程，不改写正式复核文件。

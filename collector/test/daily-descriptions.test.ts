@@ -5,7 +5,7 @@ import { prepareDailyDescriptions, runDailyDescriptions, updateDailyDescriptionC
 import { descriptionSourceHash, type DescriptionJob } from "../src/description-jobs.js";
 import type { ZhEntry } from "../src/zh-util.js";
 import type { ZhResult } from "../src/llm.js";
-import reviews from "../../plugin/src/shared/reviewed-descriptions.json";
+import reviews from "../config/reviewed-descriptions.json";
 import holds from "../config/editorial-holds.json";
 
 const now = Date.parse("2026-09-10T00:00:00Z");

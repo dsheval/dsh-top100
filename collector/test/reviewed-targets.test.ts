@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import reviews from "../config/reviewed-categories.json";
-import descriptions from "../../plugin/src/shared/reviewed-descriptions.json";
+import descriptions from "../config/reviewed-descriptions.json";
 import { reviewedPluginTargets, matchesReviewedTarget, quarantineUnreviewedTarget } from "../src/reviewed-targets.js";
 import type { DshPlugin } from "@dsh-top100/schema";
 import { planDailyCategories, runDailyCategories, type DailyCategoryInput } from "../src/daily-categories.js";
 import { matchingEditorialHold } from "../src/content-source.js";
 import { planDescriptionJobs } from "../src/description-jobs.js";
 import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
-import { descriptionFor } from "../../plugin/src/shared/description-rules.js";
+import { descriptionFor } from "../src/description-rules.js";
 
 describe("September 11 source review", () => {
   // These two members now carry refreshed source evidence from September 14.

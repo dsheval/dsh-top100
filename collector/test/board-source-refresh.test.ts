@@ -3,7 +3,7 @@ import type { DshPlugin } from '@dsh-top100/schema';
 import type { RankingsDocument } from '../src/rankings.js';
 import { refreshBoardSource, refreshBoardSources } from '../src/board-source-refresh.js';
 import { fetchRawFile, fetchFileViaApi, fetchRepoRoot, githubFetch } from '../src/github.js';
-import { descriptionFor, PENDING_DESCRIPTION_ZH } from '../../plugin/src/shared/description-rules.js';
+import { descriptionFor, PENDING_DESCRIPTION_ZH } from '../src/description-rules.js';
 import { reviewedDescription } from '../src/editorial.js';
 import { hasSelectedReadmeEvidence } from '../src/readme-evidence.js';
 import { matchingEditorialHold } from '../src/content-source.js';

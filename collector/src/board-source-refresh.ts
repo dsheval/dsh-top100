@@ -9,7 +9,7 @@ import { summarizeSelectedReadme } from './reviewed-summary.js';
 import { selectedReadmeEvidence, hasSelectedReadmeEvidence } from './readme-evidence.js';
 import { reviewFunctionChanges } from './source-change-review.js';
 import { applyFunctionEvidenceCheck } from './reviewed-evidence-state.js';
-import { PENDING_DESCRIPTION_ZH } from '../../plugin/src/shared/description-rules.js';
+import { PENDING_DESCRIPTION_ZH } from './description-rules.js';
 import { readPackageSourceFacts, hasPackageSourceFacts } from './package-source-facts.js';
 import { beginSourceRecovery, completeSourceRecovery, recoveryCandidate, recoveryKey, sourceRecoveryDue,
   type SourceRecoveryState } from './source-recovery.js';

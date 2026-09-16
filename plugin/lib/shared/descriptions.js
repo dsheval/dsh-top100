@@ -1,6 +1,5 @@
-import reviewed from "./reviewed-descriptions.json" with { type: "json" };
 import { descriptionFor } from "./description-rules.js";
-/** Keep evidence intact; only replace the presentation/search field. */
-export function withReviewedDescription(entry, context = {}) {
-    return { ...entry, descriptionZh: descriptionFor(entry, reviewed, context) };
+/** Preserve evidence and expose only the server's final summary to search/display. */
+export function withPublishedDescription(entry) {
+    return { ...entry, descriptionZh: descriptionFor(entry) };
 }

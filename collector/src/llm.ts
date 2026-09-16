@@ -6,7 +6,7 @@ import { DEFAULT_MODEL_ATTEMPTS, DEFAULT_MODEL_MAX_TOKENS, DEFAULT_MODEL_THINKIN
  */
 
 import { CATEGORY_DEFINITIONS, normalizeCategorySuggestions, type CategorySuggestion } from "./categories.js";
-import { cleanDescription, isChineseDescription, isPlaceholder, descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { cleanDescription, isChineseDescription, isPlaceholder, descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 
 export interface ZhResult {
   descriptionZh: string;

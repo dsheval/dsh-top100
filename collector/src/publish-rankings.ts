@@ -1,7 +1,7 @@
 /** Build and atomically publish immutable, paginated v2 ranking snapshots. */
 
 import { createHash, randomUUID } from "node:crypto";
-import { publishedDescriptionZh } from "./published-description.js";
+import { publishedDescriptionZh, publishDocumentDescriptions } from "./published-description.js";
 import {
   existsSync,
   mkdirSync,
@@ -27,7 +27,7 @@ import type { RankingEntry, RankingsDocument } from "./rankings.js";
 import { buildSearchIndex, buildSnapshotSearchEntries } from "./search-index.js";
 
 export const RANKING_PAGE_SIZE = 100;
-export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.8";
+export const RANKING_PUBLICATION_FORMAT = "ranking-static-v2.9";
 
 export interface RankingPublicationOptions {
   pageSize?: number;
@@ -87,6 +87,7 @@ function toSummaryEntry(entry: RankingEntry, rank = entry.rank): RankingSummaryE
     fullName: entry.fullName,
     name: entry.name,
     description: entry.description,
+    descriptionPolicy: 'server-v1',
     ...(entry.descriptionStatus ? { descriptionStatus: entry.descriptionStatus } : {}),
     ...(publishedDescriptionZh(entry)
       ? { descriptionZh: publishedDescriptionZh(entry) }
@@ -145,6 +146,7 @@ export function buildRankingPublication(
   rankings: RankingsDocument,
   options: RankingPublicationOptions = {}
 ): RankingPublication {
+  rankings = publishDocumentDescriptions(rankings);
   const pageSize = options.pageSize ?? RANKING_PAGE_SIZE;
   assertPageSize(pageSize);
   const publicUrlPrefix = normalizePublicUrlPrefix(options.publicUrlPrefix ?? "/data");
@@ -497,6 +499,7 @@ export function publishRankings(
   publicDirectory: string,
   options: RankingPublicationOptions = {}
 ): RankingManifestV2 {
+  rankings = publishDocumentDescriptions(rankings);
   const publication = buildRankingPublication(rankings, options);
   const snapshotRoot = join(publicDirectory, "snapshots");
   const finalDirectory = join(snapshotRoot, publication.manifest.snapshotId);

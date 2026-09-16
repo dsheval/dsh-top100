@@ -33,6 +33,7 @@ function entry(fullName: string, extra: Partial<RankingEntry> = {}): RankingEntr
     name: fullName.split("/")[1] ?? fullName,
     owner: fullName.split("/")[0] ?? "owner",
     description: extra.description ?? "English summary",
+    descriptionPolicy: 'server-v1',
     descriptionZh: extra.descriptionZh ?? "中文简介",
     stars: extra.stars ?? 10,
     dailyStars: 0,

@@ -307,15 +307,15 @@
                 <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>插件版本</dt><dd>v1.3.7</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.8</dd></div>
                 <div><dt>指南使用 DSH</dt><dd>0.1.5-rc.2</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.7</code>
+                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.7"
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8"
                 >复制安装命令</button>
               </div>
               <p class="install-console-note" data-site-copy="note">复制后请在终端执行，再启动或重启 DSH。首次使用需准备 Node.js 和 pnpm，请先查看<a href="./index.html?page=dsh#dsh">安装指南</a>。</p>
@@ -393,8 +393,7 @@
     <script type="module">
       import "./install-card-copy.js";
       import { enhanceDescriptions } from "./description-preview.js";
-      import { descriptionFor, loadReviewedDescriptions } from "./description-presentation.js";
-      const reviewedDescriptions = await loadReviewedDescriptions();
+      import { descriptionFor, descriptionDisplayFor } from "./description-presentation.js";
       import { normalizeSearchText, scoreSearchEntry } from "./search-engine.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
 
@@ -446,7 +445,7 @@
 
       async function fetchJson(url, options = {}) {
         const response = await fetch(url, options);
-        if (!response.ok) throw new Error(`${url} returned HTTP ${response.status}`);
+        if (!response.ok) throw Object.assign(new Error(`${url} returned HTTP ${response.status}`), { status: response.status });
         return response.json();
       }
 
@@ -522,7 +521,7 @@
           item.querySelector(".skill-number").textContent = `#${String(position + 1).padStart(3, "0")}`;
           item.querySelector("h3").textContent = entry.name || entry.fullName.split("/").pop();
           item.querySelector("h3").title = item.querySelector("h3").textContent;
-          item.querySelector(".description").textContent = descriptionFor(entry, reviewedDescriptions);
+          item.querySelector(".description").textContent = descriptionDisplayFor(entry);
           item.querySelector(".description").title = item.querySelector(".description").textContent;
           const updatedAt = entry.pushedAt || entry.updatedAt;
           const updatedLabel = item.querySelector(".meta-updated");
@@ -572,13 +571,15 @@
 
       async function load() {
         let payload;
+        let manifest;
         try {
-          const manifest = await fetchJson(MANIFEST_URL, { cache: "no-cache" });
+          manifest = await fetchJson(MANIFEST_URL, { cache: "no-cache" });
           const skillsUrl = manifest?.datasets?.skills?.url;
           if (!skillsUrl) throw new Error("manifest does not publish a Skills directory");
           payload = await fetchJson(skillsUrl);
           updated.textContent = `更新于：${formatTime(payload.generatedAt || manifest.generatedAt)}`;
         } catch (manifestError) {
+          if (manifest?.datasets?.skills?.url || !manifest && manifestError.status !== 404) throw manifestError;
           console.warn("Skills manifest unavailable; using compatibility dataset.", manifestError);
           try {
             payload = await fetchJson(LEGACY_SKILLS_URL, { cache: "no-cache" });
@@ -593,7 +594,7 @@
         }
         entries = (Array.isArray(payload.rankings) ? payload.rankings : [])
           .filter((entry) => entry?.type === "skill" && entry.fullName?.toLowerCase() !== "dsheval/dsh-top100")
-          .map((entry) => ({ ...entry, descriptionZh: descriptionFor(entry, reviewedDescriptions) }));
+          .map((entry) => ({ ...entry, descriptionZh: descriptionFor(entry) }));
         updateCategoryControls();
         render();
       }

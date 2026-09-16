@@ -9,7 +9,7 @@ import { contentSourceHash, matchesContentSourceHash, DESCRIPTION_POLICY_VERSION
 import { carryForwardDailyCategories, planDailyCategories } from "../src/daily-categories.js";
 import { prepareDailyDescriptions } from "../src/daily-descriptions.js";
 import { reviewedCategories, reviewedDescription } from "../src/editorial.js";
-import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { PENDING_DESCRIPTION_ZH } from "../src/description-rules.js";
 
 const id = "zhu1090093659/dsh-trading";
 const evidence = reviewedFunctionEvidence[id];

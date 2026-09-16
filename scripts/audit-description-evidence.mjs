@@ -11,7 +11,7 @@ import { matchingEditorialHold } from '../collector/src/content-source.ts';
 import { INSTALL_PARSER_VERSION } from '../collector/src/install-parse.ts';
 import { canReuseDetectionCache } from '../collector/src/discovery-policy.ts';
 import { summarizeSelectedReadme } from '../collector/src/reviewed-summary.ts';
-import { cleanDescription, isPlaceholder, matchesReviewedReadme } from '../plugin/src/shared/description-rules.ts';
+import { cleanDescription, isPlaceholder, matchesReviewedReadme } from '../collector/src/description-rules.ts';
 
 const HASH = value => createHash('sha256').update(value).digest('hex');
 const safe = value => value.replace(/[^a-zA-Z0-9_.-]/g, '_');
@@ -197,7 +197,7 @@ export function run({ inventory, snapshot, cacheRoot, output, historyFiles = [] 
     parsingFailures: failures, actualApiRequests: 0, paidModelRequests: 0, productionModified: false, candidatesApplied: 0,
     scope: 'frozen snapshot; cache reuse is not current online validation or runtime installation',
     inputs: inputs.map(file => ({ file, sha256: HASH(fs.readFileSync(file)) })),
-    policyFiles: ['../collector/config/editorial-holds.json', '../collector/config/reviewed-plugin-targets.json', '../collector/config/reviewed-function-evidence.json', '../plugin/src/shared/reviewed-descriptions.json', '../collector/src/content-source.ts', '../collector/src/discovery-policy.ts', '../collector/src/selected-readme.ts', '../collector/src/summary.ts', '../collector/src/reviewed-summary.ts', '../collector/src/install-parse.ts', '../plugin/src/shared/description-rules.ts', './audit-description-evidence.mjs'].map(relative => { const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), relative); return {file, sha256: HASH(fs.readFileSync(file))}; }),
+    policyFiles: ['../collector/config/editorial-holds.json', '../collector/config/reviewed-plugin-targets.json', '../collector/config/reviewed-function-evidence.json', '../collector/config/reviewed-descriptions.json', '../collector/src/content-source.ts', '../collector/src/discovery-policy.ts', '../collector/src/selected-readme.ts', '../collector/src/summary.ts', '../collector/src/reviewed-summary.ts', '../collector/src/install-parse.ts', '../collector/src/description-rules.ts', './audit-description-evidence.mjs'].map(relative => { const file = path.resolve(path.dirname(fileURLToPath(import.meta.url)), relative); return {file, sha256: HASH(fs.readFileSync(file))}; }),
     evidenceFiles: [...evidenceHashes].map(([file, sha256]) => ({ file, sha256 })) };
   const save = (name, data) => fs.writeFileSync(path.join(outputDir, name), JSON.stringify(data, null, 2) + '\n');
   save('results.json', { summary, rows }); save('summary.json', summary);

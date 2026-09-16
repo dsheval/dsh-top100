@@ -4,7 +4,7 @@ import type { RankingsDocument, RankingEntry } from './rankings.js';
 import { descriptionSourceHash, type DescriptionJob } from './description-jobs.js';
 import { matchingDescriptionHold, hasContentEvidence } from './content-source.js';
 import { publishedDescriptionZh } from './published-description.js';
-import { descriptionFor, descriptionQualityIssue, PENDING_DESCRIPTION_ZH, type DescriptionStatus } from '../../plugin/src/shared/description-rules.js';
+import { descriptionFor, descriptionQualityIssue, PENDING_DESCRIPTION_ZH, type DescriptionStatus } from './description-rules.js';
 
 export function boardDescriptionScope(rankings: RankingsDocument): Set<string> {
   return new Set(['hot', 'rising'].flatMap(board => rankings.rankings[board as 'hot' | 'rising']
@@ -12,7 +12,7 @@ export function boardDescriptionScope(rankings: RankingsDocument): Set<string> {
 }
 
 export function hasPublishedChinese(entry: RankingEntry): boolean {
-  return descriptionFor({ ...entry, descriptionZh: publishedDescriptionZh(entry) }) !== PENDING_DESCRIPTION_ZH;
+  return descriptionFor({ ...entry, descriptionZh: publishedDescriptionZh({ ...entry, descriptionStatus: undefined }) }) !== PENDING_DESCRIPTION_ZH;
 }
 
 /** A board grants only missing-description eligibility, never an identity/evidence bypass. */

@@ -1,5 +1,5 @@
 import { catalogSourceStatus, installSourceKey } from "../../plugin/src/shared/install-assessment.js";
-import { descriptionFor } from "../../plugin/src/shared/description-rules.js";
+import { descriptionFor } from "../src/description-rules.js";
 import { describe, expect, it } from "vitest";
 import {
   buildSearchIndex,
@@ -64,7 +64,7 @@ describe("compact search index", () => {
       name: "demo",
       owner: "acme",
       description: "English description",
-      descriptionZh: "中文简介",
+      descriptionZh: "读取文件并提供中文检索能力。",
       stars: 12,
       dailyStars: 1,
       weeklyStars: 3,
@@ -99,7 +99,7 @@ describe("compact search index", () => {
       fullName: "acme/demo",
       name: "demo",
       description: "English description",
-      descriptionZh: "中文简介",
+      descriptionZh: "读取文件并提供中文检索能力。",
       license: "MIT",
       pushedAt: "2026-08-31T00:00:00Z",
       install: entry.install,

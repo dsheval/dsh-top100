@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { toSearchEntry, toSnapshotSearchEntry } from "../src/search-index.js";
+import reviews from "../config/reviewed-descriptions.json";
 import { publishedDescriptionZh } from "../src/published-description.js";
-import { descriptionFor, PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import { descriptionFor, PENDING_DESCRIPTION_ZH } from "../src/description-rules.js";
 import type { RankingEntry } from "../src/rankings.js";
 
 function entry(): RankingEntry {
@@ -30,4 +31,30 @@ describe("published Chinese identity", () => {
     source.descriptionZh = "";
     expect(descriptionFor(toSnapshotSearchEntry(source))).toBe(PENDING_DESCRIPTION_ZH);
   });
+});
+
+it('the server alone rejects semantic failures and authoritative missing statuses', () => {
+  for (const text of ['', '感谢官方对本项目的肯定与支持！', '安装后会提供九个可单独调用的入口：…']) {
+    expect(publishedDescriptionZh({...entry(),descriptionZh:text})).toBe(PENDING_DESCRIPTION_ZH);
+  }
+  expect(publishedDescriptionZh({...entry(),descriptionStatus:{state:'review-required',reason:'源已撤回'}})).toBe(PENDING_DESCRIPTION_ZH);
+});
+
+
+it.each(['readme', 'package', 'directory', 'type'] as const)('does not stamp a stale legacy review as server-final after %s changes', change => {
+  const fullName = 'meteornox/deepseek-balance-whale-widget';
+  const review = reviews[fullName];
+  const source = { ...entry(), fullName, description: review.sourceDescription,
+    descriptionZh: review.descriptionZh, readmeSummary: review.sourceReadme,
+    type: review.sourceType, install: { method: 'pnpm-profile' as const,
+      packageName: review.sourceInstall.packageName } } as RankingEntry;
+  expect(publishedDescriptionZh(source)).toBe(review.descriptionZh);
+  if (change === 'readme') source.readmeSummary += ' Changed functionality, not reviewed.';
+  if (change === 'package') source.install.packageName = '@fixture/other';
+  if (change === 'directory') source.install.repositoryPath = 'packages/other';
+  if (change === 'type') source.type = 'skill';
+  expect(publishedDescriptionZh(source)).toBe(PENDING_DESCRIPTION_ZH);
+  for (const compact of [toSearchEntry(source), toSnapshotSearchEntry(source)]) {
+    expect(compact.descriptionZh).toBe(PENDING_DESCRIPTION_ZH);
+  }
 });

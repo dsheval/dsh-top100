@@ -5,14 +5,14 @@ import { descriptionSourceHash, type DescriptionJob } from '../src/description-j
 import { checkReviewedFunctionEvidence } from '../src/reviewed-evidence.js';
 import { applyFunctionEvidenceCheck } from '../src/reviewed-evidence-state.js';
 import { reviewedDescription } from '../src/editorial.js';
-import { publishedDescriptionZh } from '../src/published-description.js';
+import { publishedDescriptionZh, publishDescription } from '../src/published-description.js';
 import { attachDescriptionCoverage } from '../src/board-descriptions.js';
 import type { RankingEntry, RankingsDocument } from '../src/rankings.js';
 import type { ZhEntry } from '../src/zh-util.js';
 import { descriptionDisplayFor, PENDING_DESCRIPTION_ZH } from '../../plugin/src/shared/description-rules.js';
-import { withReviewedDescription } from '../../plugin/src/shared/descriptions.js';
+import { withPublishedDescription } from '../../plugin/src/shared/descriptions.js';
 import { descriptionDisplayFor as webDescriptionDisplayFor } from '../../web/public/description-presentation.js';
-import reviews from '../../plugin/src/shared/reviewed-descriptions.json';
+import reviews from '../config/reviewed-descriptions.json';
 import fixture from './fixtures/board-review-integration-20260916.json';
 
 const now = Date.parse('2026-09-16T04:00:00Z');
@@ -132,8 +132,8 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       }
       for (const input of inputs) {
         const stale = rankingEntry(input);
-        expect(descriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
-        expect(webDescriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+        expect(descriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+        expect(webDescriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
       }
       const result = await run(inputs, previous, cache, jobs);
       for (const input of inputs) {
@@ -164,9 +164,9 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       // Check the stale payload before collection can sanitize it: both clients
       // must independently refuse the old claim for the changed object.
       const stale = rankingEntry(input);
-      expect(descriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
-      expect(webDescriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
-      expect(withReviewedDescription(stale as Parameters<typeof withReviewedDescription>[0], fixture).descriptionZh,
+      expect(descriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(webDescriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(withPublishedDescription(stale as Parameters<typeof withPublishedDescription>[0]).descriptionZh,
         input.fullName).toBe(PENDING_DESCRIPTION_ZH);
     }
     const result = await run(inputs, previous, cache, jobs);
@@ -212,8 +212,8 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
     for (const [index, input] of inputs.entries()) {
       expect(input.readmeSummary, input.fullName).toBe(previous[index].readmeSummary);
       const stale = rankingEntry(input);
-      expect(descriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
-      expect(webDescriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(descriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(webDescriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
     }
     const result = await run(inputs, previous, cache, jobs);
     for (const input of inputs) {
@@ -232,8 +232,8 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
     for (const input of inputs) input.install.discovery!.status = 'review-required';
     for (const input of inputs) {
       const stale = rankingEntry(input);
-      expect(descriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
-      expect(webDescriptionDisplayFor(stale, reviews, fixture), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(descriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(webDescriptionDisplayFor(stale), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
     }
     const result = await run(inputs, previous, cache, jobs);
     for (const input of inputs) {
@@ -259,11 +259,11 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       const expected = approved.find(row => row.source.fullName === input.fullName)!.expected;
       expect(input.descriptionZh, input.fullName).toBe(expected);
       expect(result.jobs[input.id].status, input.fullName).toBe('complete');
-      const published = rankingEntry(input);
+      const published = publishDescription(rankingEntry(input));
       expect(publishedDescriptionZh(published), input.fullName).toBe(expected);
-      expect(descriptionDisplayFor(published, reviews, fixture), input.fullName).toBe(expected);
-      expect(webDescriptionDisplayFor(published, reviews, fixture), input.fullName).toBe(expected);
-      expect(withReviewedDescription(published as Parameters<typeof withReviewedDescription>[0], fixture).descriptionZh,
+      expect(descriptionDisplayFor(published), input.fullName).toBe(expected);
+      expect(webDescriptionDisplayFor(published), input.fullName).toBe(expected);
+      expect(withPublishedDescription(published as Parameters<typeof withPublishedDescription>[0]).descriptionZh,
         input.fullName).toBe(expected);
     }
   });
@@ -279,10 +279,10 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
     expect(coverage.boards.hot.missing).toHaveLength(4);
     for (const entry of document.rankings.hot) {
       const expected = fixture.entries.find(row => row.source.fullName === entry.fullName)!.expected;
-      const published = { ...entry, descriptionZh: publishedDescriptionZh(entry) };
-      const plugin = withReviewedDescription(published as Parameters<typeof withReviewedDescription>[0], fixture);
+      const published = publishDescription(entry);
+      const plugin = withPublishedDescription(published as Parameters<typeof withPublishedDescription>[0]);
       const pluginDisplay = descriptionDisplayFor(plugin);
-      const webDisplay = webDescriptionDisplayFor(published, reviews, fixture);
+      const webDisplay = webDescriptionDisplayFor(published);
       expect(webDisplay, entry.fullName).toBe(pluginDisplay);
       if (expected) expect(pluginDisplay, entry.fullName).toBe(expected);
       else expect(pluginDisplay, entry.fullName).toMatch(/^中文简介待复核：/);
