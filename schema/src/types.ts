@@ -70,7 +70,20 @@ export interface ReadmeEvidence {
 }
 
 export interface DiscoveryEvidence {
+  /** Automatic comparison against an immutable human-reviewed file baseline. */
+  functionReview?: {
+    policy: 'syntax-equivalence-v1'; decision: 'equivalent' | 'held'; baselineCommit: string;
+    expectedFingerprint: string; currentFingerprint: string | null; sourceRevision?: string;
+    files: { path: string; beforeSha256: string; afterSha256: string | null;
+      outcome: 'equivalent' | 'changed' | 'missing' | 'unavailable' | 'baseline-unverified';
+      signals?: ('imports-changed' | 'environment-writes-changed' | 'source-change-needs-review')[] }[];
+  };
   readme?: ReadmeEvidence;
+  /** Bounded static facts from this exact package, never root/sibling marketing text. */
+  sourceFiles?: {
+    kind: 'static-package-facts-v1'; fullName: string; packageName: string; repositoryPath: string;
+    sourceRevision: string; summarySha256: string; files: { path: string; sha256: string }[];
+  };
   status: "verified" | "review-required";
   kind: "bundle" | "client" | "host" | "skill";
   evidence: string[];

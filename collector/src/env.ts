@@ -31,4 +31,4 @@ if (existsSync(envPath)) {
 }
 
 // A configured secret file is authoritative; failed validation cannot reuse an old env key.
-applyModelApiKey();
+if (process.env.DSH_MONITOR_READ_ONLY !== '1') applyModelApiKey();

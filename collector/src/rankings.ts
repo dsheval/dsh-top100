@@ -180,6 +180,7 @@ export function buildRankings(
     })).sort((a, b) => b.stars - a.stars || (a.fullName < b.fullName ? -1 : a.fullName > b.fullName ? 1 : 0));
   }
   const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin"
+    && !repository.install?.discovery?.evidence.some(value => value.startsWith('selected-package-ineligible:'))
     && !isFeaturedRepository(repository)
     && !Object.hasOwn(config.excludedRepositories ?? {}, repository.fullName.toLowerCase()));
   const skills = activeRepositories.filter((repository) => repository.type === "skill");

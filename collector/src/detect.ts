@@ -17,7 +17,9 @@ export const DISCOVERY_POLICY_VERSION = 6;
 export type DiscoveryKind = "bundle" | "client" | "host" | "skill";
 
 /** Observed structural invalidity, distinct from a temporary fetch failure. */
-export class ReviewedTargetValidationError extends Error {}
+export class ReviewedTargetValidationError extends Error {
+  constructor(message: string, readonly reason: 'identity' | 'invalid-declaration' = 'identity') { super(message); }
+}
 
 export interface Detection {
   kind: DiscoveryKind | null;
@@ -278,7 +280,7 @@ export async function detectPlugin(
       throw new ReviewedTargetValidationError(`Reviewed package name mismatch: ${fullName}/${path}`);
     }
     const kind = await validatePackage(fullName, path, content, items, branch);
-    if (!kind) throw new ReviewedTargetValidationError(`Reviewed package declaration or entry invalid: ${fullName}/${path}`);
+    if (!kind) throw new ReviewedTargetValidationError(`Reviewed package declaration or entry invalid: ${fullName}/${path}`, 'invalid-declaration');
     return bundleDetection([{
       path, packageName: target.packageName, kind, priority: -1,
       evidence: `reviewed ${path}/ validated ${kind} declaration, package name and entry`,

@@ -1,6 +1,7 @@
 import { selectedReadmeEvidence } from "./readme-evidence.js";
 import { reviewedReadmeSource, summarizeSelectedReadme } from "./reviewed-summary.js";
-import { reviewedFunctionEvidence, checkReviewedFunctionEvidence } from "./reviewed-evidence.js";
+import { reviewedFunctionEvidence } from "./reviewed-evidence.js";
+import { reviewFunctionChanges } from './source-change-review.js';
 import { applyFunctionEvidenceCheck } from "./reviewed-evidence-state.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS } from "./model-defaults.js";
 import { refreshCachedInstallEvidence } from "./install-cache.js";
@@ -98,6 +99,7 @@ interface Detected {
 }
 
 import { type ZhEntry } from "./zh-util.js";
+import { atomicOperationJson } from './operation-state.js';
 import { carryForwardDailyCategories } from "./daily-categories.js";
 import { prepareDailyDescriptions, runDailyDescriptions, updateDailyDescriptionCache } from "./daily-descriptions.js";
 
@@ -110,18 +112,20 @@ const ZH_CACHE_FILE = join(DATA_DIR, "zh-cache.json");
 function loadZhCache(): Map<string, ZhEntry> {
   try {
     const raw = JSON.parse(readFileSync(ZH_CACHE_FILE, "utf-8")) as ZhCache;
-    return new Map(Object.entries(raw.entries ?? {}));
-  } catch {
-    return new Map();
+    if (!raw.entries || typeof raw.entries !== 'object' || Array.isArray(raw.entries)) throw new Error('invalid-cache');
+    return new Map(Object.entries(raw.entries));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return new Map();
+    throw new Error('chinese-cache-invalid');
   }
 }
 function saveZhCache(entries: Map<string, ZhEntry>): void {
   try {
     const out: ZhCache = { updatedAt: new Date().toISOString(), entries: Object.fromEntries(entries) };
     mkdirSync(DATA_DIR, { recursive: true });
-    writeFileSync(ZH_CACHE_FILE, JSON.stringify(out), "utf-8");
-  } catch (err) {
-    console.warn(`  zh-cache 保存失败: ${(err as Error).message}`);
+    atomicOperationJson(ZH_CACHE_FILE, out);
+  } catch {
+    throw new Error('chinese-cache-save-failed');
   }
 }
 
@@ -130,9 +134,11 @@ function loadPreviousPlugins(): Map<string, DshPlugin> {
   try {
     const raw = readFileSync(join(DATA_DIR, "plugins.json"), "utf-8");
     const prev = JSON.parse(raw) as MarketData;
+    if (!Array.isArray(prev.plugins) || !prev.plugins.length) throw new Error('invalid-baseline');
     return new Map(prev.plugins.map((p) => [p.id.toLowerCase(), p]));
-  } catch {
-    return new Map();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return new Map();
+    throw new Error('collector-baseline-invalid');
   }
 }
 
@@ -575,7 +581,7 @@ async function main() {
   for (const item of detected) {
     if (!reviewedFunctionEvidence[item.plugin.fullName.toLowerCase()]) continue;
     let refPromise: Promise<string> | undefined;
-    const check = await checkReviewedFunctionEvidence(item.plugin.fullName, item.plugin.install, async path => {
+    const check = await reviewFunctionChanges(item.plugin.fullName, item.plugin.install, async path => {
       // Resolve one commit, so all file hashes describe a single repository state.
       refPromise ??= (async () => {
         const head = await githubFetch<{ sha: string }>(`/repos/${item.plugin.fullName}/commits/${encodeURIComponent(item.repo.default_branch ?? "HEAD")}`);
@@ -583,7 +589,8 @@ async function main() {
         return head.sha;
       })();
       return fetchRawFile(item.plugin.fullName, path, await refPromise);
-    });
+    }, (path, baseline) => fetchRawFile(item.plugin.fullName, path, baseline));
+    if (check.sourceReview && refPromise) check.sourceReview.sourceRevision = await refPromise;
     item.plugin = applyFunctionEvidenceCheck(item.plugin, prevPlugins.get(item.plugin.fullName.toLowerCase()), check);
   }
   // The historical fallback path also passes the targeted stale-command guard.
@@ -795,7 +802,7 @@ async function main() {
     packs,
   };
   mkdirSync(DATA_DIR, { recursive: true });
-  writeFileSync(join(DATA_DIR, "plugins.json"), JSON.stringify(market, null, 2), "utf-8");
+  atomicOperationJson(join(DATA_DIR, "plugins.json"), market);
   // 独立 packs 数据文件（Web 单独加载，schemaVersion 1）：
   // 扫描关闭时不覆盖——data/packs.json 由人工通道（scripts/pack-add.ts）维护，
   // 每日管道只负责把已提交的文件同步到 web/public 并部署。
@@ -821,6 +828,7 @@ async function main() {
       {
         generatedAt: market.generatedAt,
         discovery: discovery.audit,
+        metadataRefresh: { attempted: missing.length, failed: unresolved },
         total: market.plugins.length,
         byType: market.plugins.reduce<Record<string, number>>((acc, p) => {
           acc[p.type] = (acc[p.type] ?? 0) + 1;

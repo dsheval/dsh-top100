@@ -18,6 +18,7 @@
     "db:sync": "npm run db:sync -w @dsh-top100/collector",
     "update:once": "npm run collect && npm run db:sync",
     "scheduler": "npm run scheduler -w @dsh-top100/collector",
+    "watchdog": "npm run watchdog -w @dsh-top100/collector",
     "test": "npm run test -w @dsh-top100/collector && npm run test -w @dsheval/dsh-top100-plugin && npm run test:web",
     "test:web": "node --test web/test/*.test.js",
     "analytics:report": "node scripts/report-events.mjs",

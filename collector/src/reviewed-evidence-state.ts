@@ -1,6 +1,7 @@
 import type { DshPlugin } from "@dsh-top100/schema";
-import { reviewedFunctionEvidence, FUNCTION_EVIDENCE_MARKER_PREFIX, type FunctionEvidenceCheck } from "./reviewed-evidence.js";
+import { reviewedFunctionEvidence, FUNCTION_EVIDENCE_MARKER_PREFIX } from "./reviewed-evidence.js";
 import { PENDING_DESCRIPTION_ZH } from "../../plugin/src/shared/description-rules.js";
+import type { AutomaticFunctionCheck } from './source-change-review.js';
 
 type EvidenceSource = { fullName?: string; id?: string | number; name?: string; type?: string;
   install?: { packageName?: string | null; repositoryPath?: string | null; discovery?: { evidence: string[] } } | null };
@@ -15,11 +16,11 @@ export function needsFunctionReview(entry: EvidenceSource): boolean {
 }
 
 /** Keep old content only after an inconclusive read of the same already-reviewed package. */
-export function applyFunctionEvidenceCheck(current: DshPlugin, previous: DshPlugin | undefined, check: FunctionEvidenceCheck): DshPlugin {
+export function applyFunctionEvidenceCheck(current: DshPlugin, previous: DshPlugin | undefined, check: AutomaticFunctionCheck): DshPlugin {
   if (check.status === "not-required") return current;
   const discovery = current.install.discovery;
   if (check.status === "matched" && check.marker && discovery) {
-    return { ...current, install: { ...current.install, discovery: { ...discovery,
+    return { ...current, install: { ...current.install, discovery: { ...discovery, functionReview: check.sourceReview,
       evidence: [...discovery.evidence.filter(value => !value.startsWith(FUNCTION_EVIDENCE_MARKER_PREFIX)), check.marker] } } };
   }
   if (check.status === "unavailable" && previous && !needsFunctionReview(previous)
@@ -34,5 +35,6 @@ export function applyFunctionEvidenceCheck(current: DshPlugin, previous: DshPlug
   }
   return { ...current, descriptionZh: PENDING_DESCRIPTION_ZH, categories: [], tags: [...current.topics],
     install: { ...current.install, ...(discovery ? { discovery: { ...discovery, status: "review-required",
+      functionReview: check.sourceReview,
       evidence: [...discovery.evidence.filter(value => !value.startsWith(FUNCTION_EVIDENCE_MARKER_PREFIX)), check.reason] } } : {}) } };
 }

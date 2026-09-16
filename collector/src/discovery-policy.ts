@@ -10,6 +10,7 @@ export function canRestorePrevious(id: string, definitiveRejections: ReadonlySet
 /** 刷新星数/推送时间不是重新验证插件；历史结构证据仅标为待复核。 */
 export function restoredDiscovery(previous: DshPlugin): NonNullable<DshPlugin["install"]["discovery"]> {
   return {
+    ...previous.install.discovery,
     status: "review-required",
     kind: previous.install.discovery?.kind ?? (previous.type === "skill" ? "skill" : "host"),
     evidence: [...new Set([...(previous.install.discovery?.evidence ?? []), "历史记录保留，本轮未完成结构复核"])],

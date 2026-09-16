@@ -40,10 +40,12 @@ describe("discovery recovery policy", () => {
       install: { ...previous.install, discovery: {
         status: "verified" as const, kind: "bundle" as const, evidence: ["declared patch"],
         checkedAt: "2026-09-03T00:00:00Z", sourceRevision: "2026-09-01T00:00:00Z", policyVersion: DISCOVERY_POLICY_VERSION,
+        readme: { fullName: 'fixture/project', packageName: 'fixture', path: 'README.md', sourceRevision: '2026-09-01T00:00:00Z', documentSha256: 'a'.repeat(64), summarySha256: 'b'.repeat(64) },
       } },
     };
     const restored = restoredDiscovery(withEvidence);
     expect(restored).toMatchObject({ status: "review-required", kind: "bundle", sourceRevision: "2026-09-01T00:00:00Z", checkedAt: "2026-09-03T00:00:00Z" });
+    expect(restored.readme).toEqual(withEvidence.install.discovery.readme);
     expect(restoredDiscovery({ ...withEvidence, install: { ...withEvidence.install, discovery: restored } }).evidence).toEqual(restored.evidence);
   });
 });

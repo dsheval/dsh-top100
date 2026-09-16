@@ -58,6 +58,21 @@ function market(plugins: DshPlugin[]): MarketData {
 }
 
 describe("SQLite history and rankings", () => {
+  it('quarantines a conclusively ineligible package before scoring and fills its place without deleting history', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'dsh-quarantine-')); temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, 'market.sqlite') });
+    try {
+      const rows = Array.from({ length: 105 }, (_, i) => plugin(`fixture/plugin-${i}`, 200 - i));
+      importMarketData(database, market(rows), { snapshotDate: '2026-08-20' });
+      rows[0].install.discovery = { status: 'review-required', kind: 'host', checkedAt: '2026-08-21T00:00:00Z', policyVersion: 6,
+        evidence: ['selected-package-ineligible:' + 'a'.repeat(40)] };
+      importMarketData(database, market(rows), { snapshotDate: '2026-08-21' });
+      const ranks = buildRankings(database, '2026-08-21', resolve('../config/ranking.json'));
+      expect(ranks.rankings.total).toHaveLength(104); expect(ranks.rankings.hot).toHaveLength(100); expect(ranks.rankings.rising).toHaveLength(100);
+      expect(ranks.rankings.total.some(row => row.fullName === rows[0].fullName)).toBe(false);
+      expect(readActiveRepositories(database)).toHaveLength(105);
+    } finally { database.close(); }
+  });
   it("previews today's entrants against real history without changing SQLite and matches the published ranking", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-board-preview-"));
     temporaryDirectories.push(directory);

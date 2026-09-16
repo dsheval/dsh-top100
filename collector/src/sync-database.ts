@@ -1,5 +1,7 @@
 import { refreshBoardSources } from "./board-source-refresh.js";
-import { isDailyBoardRun } from "./model-requests.js";
+import { dailyBoardSourceChecksEnabled } from "./model-requests.js";
+import { loadSourceRecovery } from './source-recovery.js';
+import { atomicOperationJson } from './operation-state.js';
 import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
 import { bindDailySourceJob } from "./daily-model-scope.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY } from "./model-defaults.js";
@@ -109,6 +111,9 @@ async function classifyRepositories(
 }
 
 async function main(): Promise<void> {
+  if (process.env.DSH_OPERATION_DATE && process.env.DSH_OPERATION_DATE !== dateInTimeZone(new Date(), process.env.TZ ?? 'Asia/Shanghai')) {
+    throw new Error('daily-operation-crossed-date-boundary');
+  }
   const sourcePath = resolve(projectRoot, process.env.SOURCE_DATA_PATH ?? "data/plugins.json");
   const databasePath = resolve(
     projectRoot,
@@ -163,11 +168,18 @@ async function main(): Promise<void> {
     const snapshotDate = dateInTimeZone(rankingNow, process.env.TZ ?? "Asia/Shanghai");
     const rankingConfig = resolve(projectRoot, "config/ranking.json");
     const previousSources = new Map(readActiveRepositories(database).map(row => [row.fullName.toLowerCase(), row.raw]));
+    const sourceChecksEnabled = dailyBoardSourceChecksEnabled();
+    const recoveryPath = join(dirname(sourcePath), 'source-recovery.json');
     const sourceRefresh = await refreshBoardSources(market.plugins,
       () => buildRankings(database, snapshotDate, rankingConfig, { sources: market.plugins, now: rankingNow }),
-      { enabled: isDailyBoardRun(), now: rankingNow.getTime() });
+      { enabled: sourceChecksEnabled, now: rankingNow.getTime(),
+        recovery: sourceChecksEnabled ? loadSourceRecovery(recoveryPath) : undefined,
+        persistRecovery: state => atomicOperationJson(recoveryPath, state) });
     if (sourceRefresh.length) {
-      atomicJson(join(dirname(sourcePath), "board-source-report.json"), { snapshotDate, entries: sourceRefresh });
+      atomicJson(join(dirname(sourcePath), "board-source-report.json"), { snapshotDate, entries: sourceRefresh,
+        reviewCandidates: market.plugins.filter(source => source.install.discovery?.functionReview?.decision === 'held')
+          .map(source => ({ fullName: source.fullName, sourceRevision: source.install.discovery!.sourceRevision,
+            review: source.install.discovery!.functionReview, action: 'retain-fixed-review-until-material-change-is-approved' })) });
       console.log(`Board source refresh: ${sourceRefresh.length} checked before descriptions`);
     }
     await completeDailyBoardDescriptions(market.plugins, previousSources, dirname(sourcePath),

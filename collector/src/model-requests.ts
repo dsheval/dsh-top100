@@ -47,6 +47,13 @@ export function dailyBoardDescriptionsEnabled(): boolean {
     return config.scope === "daily-source-changes" && config.boardDescriptions === "hot-rising-top100";
   } catch { return false; }
 }
+/** Evidence refresh is free; expired model prices must not stop identity checks. */
+export function dailyBoardSourceChecksEnabled(): boolean {
+  try {
+    const config = readApprovedModelBudget();
+    return process.env.DSH_DAILY_UPDATE === '1' && config.scope === 'daily-source-changes' && config.boardDescriptions === 'hot-rising-top100';
+  } catch { return false; }
+}
 
 /** Scheduler startup db:sync and auxiliary commands must not start board work. */
 export function isDailyBoardRun(): boolean {
@@ -57,7 +64,7 @@ function outsideRepository(path: string): boolean {
   return part.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) || isAbsolute(part);
 }
 /** Read only the explicitly supplied private config; never search for credentials or alternate config. */
-export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
+function readApprovedModelBudget(now?: number): ApprovedModelBudget {
   const path = process.env.DSH_MODEL_BUDGET_CONFIG;
   let fd: number | undefined;
   try {
@@ -73,10 +80,19 @@ export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
     if (config.scope !== undefined && config.scope !== "daily-source-changes") throw new Error();
     if (config.boardDescriptions !== undefined && (config.scope !== "daily-source-changes" || config.boardDescriptions !== "hot-rising-top100")) throw new Error();
     validateBudgetConfig(config, now);
-    validateBudgetConfig(config, now + 45_000);
+    if (now !== undefined) validateBudgetConfig(config, now + 45_000);
     return config;
   } catch { throw new Error(MODEL_REQUESTS_PAUSED); }
   finally { if (fd !== undefined) closeSync(fd); }
+}
+export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
+  return readApprovedModelBudget(now);
+}
+/** Monitoring may inspect expired prices, but cannot authorize or renew them. No private paths or request hashes. */
+export function modelPolicyHealth() {
+  const config = readApprovedModelBudget();
+  return { model: config.model, dailyLimitCny: config.dailyLimitCny, monthlyLimitCny: config.monthlyLimitCny,
+    priceValidUntil: config.price.validUntil, scope: config.scope, boardDescriptions: config.boardDescriptions };
 }
 export function modelRequestsEnabled(): boolean {
   if (process.env.DSH_MODEL_REQUESTS_ENABLED !== "1" || !process.env.DEEPSEEK_API_KEY?.trim()) return false;

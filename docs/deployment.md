@@ -79,6 +79,8 @@ The backup script stops the old scheduler while creating the archive so the SQLi
 
 ## Health and logs
 
+For opt-in persistent daily recovery, independent acceptance checks and the deferred GEO event interface, see [daily operations](daily-operations.md). Existing deployments remain on the previous scheduler until explicitly enabled.
+
 ```bash
 docker compose ps
 docker compose logs --tail=200 web scheduler

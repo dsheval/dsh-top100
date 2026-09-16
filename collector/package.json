@@ -6,7 +6,8 @@
   "scripts": {
     "collect": "node --use-env-proxy --import tsx src/index.ts",
     "db:sync": "node --import tsx src/sync-database.ts",
-    "scheduler": "node --import tsx src/scheduler.ts",
+    "scheduler": "node --import tsx src/scheduler-entry.ts",
+    "watchdog": "node --import tsx src/scheduler-entry.ts --watchdog",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

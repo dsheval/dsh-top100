@@ -7,6 +7,8 @@ import { descriptionFor, PENDING_DESCRIPTION_ZH } from '../../plugin/src/shared/
 import { reviewedDescription } from '../src/editorial.js';
 import { hasSelectedReadmeEvidence } from '../src/readme-evidence.js';
 import { matchingEditorialHold } from '../src/content-source.js';
+import { type SourceRecoveryState } from '../src/source-recovery.js';
+import { hasPackageSourceFacts } from '../src/package-source-facts.js';
 vi.mock('../src/github.js',()=>({githubFetch:vi.fn(),fetchRawFile:vi.fn(),fetchFileViaApi:vi.fn(),fetchRepoRoot:vi.fn()}));
 const commit='a'.repeat(40),now=Date.parse('2026-09-15T00:00:00Z');
 const pkg={name:'@fixture/selected',dsh:{bundle:{patch:'./cordis.patch.yml'}}};
@@ -35,7 +37,8 @@ describe('board source refresh',()=>{
   vi.mocked(fetchRawFile).mockResolvedValue(null);
   const result=await refreshBoardSource(source(),now);
   expect(result.source!.readmeSummary).toBeNull(); expect(hasSelectedReadmeEvidence(result.source!)).toBe(false);
-  expect(fetchRawFile).toHaveBeenCalledTimes(1);expect(matchingEditorialHold(result.source!)).not.toBeNull();
+  expect(fetchRawFile).not.toHaveBeenCalledWith('a/project','README.md',commit);
+  expect(result.content).toBe('missing-source');expect(matchingEditorialHold(result.source!)).not.toBeNull();
  });
  it('holds the SDK wrapper instead of generating Chinese or retaining install claims',async()=>{
   vi.mocked(fetchFileViaApi).mockResolvedValue({sha:'sdk',content:JSON.stringify({name:pkg.name,main:'dist/index.js',dependencies:{'@deepseek-ai/dsh-sdk-client':'*','@deepseek-ai/dsh-attachment':'*'}})});
@@ -43,6 +46,7 @@ describe('board source refresh',()=>{
   const old=source();old.descriptionZh='旧的插件简介应该在错误收录时撤回。';old.install.commands=['dsh plugin add @fixture/selected'];
   const result=await refreshBoardSource(old,now);expect(result.status).toBe('review-required');
   expect(result.source!.install.commands).toBeUndefined();expect(fetchRawFile).not.toHaveBeenCalled();
+  expect(result.source!.install.discovery!.evidence).toContain(`selected-package-ineligible:${commit}`);
   expect(reviewedDescription(result.source!)).toBe(PENDING_DESCRIPTION_ZH);
   expect(descriptionFor(result.source! as never)).toBe(PENDING_DESCRIPTION_ZH);
  });
@@ -66,5 +70,48 @@ describe('board source refresh',()=>{
   const refresh=vi.fn(async(s:DshPlugin)=>s.id==='a/1'?{status:'excluded' as const,reason:'private'}:{status:'verified' as const,source:s,reason:'ok'});
   const report=await refreshBoardSources(rows,()=>ranking(rows.slice(0,1)),{enabled:true,now,refresh,limit:2});
   expect(report).toHaveLength(2);expect(rows.map(s=>s.id)).toEqual(['a/2','a/3']);expect(report[0].fullName).toBe('[excluded repository]');
+ });
+ it('recovers a quarantined package outside the boards and removes the quarantine only after revalidation',async()=>{
+  const old=source(); old.install.discovery!.evidence.push(`selected-package-ineligible:${commit}`);
+  const rows=[old],recovery:SourceRecoveryState={schemaVersion:1,entries:{}};
+  const report=await refreshBoardSources(rows,()=>ranking(rows.filter(s=>!s.install.discovery?.evidence.some(e=>e.startsWith('selected-package-ineligible:')))),
+   {enabled:true,now,recovery});
+  expect(report).toHaveLength(1);expect(rows[0].install.discovery!.status).toBe('verified');
+  expect(rows[0].install.discovery!.evidence.some(e=>e.startsWith('selected-package-ineligible:'))).toBe(false);
+  expect(recovery.entries).toEqual({});
+ });
+ it('persists failures before checking, respects backoff across publication retries and rechecks after new evidence',async()=>{
+  const rows=[source()],recovery:SourceRecoveryState={schemaVersion:1,entries:{}};
+  const persist=vi.fn(),refresh=vi.fn(async(s:DshPlugin)=>{
+   expect(persist).toHaveBeenCalled(); expect(recovery.entries[s.fullName].status).toBe('checking');
+   return {status:'review-required' as const,source:s,reason:'unavailable'};
+  });
+  const options={enabled:true,now,recovery,persistRecovery:persist,refresh};
+  await refreshBoardSources(rows,()=>ranking(rows),options);
+  await refreshBoardSources(rows,()=>ranking(rows),{...options,now:now+60_000}); expect(refresh).toHaveBeenCalledTimes(1);
+  rows[0].pushedAt='new-source';await refreshBoardSources(rows,()=>ranking(rows),{...options,now:now+60_000});
+  expect(refresh).toHaveBeenCalledTimes(2);
+ });
+ it('bounds off-board recovery to twenty and does not expand into unrelated long-tail sources',async()=>{
+  const rows=Array.from({length:35},(_,i)=>source(`a/${i}`));
+  for(const row of rows.slice(0,30))row.install.discovery!.evidence.push(`selected-package-ineligible:${commit}`);
+  const refresh=vi.fn(async(s:DshPlugin)=>({status:'review-required' as const,source:s,reason:'invalid'}));
+  await refreshBoardSources(rows,()=>ranking([]),{enabled:true,now,refresh});expect(refresh).toHaveBeenCalledTimes(20);
+  expect(refresh.mock.calls.some(([s])=>Number(s.fullName.split('/')[1])>=30)).toBe(false);
+ });
+ it('supplies scoped facts when README is missing and automatically admits the description source',async()=>{
+  vi.mocked(fetchRawFile).mockImplementation(async(_,path)=>path.endsWith('package.json')?JSON.stringify(pkg)
+   :path.endsWith('src/index.ts')?'export function apply(ctx:any,config:any){const commonTools=config.commonTools;ctx.on("system-prompt/assemble",()=>{});}' :null);
+  const result=await refreshBoardSource(source(),now);
+  expect(result.content).toBe('ready');expect(hasPackageSourceFacts(result.source!)).toBe(true);
+  expect(matchingEditorialHold(result.source!)).toBeNull();
+ });
+ it('closes an old recovery record when regular discovery has already revalidated the source',async()=>{
+  const rows=[source()],recovery:SourceRecoveryState={schemaVersion:1,entries:{}};
+  await refreshBoardSources(rows,()=>ranking(rows),{enabled:true,now,recovery,
+   refresh:async s=>({status:'review-required',source:s,reason:'unavailable'})});
+  const validated=(await refreshBoardSource(rows[0],now+60_000)).source!;
+  await refreshBoardSources([validated],()=>ranking([]),{enabled:true,now:now+60_000,recovery,refresh:vi.fn()});
+  expect(recovery.entries).toEqual({});
  });
 });

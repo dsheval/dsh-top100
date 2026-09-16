@@ -39,7 +39,41 @@ services:
       - ./runtime/collector-data:/app/data
     logging: *default-logging
     stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "collector/scripts/operation-health.mjs", "scheduler"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
     restart: unless-stopped
+
+  watchdog:
+    profiles: ["automation"]
+    build:
+      context: .
+      dockerfile: docker/collector.Dockerfile
+    init: true
+    env_file:
+      - .env
+    environment:
+      TZ: "${TZ:-Asia/Shanghai}"
+      COLLECT_HOUR: "${COLLECT_HOUR:-6}"
+      DSH_AUTOMATION_ENABLED: "1"
+      DSH_MONITOR_READ_ONLY: "1"
+      DATABASE_PATH: /app/runtime/dsh-top100.sqlite
+      SOURCE_DATA_PATH: /app/data/plugins.json
+      PUBLIC_DATA_DIR: /app/runtime/public-data
+    volumes:
+      - ./runtime:/app/runtime:ro
+      - ./runtime/operations:/app/runtime/operations
+      - ./runtime/collector-data:/app/data:ro
+    logging: *default-logging
+    restart: unless-stopped
+    command: ["npm", "run", "watchdog"]
+    healthcheck:
+      test: ["CMD", "node", "collector/scripts/operation-health.mjs", "watchdog"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
 
   collector:
     profiles: ["manual"]

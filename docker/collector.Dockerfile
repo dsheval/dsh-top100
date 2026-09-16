@@ -2,6 +2,9 @@ FROM node:24-bookworm-slim
 
 WORKDIR /app
 
+# OS advisory locks survive a scheduler crash while a phase still owns the descriptor.
+RUN apt-get update && apt-get install -y --no-install-recommends util-linux && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY collector/package.json collector/package.json
 COPY schema/package.json schema/package.json

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bindModelBudget, canRequestModel, inspectModelRequest, loadApprovedModelBudget, modelRequestsEnabled,
-  requestModel, withDailyModelRequest, isDailyBoardRun, dailyBoardDescriptionsEnabled, type ApprovedModelBudget } from "../src/model-requests.js";
+  requestModel, withDailyModelRequest, isDailyBoardRun, dailyBoardDescriptionsEnabled, dailyBoardSourceChecksEnabled, modelPolicyHealth, type ApprovedModelBudget } from "../src/model-requests.js";
 import { BudgetLedger } from "../src/model-budget.js";
 import { buildTranslationRequest, buildClassificationRequest } from "../src/llm.js";
 
@@ -26,6 +26,16 @@ function configure() {
 }
 afterEach(() => { vi.restoreAllMocks();vi.unstubAllEnvs();for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 describe("daily requests share the existing money guard", () => {
+  it('monitors expired prices and permits free board source checks without authorizing paid work', () => {
+    const { dir, config, now } = configure(); vi.stubEnv('DSH_DAILY_UPDATE', '1');
+    config.boardDescriptions = 'hot-rising-top100';
+    config.price.verifiedAt = new Date(now - 2 * 86_400_000).toISOString(); config.price.validUntil = new Date(now - 1000).toISOString();
+    writeFileSync(join(dir, 'config.json'), JSON.stringify(config));
+    expect(modelPolicyHealth().priceValidUntil).toBe(config.price.validUntil);
+    expect(dailyBoardSourceChecksEnabled()).toBe(true); expect(modelRequestsEnabled()).toBe(false);
+    expect(canRequestModel()).toBe(false); expect(isDailyBoardRun()).toBe(false);
+    vi.stubEnv('DSH_DAILY_UPDATE', '0'); expect(dailyBoardSourceChecksEnabled()).toBe(false);
+  });
   it("blocks a scoped classification request during scheduler startup before transport", async () => {
     configure();vi.stubEnv("DSH_DAILY_UPDATE", "0");
     const fetch = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unexpected network"));

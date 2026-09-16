@@ -2,7 +2,7 @@
 set -eu
 
 project_dir=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
-mkdir -p "$project_dir/runtime/collector-data" "$project_dir/runtime/public-data"
+mkdir -p "$project_dir/runtime/collector-data" "$project_dir/runtime/public-data" "$project_dir/runtime/operations"
 
 if [ ! -f "$project_dir/runtime/collector-data/plugins.json" ]; then
   cp "$project_dir/data/plugins.json" "$project_dir/runtime/collector-data/plugins.json"
