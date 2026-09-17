@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import type { DshPlugin } from '@dsh-top100/schema';
@@ -132,6 +133,49 @@ describe('observed repository attention', () => {
 });
 
 describe('bounded historical snapshot transition', () => {
+  it('publishes historical estimates after the sync entry point reimports the same legacy day', () => {
+    const f = fixture();
+    for (const [date, stars] of [['2026-09-10', 20], ['2026-09-14', 30], ['2026-09-16', 40], ['2026-09-17', 50]] as const) {
+      f.put(date, [plugin('a/transition', stars)]);
+      f.db.prepare('UPDATE repository_daily_stats SET recorded_at=? WHERE snapshot_date=?').run(`${date}T00:00:00Z`, date);
+    }
+    f.db.close();
+    const sourcePath = join(f.dir, 'plugins.json');
+    writeFileSync(sourcePath, JSON.stringify({ schemaVersion: 2, generatedAt: '2026-09-17T00:00:00Z', plugins: [plugin('a/transition', 50)] }));
+    const clockPath = join(f.dir, 'clock.mjs');
+    // Advance every clock read so the import always follows the preview's clock,
+    // independently of machine speed. Any attempted request fails this offline test.
+    writeFileSync(clockPath, `
+      const RealDate = Date;
+      let tick = 0;
+      const base = RealDate.parse('2026-09-17T04:00:00.000Z');
+      globalThis.Date = class extends RealDate {
+        constructor(...args) { args.length ? super(...args) : super(base + tick++ * 100); }
+        static now() { return base + tick++ * 100; }
+      };
+      let requests = 0;
+      globalThis.fetch = async () => { requests++; throw new Error('Offline sync test'); };
+      process.on('exit', () => { if (requests) process.exitCode = 1; });
+    `);
+    const publicDirectory = join(f.dir, 'public');
+    const synced = spawnSync(process.execPath, ['--import', clockPath, '--import', 'tsx', resolve('src/sync-database.ts')], {
+      cwd: resolve('.'), encoding: 'utf8', timeout: 30_000,
+      env: { ...process.env, NODE_OPTIONS: '', TZ: 'Asia/Shanghai',
+        SOURCE_DATA_PATH: sourcePath, DATABASE_PATH: join(f.dir, 'db.sqlite'), PUBLIC_DATA_DIR: publicDirectory,
+        DSH_MODEL_REQUESTS_ENABLED: '0', DSH_DAILY_UPDATE: '0', DSH_MODEL_BUDGET_CONFIG: '',
+        DEEPSEEK_API_KEY: '', DEEPSEEK_API_KEY_FILE: '', DSH_MONITOR_READ_ONLY: '1',
+        INSTALL_ASSESSMENT_BATCH_SIZE: '0' },
+    });
+    expect(synced.error).toBeUndefined();
+    expect(synced.status, synced.stderr + synced.stdout).toBe(0);
+    const published = JSON.parse(readFileSync(join(publicDirectory, 'rankings.json'), 'utf8'));
+    expect(published.rankings.hot).toHaveLength(1);
+    expect(published.rankings.rising).toHaveLength(1);
+    expect(published.rankings.rising[0]).toMatchObject({ fullName: 'a/transition', starsObservedAt: null,
+      dailyStars: 10, threeDayStars: 20, weeklyStars: 30,
+      growthBasis: { daily: 'historical-estimate', threeDay: 'historical-estimate', weekly: 'historical-estimate' } });
+  }, 35_000);
+
   function legacy(f: ReturnType<typeof fixture>, date: string, stars: number) {
     f.put(date, [plugin('a/transition', stars)]);
     f.db.prepare('UPDATE repository_daily_stats SET recorded_at=? WHERE snapshot_date=?').run(`${date}T00:00:00Z`, date);

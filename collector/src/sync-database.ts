@@ -217,10 +217,11 @@ async function main(): Promise<void> {
       snapshotDate,
     });
     logPublicationMemory('database-imported');
+    // Validate imported timestamps against the current time, after recorded_at is written.
     const rankings = buildRankings(
       database,
       imported.snapshotDate,
-      rankingConfig, { now: rankingNow },
+      rankingConfig,
     );
     const coverage = attachDescriptionCoverage(rankings, readDescriptionJobs(dirname(sourcePath)));
     logPublicationMemory('rankings-built');
