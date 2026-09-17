@@ -50,6 +50,7 @@
     </script>
     <title>插件榜单 · Top100 · DSH-Eval</title>
     <link rel="stylesheet" href="./install-console.css" />
+    <link rel="stylesheet" href="./catalog-install-command.css" />
     <style>
       :root {
         color-scheme: light;
@@ -3145,7 +3146,7 @@
               </div>
               <dl class="release-grid">
                 <div><dt>插件版本</dt><dd>v1.3.9</dd></div>
-                <div><dt>指南使用 DSH</dt><dd>0.1.5-rc.2</dd></div>
+                <div><dt>入门示例 DSH</dt><dd>0.1.5-rc.2</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
@@ -3156,7 +3157,7 @@
                   data-analytics="install-command"
                 >复制安装命令</button>
               </div>
-              <p class="install-console-note" data-site-copy="note">复制后请在终端执行，再启动或重启 DSH。首次使用需准备 Node.js 和 pnpm，请先查看<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>。</p>
+              <p class="install-console-note" data-site-copy="note">以上为首次使用示例。已有 DSH？请在<a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>选择「已经在用 DSH」，沿用原启动方式和版本。</p>
               <p class="install-console-note install-copy-feedback" role="status" aria-live="polite"></p>
             </aside>
           </div>
@@ -3390,6 +3391,7 @@
       import { filterDiscoveryEntries, requiresSearchIndex } from "./discovery-filter.js";
       import { enhanceDescriptions } from "./description-preview.js";
       import { initializeInstallGuide } from "./install-guide.js";
+      import { chooseCatalogInstallCommand } from "./catalog-install-command.js";
       import { descriptionDisplayFor } from "./description-presentation.js";
       import { showFeaturedPlugin, isFeaturedRepository } from "./featured-plugin.js";
       import { CATEGORY_DEFINITIONS, renderCategoryOptions } from "./category-system.js";
@@ -3767,8 +3769,12 @@
       document.addEventListener("click", async (event) => {
         const button = event.target.closest("[data-copy-command]");
         if (!button) return;
-        const command = button.dataset.copyCommand;
+        let command = button.dataset.copyCommand;
         if (!command) return;
+        if (button.dataset.plugin) {
+          command = await chooseCatalogInstallCommand(command);
+          if (!command) return;
+        }
         const iconOnly = button.classList.contains("quick-install");
         const originalLabel = button.textContent;
         const originalAriaLabel = button.getAttribute("aria-label");
@@ -4483,7 +4489,7 @@
           } else if (!searchActive && currentView === "rising") {
             const hasMomentum = typeof plugin.risingScore === "number";
             const metric = hasMomentum ? plugin.risingScore : plugin.dailyStars;
-            const rateText = typeof metric === "number" ? (hasMomentum ? metric.toFixed(2) : formatStars(metric)) : "—";
+            const rateText = typeof metric === "number" ? (hasMomentum ? metric.toFixed(1) : formatStars(metric)) : "—";
             stars.classList.add("is-momentum");
             stars.textContent = hasMomentum ? rateText : `日增 ${rateText}`;
             stars.title = `${hasMomentum ? "新锐指数（0～100分）：按仓库规模修正的近3日增长" : "旧口径日增 Stars"}；所属仓库 Stars ${starText}`;

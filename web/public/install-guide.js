@@ -1,13 +1,18 @@
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?(?:\+[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/;
 
+export function existingDshPrefix(method, version = "") {
+  if (method === "global") return "dsh";
+  if (method === "source") return "pnpm dsh";
+  if (method === "npx" && exactVersion.test(version.trim())) {
+    return `npx @deepseek-ai/dsh@${version.trim()}`;
+  }
+  return null;
+}
+
 export function existingDshCommands(method, version, pluginVersion) {
   if (!exactVersion.test(pluginVersion)) return null;
-  let prefix;
-  if (method === "global") prefix = "dsh";
-  else if (method === "source") prefix = "pnpm dsh";
-  else if (method === "npx" && exactVersion.test(version.trim())) {
-    prefix = `npx @deepseek-ai/dsh@${version.trim()}`;
-  } else return null;
+  const prefix = existingDshPrefix(method, version);
+  if (!prefix) return null;
   return {
     install: `${prefix} plugin --profile web add @dsheval/dsh-top100-plugin@${pluginVersion}`,
     check: `${prefix} plugin --profile web list --depth 0`,

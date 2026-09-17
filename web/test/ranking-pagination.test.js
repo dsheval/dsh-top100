@@ -280,7 +280,7 @@ test("momentum rows show their published score and unknown growth never becomes 
   page.risingEntries = [row];
   page.renderRanking();
   const rendered = page.list.children.find(child => child !== page.featuredPlugin);
-  assert.equal(rendered.querySelector(".stars").textContent, "0.63");
+  assert.equal(rendered.querySelector(".stars").textContent, "0.6");
   assert.deepEqual(rendered.querySelector(".meta-growth").children.map(x => x.textContent), ["日增 —", "3日 +5"]);
   assert.equal(rendered.querySelector(".github-link").title, "example/plugin-1");
   assert.ok(rendered.querySelector(".stars").title.includes("所属仓库 Stars 1000"));
@@ -305,11 +305,11 @@ test("historical provenance does not clutter ranking numbers or growth labels", 
     growthBasis:{threeDay:"historical-estimate",weekly:"observed"}};
   page.risingEntries=[row];page.renderRanking();
   let rendered=page.list.children.find(child=>child!==page.featuredPlugin);
-  assert.equal(rendered.querySelector(".stars").textContent,"1.25");
+  assert.equal(rendered.querySelector(".stars").textContent,"1.3");
   assert.deepEqual(rendered.querySelector(".meta-growth").children.map(x=>x.textContent),["日增 —","3日 +10"]);
   row.plugin.growthBasis.threeDay="observed";page.renderRanking();
   rendered=page.list.children.find(child=>child!==page.featuredPlugin);
-  assert.equal(rendered.querySelector(".stars").textContent,"1.25");
+  assert.equal(rendered.querySelector(".stars").textContent,"1.3");
   page.currentView="top100";page.hotEntries=[row];row.plugin.growthBasis.weekly="historical-estimate";page.renderRanking();
   rendered=page.list.children.find(child=>child!==page.featuredPlugin);
   assert.equal(rendered.querySelector(".stars").textContent,"42.0");
