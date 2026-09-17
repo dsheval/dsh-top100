@@ -55,4 +55,3 @@ export function restoreKnownSkillSource(source: DshPlugin, previous: DshPlugin, 
     sourceRevision: proof.sourceRevision, skill: { ...proof }, checkedAt: previous.install.discovery!.checkedAt };
   return true;
 }
-
