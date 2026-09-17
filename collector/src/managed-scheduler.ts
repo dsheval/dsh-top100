@@ -6,6 +6,8 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { advanceOperation, atomicOperationJson, dailyOperationDue, loadOperation, localDay, operationPath, type Stage } from './operation-state.js';
 import { auditPublication } from './operation-audit.js';
+import { assessDiskSpace } from './disk-space.js';
+import { observeDisk } from './disk-observation.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const runtime = dirname(resolve(root, process.env.DATABASE_PATH ?? 'runtime/dsh-top100.sqlite'));
@@ -30,6 +32,12 @@ for (const signal of ['SIGINT', 'SIGTERM'] as const) process.on(signal, () => {
 function command(stage: Exclude<Stage, 'verify'>, date: string): Promise<void> {
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   return new Promise((ok, fail) => {
+    const disk = observeDisk(runtime), runId = Date.now();
+    const finishDisk = () => {
+      const report = disk.finish();
+      try { atomicOperationJson(join(operations, 'disk-usage', `${date}-${stage}-${runId}.json`), { ...report, stage, date }); }
+      catch { console.error('[scheduler] disk-observation-write-failed'); }
+    };
     const processChild = spawn('npm', ['run', stage === 'collect' ? 'collect' : 'db:sync'], {
       cwd: root, detached: true,
       // Retain the shared flock in the phase tree even if the scheduler is killed.
@@ -45,8 +53,8 @@ function command(stage: Exclude<Stage, 'verify'>, date: string): Promise<void> {
       killTimer = setTimeout(() => { if (processChild.pid) try { process.kill(-processChild.pid, 'SIGKILL'); } catch { /* exited */ } }, 10_000);
       killTimer.unref();
     }, 90 * 60_000);
-    processChild.once('error', () => { clearTimeout(timeout); child = undefined; fail(new Error('phase-start-failed')); });
-    processChild.once('exit', code => { clearTimeout(timeout); if (killTimer) clearTimeout(killTimer); child = undefined; code === 0 && !timedOut ? ok() : fail(new Error('phase-failed')); });
+    processChild.once('error', () => { clearTimeout(timeout); finishDisk(); child = undefined; fail(new Error('phase-start-failed')); });
+    processChild.once('exit', code => { clearTimeout(timeout); if (killTimer) clearTimeout(killTimer); finishDisk(); child = undefined; code === 0 && !timedOut ? ok() : fail(new Error('phase-failed')); });
   });
 }
 async function tick() {
@@ -58,6 +66,19 @@ async function tick() {
     const state = loadOperation(operations, today.date, now);
     await advanceOperation(state, { now: Date.now, timeZone,
       persist: state => atomicOperationJson(operationPath(operations, state.date), state),
+      beforeStage: stage => {
+        if (stage === 'verify') return true;
+        try {
+          const report = assessDiskSpace({ databasePath: resolve(root, process.env.DATABASE_PATH ?? 'runtime/dsh-top100.sqlite'),
+            sourcePath: resolve(root, process.env.SOURCE_DATA_PATH ?? 'data/plugins.json'), publicDirectory });
+          atomicOperationJson(join(operations, 'disk-preflight.json'), { ...report, stage, date: today.date });
+          return report.status === 'ready';
+        } catch {
+          atomicOperationJson(join(operations, 'disk-preflight.json'), { schemaVersion: 1, checkedAt: new Date().toISOString(),
+            status: 'unknown', code: 'disk-check-failed', stage, date: today.date });
+          return false;
+        }
+      },
       execute: async stage => {
         if (stopping) throw new Error('scheduler-stopping');
         if (stage !== 'verify') {

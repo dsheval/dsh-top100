@@ -35,6 +35,9 @@ jobs:
       - name: Typecheck and test
         run: npm run check
 
+      - name: Validate host disk maintenance safety
+        run: python3 -B -m unittest discover -s scripts/test -p 'test_maintain_disk.py' -v
+
       - name: Validate npm plugin package
         run: npm run plugin:pack:check
 

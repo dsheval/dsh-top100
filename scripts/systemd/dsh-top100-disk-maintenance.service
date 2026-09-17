@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Top100 disk capacity and prune old unused build cache
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+UMask=0077
+Nice=15
+ExecStart=/usr/bin/python3 /opt/dsh-top100/scripts/maintain-disk.py --apply --log-dir /var/log/dsh-top100-disk
+TimeoutStartSec=8min

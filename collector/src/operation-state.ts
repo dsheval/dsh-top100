@@ -81,10 +81,14 @@ export function failStage(state: DailyOperation, stage: Stage, now: number, code
 /** Running after a crash is inconclusive, never a successful stage. Paid job/ledger state is retained. */
 export async function advanceOperation(state: DailyOperation, options: {
   now: () => number; timeZone: string; persist: (state: DailyOperation) => void;
+  /** Resource pauses do not start a stage or consume its finite retry allowance. */
+  beforeStage?: (stage: Stage) => Promise<boolean> | boolean;
   execute: (stage: Stage) => Promise<{ snapshotId?: string } | void>;
 }): Promise<void> {
   let stage: Stage | undefined;
   while (localDay(options.now(), options.timeZone).date === state.date && (stage = nextStage(state, options.now()))) {
+    if (options.beforeStage && !await options.beforeStage(stage)) return;
+    if (localDay(options.now(), options.timeZone).date !== state.date) return;
     const progress = state.stages[stage];
     progress.status = 'running'; progress.attempts++; progress.startedAt = new Date(options.now()).toISOString();
     delete progress.nextAttemptAt; delete progress.error;

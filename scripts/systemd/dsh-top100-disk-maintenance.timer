@@ -1,0 +1,10 @@
+[Unit]
+Description=Check Top100 disk space before the daily update
+
+[Timer]
+OnCalendar=*-*-* 05:30:00 Asia/Shanghai
+Persistent=false
+Unit=dsh-top100-disk-maintenance.service
+
+[Install]
+WantedBy=timers.target

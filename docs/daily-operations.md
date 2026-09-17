@@ -16,6 +16,79 @@ Publication emits `[publication-memory]` at source loading, source/description/c
 
 `npm run test:publication-memory` generates 24,000 synthetic entries with historical snapshots, performs repeated ranking previews, runs the actual `db:sync` command with paid work disabled, checks peak RSS against 1,792 MiB, and audits the resulting publication. It fails on any fetch attempt and removes its temporary data. CI runs this check in the built scheduler image with networking disabled, a 1,792 MiB container memory limit, no additional swap and two CPUs. This exercises the Linux image at approximately the current production catalog size; it does not guarantee unlimited future growth or identical memory use for every source payload. Production data and credentials are never part of the fixture.
 
+## Disk capacity and host cache maintenance
+
+The managed scheduler checks capacity before **each** collection/publication
+attempt. It pauses before launching a child if capacity is insufficient or the
+check fails. This does not consume a stage attempt or rerun completed work.
+Verification remains available. A later scheduler tick can resume after space is
+restored. `operations/disk-preflight.json` records the check; the independent
+watchdog also checks capacity and adds a critical disk incident to `status.json`.
+Each managed collection/publication phase samples filesystem headroom every
+second and writes an aggregate to `operations/disk-usage/` on child exit. It records
+the minimum available space, sampled peak consumption, net growth and failed
+samples. It includes concurrent host writes, can miss subsecond peaks, and cannot
+persist a final measurement if the scheduler itself is killed. It does not claim
+an exact attributable high-water mark or stop a running child.
+GEO delivery remains disconnected. The legacy scheduler and manual commands do
+not inherit this guard; operators must run the read-only check before manual work.
+
+The initial required available space is the larger of **5 GiB** or an estimate:
+twice the combined database/WAL, top-level source/job files, current immutable
+snapshot and top-level public exports, plus the larger of 1 GiB or four times the
+source catalog size for cache growth, plus 1 GiB residual reserve. Repeated
+manifest references are counted once. At least 10,000 available inodes are also
+required (scaled up for larger manifests). Filesystem-reserved blocks do not
+count as available space. Different source/database/public filesystems, invalid
+inputs and unsupported symlinks fail closed instead of adding unrelated free
+space together. Existing old snapshots are retained and already reduce measured
+free space; they are not read or deleted by this check.
+
+These are conservative initial allowances, **not measured upper bounds** on a
+complete daily run. A preflight does not reserve space against another process,
+bound source payload growth or stop a running phase from exhausting disk. A full
+automatic run, including collection/cache growth and concurrent host activity,
+must still be measured before claiming a calibrated threshold. Publication keeps
+its existing manifest-last behavior and failure handling.
+
+Run the read-only check in the deployed scheduler image:
+
+```sh
+docker exec dsh-top100-scheduler-1 node --import tsx collector/src/disk-space-cli.ts
+```
+
+For host maintenance, Python 3 and the Docker CLI are required. Deploy the updated
+scheduler image before using the host wrapper. Preview is the default:
+
+```sh
+python3 scripts/maintain-disk.py
+# Explicit apply, after approval of this host's cache cleanup policy:
+sudo python3 scripts/maintain-disk.py --apply --log-dir /var/log/dsh-top100-disk
+```
+
+Only when the fresh capacity check is insufficient does apply run
+`docker buildx prune --builder default --filter until=168h --force`. This uses
+[Docker's last-use filter](https://docs.docker.com/reference/cli/docker/buildx/prune/#provide-filter-values---filter).
+It does not call image/system/volume prune, delete runtime files, or escalate its
+scope when cleanup releases nothing. The default builder can contain caches from
+other applications on the same host; first use requires approval for that shared
+build cache. Images, containers, volumes, model caches/ledger, source records,
+public snapshots and deployment backups are outside its deletion scope.
+
+Apply requires a persistent private audit directory, locks concurrent maintenance
+runs, and records intent before pruning, Docker's deleted-cache output, and fresh
+capacity afterward. A failed intent log write prevents pruning. Exit codes are
+0 (capacity ready), 2 (still insufficient, including preview), and 3 (failed or
+unknown). A Docker success code alone is not proof of sufficient space.
+
+The example units in `scripts/systemd/` run at 05:30 Asia/Shanghai, with the host
+script installed at `/opt/dsh-top100/scripts/maintain-disk.py`. They require explicit
+deployment and activation; merely adding these files does not enable a timer.
+`Persistent=false` avoids an unscheduled catch-up cleanup on activation/reboot.
+A nonzero result leaves the service failed; the watchdog's capacity incident
+remains independent of the cleanup service. GEO notification is still pending.
+Backup retention, migration, and disk expansion require their own plan.
+
 ## Source handling
 
 - A package whose declaration/entry is conclusively invalid at a pinned commit is quarantined from plugin rankings/search, with normal ranking replacement. Original source and statistics remain stored. Missing metadata, a renamed package or transient network errors alone do not trigger this quarantine rule.

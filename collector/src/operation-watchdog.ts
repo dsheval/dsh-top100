@@ -7,6 +7,7 @@ import { atomicOperationJson, hasExhaustedStage, loadOperation, localDay, readOp
 import { reconcileIncidents, type IncidentState } from './operation-incidents.js';
 import { modelPolicyHealth } from './model-requests.js';
 import { loadSourceRecovery } from './source-recovery.js';
+import { assessDiskSpace } from './disk-space.js';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const runtime = dirname(resolve(root, process.env.DATABASE_PATH ?? 'runtime/dsh-top100.sqlite'));
@@ -22,6 +23,15 @@ async function tick() {
   const now = Date.now(), today = localDay(now, timeZone), at = new Date(now).toISOString();
   try {
     const issues: OperationIssue[] = [];
+    let disk;
+    try {
+      disk = assessDiskSpace({ databasePath: resolve(root, process.env.DATABASE_PATH ?? 'runtime/dsh-top100.sqlite'),
+        sourcePath: resolve(root, process.env.SOURCE_DATA_PATH ?? 'data/plugins.json'),
+        publicDirectory: resolve(root, process.env.PUBLIC_DATA_DIR ?? 'runtime/public-data'), now });
+      if (disk.status !== 'ready') issues.push({ key: 'disk-capacity', severity: 'critical', code: 'disk-space-insufficient' });
+    } catch {
+      issues.push({ key: 'disk-capacity', severity: 'critical', code: 'disk-check-failed' });
+    }
     let operation: DailyOperation | undefined;
     try { operation = loadOperation(directory, today.date, now); }
     catch { issues.push({ key: 'operation-state', severity: 'critical', code: 'operation-state-invalid' }); }
@@ -88,7 +98,7 @@ async function tick() {
     const activeIssues = Object.values(result.state.incidents).filter(incident => !incident.resolvedAt);
     atomicOperationJson(join(directory, 'status.json'), { schemaVersion: 1, checkedAt: at,
       status: activeIssues.some(issue => issue.severity === 'critical') ? 'action-required' : activeIssues.some(issue => issue.severity === 'warning') ? 'degraded' : 'healthy',
-      notification: { destination: 'geo', connected: false }, operation, publication: audit, budget, issues: activeIssues });
+      notification: { destination: 'geo', connected: false }, operation, publication: audit, budget, disk, issues: activeIssues });
     atomicOperationJson(join(directory, 'watchdog-heartbeat.json'), { at });
   } catch { console.error('[watchdog] observation-failed'); }
   finally { running = false; }
