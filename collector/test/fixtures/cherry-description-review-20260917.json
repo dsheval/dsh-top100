@@ -1,0 +1,43 @@
+{
+  "fullName": "CherryHQ/cherry-studio",
+  "name": "cherry-studio",
+  "type": "cordis-plugin",
+  "description": "AI productivity studio with smart chat, autonomous agents, and 300+ assistants. Unified access to frontier LLMs",
+  "readmeSummary": null,
+  "install": {
+    "method": "pnpm-profile",
+    "discovery": {
+      "status": "review-required",
+      "kind": "host",
+      "policyVersion": 6,
+      "checkedAt": "2026-09-16T22:28:56.852Z",
+      "sourceRevision": "b718f3a5689d19c4d12689218a5f709f66bc2236",
+      "evidence": [
+        "reviewed packages/dsh-bridge/ validated host declaration, package name and entry",
+        "Reviewed source files changed or disappeared: packages/dsh-bridge/src/plugin.ts"
+      ],
+      "functionReview": {
+        "policy": "syntax-equivalence-v1",
+        "decision": "held",
+        "baselineCommit": "989dfd05ccb802326a1965e78db9f0ab22b427c9",
+        "expectedFingerprint": "445f5cc7931df13b8eb5f48b8e22c139a458b9b2b73add7a2cde76ed156be761",
+        "currentFingerprint": "f242827cc1d1901e50111993d79f244f5501ade19bd16f52b84e21de9a1a8834",
+        "files": [
+          {
+            "path": "packages/dsh-bridge/src/plugin.ts",
+            "beforeSha256": "2f7f366f2b8d3eeb7859272da7f0a12499c1c95f9e7db9fb4ea99d54c56fc995",
+            "afterSha256": "521c11114898a00a54ea76e3c92d13ee88c78693b119c114e5ac9c07b143cf6f",
+            "outcome": "changed",
+            "signals": [
+              "source-change-needs-review"
+            ]
+          }
+        ],
+        "sourceRevision": "b718f3a5689d19c4d12689218a5f709f66bc2236"
+      }
+    },
+    "repositoryPath": "packages/dsh-bridge",
+    "packageName": "@cherrystudio/dsh-bridge",
+    "needsConfig": false
+  }
+}

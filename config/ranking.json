@@ -20,14 +20,18 @@
     "rising": 100,
     "hot": 100
   },
-  "hotWeights": {
-    "dailyGrowth": 35,
-    "weeklyGrowth": 25,
-    "growthRate": 15,
-    "activity": 10,
-    "quality": 10,
-    "popularity": 5
+  "hot": {
+    "weeklyWeight": 60,
+    "popularityWeight": 40,
+    "weeklyScale": 20,
+    "popularityScale": 100,
+    "minimumStars": 10
   },
-  "activityHalfLifeDays": 60,
-  "growthRateAtFullScore": 0.3
+  "rising": {
+    "baselineSmoothing": 50,
+    "minimumGrowth": 3,
+    "scoreScale": 5
+  },
+  "windowToleranceHours": 6,
+  "legacySnapshotsThrough": "2026-09-17"
 }

@@ -16,6 +16,8 @@ function sample(fullName: keyof typeof reviewed = "nexu-io/open-design"): Rankin
     description: review.sourceDescription, readmeSummary: review.sourceReadme,
     ...("sourceInstall" in review ? { install: { method: "pnpm-profile" as const, needsConfig: false,
       packageName: review.sourceInstall.packageName ?? undefined, repositoryPath: review.sourceInstall.repositoryPath ?? undefined,
+      ...("sourceSkill" in review ? { discovery: { status: "verified" as const, kind: "skill" as const,
+        checkedAt: "2026-09-17T00:00:00Z", policyVersion: 6, sourceRevision: "fixture", evidence: [], skill: review.sourceSkill } } : {}),
       ...("functionEvidence" in review.sourceInstall ? { discovery: { status: "verified" as const, kind: "bundle" as const,
         checkedAt: "2026-09-11T00:00:00Z", policyVersion: 6, sourceRevision: "fixture",
         evidence: [`reviewed-function-sha256:${review.sourceInstall.functionEvidence}`] } } : {}) } } : {}),
@@ -34,6 +36,23 @@ function document(entry: RankingEntry, snapshotId?: string): RankingsDocument {
 const options = { view: "total" as const, category: null, query: "协议桥接", offset: 0, limit: 10, installed: {} };
 
 describe("shared editorial descriptions", () => {
+  it('binds selected Skill reviews to path, name and full document while preserving compact server results', () => {
+    const skill = { name: 'papers', path: 'skills/papers/SKILL.md', documentSha256: 'a'.repeat(64) };
+    const entry = { fullName: 'fixture/skills', type: 'skill', description: 'Research tools', readmeSummary: 'Search academic papers.',
+      install: { discovery: { status: 'verified', evidence: [], skill } } };
+    const review = { sourceDescription: entry.description, sourceReadme: entry.readmeSummary, sourceType: 'skill',
+      sourceInstall: { packageName: null, repositoryPath: null }, sourceSkill: skill, enforceSourceMatch: true,
+      descriptionZh: '检索学术论文并整理引用，辅助研究资料收集。' };
+    const reviews = { [entry.fullName]: review };
+    expect(descriptionFor(entry, reviews)).toBe(review.descriptionZh);
+    for (const changed of [{ ...skill, name: 'other' }, { ...skill, path: 'plugins/papers/SKILL.md' },
+      { ...skill, documentSha256: 'b'.repeat(64) }, undefined]) {
+      expect(descriptionFor({ ...entry, install: { discovery: { ...entry.install.discovery, skill: changed } } }, reviews))
+        .toBe(PENDING_DESCRIPTION_ZH);
+    }
+    expect(descriptionFor({ fullName: entry.fullName, type: 'skill', descriptionZh: review.descriptionZh }, reviews))
+      .toBe(review.descriptionZh);
+  });
   it('withholds irrelevant Chinese in both full and compact listings without borrowing the root description', () => {
     for (const text of ['感谢官方对本项目的肯定与支持！', '安装后会提供九个可单独调用的入口：…',
       '中文 · English PATH 上需要官方 dsh 和 pnpm。', '· 右：基于已有结果继续对话修改，在画布中持续迭代创作。',

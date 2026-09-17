@@ -1,3 +1,4 @@
+import { hasSkillSourceEvidence } from './skill-evidence.js';
 import { hasSelectedReadmeEvidence } from "./readme-evidence.js";
 import { hasPackageSourceFacts } from "./package-source-facts.js";
 import { functionEvidenceMarker, needsFunctionReview } from "./reviewed-evidence-state.js";
@@ -97,6 +98,8 @@ function sourceHash(entry: ContentSource, kind: "description" | "categories", le
     kind === "description" && !legacy ? [] : entry.topics ?? [],
     entry.install?.packageName ?? null, entry.install?.repositoryPath ?? null,
   ];
+  const skill = entry.install?.discovery?.skill;
+  if (skill) fields.push([skill.policy, skill.path, skill.name]);
   if (reviewedFunctionEvidence[(entry.fullName ?? entry.id ?? entry.name ?? "").toLowerCase()]) fields.push(functionEvidenceMarker(entry));
   return createHash("sha256").update(JSON.stringify(fields)).digest("hex");
 }
@@ -125,9 +128,9 @@ export function nextContentAttemptAt(attempts: number, now: number): string {
   return new Date(now + Math.min(7, 2 ** Math.min(Math.max(0, attempts - 1), 3)) * 86_400_000).toISOString();
 }
 
-/** Root marketing metadata cannot change the function evidence of a proven subpackage. */
+/** Root marketing metadata cannot change proven selected-package or Skill function evidence. */
 export function sameDescriptionSource(current: ContentSource, previous: ContentSource): boolean {
   return contentSourceHash(current, "description") === contentSourceHash(previous, "description")
-    || !!current.install?.repositoryPath && (hasSelectedReadmeEvidence(current) || hasPackageSourceFacts(current))
+    || (hasSkillSourceEvidence(current) || !!current.install?.repositoryPath && (hasSelectedReadmeEvidence(current) || hasPackageSourceFacts(current)))
       && contentSourceHash(current, "description") === contentSourceHash({ ...previous, description: current.description }, "description");
 }

@@ -8,19 +8,37 @@ import type { ZhEntry } from './zh-util.js';
 import { prepareDailyDescriptions, runDailyDescriptions, updateDailyDescriptionCache } from './daily-descriptions.js';
 import { bindDailySourceJob } from './daily-model-scope.js';
 import { boardDescriptionScope, bindBoardDescriptionJob } from './board-descriptions.js';
-import { isDailyBoardRun, modelRequestsEnabled, withDailyModelRequest } from './model-requests.js';
+import { isDailyBoardRun, isDailySkillsRun, modelRequestsEnabled, withDailyModelRequest } from './model-requests.js';
 import { buildTranslationRequest, translateWithDeepSeek, type ZhResult } from './llm.js';
+import { hasSkillSourceEvidence, skillsDescriptionScope } from './skills-source-refresh.js';
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS } from './model-defaults.js';
 
 export async function runBoardFirstDescriptions(sources: DshPlugin[], previous: Map<string, DshPlugin>,
   cache: Map<string, ZhEntry>, oldJobs: Record<string, DescriptionJob>, rankings: () => RankingsDocument,
-  options: { enabled: boolean; limit: number; now: number; worker: (entry: DshPlugin) => Promise<ZhResult | null>;
+  options: { enabled: boolean; skillsEnabled?: boolean; boardsEnabled?: boolean; limit: number; now: number; worker: (entry: DshPlugin) => Promise<ZhResult | null>;
     invalidOutputs?: ReadonlySet<string>;
     persist: (jobs: Record<string, DescriptionJob>) => void }) {
   const plan = prepareDailyDescriptions(sources, previous, cache, oldJobs, new Set(), options.now);
-  const scope = boardDescriptionScope(rankings());
-  const first = plan.ready.filter(entry => bindBoardDescriptionJob(entry, scope, previous, oldJobs[entry.id], plan.jobs[entry.id]));
+  const current = rankings();
+  const scope = options.boardsEnabled === false ? new Set<string>() : boardDescriptionScope(current);
+  const skillsScope = options.skillsEnabled ? skillsDescriptionScope(current) : new Set<string>();
+  const eligibleSkill = (entry: DshPlugin) => {
+    const old = oldJobs[entry.id], job = plan.jobs[entry.id];
+    if (old?.reviewLocked) {
+      job.status = 'review-required'; job.reviewLocked = true;
+      job.reviewReason = old.reviewReason ?? '既有技能复核暂停仍需定向确认。';
+      return false;
+    }
+    job.attempts = Math.max(job.attempts, old?.attempts ?? 0);
+    return hasSkillSourceEvidence(entry)
+      && Date.parse(entry.install.discovery!.checkedAt) === options.now
+      && bindBoardDescriptionJob(entry, skillsScope, previous, old, job);
+  };
+  const first = plan.ready.filter(entry => entry.type === 'skill'
+    ? skillsScope.has(entry.fullName.toLowerCase()) && eligibleSkill(entry)
+    : bindBoardDescriptionJob(entry, scope, previous, oldJobs[entry.id], plan.jobs[entry.id]));
   const second = plan.ready.filter(entry => !scope.has(entry.fullName.toLowerCase())
+    && !skillsScope.has(entry.fullName.toLowerCase())
     && bindDailySourceJob(entry, previous, oldJobs[entry.id], plan.jobs[entry.id]));
   const persist = () => {
     for (const id of options.invalidOutputs ?? []) {
@@ -40,7 +58,7 @@ export async function runBoardFirstDescriptions(sources: DshPlugin[], previous: 
   const daily = await run(second, Math.max(0, options.limit - boards.attempted));
   updateDailyDescriptionCache(sources, cache, plan.jobs);
   persist();
-  return { jobs: plan.jobs, scope, boardsReady: first.length, dailyReady: second.length, boards, daily };
+  return { jobs: plan.jobs, scope, skillsScope, boardsReady: first.length, dailyReady: second.length, boards, daily };
 }
 
 function readJson<T>(path: string, fallback: T): T {
@@ -60,7 +78,8 @@ export function readDescriptionJobs(dataDirectory: string): Record<string, Descr
 
 export async function completeDailyBoardDescriptions(sources: DshPlugin[], previous: Map<string, DshPlugin>,
   dataDirectory: string, rankings: () => RankingsDocument, now: number): Promise<void> {
-  if (!isDailyBoardRun()) return;
+  const boardsEnabled = isDailyBoardRun(), skillsEnabled = isDailySkillsRun();
+  if (!boardsEnabled && !skillsEnabled) return;
   const jobs = readDescriptionJobs(dataDirectory);
   const cached = readJson<{ entries: Record<string, ZhEntry> }>(join(dataDirectory, 'zh-cache.json'), { entries: {} });
   const cache = new Map(Object.entries(cached.entries));
@@ -70,12 +89,12 @@ export async function completeDailyBoardDescriptions(sources: DshPlugin[], previ
   const model = DEFAULT_MODEL;
   const invalidOutputs = new Set<string>();
   const result = await runBoardFirstDescriptions(sources, previous, cache, jobs, rankings, {
-    enabled: modelRequestsEnabled(), limit, now, invalidOutputs,
+    enabled: modelRequestsEnabled(), boardsEnabled, skillsEnabled, limit, now, invalidOutputs,
     persist: jobs => atomicJson(join(dataDirectory, 'description-jobs.json'), { updatedAt: new Date().toISOString(), jobs }),
     worker: source => {
       const input = { name: source.fullName, type: source.type, packageName: source.install.packageName,
-        repositoryPath: source.install.repositoryPath, description: source.description,
-        readmeSummary: source.readmeSummary, topics: source.topics, knownTags: tags };
+        repositoryPath: source.install.repositoryPath, description: source.type === 'skill' ? '' : source.description,
+        readmeSummary: source.readmeSummary, topics: source.type === 'skill' ? [] : source.topics, knownTags: tags };
       return withDailyModelRequest(buildTranslationRequest(input, model), () => translateWithDeepSeek(input, {
         apiKey: process.env.DEEPSEEK_API_KEY!, baseURL: process.env.DEEPSEEK_API_BASE ?? 'https://api.deepseek.com',
         model, maxTokens: DEFAULT_MODEL_MAX_TOKENS, maxAttempts: 1, retryDelayMs: 0, timeoutMs: 45_000, thinking: 'disabled',
@@ -84,6 +103,6 @@ export async function completeDailyBoardDescriptions(sources: DshPlugin[], previ
     },
   });
   atomicJson(join(dataDirectory, 'zh-cache.json'), { updatedAt: new Date().toISOString(), entries: Object.fromEntries(cache) });
-  console.log(`[board-descriptions] ${JSON.stringify({ unique: result.scope.size, boardsReady: result.boardsReady,
+  console.log(`[board-descriptions] ${JSON.stringify({ unique: result.scope.size, skillsUnique: result.skillsScope.size, boardsReady: result.boardsReady,
     dailyReady: result.dailyReady, boards: result.boards, daily: result.daily })}`);
 }

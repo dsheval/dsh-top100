@@ -78,22 +78,58 @@ const PENDING_DESCRIPTION_ZH = "中文简介待生成。";
 function cleanDescription(value) {
 	return String(value ?? "").replace(/```[\s\S]*?```/g, " ").replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, " ").replace(/<[^>]*>/g, " ").replace(/!\[[^\]]*\]\([^)]*\)/g, " ").replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/&nbsp;|&#160;/gi, " ").replace(/&amp;/gi, "&").replace(/[`*_~>#]/g, " ").replace(/\s+/g, " ").trim().replace(/^((?:[\w@/.-]+\s+)?)(?:简体中文|中文)\s*[|·]\s*English\s*/i, "$1").replace(/^((?:[\w@/.-]+\s+)?)English\s*[|·]\s*(?:简体中文|中文)\s*/i, "$1").trim();
 }
+/** Validate the calendar date without accepting JavaScript's invalid-date rollover. */
+function isDescriptionReviewDate(value) {
+	if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value.startsWith("0000")) return false;
+	const parsed = /* @__PURE__ */ new Date(`${value}T00:00:00.000Z`);
+	return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+/** Invalid server status fails closed; clients do not invent missing review evidence. */
+function descriptionStatusFor(value) {
+	if (value === void 0) return void 0;
+	if (value && typeof value === "object") {
+		const status = value;
+		if (typeof status.state === "string" && [
+			"pending",
+			"review-required",
+			"missing-source",
+			"retry",
+			"stale"
+		].includes(status.state) && typeof status.reason === "string" && (status.origin === void 0 || status.origin === "model") && (status.state !== "stale" || isDescriptionReviewDate(status.origin === "model" ? status.generatedAt : status.reviewedAt))) return {
+			state: status.state,
+			reason: cleanDescription(status.reason).slice(0, 200),
+			...status.origin === "model" ? { origin: "model" } : {},
+			...isDescriptionReviewDate(status.generatedAt) ? { generatedAt: status.generatedAt } : {},
+			...isDescriptionReviewDate(status.reviewedAt) ? { reviewedAt: status.reviewedAt } : {}
+		};
+	}
+	return {
+		state: "review-required",
+		reason: "服务端简介状态无效，等待复核。"
+	};
+}
 /** Never infer a summary from author metadata, a README or an older local review. */
 function descriptionFor(entry) {
-	if (entry.descriptionPolicy !== DESCRIPTION_POLICY || entry.descriptionStatus !== void 0) return PENDING_DESCRIPTION_ZH;
+	if (entry.descriptionPolicy !== DESCRIPTION_POLICY) return PENDING_DESCRIPTION_ZH;
+	const status = descriptionStatusFor(entry.descriptionStatus);
+	if (status !== void 0 && status.state !== "stale") return PENDING_DESCRIPTION_ZH;
 	if (typeof entry.descriptionZh !== "string") return PENDING_DESCRIPTION_ZH;
 	return cleanDescription(entry.descriptionZh) || PENDING_DESCRIPTION_ZH;
 }
 function descriptionDisplayFor(entry) {
 	const description = descriptionFor(entry);
-	if (description !== PENDING_DESCRIPTION_ZH || !entry.descriptionStatus) return description;
-	const label = {
+	const status = descriptionStatusFor(entry.descriptionStatus);
+	if (status?.state === "stale") {
+		if (description === PENDING_DESCRIPTION_ZH) return "中文简介待复核：旧简介正文缺失，等待服务端核查。";
+		return status.origin === "model" ? `生成于 ${status.generatedAt}，来源待核查，简介待更新。${description}` : `上次核验 ${status.reviewedAt}，来源核查中，简介待更新。${description}`;
+	}
+	if (description !== PENDING_DESCRIPTION_ZH || !status) return description;
+	return `${{
 		"pending": "中文简介待生成",
 		"review-required": "中文简介待复核",
 		"missing-source": "中文简介资料不足",
 		"retry": "中文简介生成未完成"
-	}[entry.descriptionStatus.state];
-	return label ? `${label}：${cleanDescription(entry.descriptionStatus.reason).slice(0, 200)}` : description;
+	}[status.state]}${status.reason ? `：${status.reason}` : "。"}`;
 }
 
 //#endregion
@@ -3326,8 +3362,8 @@ function RankingsPage({ t }) {
 							label: t("hotScore"),
 							value: scoreLabel(item.hotScore)
 						} : catalogScope === "plugins" && !query && view === "rising" ? {
-							label: t("daily"),
-							value: deltaLabel(item.dailyStars)
+							label: t(item.risingScore == null ? "daily" : "risingScore"),
+							value: item.risingScore == null ? deltaLabel(item.dailyStars) : scoreLabel(item.risingScore)
 						} : null;
 						return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("article", {
 							className: "ranking-card",
@@ -3370,13 +3406,23 @@ function RankingsPage({ t }) {
 									children: [
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: "star-fact",
+											title: `${t("repositoryStars")} · ${item.fullName}`,
 											children: ["★ ", item.stars]
+										}),
+										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+											title: t("repositoryStars"),
+											children: item.fullName
 										}),
 										/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
 											t("weekly"),
 											" ",
 											deltaLabel(item.weeklyStars)
 										] }),
+										item.threeDayStars != null ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", { children: [
+											t("threeDay"),
+											" ",
+											deltaLabel(item.threeDayStars)
+										] }) : null,
 										rankingMetric ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 											className: "ranking-metric",
 											title: t(rankingBasisKey(view, query)),
@@ -3420,7 +3466,7 @@ function RankingsPage({ t }) {
 						}, `${item.fullName}-${item.rank}`);
 					}), !loading && items.length === 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 						className: "lede",
-						children: t("empty")
+						children: t(catalogScope === "plugins" && !query && view !== "total" ? "emptyRanking" : "empty")
 					}) : null]
 				}),
 				remaining > 0 ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
@@ -5705,6 +5751,7 @@ const zh = {
 	updated: "数据日期",
 	source: "数据源",
 	empty: "此范围内没有匹配项目",
+	emptyRanking: "暂无满足观测和入榜条件的项目；新数据需积累3日或7日，可查看 Stars 总榜。",
 	loadingRankings: "正在加载榜单…",
 	loadError: "无法读取线上榜单",
 	installError: "插件安装失败",
@@ -5894,17 +5941,20 @@ const zh = {
 	cancel: "取消",
 	github: "GitHub",
 	more: "加载更多",
-	stars: "Stars",
+	stars: "仓库 Stars",
+	threeDay: "3日",
+	risingScore: "新锐指数",
+	repositoryStars: "所属仓库 Stars，非插件独立使用量",
 	weekly: "7日",
 	daily: "今日",
 	hotScore: "热度分",
-	basis_hot: "排序依据：日增、周增、增长率、活跃度、质量与总热度",
-	basis_rising: "排序依据：今日新增 Stars",
+	basis_hot: "排序依据：近7日增长与仓库累计关注度；数据不足不入榜",
+	basis_rising: "新锐指数0～100分：近3日仓库增长，按原有规模修正；至少净增3星",
 	basis_total: "排序依据：GitHub Stars 总数",
 	basis_category: "分类筛选保持总榜顺序",
 	basis_search: "搜索结果按名称与内容相关性排序",
 	basisShort_hot: "综合热度榜",
-	basisShort_rising: "今日增长榜",
+	basisShort_rising: "新锐榜",
 	basisShort_total: "Stars 总榜",
 	basisShort_category: "分类筛选",
 	basisShort_search: "相关性排序",
@@ -6162,6 +6212,7 @@ const en = {
 	updated: "Snapshot",
 	source: "Source",
 	empty: "No matching projects in this section",
+	emptyRanking: "No projects meet the observation and ranking criteria yet. New data needs 3 or 7 days; browse total Stars meanwhile.",
 	loadingRankings: "Loading rankings…",
 	loadError: "Could not load the hosted rankings",
 	installError: "Plugin installation failed",
@@ -6351,17 +6402,20 @@ const en = {
 	cancel: "Cancel",
 	github: "GitHub",
 	more: "Load more",
-	stars: "Stars",
+	stars: "Repository Stars",
+	threeDay: "3d",
+	risingScore: "Rising index",
+	repositoryStars: "Stars of the entire repository, not plugin usage",
 	weekly: "7d",
 	daily: "Today",
 	hotScore: "Heat score",
-	basis_hot: "Ranked by daily and weekly growth, growth rate, activity, quality, and popularity",
-	basis_rising: "Ranked by Stars gained today",
+	basis_hot: "Ranked by 7-day growth and repository Stars; requires valid observations",
+	basis_rising: "Rising index (0–100): size-adjusted 3-day repository growth; at least 3 new Stars",
 	basis_total: "Ranked by total GitHub Stars",
 	basis_category: "Category filters retain the overall ranking order",
 	basis_search: "Search results are ranked by name and content relevance",
 	basisShort_hot: "Composite heat",
-	basisShort_rising: "Today's growth",
+	basisShort_rising: "Recent momentum",
 	basisShort_total: "Stars ranking",
 	basisShort_category: "Category filter",
 	basisShort_search: "Relevance order",

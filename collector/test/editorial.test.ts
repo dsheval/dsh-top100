@@ -46,10 +46,17 @@ describe("current priority editorial review", () => {
         type: description.sourceType, install: { ...entry.install,
           packageName: description.sourceInstall.packageName ?? undefined,
           repositoryPath: description.sourceInstall.repositoryPath ?? undefined } };
-      expect(description.sourceUrl, fullName).toBe(review.sourceUrl);
-      if ("enforceSourceMatch" in description && description.enforceSourceMatch)
-        expect(description.snapshotId, fullName).toBe("2026-09-16-10c17709d0632ece");
-      else expect(description, fullName).not.toHaveProperty("snapshotId");
+      if ("sourceSkill" in description && description.sourceSkill) {
+        const skill = description.sourceSkill;
+        const prefix = `https://raw.githubusercontent.com/${fullName}/`;
+        expect(description.sourceUrl.startsWith(prefix), fullName).toBe(true);
+        expect(description.sourceUrl.slice(prefix.length, prefix.length + 40)).toMatch(/^[a-f0-9]{40}$/);
+        expect(description.sourceUrl.slice(prefix.length + 40), fullName).toBe(`/${skill.path}`);
+        expect(skill.documentSha256).toMatch(/^[a-f0-9]{64}$/);
+        entry.install = { ...entry.install, discovery: { ...entry.install.discovery,
+          status: 'verified', evidence: [], skill } } as typeof entry.install;
+      } else expect(description.sourceUrl, fullName).toBe(review.sourceUrl);
+      if ("snapshotId" in description) expect(description.snapshotId, fullName).toMatch(/^2026-09-\d{2}-[a-f0-9]+$/);
       const chinese = reviewedDescription(entry);
       expect(chinese, fullName).toBe(description.descriptionZh);
       if ("suspended" in description && description.suspended) {

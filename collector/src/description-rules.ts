@@ -5,12 +5,15 @@ export interface DescriptionEntry {
   descriptionStatus?: DescriptionStatus;
   readmeSummary?: string;
   type?: string;
-  install?: { packageName?: string | null; repositoryPath?: string | null; discovery?: { evidence: string[]; status?: string; readme?: { documentSha256: string } } };
+  install?: { packageName?: string | null; repositoryPath?: string | null; discovery?: { evidence: string[]; status?: string; readme?: { documentSha256: string }; skill?: { name: string; path: string; documentSha256: string } } };
   installPackageName?: string | null;
   installRepositoryPath?: string | null;
 }
 export interface DescriptionStatus {
-  state: 'pending' | 'review-required' | 'missing-source' | 'retry';
+  state: 'pending' | 'review-required' | 'missing-source' | 'retry' | 'stale';
+  reviewedAt?: string;
+  origin?: 'model';
+  generatedAt?: string;
   reason: string;
 }
 export interface ReviewedInstallIdentity {
@@ -34,6 +37,11 @@ export function matchesReviewedIdentity(
 }
 export interface DescriptionContext { snapshotId?: string; }
 export interface ReviewedDescription {
+  reviewedAt?: string;
+  /** Exact publication evidence approval; never replaces a function/category baseline. */
+  publicationReview?: { sourceHash: string; reviewedAt: string; descriptionZh: string };
+  /** A selected Skill review binds both its location and complete document. */
+  sourceSkill?: { name: string; path: string; documentSha256: string };
   sourceScope?: string;
   /** Explicitly reviewed revisions; never a wildcard for subsequent changes. */
   sourceVariants?: Array<{ sourceDescription: string; sourceReadme: string }>;
@@ -62,6 +70,11 @@ export function matchesReviewedDescriptionSource(entry: DescriptionEntry, review
   if (review.enforceSourceMatch && entry.install?.discovery?.status
     && entry.install.discovery.status !== 'verified') return false;
   if (review.sourceScope === 'verified-function') return Boolean(review.sourceInstall?.functionEvidence);
+  if (review.sourceSkill) {
+    const skill = entry.install?.discovery?.skill;
+    if (skill ? skill.name !== review.sourceSkill.name || skill.path !== review.sourceSkill.path
+      || skill.documentSha256 !== review.sourceSkill.documentSha256 : entry.readmeSummary !== undefined) return false;
+  }
   const documentHash = entry.install?.discovery?.readme?.documentSha256;
   if (review.sourceDocumentHashes?.length && documentHash && !review.sourceDocumentHashes.includes(documentHash)) return false;
   // A compact published row carries the collector's explicit result. Pending
@@ -169,7 +182,7 @@ export function descriptionDisplayFor(entry: DescriptionEntry, reviewed: Reviewe
   const description = descriptionFor(entry, reviewed, context);
   if (description !== PENDING_DESCRIPTION_ZH || !entry.descriptionStatus) return description;
   const labels = { 'pending': '中文简介待生成', 'review-required': '中文简介待复核',
-    'missing-source': '中文简介资料不足', 'retry': '中文简介生成未完成' };
+    'missing-source': '中文简介资料不足', 'retry': '中文简介生成未完成', 'stale': '中文简介待更新' };
   const label = labels[entry.descriptionStatus.state];
   return label ? `${label}：${cleanDescription(entry.descriptionStatus.reason).slice(0, 200)}` : description;
 }

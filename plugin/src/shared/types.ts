@@ -1,3 +1,4 @@
+import type { DescriptionStatus } from './description-rules.js';
 import type { HostRuntimeStatus } from "../host/runtime-status.js";
 /** Shared shapes for the published rankings JSON and the plugin HTTP API. */
 
@@ -68,7 +69,7 @@ export interface RankingEntry {
   description: string;
   descriptionZh: string;
   descriptionPolicy?: 'server-v1';
-  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
+  descriptionStatus?: DescriptionStatus;
   /** README-derived excerpt, present in authoritative detail pages when published. */
   readmeSummary?: string;
   stars: number;
@@ -76,6 +77,10 @@ export interface RankingEntry {
   dailyStars: number | null;
   weeklyStars: number | null;
   hotScore: number | null;
+  threeDayStars?: number | null;
+  risingScore?: number | null;
+  growthBasis?: { daily?: "observed" | "historical-estimate" | null; threeDay: "observed" | "historical-estimate" | null; weekly: "observed" | "historical-estimate" | null };
+  starsObservedAt?: string | null;
   forks: number;
   openIssues: number;
   language: string | null;

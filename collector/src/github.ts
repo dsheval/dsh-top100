@@ -44,6 +44,21 @@ export function redactPrivateRejections(
     : { ...record });
 }
 
+/** Stamp only freshly received repository metadata; cached responses retain this time. */
+export function stampRepositoryObservations<T>(payload: T, at = new Date().toISOString()): T {
+  const stamp = (value: unknown) => {
+    if (!value || typeof value !== "object") return;
+    const repo = value as Record<string, unknown>;
+    if (typeof repo.full_name === "string" && Number.isSafeInteger(repo.stargazers_count)
+      && (repo.stargazers_count as number) >= 0) repo.starsObservedAt = at;
+  };
+  if (Array.isArray(payload)) payload.forEach(stamp);
+  else if (payload && typeof payload === "object" && Array.isArray((payload as { items?: unknown }).items))
+    ((payload as unknown as { items: unknown[] }).items).forEach(stamp);
+  else stamp(payload);
+  return payload;
+}
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "DELETE";
   body?: unknown;
@@ -102,7 +117,7 @@ export async function githubFetch<T>(
       }
 
       if (res.status === 204) return undefined as T;
-      return (await res.json()) as T;
+      return stampRepositoryObservations((await res.json()) as T);
     } catch (err) {
       lastError = err as Error;
       if (err instanceof GithubError && err.status < 500 && err.status !== 429) {
@@ -197,6 +212,7 @@ export interface RepoContentItem {
 }
 
 export interface GithubRepo {
+  starsObservedAt?: string;
   private?: boolean;
   visibility?: string;
   id: number;

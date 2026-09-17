@@ -6,7 +6,10 @@ import { resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type { DshPlugin } from "@dsh-top100/schema";
 import {
-  previousSnapshot,
+  snapshotReader,
+  type SnapshotRow,
+  validStarsObservation,
+  readActiveRepositoryIds,
   readActiveRepositories,
   type RepositoryRow,
 } from "./database.js";
@@ -22,19 +25,15 @@ import { isFeaturedRepository } from "../../plugin/src/shared/featured.js";
 interface RankingConfig {
   excludedRepositories?: Record<string, { reason: string; reviewedAt: string; sourceUrl: string }>;
   limits: { rising: number; hot: number };
-  hotWeights: {
-    dailyGrowth: number;
-    weeklyGrowth: number;
-    growthRate: number;
-    activity: number;
-    quality: number;
-    popularity: number;
-  };
-  activityHalfLifeDays: number;
-  growthRateAtFullScore: number;
+  hot: { weeklyWeight: number; popularityWeight: number; weeklyScale: number; popularityScale: number; minimumStars: number };
+  rising: { baselineSmoothing: number; minimumGrowth: number; scoreScale: number };
+  windowToleranceHours: number;
+  legacySnapshotsThrough?: string;
 }
 
 export interface RankingEntry {
+  descriptionHistory?: import('@dsh-top100/schema').GeneratedDescriptionVersion[];
+  descriptionHistoryHold?: string;
   rank: number;
   totalRank: number;
   fullName: string;
@@ -43,12 +42,16 @@ export interface RankingEntry {
   description: string;
   descriptionZh: string;
   descriptionPolicy?: 'server-v1';
-  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry' | 'stale'; reason: string; reviewedAt?: string; origin?: 'model'; generatedAt?: string };
   readmeSummary?: string;
   stars: number;
-  dailyStars: number;
-  weeklyStars: number;
-  hotScore: number;
+  dailyStars: number | null;
+  weeklyStars: number | null;
+  hotScore: number | null;
+  threeDayStars?: number | null;
+  risingScore?: number | null;
+  growthBasis?: { daily?: "observed" | "historical-estimate" | null; threeDay: "observed" | "historical-estimate" | null; weekly: "observed" | "historical-estimate" | null };
+  starsObservedAt?: string | null;
   forks: number;
   openIssues: number;
   language: string | null;
@@ -95,38 +98,20 @@ export interface RankingsDocument {
 interface ScoredRepository {
   repository: RepositoryRow;
   totalRank: number;
-  dailyStars: number;
-  weeklyStars: number;
-  previousWeekStars: number;
-  hotScore: number;
+  dailyStars: number | null;
+  weeklyStars: number | null;
+  threeDayStars: number | null;
+  hotScore: number | null;
+  risingScore: number | null;
+  risingRawScore: number | null;
+  growthBasis?: { daily?: "observed" | "historical-estimate" | null; threeDay: "observed" | "historical-estimate" | null; weekly: "observed" | "historical-estimate" | null };
+  starsObservedAt: string | null;
 }
 
 function subtractDays(isoDate: string, days: number): string {
   const date = new Date(`${isoDate}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() - days);
   return date.toISOString().slice(0, 10);
-}
-
-function ageInDays(isoDate: string, now: Date): number {
-  const timestamp = Date.parse(isoDate);
-  return Number.isFinite(timestamp)
-    ? Math.max(0, (now.getTime() - timestamp) / 86_400_000)
-    : Number.POSITIVE_INFINITY;
-}
-
-function normalizeLog(value: number, maximum: number): number {
-  if (value <= 0 || maximum <= 0) return 0;
-  return Math.log1p(value) / Math.log1p(maximum);
-}
-
-function qualityScore(repository: RepositoryRow): number {
-  const signals = [
-    Boolean(repository.descriptionZh),
-    Boolean(repository.readmeSummary),
-    Boolean(repository.license),
-    repository.sources.length > 0,
-  ];
-  return signals.filter(Boolean).length / signals.length;
 }
 
 function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
@@ -138,6 +123,8 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     name: repository.name,
     owner: repository.owner,
     description: repository.description,
+    ...(repository.raw.descriptionHistory?.length ? { descriptionHistory: repository.raw.descriptionHistory } : {}),
+    ...(repository.raw.descriptionHistoryHold ? { descriptionHistoryHold: repository.raw.descriptionHistoryHold } : {}),
     descriptionZh:
       reviewedDescription(repository) ?? (hasChineseDescription(repository.descriptionZh) ? repository.descriptionZh!
         : descriptionQualityIssue(repository.descriptionZh) || matchingDescriptionHold({ ...repository, id: repository.fullName }) ? PENDING_DESCRIPTION_ZH : fallbackDescriptionZh(repository)),
@@ -146,6 +133,10 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
     dailyStars: scored.dailyStars,
     weeklyStars: scored.weeklyStars,
     hotScore: scored.hotScore,
+    threeDayStars: scored.threeDayStars,
+    risingScore: scored.risingScore,
+    starsObservedAt: scored.starsObservedAt,
+    growthBasis: scored.growthBasis,
     forks: repository.forks,
     openIssues: repository.openIssues,
     language: repository.language,
@@ -164,7 +155,7 @@ function toEntry(scored: ScoredRepository, rank: number): RankingEntry {
   };
 }
 
-/** Build the complete total ranking, daily rising 100, and public Top 100. */
+/** Repository attention rankings; missing observations never fabricate growth or fill a board. */
 export function buildRankings(
   database: DatabaseSync,
   snapshotDate: string,
@@ -172,98 +163,97 @@ export function buildRankings(
   options: { sources?: DshPlugin[]; now?: Date } = {},
 ): RankingsDocument {
   const config = JSON.parse(readFileSync(configPath, "utf8")) as RankingConfig;
-  let activeRepositories = readActiveRepositories(database);
+  if (!Number.isFinite(config.rising.scoreScale) || config.rising.scoreScale <= 0)
+    throw new Error("ranking.rising.scoreScale must be a positive finite number");
+  let activeRepositories: RepositoryRow[];
   if (options.sources) {
-    const ids = new Map(activeRepositories.map(row => [row.fullName.toLowerCase(), row.id]));
+    const ids = readActiveRepositoryIds(database);
     // Read today's metadata against existing history without importing it early.
     activeRepositories = options.sources.map((source, index): RepositoryRow => ({
       ...source, id: ids.get(source.fullName.toLowerCase()) ?? -(index + 1),
       categories: source.categories ?? [], raw: source,
     })).sort((a, b) => b.stars - a.stars || (a.fullName < b.fullName ? -1 : a.fullName > b.fullName ? 1 : 0));
-  }
+  } else activeRepositories = readActiveRepositories(database);
   const repositories = activeRepositories.filter((repository) => repository.type === "cordis-plugin"
     && !repository.install?.discovery?.evidence.some(value => value.startsWith('selected-package-ineligible:'))
     && !isFeaturedRepository(repository)
     && !Object.hasOwn(config.excludedRepositories ?? {}, repository.fullName.toLowerCase()));
   const skills = activeRepositories.filter((repository) => repository.type === "skill");
-  const weekDate = subtractDays(snapshotDate, 7);
   const now = options.now ?? new Date();
-
-  const scored: ScoredRepository[] = repositories.map((repository, index) => {
-    const yesterday = previousSnapshot(database, repository.id, snapshotDate, false);
-    const lastWeek = previousSnapshot(database, repository.id, weekDate, true);
-    return {
-      repository,
-      totalRank: index + 1,
-      dailyStars: yesterday ? Math.max(0, repository.stars - yesterday.stars) : 0,
-      weeklyStars: lastWeek ? Math.max(0, repository.stars - lastWeek.stars) : 0,
-      previousWeekStars: lastWeek?.stars ?? repository.stars,
-      hotScore: 0,
+  const readSnapshot = snapshotReader(database, true);
+  const cutoff = config.legacySnapshotsThrough;
+  const validCutoff = typeof cutoff === "string" && /^\d{4}-\d{2}-\d{2}$/.test(cutoff)
+    && Number.isFinite(Date.parse(`${cutoff}T00:00:00Z`));
+  const legacyAt = (row: SnapshotRow | null, date: string) => {
+    if (!validCutoff || date > cutoff!) return null;
+    // Import time can establish a dated snapshot, never a successful API observation.
+    if (!row || row.observedAt !== undefined || row.observationInvalid || !Number.isSafeInteger(row.stars) || row.stars < 0
+      || !validStarsObservation(row.recordedAt, date, now)) return null;
+    return row;
+  };
+  const score = (repository: RepositoryRow, index: number): ScoredRepository => {
+    const observedAt = validStarsObservation(repository.starsObservedAt, snapshotDate, now);
+    const growth = (days: number): { delta: number; baseline: number; basis: "observed" | "historical-estimate" } | null => {
+      const date = subtractDays(snapshotDate, days);
+      const previous = readSnapshot(repository.id, date);
+      if (observedAt && previous && validStarsObservation(previous.observedAt, date, now)) {
+        const elapsed = Date.parse(observedAt) - Date.parse(previous.observedAt!);
+        if (Math.abs(elapsed - days * 86_400_000) > config.windowToleranceHours * 3_600_000) return null;
+        return { delta: repository.stars - previous.stars, baseline: previous.stars, basis: "observed" };
+      }
+      // Exact calendar endpoints only; no nearest-day substitution or zero fill.
+      // The fixed cutoff expires each 1/3/7-day fallback independently, without reset on restart.
+      if (!validCutoff || date > cutoff!) return null;
+      // Explicit stale/invalid observations must not be relabelled as legacy unknown data.
+      if (!observedAt && repository.starsObservedAt !== undefined) return null;
+      const currentLegacy = !observedAt ? legacyAt(readSnapshot(repository.id, snapshotDate), snapshotDate) : null;
+      if (!observedAt && (!currentLegacy || currentLegacy.stars !== repository.stars)) return null;
+      if (previous?.observedAt !== undefined) return null; // never reinterpret known observations
+      const baseline = legacyAt(previous, date);
+      if (!baseline) return null;
+      return { delta: repository.stars - baseline.stars, baseline: baseline.stars, basis: "historical-estimate" };
     };
-  });
-
-  const maxDaily = Math.max(0, ...scored.map((item) => item.dailyStars));
-  const maxWeekly = Math.max(0, ...scored.map((item) => item.weeklyStars));
-  const maxStars = Math.max(0, ...scored.map((item) => item.repository.stars));
-  const weights = config.hotWeights;
-
-  for (const item of scored) {
-    const weeklyRate = item.weeklyStars / Math.max(item.previousWeekStars, 1);
-    const activity = Math.pow(
-      0.5,
-      ageInDays(item.repository.pushedAt, now) / config.activityHalfLifeDays
-    );
-    const score =
-      normalizeLog(item.dailyStars, maxDaily) * weights.dailyGrowth +
-      normalizeLog(item.weeklyStars, maxWeekly) * weights.weeklyGrowth +
-      Math.min(weeklyRate / config.growthRateAtFullScore, 1) * weights.growthRate +
-      activity * weights.activity +
-      qualityScore(item.repository) * weights.quality +
-      normalizeLog(item.repository.stars, maxStars) * weights.popularity;
-    item.hotScore = Math.round(score * 100) / 100;
-  }
-
+    const daily = growth(1), threeDay = growth(3), weekly = growth(7);
+    const weeklyGain = Math.max(0, weekly?.delta ?? 0);
+    const risingRawScore = threeDay ? Math.max(0, threeDay.delta) / Math.sqrt(threeDay.baseline + config.rising.baselineSmoothing) : null;
+    // Square-root saturation keeps each scale at half credit and approaches the ceiling more slowly.
+    const weeklySignal = Math.sqrt(weeklyGain), popularitySignal = Math.sqrt(repository.stars);
+    const risingSignal = risingRawScore === null ? null : Math.sqrt(risingRawScore);
+    const hot = weekly ? config.hot.weeklyWeight * weeklySignal / (weeklySignal + Math.sqrt(config.hot.weeklyScale))
+      + config.hot.popularityWeight * popularitySignal / (popularitySignal + Math.sqrt(config.hot.popularityScale)) : null;
+    return {
+      repository, totalRank: index + 1, starsObservedAt: repository.starsObservedAt && Number.isFinite(Date.parse(repository.starsObservedAt))
+        && Date.parse(repository.starsObservedAt) <= now.getTime() ? repository.starsObservedAt : null,
+      // Preserve negative net changes for display; only scoring clips losses.
+      dailyStars: daily?.delta ?? null, weeklyStars: weekly?.delta ?? null,
+      threeDayStars: threeDay?.delta ?? null,
+      growthBasis: { daily: daily?.basis ?? null, threeDay: threeDay?.basis ?? null, weekly: weekly?.basis ?? null },
+      hotScore: hot,
+      risingRawScore,
+      risingScore: risingSignal === null ? null : 100 * risingSignal / (risingSignal + Math.sqrt(config.rising.scoreScale)),
+    };
+  };
+  const scored = repositories.map(score);
   const total = scored.map((item, index) => toEntry(item, index + 1));
-  const rising = [...scored]
-    .sort(
-      (left, right) =>
-        right.dailyStars - left.dailyStars ||
-        right.repository.stars - left.repository.stars ||
-        left.repository.fullName.localeCompare(right.repository.fullName)
-    )
-    .slice(0, config.limits.rising)
-    .map((item, index) => toEntry(item, index + 1));
-  const hot = [...scored]
-    .sort(
-      (left, right) =>
-        right.hotScore - left.hotScore ||
-        right.dailyStars - left.dailyStars ||
-        right.repository.stars - left.repository.stars ||
-        left.repository.fullName.localeCompare(right.repository.fullName)
-    )
-    .slice(0, config.limits.hot)
-    .map((item, index) => toEntry(item, index + 1));
-  const skillDirectory = skills.map((repository, index) => {
-    const yesterday = previousSnapshot(database, repository.id, snapshotDate, false);
-    const lastWeek = previousSnapshot(database, repository.id, weekDate, true);
-    return toEntry({
-      repository,
-      totalRank: index + 1,
-      dailyStars: yesterday ? Math.max(0, repository.stars - yesterday.stars) : 0,
-      weeklyStars: lastWeek ? Math.max(0, repository.stars - lastWeek.stars) : 0,
-      previousWeekStars: lastWeek?.stars ?? repository.stars,
-      hotScore: 0,
-    }, index + 1);
-  });
+  const byName = (a: ScoredRepository, b: ScoredRepository) => a.repository.fullName.localeCompare(b.repository.fullName);
+  const rising = scored.filter(item => item.risingScore !== null && item.threeDayStars! >= config.rising.minimumGrowth)
+    .sort((a, b) => b.risingRawScore! - a.risingRawScore! || b.threeDayStars! - a.threeDayStars!
+      || b.repository.stars - a.repository.stars || byName(a, b))
+    .slice(0, config.limits.rising).map((item, index) => toEntry(item, index + 1));
+  const hot = scored.filter(item => item.hotScore !== null && item.repository.stars >= config.hot.minimumStars)
+    .sort((a, b) => b.hotScore! - a.hotScore! || b.weeklyStars! - a.weeklyStars!
+      || b.repository.stars - a.repository.stars || byName(a, b))
+    .slice(0, config.limits.hot).map((item, index) => toEntry(item, index + 1));
+  const skillDirectory = skills.map(score).map((item, index) => toEntry({ ...item, hotScore: null, risingScore: null }, index + 1));
 
   return {
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     snapshotDate,
     definitions: {
-      total: "当前 GitHub Stars 总数降序",
-      rising: "当前 Stars 减去上一份历史快照的 Stars",
-      hot: "日增、周增、增长率、活跃度、数据质量与总热度的加权分",
+      total: "所属 GitHub 仓库 Stars 总数降序，不代表插件独立使用量",
+      rising: `新锐指数（0～100分）=100×√R/(√R+√${config.rising.scoreScale})，R=近3日净增长/√(3日前Stars+${config.rising.baselineSmoothing})；至少净增3星，按未换算原始值排序；历史快照过渡规则见排名方法`,
+      hot: "60%平方根平滑近7日增长 + 40%平方根平滑仓库总 Stars；至少10星，数据不足不入榜；历史快照过渡规则见排名方法",
     },
     categories: CATEGORY_DEFINITIONS.map((definition) => ({
       ...definition,

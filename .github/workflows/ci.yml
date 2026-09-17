@@ -71,3 +71,11 @@ jobs:
           tags: dsh-top100-scheduler:ci
           cache-from: type=gha,scope=dsh-top100-scheduler
           cache-to: type=gha,scope=dsh-top100-scheduler,mode=max
+
+      - name: Validate production-scale publication under memory limit
+        run: >-
+          docker run --rm --network none
+          --memory 1792m --memory-swap 1792m --cpus 2
+          --mount type=bind,src="$PWD/scripts",dst=/app/scripts,readonly
+          --entrypoint node dsh-top100-scheduler:ci
+          scripts/check-publication-memory.mjs

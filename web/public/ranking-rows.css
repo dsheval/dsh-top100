@@ -190,7 +190,9 @@
   }
 }
 @media (min-width: 721px) and (max-width: 980px) {
-  .plugin-list.is-top100-list .plugin:not(.featured-plugin) .plugin-description,
+  .plugin-list.is-top100-list .plugin:not(.featured-plugin) .plugin-description {
+    grid-row: 1;
+  }
   .skill-card:not(.featured-skill) .skill-details {
     grid-row: 1 / 3;
   }

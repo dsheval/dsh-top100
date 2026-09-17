@@ -3,7 +3,8 @@ import type { DshPlugin } from '@dsh-top100/schema';
 import type { RankingsDocument, RankingEntry } from './rankings.js';
 import { descriptionSourceHash, type DescriptionJob } from './description-jobs.js';
 import { matchingDescriptionHold, hasContentEvidence } from './content-source.js';
-import { publishedDescriptionZh } from './published-description.js';
+import { verifiedDescriptionZh } from './published-description.js';
+import { lastVerifiedDescription } from './description-continuity.js';
 import { descriptionFor, descriptionQualityIssue, PENDING_DESCRIPTION_ZH, type DescriptionStatus } from './description-rules.js';
 
 export function boardDescriptionScope(rankings: RankingsDocument): Set<string> {
@@ -12,7 +13,8 @@ export function boardDescriptionScope(rankings: RankingsDocument): Set<string> {
 }
 
 export function hasPublishedChinese(entry: RankingEntry): boolean {
-  return descriptionFor({ ...entry, descriptionZh: publishedDescriptionZh({ ...entry, descriptionStatus: undefined }) }) !== PENDING_DESCRIPTION_ZH;
+  if (entry.descriptionStatus?.state === 'stale') return false;
+  return descriptionFor({ ...entry, descriptionZh: verifiedDescriptionZh({ ...entry, descriptionStatus: undefined }) }) !== PENDING_DESCRIPTION_ZH;
 }
 
 /** A board grants only missing-description eligibility, never an identity/evidence bypass. */
@@ -36,7 +38,9 @@ export function bindBoardDescriptionJob(entry: DshPlugin, scope: ReadonlySet<str
 }
 
 export function missingDescriptionStatus(entry: RankingEntry, job?: DescriptionJob): DescriptionStatus | undefined {
-  if (hasPublishedChinese(entry)) return undefined;
+  if (hasPublishedChinese({ ...entry, descriptionStatus: undefined })) return undefined;
+  const previous = lastVerifiedDescription(entry);
+  if (previous) return previous.status;
   const hold = matchingDescriptionHold(entry);
   if (hold) return { state: 'review-required', reason: hold.reason };
   const qualityIssue = descriptionQualityIssue(entry.descriptionZh);
@@ -66,8 +70,27 @@ export function attachDescriptionCoverage(rankings: RankingsDocument, jobs: Reco
     const missing = entries.filter(entry => !hasPublishedChinese(entry)).map(entry => ({
       fullName: entry.fullName, rank: entry.rank, ...entry.descriptionStatus!,
     }));
-    return [board, { total: entries.length, covered: entries.length - missing.length, missing }];
+    const stale = missing.filter(entry => entry.state === 'stale').length;
+    return [board, { total: entries.length, covered: entries.length - missing.length,
+      stale, available: entries.length - missing.length + stale, missing }];
+  }));
+  // Visibility does not grant paid backlog eligibility. Skills remain outside
+  // boardDescriptionScope until a separate scope is explicitly enabled.
+  const skills = rankings.directories?.skills ?? [];
+  const states: Partial<Record<DescriptionStatus['state'], number>> = {};
+  let missingSkills = 0;
+  for (const entry of skills) {
+    if (!entry.descriptionStatus) continue;
+    missingSkills++;
+    const state = entry.descriptionStatus.state;
+    states[state] = (states[state] ?? 0) + 1;
+  }
+  const topSkills = skills.slice(0, 100);
+  const topMissing = topSkills.filter(entry => entry.descriptionStatus).map(entry => ({
+    fullName: entry.fullName, rank: entry.rank, ...entry.descriptionStatus!,
   }));
   return { generatedAt: rankings.generatedAt, snapshotDate: rankings.snapshotDate,
-    scope: 'hot-rising-top100', unique: boardDescriptionScope(rankings).size, boards };
+    scope: 'hot-rising-top100', unique: boardDescriptionScope(rankings).size, boards,
+    directories: { skills: { total: skills.length, covered: skills.length - missingSkills, missing: missingSkills, states,
+      top100: { total: topSkills.length, covered: topSkills.length - topMissing.length, missing: topMissing } } } };
 }

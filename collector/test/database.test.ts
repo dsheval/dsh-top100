@@ -1,9 +1,9 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DshPlugin, MarketData } from "@dsh-top100/schema";
-import { importMarketData, openDatabase, readActiveRepositories } from "../src/database.js";
+import { importMarketData as persistMarketData, openDatabase, readActiveRepositories } from "../src/database.js";
 import { buildRankings } from "../src/rankings.js";
 
 const temporaryDirectories: string[] = [];
@@ -57,13 +57,45 @@ function market(plugins: DshPlugin[]): MarketData {
   return { schemaVersion: 2, generatedAt: "2026-08-21T00:00:00Z", plugins };
 }
 
+// These fixtures model successful metadata responses, independently of source checks.
+function importMarketData(database: Parameters<typeof persistMarketData>[0], data: MarketData, options: { snapshotDate: string }) {
+  for (const item of data.plugins) item.starsObservedAt = `${options.snapshotDate}T00:00:00.000Z`;
+  return persistMarketData(database, data, options);
+}
+
 describe("SQLite history and rankings", () => {
+  it('bounds history statement allocation and avoids loading full database rows for repeated source previews', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'dsh-ranking-memory-')); temporaryDirectories.push(directory);
+    const database = openDatabase({ path: join(directory, 'market.sqlite') });
+    try {
+      const sources = Array.from({ length: 120 }, (_, i) => plugin(`fixture/item-${i}`, 100 + i, i === 0 ? 'skill' : 'cordis-plugin'));
+      importMarketData(database, market(sources), { snapshotDate: '2026-08-14' });
+      for (const source of sources) source.stars += 5;
+      importMarketData(database, market(sources), { snapshotDate: '2026-08-20' });
+      for (const source of sources) source.stars += 7;
+      // Today's persisted history must not replace the previous day's baseline.
+      importMarketData(database, market(sources), { snapshotDate: '2026-08-21' });
+      sources.push(plugin('fixture/new-entry', 500));
+      const prepare = vi.spyOn(database, 'prepare');
+      for (let i = 0; i < 3; i++) {
+        const result = buildRankings(database, '2026-08-21', resolve('../config/ranking.json'), { sources });
+        expect(result.rankings.total.find(row => row.fullName === 'fixture/item-1')).toMatchObject({ dailyStars: 7, weeklyStars: 12 });
+        expect(result.directories.skills[0]).toMatchObject({ dailyStars: 7, weeklyStars: 12 });
+        expect(result.rankings.total.find(row => row.fullName === 'fixture/new-entry')).toMatchObject({ dailyStars: null, weeklyStars: null });
+      }
+      expect(prepare.mock.calls.filter(([sql]) => sql.includes('FROM repository_daily_stats'))).toHaveLength(3);
+      expect(prepare.mock.calls.some(([sql]) => /SELECT \* FROM repositories/.test(sql))).toBe(false);
+      prepare.mockRestore();
+    } finally { database.close(); }
+  });
   it('quarantines a conclusively ineligible package before scoring and fills its place without deleting history', () => {
     const directory = mkdtempSync(join(tmpdir(), 'dsh-quarantine-')); temporaryDirectories.push(directory);
     const database = openDatabase({ path: join(directory, 'market.sqlite') });
     try {
       const rows = Array.from({ length: 105 }, (_, i) => plugin(`fixture/plugin-${i}`, 200 - i));
-      importMarketData(database, market(rows), { snapshotDate: '2026-08-20' });
+      importMarketData(database, market(rows), { snapshotDate: '2026-08-14' });
+      importMarketData(database, market(rows), { snapshotDate: '2026-08-18' });
+      for (const row of rows) row.stars += 5;
       rows[0].install.discovery = { status: 'review-required', kind: 'host', checkedAt: '2026-08-21T00:00:00Z', policyVersion: 6,
         evidence: ['selected-package-ineligible:' + 'a'.repeat(40)] };
       importMarketData(database, market(rows), { snapshotDate: '2026-08-21' });
@@ -79,10 +111,11 @@ describe("SQLite history and rankings", () => {
     const database = openDatabase({ path: join(directory, "market.sqlite") });
     try {
       const old = Array.from({ length: 110 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index));
-      importMarketData(database, market(old), { snapshotDate: "2026-08-20" });
+      importMarketData(database, market(old), { snapshotDate: "2026-08-18" });
       const today = structuredClone(old);
       today[109].stars += 500;
       today.push(plugin('fixture/new', 10));
+      for (const row of today) row.starsObservedAt = '2026-08-21T00:00:00.000Z';
       const config = resolve('../config/ranking.json'), options = { now: new Date('2026-08-21T00:00:00Z') };
       const before = database.prepare('SELECT * FROM repository_daily_stats').all();
       const preview = buildRankings(database, '2026-08-21', config, { ...options, sources: today });
@@ -102,7 +135,8 @@ describe("SQLite history and rankings", () => {
     const control = openDatabase({ path: join(directory, "control.sqlite") });
     try {
       const peers = Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index));
-      for (const snapshotDate of ["2026-08-20", "2026-08-21"]) {
+      for (const snapshotDate of ["2026-08-14", "2026-08-18", "2026-08-21"]) {
+        if (snapshotDate.endsWith("21")) for (const row of peers) row.stars += 5;
         importMarketData(database, market([plugin("DSHEval/DSH-Top100", snapshotDate.endsWith("21") ? 999999 : 1), ...peers]), { snapshotDate });
         importMarketData(control, market(peers), { snapshotDate });
       }
@@ -116,7 +150,7 @@ describe("SQLite history and rankings", () => {
         expect(rows.map(({ rank }) => rank)).toEqual(rows.map((_, index) => index + 1));
       }
       expect(readActiveRepositories(database)).toHaveLength(102);
-      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(204);
+      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(306);
     } finally { database.close(); control.close(); }
   });
 
@@ -126,7 +160,9 @@ describe("SQLite history and rankings", () => {
     const database = openDatabase({ path: join(directory, "market.sqlite") });
     try {
       const sources = [plugin("Zuorn/Tydora", 999999), plugin("eleckoi/ElecKoi", 888888), ...Array.from({ length: 101 }, (_, index) => plugin(`fixture/plugin-${index}`, 200 - index)), plugin("fixture/skill", 1000, "skill")];
-      importMarketData(database, market(sources), { snapshotDate: "2026-08-20" });
+      importMarketData(database, market(sources), { snapshotDate: "2026-08-14" });
+      importMarketData(database, market(sources), { snapshotDate: "2026-08-18" });
+      for (const row of sources) row.stars += 5;
       importMarketData(database, market(sources), { snapshotDate: "2026-08-21" });
       const first = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
       const second = buildRankings(database, "2026-08-21", resolve("../config/ranking.json"));
@@ -141,7 +177,7 @@ describe("SQLite history and rankings", () => {
         expect(rankings.directories.skills).toHaveLength(1);
       }
       expect(readActiveRepositories(database)).toHaveLength(104);
-      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(208);
+      expect(database.prepare("SELECT COUNT(*) AS count FROM repository_daily_stats").get()!.count).toBe(312);
     } finally { database.close(); }
   });
 
@@ -198,7 +234,7 @@ describe("SQLite history and rankings", () => {
     }
   });
 
-  it("ranks rising repositories by daily growth instead of weekly growth or total stars", () => {
+  it("ranks recent momentum from its three-day window and excludes zero growth", () => {
     const directory = mkdtempSync(join(tmpdir(), "dsh-top100-db-"));
     temporaryDirectories.push(directory);
     const database = openDatabase({ path: join(directory, "market.sqlite") });
@@ -211,6 +247,15 @@ describe("SQLite history and rankings", () => {
           plugin("c/slowing", 10),
         ]),
         { snapshotDate: "2026-08-14" }
+      );
+      importMarketData(
+        database,
+        market([
+          plugin("a/growing", 100),
+          plugin("b/large", 1000),
+          plugin("c/slowing", 60),
+        ]),
+        { snapshotDate: "2026-08-18" }
       );
       importMarketData(
         database,
@@ -241,9 +286,8 @@ describe("SQLite history and rankings", () => {
       expect(rankings.rankings.rising[0]?.fullName).toBe("a/growing");
       expect(rankings.rankings.rising[0]?.dailyStars).toBe(7);
       expect(rankings.rankings.rising[0]?.weeklyStars).toBe(17);
-      expect(
-        rankings.rankings.rising.findIndex((entry) => entry.fullName === "c/slowing")
-      ).toBeGreaterThan(0);
+      expect(rankings.rankings.rising.map(entry => entry.fullName)).toEqual(["a/growing"]);
+      expect(rankings.rankings.rising[0].threeDayStars).toBe(7);
       expect(rankings.rankings.hot[0]?.hotScore).toBeGreaterThan(0);
     } finally {
       database.close();

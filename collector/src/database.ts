@@ -32,6 +32,7 @@ export interface RepositoryRow {
   descriptionZh: string | null;
   readmeSummary: string | null;
   stars: number;
+  starsObservedAt?: string;
   forks: number;
   openIssues: number;
   language: string | null;
@@ -52,6 +53,9 @@ export interface RepositoryRow {
 export interface SnapshotRow {
   snapshotDate: string;
   stars: number;
+  observedAt?: string;
+  recordedAt?: string;
+  observationInvalid?: boolean;
 }
 
 export interface CategoryCacheEntry {
@@ -59,13 +63,15 @@ export interface CategoryCacheEntry {
   categories: PluginCategoryAssignment[];
 }
 
+// Intl formatters allocate native ICU state; reuse them across large catalogs.
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 export function dateInTimeZone(date = new Date(), timeZone = "Asia/Shanghai"): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
+  let formatter = dateFormatters.get(timeZone);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" });
+    dateFormatters.set(timeZone, formatter);
+  }
+  return formatter.format(date);
 }
 
 export { categorySourceHash } from "./categories.js";
@@ -161,6 +167,12 @@ export function openDatabase(options: DatabaseOptions): DatabaseSync {
     CREATE INDEX IF NOT EXISTS idx_repository_categories_category
       ON repository_categories(category, confidence DESC);
   `);
+  // Legacy rows intentionally remain NULL: recorded_at proves import, not observation.
+  const columns = database.prepare("PRAGMA table_info(repository_daily_stats)").all();
+  if (!columns.some(column => column.name === "stars_observed_at"))
+    database.exec("ALTER TABLE repository_daily_stats ADD COLUMN stars_observed_at TEXT");
+  if (!columns.some(column => column.name === "stars_observation_invalid"))
+    database.exec("ALTER TABLE repository_daily_stats ADD COLUMN stars_observation_invalid INTEGER NOT NULL DEFAULT 0");
   return database;
 }
 
@@ -215,13 +227,18 @@ export function importMarketData(
   );
   const upsertSnapshot = database.prepare(`
     INSERT INTO repository_daily_stats (
-      repository_id, snapshot_date, recorded_at, stars, forks, open_issues
-    ) VALUES (?, ?, ?, ?, ?, ?)
+      repository_id, snapshot_date, recorded_at, stars, forks, open_issues, stars_observed_at, stars_observation_invalid
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(repository_id, snapshot_date) DO UPDATE SET
       recorded_at = excluded.recorded_at,
       stars = excluded.stars,
       forks = excluded.forks,
-      open_issues = excluded.open_issues
+      open_issues = excluded.open_issues,
+      stars_observed_at = excluded.stars_observed_at,
+      stars_observation_invalid = CASE WHEN excluded.stars_observed_at IS NOT NULL THEN 0
+        ELSE MAX(repository_daily_stats.stars_observation_invalid, excluded.stars_observation_invalid) END
+    WHERE repository_daily_stats.stars_observed_at IS NULL
+      OR excluded.stars_observed_at >= repository_daily_stats.stars_observed_at
   `);
   const upsertSummary = database.prepare(`
     INSERT INTO repository_summaries (
@@ -280,7 +297,8 @@ export function importMarketData(
       );
       const idRow = selectRepositoryId.get(plugin.fullName) as { id: number } | undefined;
       if (!idRow) throw new Error(`Repository upsert did not return an id: ${plugin.fullName}`);
-      upsertSnapshot.run(idRow.id, snapshotDate, now, plugin.stars, plugin.forks, plugin.openIssues);
+      const observed = validStarsObservation(plugin.starsObservedAt, snapshotDate, new Date(now), options.timeZone);
+      upsertSnapshot.run(idRow.id, snapshotDate, now, plugin.stars, plugin.forks, plugin.openIssues, observed, plugin.starsObservedAt !== undefined && !observed ? 1 : 0);
       upsertSummary.run(
         idRow.id,
         plugin.descriptionZh,
@@ -382,51 +400,69 @@ export function readCategoryCache(database: DatabaseSync): Map<string, CategoryC
 }
 
 export function readActiveRepositories(database: DatabaseSync): RepositoryRow[] {
+  const categories = readCategoriesByRepository(database);
+  // Decode one row at a time: keeping all raw JSON strings alongside all parsed
+  // objects doubles the peak memory of a full catalog read.
   const rows = database
     .prepare("SELECT * FROM repositories WHERE active = 1 ORDER BY stars DESC, full_name ASC")
-    .all() as Array<Record<string, unknown>>;
-  const categories = readCategoriesByRepository(database);
-  return rows.map((row) => ({
-    id: Number(row.id),
-    fullName: String(row.full_name),
-    name: String(row.name),
-    owner: String(row.owner),
-    type: String(row.type),
-    description: String(row.description),
-    descriptionZh: row.description_zh ? String(row.description_zh) : null,
-    readmeSummary: row.readme_summary ? String(row.readme_summary) : null,
-    stars: Number(row.stars),
-    forks: Number(row.forks),
-    openIssues: Number(row.open_issues),
-    language: row.language ? String(row.language) : null,
-    homepage: row.homepage ? String(row.homepage) : null,
-    license: row.license ? String(row.license) : null,
-    topics: parseJson(String(row.topics_json), [] as string[]),
-    tags: parseJson(String(row.tags_json), [] as string[]),
-    categories: categories.get(Number(row.id)) ?? [],
-    install: parseJson(String(row.install_json), {} as DshPlugin["install"]),
-    sources: parseJson(String(row.sources_json), [] as string[]),
-    pushedAt: String(row.pushed_at),
-    createdAt: String(row.created_at),
-    updatedAt: String(row.updated_at),
-    lastCheckedAt: String(row.last_checked_at),
-    raw: parseJson(String(row.raw_json), {} as DshPlugin),
-  }));
+    .iterate();
+  return Array.from(rows, (row) => {
+    const raw = parseJson(String(row.raw_json), {} as DshPlugin);
+    return {
+      id: Number(row.id),
+      fullName: String(row.full_name),
+      name: String(row.name),
+      owner: String(row.owner),
+      type: String(row.type),
+      description: String(row.description),
+      descriptionZh: row.description_zh ? String(row.description_zh) : null,
+      readmeSummary: row.readme_summary ? String(row.readme_summary) : null,
+      stars: Number(row.stars),
+      forks: Number(row.forks),
+      openIssues: Number(row.open_issues),
+      language: row.language ? String(row.language) : null,
+      homepage: row.homepage ? String(row.homepage) : null,
+      license: row.license ? String(row.license) : null,
+      topics: parseJson(String(row.topics_json), [] as string[]),
+      tags: parseJson(String(row.tags_json), [] as string[]),
+      categories: categories.get(Number(row.id)) ?? [],
+      install: parseJson(String(row.install_json), {} as DshPlugin["install"]),
+      sources: parseJson(String(row.sources_json), [] as string[]),
+      pushedAt: String(row.pushed_at),
+      createdAt: String(row.created_at),
+      updatedAt: String(row.updated_at),
+      lastCheckedAt: String(row.last_checked_at),
+      starsObservedAt: raw.starsObservedAt,
+      raw,
+    };
+  });
 }
 
-export function previousSnapshot(
-  database: DatabaseSync,
-  repositoryId: number,
-  beforeOrOnDate: string,
-  inclusive = true
-): SnapshotRow | null {
-  const operator = inclusive ? "<=" : "<";
-  const row = database
-    .prepare(
-      `SELECT snapshot_date, stars FROM repository_daily_stats
-       WHERE repository_id = ? AND snapshot_date ${operator} ?
-       ORDER BY snapshot_date DESC LIMIT 1`
-    )
-    .get(repositoryId, beforeOrOnDate) as { snapshot_date: string; stars: number } | undefined;
-  return row ? { snapshotDate: row.snapshot_date, stars: Number(row.stars) } : null;
+/** A source preview only needs persisted IDs, not another full catalog copy. */
+export function readActiveRepositoryIds(database: DatabaseSync): Map<string, number> {
+  return new Map(Array.from(database.prepare("SELECT id, full_name FROM repositories WHERE active = 1").iterate(),
+    row => [String(row.full_name).toLowerCase(), Number(row.id)] as const));
+}
+
+/** Only actual observations on the requested local date may supply a baseline. */
+export function validStarsObservation(value: string | undefined, date: string, now = new Date(), timeZone = "Asia/Shanghai"): string | null {
+  if (!value) return null;
+  const time = Date.parse(value);
+  if (!Number.isFinite(time) || time > now.getTime() || dateInTimeZone(new Date(time), timeZone) !== date) return null;
+  return new Date(time).toISOString();
+}
+
+/** One prepared point lookup reused for every window and repository. */
+export function snapshotReader(database: DatabaseSync, includeLegacy = false) {
+  const statement = database.prepare(`SELECT snapshot_date, stars, stars_observed_at, recorded_at, stars_observation_invalid
+    FROM repository_daily_stats WHERE repository_id = ? AND snapshot_date = ?`);
+  return (repositoryId: number, date: string): SnapshotRow | null => {
+    const row = statement.get(repositoryId, date) as {
+      snapshot_date: string; stars: number; stars_observed_at: string | null;
+      recorded_at: string; stars_observation_invalid: number;
+    } | undefined;
+    if (!row || (!includeLegacy && !row.stars_observed_at)) return null;
+    return { snapshotDate: row.snapshot_date, stars: Number(row.stars), observedAt: row.stars_observed_at ?? undefined,
+      recordedAt: row.recorded_at, observationInvalid: row.stars_observation_invalid === 1 };
+  };
 }

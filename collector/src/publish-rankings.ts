@@ -97,6 +97,10 @@ function toSummaryEntry(entry: RankingEntry, rank = entry.rank): RankingSummaryE
     dailyStars: entry.dailyStars,
     weeklyStars: entry.weeklyStars,
     hotScore: entry.hotScore,
+    threeDayStars: entry.threeDayStars,
+    risingScore: entry.risingScore,
+    starsObservedAt: entry.starsObservedAt,
+    growthBasis: entry.growthBasis,
     openIssues: entry.openIssues,
     language: entry.language,
     homepage: entry.homepage,
@@ -146,17 +150,29 @@ export function buildRankingPublication(
   rankings: RankingsDocument,
   options: RankingPublicationOptions = {}
 ): RankingPublication {
-  rankings = publishDocumentDescriptions(rankings);
+  const files: RankingPublicationFile[] = [];
+  const manifest = createRankingPublication(publishDocumentDescriptions(rankings), options, file => files.push(file));
+  const publication = { manifest, files };
+  validateRankingPublication(publication);
+  return publication;
+}
+
+/** The production writer consumes each file immediately instead of retaining
+ * every serialized page and search document until publication has finished. */
+function createRankingPublication(
+  rankings: RankingsDocument,
+  options: RankingPublicationOptions,
+  writeFile: (file: RankingPublicationFile) => void,
+): RankingManifestV2 {
   const pageSize = options.pageSize ?? RANKING_PAGE_SIZE;
   assertPageSize(pageSize);
   const publicUrlPrefix = normalizePublicUrlPrefix(options.publicUrlPrefix ?? "/data");
   const snapshotId = snapshotIdFor(rankings);
   const snapshotUrl = `${publicUrlPrefix}/snapshots/${snapshotId}`;
-  const files: RankingPublicationFile[] = [];
 
   function addFile(relativePath: string, value: unknown, count: number): RankingFileReference {
     const content = compactJson(value);
-    files.push({ relativePath, content });
+    writeFile({ relativePath, content });
     return {
       url: `${snapshotUrl}/${relativePath}`,
       count,
@@ -295,14 +311,21 @@ export function buildRankingPublication(
     categories: categoryManifests,
   };
 
-  const publication = { manifest, files };
-  validateRankingPublication(publication);
-  return publication;
+  return manifest;
 }
 
 /** Validate hashes and cross-file snapshot/rank invariants before anything is published. */
 export function validateRankingPublication(publication: RankingPublication): void {
   const { manifest, files } = publication;
+  const byPath = new Map(files.map(file => [file.relativePath, file.content]));
+  validatePublicationFiles(manifest, files.map(file => file.relativePath), path => byPath.get(path));
+}
+
+function validatePublicationFiles(
+  manifest: RankingManifestV2,
+  paths: string[],
+  readContent: (path: string) => string | undefined,
+): void {
   if (manifest.schemaVersion !== 2) {
     throw new Error(`Unsupported ranking manifest schema: ${manifest.schemaVersion}`);
   }
@@ -313,9 +336,8 @@ export function validateRankingPublication(publication: RankingPublication): voi
     0,
     manifest.datasets.hot.url.length - "hot.json".length
   );
-  const byPath = new Map(files.map((file) => [file.relativePath, file.content]));
   const references = allFileReferences(manifest);
-  if (references.length !== files.length || byPath.size !== files.length) {
+  if (references.length !== paths.length || new Set(paths).size !== paths.length) {
     throw new Error("Ranking publication contains unreferenced or duplicate files");
   }
 
@@ -324,7 +346,7 @@ export function validateRankingPublication(publication: RankingPublication): voi
       throw new Error(`Ranking file URL is outside snapshot: ${reference.url}`);
     }
     const relativePath = reference.url.slice(prefix.length);
-    const content = byPath.get(relativePath);
+    const content = readContent(relativePath);
     if (content === undefined) throw new Error(`Ranking file is missing: ${relativePath}`);
     if (Buffer.byteLength(content) !== reference.bytes || sha256(content) !== reference.sha256) {
       throw new Error(`Ranking file hash or byte size mismatch: ${relativePath}`);
@@ -350,13 +372,15 @@ export function validateRankingPublication(publication: RankingPublication): voi
   }
 
   type RankedEntry = Pick<RankingSummaryEntry, "rank" | "fullName" | "categories" | "type">;
+  const rankedEntry = ({ rank, fullName, categories, type }: RankedEntry): RankedEntry =>
+    ({ rank, fullName, categories, type });
 
   function entriesFor(reference: RankingFileReference): RankedEntry[] {
     const relativePath = reference.url.slice(prefix.length);
-    const payload = JSON.parse(byPath.get(relativePath) ?? "null") as {
+    const payload = JSON.parse(readContent(relativePath) ?? "null") as {
       rankings: RankedEntry[];
     };
-    return payload.rankings;
+    return payload.rankings.map(rankedEntry);
   }
 
   function assertRankSequence(
@@ -397,7 +421,7 @@ export function validateRankingPublication(publication: RankingPublication): voi
     }
     const entries = pageReferences.flatMap((reference, index) => {
       const relativePath = reference.url.slice(prefix.length);
-      const payload = JSON.parse(byPath.get(relativePath) ?? "null") as RankingPageSnapshot;
+      const payload = JSON.parse(readContent(relativePath) ?? "null") as RankingPageSnapshot;
       const expectedPage = index + 1;
       const expectedEntries = Math.min(pageSize, expectedCount - index * pageSize);
       if (
@@ -412,7 +436,7 @@ export function validateRankingPublication(publication: RankingPublication): voi
       ) {
         throw new Error(`${name} page metadata is inconsistent at page ${expectedPage}`);
       }
-      return payload.rankings;
+      return payload.rankings.map(rankedEntry);
     });
     assertRankSequence(name, entries, expectedCount, category);
     return entries;
@@ -459,10 +483,10 @@ export function validateRankingPublication(publication: RankingPublication): voi
   }
 }
 
-function snapshotDirectoryMatches(directory: string, files: RankingPublicationFile[]): boolean {
-  return files.every(({ relativePath, content }) => {
+function snapshotDirectoryMatches(directory: string, stagingDirectory: string, paths: string[]): boolean {
+  return paths.every((relativePath) => {
     try {
-      return readFileSync(join(directory, relativePath), "utf8") === content;
+      return readFileSync(join(directory, relativePath), "utf8") === readFileSync(join(stagingDirectory, relativePath), "utf8");
     } catch {
       return false;
     }
@@ -500,23 +524,25 @@ export function publishRankings(
   options: RankingPublicationOptions = {}
 ): RankingManifestV2 {
   rankings = publishDocumentDescriptions(rankings);
-  const publication = buildRankingPublication(rankings, options);
   const snapshotRoot = join(publicDirectory, "snapshots");
-  const finalDirectory = join(snapshotRoot, publication.manifest.snapshotId);
   const stagingDirectory = join(
     snapshotRoot,
-    `.${publication.manifest.snapshotId}.${process.pid}.${randomUUID()}.tmp`
+    `.publication.${process.pid}.${randomUUID()}.tmp`
   );
   mkdirSync(stagingDirectory, { recursive: true });
 
   try {
-    for (const { relativePath, content } of publication.files) {
+    const paths: string[] = [];
+    const manifest = createRankingPublication(rankings, options, ({ relativePath, content }) => {
       const path = join(stagingDirectory, relativePath);
       mkdirSync(dirname(path), { recursive: true });
       writeFileSync(path, content, "utf8");
-    }
+      paths.push(relativePath);
+    });
+    validatePublicationFiles(manifest, paths, path => readFileSync(join(stagingDirectory, path), 'utf8'));
+    const finalDirectory = join(snapshotRoot, manifest.snapshotId);
     if (existsSync(finalDirectory)) {
-      if (!snapshotDirectoryMatches(finalDirectory, publication.files)) {
+      if (!snapshotDirectoryMatches(finalDirectory, stagingDirectory, paths)) {
         throw new Error(`Immutable ranking snapshot already exists with different data: ${finalDirectory}`);
       }
       rmSync(stagingDirectory, { recursive: true, force: true });
@@ -525,8 +551,8 @@ export function publishRankings(
     }
 
     publishCompatibilityFiles(rankings, publicDirectory);
-    atomicWrite(join(publicDirectory, "manifest.json"), compactJson(publication.manifest));
-    return publication.manifest;
+    atomicWrite(join(publicDirectory, "manifest.json"), compactJson(manifest));
+    return manifest;
   } catch (error) {
     rmSync(stagingDirectory, { recursive: true, force: true });
     throw error;

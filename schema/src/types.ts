@@ -79,6 +79,11 @@ export interface DiscoveryEvidence {
       signals?: ('imports-changed' | 'environment-writes-changed' | 'source-change-needs-review')[] }[];
   };
   readme?: ReadmeEvidence;
+  /** A single selected Skill, checked at one immutable commit. Collections need explicit review. */
+  skill?: {
+    policy: 'selected-skill-v1'; fullName: string; path: string; name: string;
+    sourceRevision: string; documentSha256: string; summarySha256: string;
+  };
   /** Bounded static facts from this exact package, never root/sibling marketing text. */
   sourceFiles?: {
     kind: 'static-package-facts-v1'; fullName: string; packageName: string; repositoryPath: string;
@@ -120,7 +125,19 @@ export interface InstallInfo {
   commandSource?: string;
 }
 
+export interface GeneratedDescriptionVersion {
+  id: string;
+  policy: 'source-bound-model-v1';
+  generatedAt: string;
+  descriptionZh: string;
+  sourceHash: string;
+  source: Pick<DshPlugin, 'fullName' | 'type' | 'description' | 'readmeSummary' | 'install'>;
+}
+
 export interface DshPlugin {
+  /** Bounded history of source-bound model outputs, not human-reviewed prose. */
+  descriptionHistory?: GeneratedDescriptionVersion[];
+  descriptionHistoryHold?: string;
   /** 唯一标识 owner/repo（同仓库多技能时用 owner/repo@skill-name） */
   id: string;
   type: PluginType;
@@ -129,6 +146,8 @@ export interface DshPlugin {
   repo: string;
   fullName: string;
   stars: number;
+  /** Successful GitHub metadata response time; omitted for unverified legacy values. */
+  starsObservedAt?: string;
   forks: number;
   openIssues: number;
   language: string | null;
@@ -253,13 +272,17 @@ export interface RankingSummaryEntry {
   description: string;
   descriptionZh?: string;
   descriptionPolicy?: 'server-v1';
-  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry' | 'stale'; reason: string; reviewedAt?: string; origin?: 'model'; generatedAt?: string };
   /** README-derived excerpt, loaded only with a ranked page rather than the search index. */
   readmeSummary?: string;
   stars: number;
-  dailyStars: number;
-  weeklyStars: number;
-  hotScore: number;
+  dailyStars: number | null;
+  weeklyStars: number | null;
+  hotScore: number | null;
+  threeDayStars?: number | null;
+  risingScore?: number | null;
+  growthBasis?: { daily?: "observed" | "historical-estimate" | null; threeDay: "observed" | "historical-estimate" | null; weekly: "observed" | "historical-estimate" | null };
+  starsObservedAt?: string | null;
   openIssues: number;
   language: string | null;
   homepage: string | null;
@@ -281,7 +304,7 @@ export interface RankingSearchEntry {
   description: string;
   descriptionZh?: string;
   descriptionPolicy?: 'server-v1';
-  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry'; reason: string };
+  descriptionStatus?: { state: 'pending' | 'review-required' | 'missing-source' | 'retry' | 'stale'; reason: string; reviewedAt?: string; origin?: 'model'; generatedAt?: string };
   stars: number;
   tags: string[];
   categories: PluginCategoryId[];

@@ -27,7 +27,7 @@ export interface PublicationAudit {
   publicVerified: boolean;
   pluginCount: number;
   skillCount: number;
-  boards: Record<'hot' | 'rising', { total: number; covered: number; missing: { fullName: string; state: string }[] }>;
+  boards: Record<'hot' | 'rising', { total: number; covered: number; stale: number; available: number; missing: { fullName: string; state: string }[] }>;
   issues: OperationIssue[];
 }
 function references(value: unknown, result: RankingFileReference[] = []): RankingFileReference[] {
@@ -67,12 +67,14 @@ export async function auditPublication(options: {
   const issues: OperationIssue[] = [];
   for (const board of ['hot', 'rising'] as const) {
     const rows = boardRows[board];
-    if (!rows || rows.length !== Math.min(100, manifest.datasets.total.count)
+    if (!rows || rows.length !== manifest.datasets[board].count || rows.length > Math.min(100, manifest.datasets.total.count)
       || new Set(rows.map(row => row.fullName.toLowerCase())).size !== rows.length
       || rows.some((row, index) => row.rank !== index + 1)) throw new Error('board-membership-invalid');
     if (rows.some(row => row.install?.discovery?.evidence.some(value => value.startsWith('selected-package-ineligible:')))) throw new Error('quarantined-package-published');
     const missing = rows.filter(row => !hasPublishedChinese(row)).map(row => ({ fullName: row.fullName, state: row.descriptionStatus?.state ?? 'pending' }));
-    boards[board] = { total: rows.length, covered: rows.length - missing.length, missing };
+    const stale = missing.filter(entry => entry.state === 'stale').length;
+    boards[board] = { total: rows.length, covered: rows.length - missing.length, stale,
+      available: rows.length - missing.length + stale, missing };
     if (missing.length > 5) issues.push({ key: `coverage:${board}`, severity: 'warning', code: 'board-description-gaps', subject: board });
     for (const entry of missing) {
       const row = rows.find(row => row.fullName === entry.fullName)!;

@@ -1,4 +1,3 @@
-/** Fetch and filter the published rankings document. */
 import { type InstalledEntryEvidence } from "../install/install-spec.js";
 import type { CatalogCacheStatus, CatalogCategoryDefinition, CatalogItem, CatalogScope, CatalogScopeCounts, InstallAvailability, PluginCategoryDefinition, RankingEntry, RankingsDocument, RankingView, PluginCategoryId } from "../shared/types.js";
 export declare const DEFAULT_DATA_URL = "https://www.dsheval.ai/data";

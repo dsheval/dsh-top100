@@ -1,5 +1,6 @@
 import { refreshBoardSources } from "./board-source-refresh.js";
-import { dailyBoardSourceChecksEnabled } from "./model-requests.js";
+import { refreshSkillsSources } from "./skills-source-refresh.js";
+import { dailyBoardSourceChecksEnabled, dailySkillsSourceChecksEnabled } from "./model-requests.js";
 import { loadSourceRecovery } from './source-recovery.js';
 import { atomicOperationJson } from './operation-state.js';
 import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest } from "./model-requests.js";
@@ -36,6 +37,15 @@ import { matchingDescriptionHold } from "./content-source.js";
 import { descriptionQualityIssue, PENDING_DESCRIPTION_ZH } from "./description-rules.js";
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
+
+function logPublicationMemory(phase: string): void {
+  const memory = process.memoryUsage();
+  console.log(`[publication-memory] ${JSON.stringify({ phase,
+    rssMiB: Math.ceil(memory.rss / 1024 ** 2),
+    heapMiB: Math.ceil(memory.heapUsed / 1024 ** 2),
+    peakMiB: Math.ceil(process.resourceUsage().maxRSS / 1024),
+  })}`);
+}
 
 function atomicJson(path: string, value: unknown, compact = false): void {
   mkdirSync(dirname(path), { recursive: true });
@@ -127,6 +137,7 @@ async function main(): Promise<void> {
   if (!Array.isArray(market.plugins) || market.plugins.length === 0) {
     throw new Error(`Source snapshot has no plugins: ${sourcePath}`);
   }
+  logPublicationMemory('source-loaded');
 
   let repairedDescriptions = 0;
   for (const plugin of market.plugins) {
@@ -185,26 +196,38 @@ async function main(): Promise<void> {
             review: source.install.discovery!.functionReview, action: 'retain-fixed-review-until-material-change-is-approved' })) });
       console.log(`Board source refresh: ${sourceRefresh.length} checked before descriptions`);
     }
+    const skillRefresh = await refreshSkillsSources(market.plugins,
+      () => buildRankings(database, snapshotDate, rankingConfig, { sources: market.plugins, now: rankingNow }),
+      { enabled: dailySkillsSourceChecksEnabled(), now: rankingNow.getTime() });
+    if (skillRefresh.length) {
+      atomicJson(join(dirname(sourcePath), 'skills-source-report.json'), { snapshotDate, entries: skillRefresh });
+      console.log(`Skills source refresh: ${skillRefresh.length} checked before descriptions`);
+    }
+    logPublicationMemory('sources-reviewed');
     await completeDailyBoardDescriptions(market.plugins, previousSources, dirname(sourcePath),
       () => buildRankings(database, snapshotDate, rankingConfig, { sources: market.plugins, now: rankingNow }), rankingNow.getTime());
+    previousSources.clear();
+    logPublicationMemory('descriptions-complete');
     await classifyRepositories(market, database, join(dirname(sourcePath), "category-jobs.json"), priority);
+    logPublicationMemory('categories-complete');
     atomicJson(sourcePath, market);
     const imported = importMarketData(database, market, {
       model: process.env.DEEPSEEK_MODEL ?? DEFAULT_MODEL,
       timeZone: process.env.TZ ?? "Asia/Shanghai",
       snapshotDate,
     });
+    logPublicationMemory('database-imported');
     const rankings = buildRankings(
       database,
       imported.snapshotDate,
       rankingConfig, { now: rankingNow },
     );
     const coverage = attachDescriptionCoverage(rankings, readDescriptionJobs(dirname(sourcePath)));
-    const plugins = publicPlugins(database, rankings.generatedAt);
-
+    logPublicationMemory('rankings-built');
     const manifest = publishRankings(rankings, publicDirectory, {
       publicUrlPrefix: process.env.PUBLIC_DATA_URL_PREFIX ?? "/data",
     });
+    logPublicationMemory('rankings-published');
     atomicJson(join(dirname(sourcePath), "board-description-report.json"), { snapshotId: manifest.snapshotId, ...coverage });
     console.log(`[board-description-coverage] ${JSON.stringify({ snapshotId: manifest.snapshotId, ...coverage })}`);
     atomicJson(resolve(publicDirectory, "top-stars.json"), {
@@ -215,7 +238,8 @@ async function main(): Promise<void> {
       ordering: "stargazers_count desc",
       repositories: rankings.rankings.total,
     });
-    atomicJson(resolve(publicDirectory, "plugins.json"), plugins);
+    atomicJson(resolve(publicDirectory, "plugins.json"), publicPlugins(database, rankings.generatedAt));
+    logPublicationMemory('exports-complete');
     console.log(
       `SQLite import complete: ${imported.repositories} repositories, snapshot ${imported.snapshotDate}`
     );

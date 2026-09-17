@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-top100 是 DSH-Eval 旗下的插件与 Skills 发现栏目，通过热度、增长、活跃度和安装证据，帮助你找到值得安装的插件。"
+      content="dsh-top100 是 DSH-Eval 旗下的插件与 Skills 发现栏目，通过仓库热度、近期增长和安装来源，帮助你发现支持 DSH 的插件。"
     />
     <meta name="theme-color" content="#d9e7e2" />
     <link rel="canonical" href="https://www.dsheval.ai/top100/" />
@@ -16,7 +16,7 @@
     <meta property="og:locale" content="zh_CN" />
     <meta property="og:site_name" content="DSH-Eval" />
     <meta property="og:title" content="插件榜单 · Top100 · DSH-Eval" />
-    <meta property="og:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。按热度、增长、项目质量和安装证据持续更新。" />
+    <meta property="og:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。按仓库热度、近期增长和安装来源持续更新。" />
     <meta property="og:url" content="https://www.dsheval.ai/top100/" />
     <meta property="og:image" content="https://www.dsheval.ai/top100/assets/dsh-top100-og.png?v=1.3.3" />
     <meta property="og:image:width" content="1200" />
@@ -42,8 +42,8 @@
           "name": "dsh-top100",
           "applicationCategory": "DeveloperApplication",
           "operatingSystem": "Cross-platform",
-          "softwareVersion": "1.3.8",
-          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.8",
+          "softwareVersion": "1.3.9",
+          "downloadUrl": "https://www.npmjs.com/package/@dsheval/dsh-top100-plugin/v/1.3.9",
           "license": "https://opensource.org/license/mit"
         }
       }
@@ -955,6 +955,7 @@
       }
 
       .plugin-name-text {
+        min-width: 0;
         display: -webkit-box;
         padding-bottom: 0.08em;
         overflow: hidden;
@@ -986,6 +987,16 @@
         font-variant-numeric: tabular-nums;
         font-weight: 800;
         letter-spacing: 0.06em;
+      }
+
+      .score-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        grid-column: 2;
+        grid-row: 1;
+        justify-self: end;
       }
 
       .stars {
@@ -1137,7 +1148,7 @@
       .plugin-list.is-top100-list .rank,
       .plugin-list.is-top100-list .plugin-title,
       .plugin-list.is-top100-list .plugin-description,
-      .plugin-list.is-top100-list .stars {
+      .plugin-list.is-top100-list .score-cell {
         grid-row: 1;
         margin: 0;
       }
@@ -1172,7 +1183,7 @@
         align-self: center;
       }
 
-      .plugin-list.is-top100-list .stars {
+      .plugin-list.is-top100-list .score-cell {
         grid-column: 5;
         align-self: center;
       }
@@ -2233,7 +2244,7 @@
         }
       }
 
-      @media (max-width: 960px) {
+      @media (max-width: 980px) {
         .category-count {
           display: none;
         }
@@ -2254,7 +2265,7 @@
           grid-row: 2;
         }
 
-        .plugin-list.is-top100-list .stars {
+        .plugin-list.is-top100-list .score-cell {
           grid-column: 4;
         }
 
@@ -2313,7 +2324,7 @@
           display: none;
         }
 
-        .plugin-list.is-top100-list .stars {
+        .plugin-list.is-top100-list .score-cell {
           grid-column: 4;
         }
       }
@@ -2467,7 +2478,7 @@
           font-size: 22px;
         }
 
-        .plugin-list.is-top100-list .stars {
+        .plugin-list.is-top100-list .score-cell {
           grid-column: 3;
           grid-row: 1;
           align-self: center;
@@ -2791,6 +2802,7 @@
         grid-row: 4;
         margin-top: 14px;
         gap: 12px;
+        flex-wrap: wrap;
         align-items: center;
         color: var(--muted);
         font: 600 13px/1.5 var(--sans);
@@ -2806,14 +2818,21 @@
 
       .meta-growth:not([hidden]) {
         display: inline-flex;
+        flex-wrap: wrap;
         gap: 12px;
       }
 
       .meta-updated { white-space: nowrap; color: inherit; font-weight: 600; }
       .growth-period { white-space: nowrap; }
 
-      @media (max-width: 720px) {
-        .growth-period:last-child { display: none; }
+      .stars.is-momentum::before {
+        content: "";
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
+        align-self: center;
+        background: currentColor;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 12 6 7 10 9 14 3' fill='none' stroke='black' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
       }
 
       .plugin-actions {
@@ -3083,7 +3102,7 @@
             <p class="eyebrow dsh-home-eyebrow" data-site-label="page" lang="en">DSH-Eval · <span>Plugin discovery</span> · <span>Daily snapshot</span></p>
             <h1 class="dsh-home-title"><span>发现值得安装的</span><span>DSH 插件</span></h1>
             <p class="hero-description dsh-home-description" data-site-copy="lead">
-              用增长、活跃度、项目质量和安装证据筛选插件，
+              查看仓库关注度、近期增长和插件安装来源，
               从具体需求出发，而不只是追逐 Stars。收录不代表已通过能力评测。
             </p>
             <form class="hero-search" id="hero-search-form" role="search">
@@ -3125,15 +3144,15 @@
                 <span class="release-badge">正式版</span>
               </div>
               <dl class="release-grid">
-                <div><dt>插件版本</dt><dd>v1.3.8</dd></div>
+                <div><dt>插件版本</dt><dd>v1.3.9</dd></div>
                 <div><dt>指南使用 DSH</dt><dd>0.1.5-rc.2</dd></div>
                 <div><dt>安装来源</dt><dd>npm 软件包</dd></div>
               </dl>
               <div class="hero-command-row">
-                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8</code>
+                <code>npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.9</code>
                 <button
                   type="button"
-                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8"
+                  data-copy-command="npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.9"
                   data-analytics="install-command"
                 >复制安装命令</button>
               </div>
@@ -3151,7 +3170,7 @@
             <div>
               <p class="section-kicker" data-site-label="section" lang="en">Discover · Compare · Install</p>
               <h2>用证据比较，<br />不只看 Stars</h2>
-              <p class="ranking-explainer" data-site-copy="body">Top 100 是增长、活跃度、数据质量与总体关注度的综合热度榜；总榜才按 GitHub Stars 排序。</p>
+              <p class="ranking-explainer" data-site-copy="body">热度榜综合近7日增长与累计 Stars；新锐榜比较按规模修正的近3日增长。Stars 属于整个 GitHub 仓库，不代表具体插件的使用量。</p>
             </div>
             <div class="ranking-meta" aria-live="polite">
               <p id="ranking-meta-title">DEEPSEEK HARNESS PLUGINS · TOP 100</p>
@@ -3355,7 +3374,9 @@
         <div class="plugin-actions">
           <button class="plugin-action install-action" type="button" hidden>复制安装命令</button>
         </div>
-        <span class="stars" aria-label="GitHub Stars"></span>
+        <div class="score-cell">
+          <span class="stars" aria-label="GitHub Stars"></span>
+        </div>
       </article>
     </template>
     <p class="copy-feedback" id="copy-feedback" role="status" aria-live="polite" hidden></p>
@@ -3997,7 +4018,7 @@
           const publishedHotEntries = Array.isArray(hot.rankings) ? hot.rankings : [];
           hotEntries = makeEntries(publishedHotEntries);
           excludedHotEntryCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
-          if (hotEntries.length === 0) throw new Error("Top 100 榜单为空");
+
           updateAllCount();
           updateCategoryCounts();
           return;
@@ -4013,9 +4034,7 @@
         const publishedHotEntries = Array.isArray(data.rankings) ? data.rankings : [];
         hotEntries = makeEntries(publishedHotEntries);
         excludedHotEntryCount = Math.max(0, publishedHotEntries.length - hotEntries.length);
-        if (hotEntries.length === 0) {
-          throw new Error("兼容 Top 100 榜单为空");
-        }
+
         allCount.textContent = "";
         updateCategoryCounts();
       }
@@ -4034,7 +4053,7 @@
           const publishedRisingEntries = Array.isArray(payload.rankings) ? payload.rankings : [];
           risingEntries = makeEntries(publishedRisingEntries);
           excludedRisingEntryCount = Math.max(0, publishedRisingEntries.length - risingEntries.length);
-          if (risingEntries.length === 0) throw new Error("新锐榜为空");
+
           return;
         }
         if (view === "all" && (activeCategory ? categoryEntries.length === 0 : rankedEntries.length === 0)) {
@@ -4227,7 +4246,7 @@
         metricHead.textContent = currentView === "top100"
           ? "综合热度"
           : currentView === "rising"
-            ? "今日新增 Stars"
+            ? "新锐指数"
             : "GitHub Stars";
         const metaLabels = {
           top100: "DEEPSEEK HARNESS PLUGINS · TOP 100",
@@ -4406,28 +4425,34 @@
           githubLink.href = repositoryUrl;
           githubLink.dataset.plugin = plugin.fullName;
           githubLink.dataset.rank = String(displayRank);
-          githubLink.setAttribute("aria-label", `在 GitHub 打开 ${name}`);
+          githubLink.title = plugin.fullName;
+          githubLink.setAttribute("aria-label", `在 GitHub 打开 ${plugin.fullName}`);
           trustPill.textContent = capability.label;
           trustPill.dataset.level = presentation.trustLevel;
           trustPill.title = `${presentation.trustLabel}；${capability.reason}；不代表代码已经过安全审核`;
           typePill.textContent = presentation.formFactor;
           description.textContent = descriptionZh || "暂无中文简介，请查看项目 README。";
           const updatedAt = plugin.pushedAt || plugin.updatedAt;
-          const hasGrowth =
-            Object.prototype.hasOwnProperty.call(plugin, "dailyStars") ||
-            Object.prototype.hasOwnProperty.call(plugin, "weeklyStars");
           updated.hidden = !updatedAt;
           updated.textContent = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
-          updated.title = updatedAt ? `更新 · ${formatRelativeDate(updatedAt)}` : "";
+          updated.title = updated.textContent;
           updated.setAttribute("aria-label", updated.title);
+          const momentumView = !searchActive && currentView === "rising";
+          const hasThreeDay = Object.prototype.hasOwnProperty.call(plugin, "threeDayStars");
+          const periods = [
+            ["日增", plugin.dailyStars],
+            momentumView ? ["3日", plugin.threeDayStars] : ["周增", plugin.weeklyStars],
+          ];
+          const hasGrowth = hasThreeDay || Object.prototype.hasOwnProperty.call(plugin, "dailyStars")
+            || Object.prototype.hasOwnProperty.call(plugin, "weeklyStars");
           growth.hidden = !hasGrowth;
           growth.replaceChildren();
           if (hasGrowth) {
-            for (const [label, value] of [["日增", plugin.dailyStars], ["周增", plugin.weeklyStars]]) {
+            for (const [label, value] of periods) {
               const period = document.createElement("span");
               period.className = "growth-period";
-              period.textContent = `${label} +${formatStars(value)}`;
-              period.title = `${label} +${formatStars(value)}`;
+              period.textContent = `${label} ${typeof value === "number" ? (value >= 0 ? "+" : "") + formatStars(value) : "—"}`;
+              period.title = typeof value === "number" ? `${label} ${value} Stars` : `${label}数据不足`;
               period.setAttribute("aria-label", period.title);
               growth.appendChild(period);
             }
@@ -4447,20 +4472,22 @@
             quickInstall.setAttribute("aria-label", `复制 ${name} 的 DSH 安装命令`);
           }
           if (!searchActive && currentView === "top100") {
-            const heatText = new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(plugin.hotScore || 0);
+            const heatText = typeof plugin.hotScore === "number" ? new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(plugin.hotScore) : "—";
             stars.classList.add("is-heat");
-            stars.textContent = heatText;
+            stars.textContent = `${heatText}`;
+            stars.title = `综合热度 ${heatText}；所属仓库 Stars ${starText}`;
             stars.setAttribute(
               "aria-label",
               `综合热度 ${heatText}，当前 ${starText} GitHub Stars`
             );
           } else if (!searchActive && currentView === "rising") {
-            const rateText = formatStars(plugin.dailyStars);
-            stars.textContent = `↑ ${rateText}`;
-            stars.setAttribute(
-              "aria-label",
-              `今日新增 ${rateText} Stars，当前共 ${starText} Stars`
-            );
+            const hasMomentum = typeof plugin.risingScore === "number";
+            const metric = hasMomentum ? plugin.risingScore : plugin.dailyStars;
+            const rateText = typeof metric === "number" ? (hasMomentum ? metric.toFixed(2) : formatStars(metric)) : "—";
+            stars.classList.add("is-momentum");
+            stars.textContent = hasMomentum ? rateText : `日增 ${rateText}`;
+            stars.title = `${hasMomentum ? "新锐指数（0～100分）：按仓库规模修正的近3日增长" : "旧口径日增 Stars"}；所属仓库 Stars ${starText}`;
+            stars.setAttribute("aria-label", `${hasMomentum ? "新锐指数（0～100分），按规模修正的3日增长" : "旧口径日增"} ${rateText}，所属仓库 ${starText} Stars`);
           } else {
             stars.textContent = starText;
             stars.setAttribute("aria-label", `${starText} GitHub Stars`);
@@ -4477,7 +4504,7 @@
             ? `${categoryLabels[activeCategory]}分类暂时没有匹配的插件。`
             : searchActive
               ? `未找到匹配“${state.query.trim()}”的插件，请换一个关键词。`
-              : "当前榜单暂时没有插件。";
+              : "暂无满足增长观测和入榜条件的项目。新观测需积累3日或7日；可查看 Stars 总榜。";
           fragment.appendChild(status);
         }
 

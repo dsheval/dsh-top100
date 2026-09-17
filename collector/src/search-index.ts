@@ -2,7 +2,7 @@
 
 import type { RankingSearchEntry } from "@dsh-top100/schema";
 import type { RankingsDocument } from "./rankings.js";
-import { publishedDescriptionZh } from "./published-description.js";
+import { publishDescription, publishedDescriptionZh } from "./published-description.js";
 
 import { NPM_SPEC_RE, resolveCatalogInstallTarget } from "../../plugin/src/shared/install-source.js";
 
@@ -13,8 +13,8 @@ export function resolveSearchInstallTarget(
 }
 
 export interface LegacyRankingSearchEntry extends RankingSearchEntry {
-  dailyStars: number;
-  weeklyStars: number;
+  dailyStars: number | null;
+  weeklyStars: number | null;
   license: string | null;
   pushedAt: string;
   topics: string[];
@@ -33,6 +33,7 @@ export interface SearchIndexDocument {
 export function toSearchEntry(
   entry: RankingsDocument["rankings"]["total"][number]
 ): LegacyRankingSearchEntry {
+  entry = publishDescription(entry);
   return {
     rank: entry.rank,
     fullName: entry.fullName,
@@ -59,6 +60,7 @@ export function toSearchEntry(
 export function toSnapshotSearchEntry(
   entry: RankingsDocument["rankings"]["total"][number]
 ): RankingSearchEntry {
+  entry = publishDescription(entry);
   const installTarget = resolveSearchInstallTarget(entry);
   return {
     rank: entry.rank,

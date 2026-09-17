@@ -1,4 +1,3 @@
-/** Model-facing Top100 recommendation Skill and its read-only catalog search tool. */
 import type { Context } from "@deepseek-ai/cordis";
 import type { PluginCategoryId, RankingsDocument } from "../shared/types.js";
 import type { PluginResolvedConfig } from "./contracts.js";

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { bindModelBudget, canRequestModel, inspectModelRequest, loadApprovedModelBudget, modelRequestsEnabled,
-  requestModel, withDailyModelRequest, isDailyBoardRun, dailyBoardDescriptionsEnabled, dailyBoardSourceChecksEnabled, modelPolicyHealth, type ApprovedModelBudget } from "../src/model-requests.js";
+  requestModel, withDailyModelRequest, isDailySkillsRun, dailySkillsSourceChecksEnabled, isDailyBoardRun, dailyBoardDescriptionsEnabled, dailyBoardSourceChecksEnabled, modelPolicyHealth, type ApprovedModelBudget } from "../src/model-requests.js";
 import { BudgetLedger } from "../src/model-budget.js";
 import { buildTranslationRequest, buildClassificationRequest } from "../src/llm.js";
 
@@ -26,6 +26,21 @@ function configure() {
 }
 afterEach(() => { vi.restoreAllMocks();vi.unstubAllEnvs();for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 describe("daily requests share the existing money guard", () => {
+  it('Skills require their own private scheduled opt-in and expired prices allow only free checks', () => {
+    const { dir, config, now } = configure(); vi.stubEnv('DSH_DAILY_UPDATE', '1');
+    expect(isDailySkillsRun()).toBe(false); expect(dailySkillsSourceChecksEnabled()).toBe(false);
+    config.skillsDescriptions = 'skills-top100';
+    writeFileSync(join(dir, 'config.json'), JSON.stringify(config));
+    expect(isDailySkillsRun()).toBe(true); expect(isDailyBoardRun()).toBe(false);
+    expect(canRequestModel()).toBe(false);
+    vi.stubEnv('DSH_DAILY_UPDATE', '0'); expect(isDailySkillsRun()).toBe(false); expect(dailySkillsSourceChecksEnabled()).toBe(false);
+    vi.stubEnv('DSH_DAILY_UPDATE', '1'); config.price.validUntil = new Date(now - 100).toISOString();
+    writeFileSync(join(dir, 'config.json'), JSON.stringify(config));
+    expect(isDailySkillsRun()).toBe(false); expect(dailySkillsSourceChecksEnabled()).toBe(true);
+    writeFileSync(join(dir, 'config.json'), JSON.stringify({ ...config, skillsDescriptions: 'all-skills' }));
+    expect(dailySkillsSourceChecksEnabled()).toBe(false);
+  });
+
   it('monitors expired prices and permits free board source checks without authorizing paid work', () => {
     const { dir, config, now } = configure(); vi.stubEnv('DSH_DAILY_UPDATE', '1');
     config.boardDescriptions = 'hot-rising-top100';

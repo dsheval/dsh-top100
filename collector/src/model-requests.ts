@@ -23,6 +23,8 @@ export interface ApprovedModelBudget extends BudgetConfig {
   scope?: "daily-source-changes";
   /** Optional standing scope for missing descriptions in today's two Top100 lists. */
   boardDescriptions?: "hot-rising-top100";
+  /** Independent opt-in for verified missing Skills in today’s first 100. */
+  skillsDescriptions?: "skills-top100";
 }
 const dailyRequest = new AsyncLocalStorage<string>();
 
@@ -55,6 +57,22 @@ export function dailyBoardSourceChecksEnabled(): boolean {
   } catch { return false; }
 }
 
+/** The Skills backlog is independent of the plugin-board authorization. */
+export function isDailySkillsRun(): boolean {
+  try {
+    const config = loadApprovedModelBudget();
+    return process.env.DSH_DAILY_UPDATE === '1' && config.scope === 'daily-source-changes'
+      && config.skillsDescriptions === 'skills-top100';
+  } catch { return false; }
+}
+export function dailySkillsSourceChecksEnabled(): boolean {
+  try {
+    const config = readApprovedModelBudget();
+    return process.env.DSH_DAILY_UPDATE === '1' && config.scope === 'daily-source-changes'
+      && config.skillsDescriptions === 'skills-top100';
+  } catch { return false; }
+}
+
 /** Scheduler startup db:sync and auxiliary commands must not start board work. */
 export function isDailyBoardRun(): boolean {
   return process.env.DSH_DAILY_UPDATE === "1" && dailyBoardDescriptionsEnabled();
@@ -79,6 +97,7 @@ function readApprovedModelBudget(now?: number): ApprovedModelBudget {
     if (config.schemaVersion !== 1 || config.approval !== "approved" || config.protectionVersion !== "model-budget-v1") throw new Error();
     if (config.scope !== undefined && config.scope !== "daily-source-changes") throw new Error();
     if (config.boardDescriptions !== undefined && (config.scope !== "daily-source-changes" || config.boardDescriptions !== "hot-rising-top100")) throw new Error();
+    if (config.skillsDescriptions !== undefined && (config.scope !== "daily-source-changes" || config.skillsDescriptions !== "skills-top100")) throw new Error();
     validateBudgetConfig(config, now);
     if (now !== undefined) validateBudgetConfig(config, now + 45_000);
     return config;
@@ -92,7 +111,7 @@ export function loadApprovedModelBudget(now = Date.now()): ApprovedModelBudget {
 export function modelPolicyHealth() {
   const config = readApprovedModelBudget();
   return { model: config.model, dailyLimitCny: config.dailyLimitCny, monthlyLimitCny: config.monthlyLimitCny,
-    priceValidUntil: config.price.validUntil, scope: config.scope, boardDescriptions: config.boardDescriptions };
+    priceValidUntil: config.price.validUntil, scope: config.scope, boardDescriptions: config.boardDescriptions, skillsDescriptions: config.skillsDescriptions };
 }
 export function modelRequestsEnabled(): boolean {
   if (process.env.DSH_MODEL_REQUESTS_ENABLED !== "1" || !process.env.DEEPSEEK_API_KEY?.trim()) return false;

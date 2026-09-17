@@ -69,6 +69,8 @@ afterEach(async () => {
 describe("published descriptions across catalog refresh and persistent caches", () => {
   it.each([
     { label: "ordinary revision", text: "服务端新修订，插件安装包没有变化。", status: undefined },
+    { label: "approved stale revision", text: "上次已核实的旧简介。", status: { state: "stale", reviewedAt: "2026-09-16", reason: "来源核查中" } },
+    { label: "model stale revision", text: "旧模型生成简介仍保留。", status: { state: "stale", origin: "model", generatedAt: "2026-09-16", reason: "来源待核查" } },
     { label: "empty withdrawal", text: "", status: undefined },
     { label: "review required", text: "已撤回的旧中文不能恢复。", status: { state: "review-required", reason: "来源变化" } },
   ])("updates $label on the first request after the existing 30-minute interval", async ({ text, status }) => {
@@ -82,7 +84,8 @@ describe("published descriptions across catalog refresh and persistent caches", 
     clock.mockReturnValue(now + 30 * 60 * 1000 + 1);
     const current = await loadRankingView(BASE, "hot");
     expect(current.snapshotId).toBe(next.manifest.snapshotId);
-    expect(descriptionFor(current.rankings.hot[0])).toBe(status || !text ? PENDING_DESCRIPTION_ZH : text);
+    if (status?.state === "stale") expect(current.rankings.hot[0].descriptionStatus).toEqual(status);
+    expect(descriptionFor(current.rankings.hot[0])).toBe(status && status.state !== "stale" || !text ? PENDING_DESCRIPTION_ZH : text);
     expect(descriptionFor((await loadSearchRankings(BASE)).rankings.total[0])).toBe(descriptionFor(current.rankings.hot[0]));
     expect(fetchMock.mock.calls.map(([url]) => String(url))).not.toContain(`${BASE}/rankings.json`);
     invalidateCatalog();

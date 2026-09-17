@@ -868,32 +868,37 @@
         "fullName": "modusensus/dsh-mneme",
         "name": "dsh-mneme",
         "description": "Cross-session memory for DeepSeek Harness: SQLite + human-editable Markdown mirror, autoDream consolidation, six memory tools, and fully-offline semantic search (local embedding / rerank / clustering), 198 tests.",
-        "descriptionZh": "> Mneme（Μνήμη）源自希腊记忆女神 Mnemosyne。",
-        "readmeSummary": "dsh-mneme 🌏 简体中文 · English --- dsh-mneme 是 DeepSeek Harness (DSH) 的跨会话记忆插件。它不只「存得下」，更「管得好」：后台自动去重合并、矛盾先冻结等你裁决、全程可回放审计、默认全离线，还支持导出成人可读的 Markdown。 > Mneme（Μνήμη）源自希腊记忆女神 Mnemosyne。她掌管记忆与梦境——正如 autoDream 在后台默默巩固你的记忆库。 每次新开对话，AI 都像第一次认识你？ dsh-mneme 给 DeepSeek Harness 装上跨会话记忆。 你聊过的项目、提过的偏好、做过的决定，AI 都记得——即使关掉了窗口，下次打开还在。 > 但 dsh-mneme 的可信之处，恰恰在你看不见的后台。下面这些，才是它和「一个会存东西的插件」的本质区别。 - 🧾 可回放、可追责 — 每次自动整理都留一张「决策凭证」：…",
+        "descriptionZh": "中文简介待生成。",
+        "readmeSummary": "中文 | English（语义增强） > 给 DeepSeek Harness 的跨会话记忆插件：让 Agent 记住你、记住项目、自动整理记忆。Mneme（Μνήμη）——希腊记忆女神 Mnemosyne 之名，掌管记忆与梦境，正如 autoDream 在后台巩固记忆。 dsh-mneme 是一个 DeepSeek Harness (DSH) 插件，为 Agent 提供持久的跨会话记忆能力。它借鉴了 Claude 的 Dream 机制 与 cc-haha / Claude Code 的 autoDream 记忆巩固功能——不仅存储记忆，还会自动巩固（去重、合并、冲突裁决、摘要生成），让记忆库越用越精炼。完整溯源与致谢见文末「🙏 致谢」。 一句话：给 Agent 装上跨会话记忆——记住你、记住项目，并在后台自动整理，越用越懂你；…",
         "type": "cordis-plugin",
         "install": {
           "method": "pnpm-profile",
-          "packageName": "@modusensus/dsh-mneme",
-          "needsConfig": false,
           "discovery": {
             "status": "verified",
             "kind": "bundle",
-            "evidence": [
-              "has package.json",
-              "root package.json validated bundle declaration and entry"
-            ],
-            "checkedAt": "2026-09-15T22:01:58.029Z",
             "policyVersion": 6,
-            "sourceRevision": "2026-09-15T11:27:29Z",
+            "checkedAt": "2026-09-17T00:02:17.309Z",
+            "sourceRevision": "66bb4d2366438ffe6c0e22e2d7ad459ff59cb6c3",
+            "evidence": [
+              "reviewed dsh-mneme/ validated bundle declaration, package name and entry"
+            ],
             "readme": {
               "fullName": "modusensus/dsh-mneme",
               "packageName": "@modusensus/dsh-mneme",
-              "path": "README.md",
-              "sourceRevision": "2026-09-15T11:27:29Z",
-              "documentSha256": "56bbe54ac13b239a091bc5c93eb021aea771ac1e567fc43f2f0690d3820208c9",
-              "summarySha256": "def02ee0f55c02fae8e7cd367892d4e9b968ed02aa1986e963f8ceea684264b6"
+              "path": "dsh-mneme/README.md",
+              "sourceRevision": "66bb4d2366438ffe6c0e22e2d7ad459ff59cb6c3",
+              "documentSha256": "c85f7bbd9de2a77305cce4a49a7a3e3bdb858cbf132e9b24bfd87244f4ae6b3d",
+              "summarySha256": "4c3e317dca9695e5de8fc0d40a9c70d4c64170e15643580c1c4ce14b45d45c46"
             }
-          }
+          },
+          "repositoryPath": "dsh-mneme",
+          "packageName": "@modusensus/dsh-mneme",
+          "needsConfig": false,
+          "commands": [
+            "dsh plugin --profile web add @modusensus/dsh-mneme",
+            "git clone https://github.com/modusensus/dsh-mneme.git"
+          ],
+          "commandSource": "README"
         }
       },
       "boards": {
@@ -1051,23 +1056,46 @@
         "fullName": "elysia395/dsh-wallpaper-engine",
         "name": "dsh-wallpaper-engine",
         "description": "把本机 Wallpaper Engine 的壁纸变成 DSH 网页界面的背景：Video 动态播放、Web 以 iframe 加载、Scene 壁纸提取主纹理作为静态帧；iOS 液态玻璃设置窗口（配色 / 玻璃颜色 / 透明度）、内容分级与类型过滤、自定义壁纸上传、紧凑 CD 架布局、黑胶唱片展示、隐藏 / 恢复、倍速 / 翻转与自动轮播。感谢 Jerry 维护 macOS 版。",
-        "descriptionZh": "把本机动态壁纸用作 DSH 网页背景，支持视频、网页和场景静态纹理，并调整播放、透明度与壁纸轮播方式。",
+        "descriptionZh": "中文简介待生成。",
         "readmeSummary": "English | 中文 > 🆕 没用过命令行？先看这里：小白向使用指南（新手快速上手）→ —— 给完全没接触过命令行的用户准备的简化说明。 一个 DSH bundle，把你电脑上的 Wallpaper Engine 壁纸变成 DSH 网页界面（dsh web）的背景。 > ✅ 已优化：沉浸式全屏窗口偶尔全屏闪白（v0.6.4，保留完整毛玻璃） > 早期版本在桌面快捷方式打开的沉浸式全屏窗口（独立应用 / kiosk 窗口）里，点击对话或输入文字时可能整屏闪白一下——这是该窗口 + 硬件加速下，Chromium 合成器对壁纸重绘时偶发把整屏画白。 > v0.6.4 继续按「减少合成层」处理：仓库面板关闭时懒加载、拉绳无永久滤镜、壁纸媒体默认下不再强制一个变换合成层——同时完整保留毛玻璃；普通浏览器标签页完全不受影响，保持完整毛玻璃与硬件加速。 > 插件更新后会弹一次提示，告知此优化（每个新版本仅出现一次）。…",
         "type": "cordis-plugin",
         "install": {
           "method": "pnpm-profile",
-          "packageName": "dsh-plugin-wallpaper-engine",
-          "needsConfig": false,
           "discovery": {
             "status": "verified",
             "kind": "bundle",
-            "evidence": [
-              "has package.json",
-              "root package.json validated bundle declaration and entry"
-            ],
-            "checkedAt": "2026-09-11T22:02:08.221Z",
             "policyVersion": 6,
-            "sourceRevision": "2026-09-11T17:25:00Z"
+            "checkedAt": "2026-09-17T00:02:17.309Z",
+            "sourceRevision": "8a0d1d8b0a66de89342b8a7ea0de15d2644600e8",
+            "evidence": [
+              "reviewed ./ validated bundle declaration, package name and entry"
+            ],
+            "readme": {
+              "fullName": "elysia395/dsh-wallpaper-engine",
+              "packageName": "dsh-plugin-wallpaper-engine",
+              "path": "README.md",
+              "sourceRevision": "8a0d1d8b0a66de89342b8a7ea0de15d2644600e8",
+              "documentSha256": "b7559c9196196918e6d0061cd6eea188ad41f01f437aeda68c2892dd192e78f8",
+              "summarySha256": "d2de4c39a13924d18bf060c1b930e688abf2154d41bd8cd99ae5f99ea6a7c549"
+            }
+          },
+          "packageName": "dsh-plugin-wallpaper-engine",
+          "needsConfig": false,
+          "commands": [
+            "dsh plugin --profile web add dsh-plugin-wallpaper-engine",
+            "dsh plugin --profile web add dsh-plugin-wallpaper-engine-mac",
+            "dsh plugin --profile web add dsh-better-sidebar@latest",
+            "dsh plugin --profile web add github:elysia395/dsh-wallpaper-engine",
+            "git clone https://github.com/elysia395/dsh-wallpaper-engine.git"
+          ],
+          "commandSource": "README",
+          "assessment": {
+            "sourceKey": "[\"elysia395/dsh-wallpaper-engine\",\"dsh-plugin-wallpaper-engine\",\"dsh-plugin-wallpaper-engine\",null]",
+            "checkedAt": "2026-09-10T07:34:03.476Z",
+            "status": "verified",
+            "resolvedTarget": "dsh-plugin-wallpaper-engine@0.7.1",
+            "integrity": "sha512-tBUbSuT9IxX82iJKJiu24S/xX5o8H3eoTzUyuHzTwisVYm8rzylkCfwrI9WjJb1B2XtcLUtY48dufZVYez52MQ==",
+            "reason": "已核对清单元数据中的来源身份、Bundle 声明及精确版本；尚未验证发布归档、安装、宿主兼容或业务功能。"
           }
         }
       },
@@ -1075,7 +1103,7 @@
         "hot": 92,
         "rising": 81
       },
-      "expected": "将本机 Wallpaper Engine 壁纸用作 DSH 网页背景，支持视频、网页和场景渲染，并可调整播放与外观。"
+      "expected": "将本机 Wallpaper Engine 壁纸用作 DSH 网页背景，播放视频、加载网页，并将场景壁纸主纹理显示为静态图，支持调整播放与外观。"
     },
     {
       "source": {
@@ -1404,19 +1432,17 @@
         "fullName": "WestFox-AwA/dsh-prompt-optimizer",
         "name": "dsh-prompt-optimizer",
         "description": "",
-        "descriptionZh": "配对 9 胜 / 0 负 / 1 平，同格噪声平均极差 0.83 分/18（最大 4）。",
-        "readmeSummary": "> 最新实测（v0.3.1-beta.1 · 同口径 n=2）：命令侧 10 道复杂题/满分 180 → 169 分（93.9%），发布版对照 127 分（70.8%）、无优化 4 分（2.2%）；配对 9 胜 / 0 负 / 1 平，同格噪声平均极差 0.83 分/18（最大 4）。简单任务回归：复杂包泄漏 0/4、命令长度 0.39×（比发布版更短）、越权索取流程 0/4。评分卡为 0~3 四档细分、确定性判分（不额外消耗 LLM 调用）。 > 版本能力汇总（0.3.1 → 0.3.8）：命令侧（10 题/满分 180，n=2）0.3.1 = 169（93.9%，配对 9-0-1），0.3.3~0.3.4 = 165（91.9%，噪声内）；发布版对照 125（69.2%）。产物级 0~3 分档（三题各 4~6 份）：V3 17/45 = 37.8%（分布 8/2/0/5）· 发布版 0/45 = 0%。仍未解决：…",
+        "descriptionZh": "中文简介待生成。",
+        "readmeSummary": "> ## ⚠️ 请务必注意：本插件针对 PTC 模式 进行优化 > > 建议在 PTC 模式下使用本插件；否则可能无法实现明显的效果提升，不排除在其他模式下出现倒退的可能性。 > ### 0.4 与 0.1 的区别（一页看懂） > > 0.1 = 改写器：把用户的话改通顺（病句、错别字、标点、指代），输出仍是那句话的润色版——它不补内容，用户没写到的部分，下游 AI 照样不知道。 > > 0.4 = 需求补全器：用户通常只说一句（10–200 字），它把这句话补成一份完整、具体的要求说明——对象落到具体文件/界面/模块、结果是什么样子、在哪些使用情形下要成立（双击打开/离线/窄窗口/换语言主题）、边界怎么处理、范围到哪里。 > 不写流程、不写步骤、不写验收清单、不写验证纪律、不写禁止事项——这些是下游 AI 自己的能力；写进去只会占它的注意力预算、收束它的解法空间。 > > 实测（同一句 20 字请求）：…",
         "type": "cordis-plugin",
         "install": {
           "method": "pnpm-profile",
-          "packageName": "@dsh-external/dsh-prompt-optimizer",
-          "needsConfig": false,
           "discovery": {
             "status": "verified",
             "kind": "bundle",
             "policyVersion": 6,
-            "checkedAt": "2026-09-15T22:29:22.203Z",
-            "sourceRevision": "fb929d829f74eeef000c600ace1f3d460288378e",
+            "checkedAt": "2026-09-17T00:02:17.309Z",
+            "sourceRevision": "ac6c5665520904b99286e491d3fa5e35e06ccb6d",
             "evidence": [
               "reviewed ./ validated bundle declaration, package name and entry"
             ],
@@ -1424,22 +1450,29 @@
               "fullName": "westfox-awa/dsh-prompt-optimizer",
               "packageName": "@dsh-external/dsh-prompt-optimizer",
               "path": "README.md",
-              "sourceRevision": "fb929d829f74eeef000c600ace1f3d460288378e",
-              "documentSha256": "9f37aef9b56d010e1fb15658278fc666cb90d71a4c2d3afebbe34c88f8c3f923",
-              "summarySha256": "3172e1b1b2dc584699680d418fd5adaf3e74ee79da28a957c7d9714dedeb83a0"
+              "sourceRevision": "ac6c5665520904b99286e491d3fa5e35e06ccb6d",
+              "documentSha256": "325c6c10ff5aa80720f8a4ac902e0be51d055eb22dfbdd1e55597aeda2532f77",
+              "summarySha256": "292c38dcd45626b046d81dd8bc53f7be34f5b6749a8f6db3d034cd4c71842be2"
             }
-          }
+          },
+          "packageName": "@dsh-external/dsh-prompt-optimizer",
+          "needsConfig": false,
+          "commands": [
+            "dsh plugin --profile web add ./dsh-external-dsh-prompt-optimizer-0.4.3-beta.1.tgz"
+          ],
+          "commandSource": "README"
         }
       },
       "boards": {
         "rising": 87
       },
-      "expected": "在 DSH Web 中调用独立模型优化待发送提示词，可调整优化强度；面向 PTC 模式，优化会增加模型调用。"
+      "expected": "在 DSH Web 中调用模型补全待发送请求的对象、结果和边界，可调整优化档位；面向 PTC 模式，默认沿用会话模型，也可另选，优化会增加模型调用。"
     }
   ],
   "helmSourceFiles": {
     "packages/bootstrap/package.json": "{\n  \"name\": \"@helm-d/bootstrap\",\n  \"version\": \"0.1.2\",\n  \"type\": \"module\",\n  \"main\": \"dist/index.js\",\n  \"files\": [\n    \"dist\",\n    \"cordis.patch.yml\"\n  ],\n  \"scripts\": {\n    \"build\": \"tsc -p tsconfig.json\",\n    \"prepare\": \"tsc -p tsconfig.json\"\n  },\n  \"dsh\": {\n    \"bundle\": {\n      \"patch\": \"./cordis.patch.yml\"\n    }\n  },\n  \"peerDependencies\": {\n    \"@deepseek-ai/cordis\": \"^4.0.2\"\n  },\n  \"devDependencies\": {\n    \"@deepseek-ai/cordis\": \"^4.0.2\"\n  },\n  \"engines\": {\n    \"node\": \">=22.19.0\"\n  }\n}\n",
     "packages/bootstrap/cordis.patch.yml": "- insert:\n    - id: helmd-tool-bootstrap\n      name: '@helm-d/bootstrap'\n      config:\n        shellTools: [bash, pwsh]\n        commonTools: [read]\n        promoteOn: either",
     "packages/bootstrap/src/index.ts": "import type { Context } from '@deepseek-ai/cordis'\n\nexport const name = 'helmd-tool-bootstrap'\n\n/** Prompt assembly must exist before this request filter can register. */\nexport const inject = ['systemPrompt']\n\ntype PromoteMode = 'tool-call' | 'assistant-message' | 'either'\n\ninterface BootstrapConfig {\n  shellTools?: string[]\n  commonTools?: string[]\n  promoteOn?: PromoteMode\n}\n\nconst PROMOTE_EVENTS: Record<PromoteMode, string[]> = {\n  'tool-call': ['tool/call'],\n  'assistant-message': ['assistant/message'],\n  either: ['tool/call', 'assistant/message'],\n}\n\nfunction stringList(value: unknown, field: string): string[] {\n  if (\n    !Array.isArray(value)\n    || value.length === 0\n    || value.some((item) => typeof item !== 'string' || item.length === 0)\n  ) {\n    throw new TypeError(`${name}: ${field} must be a non-empty array of non-empty strings`)\n  }\n  return [...new Set(value as string[])]\n}\n\nfunction parsePromoteOn(value: unknown): string[] {\n  if (value === undefined || value === 'either') return PROMOTE_EVENTS.either\n  if (value === 'tool-call' || value === 'assistant-message') return PROMOTE_EVENTS[value]\n  throw new TypeError(`${name}: promoteOn must be one of \"tool-call\", \"assistant-message\", \"either\"; got ${JSON.stringify(value)}`)\n}\n\nexport function apply(ctx: Context, config: BootstrapConfig = {}): void {\n  const commonTools = stringList(config.commonTools, 'commonTools')\n  const shellTools = stringList(config.shellTools, 'shellTools')\n  const promoteEvents = parsePromoteOn(config.promoteOn)\n\n  const promoted = new Set<string>()\n  let warned = false\n  const warnOnce = (message: string): void => {\n    if (warned) return\n    warned = true\n    try {\n      ;(ctx as any).logger?.warn(message)\n    } catch {\n      // Logger unavailable — the guard exists only to avoid spamming.\n    }\n  }\n\n  const isPromoted = (agent: any): boolean => {\n    if (agent === undefined || agent === null) return true\n    const session = agent.session\n    if (session === undefined || session === null) return true\n    // Subagents keep their full catalog from their very first request.\n    if ((session.header?.delegationDepth ?? 0) > 0) return true\n    if (promoted.has(session.id)) return true\n    const hit = Array.isArray(session.events)\n      && session.events.some((event: any) => promoteEvents.includes(event.type))\n    if (hit) promoted.add(session.id)\n    return hit\n  }\n\n  const applyBootstrap = (assembled: any): any => {\n    const available = new Set((assembled.tools ?? []).map((tool: any) => tool.name))\n    const selectedShells = shellTools.filter((toolName) => available.has(toolName))\n    const missingCommon = commonTools.filter((toolName) => !available.has(toolName))\n    if (selectedShells.length !== 1 || missingCommon.length > 0) {\n      warnOnce(\n        `${name}: expected exactly one bootstrap shell and every common tool; `\n        + `shells=${JSON.stringify(selectedShells)}, missing=${JSON.stringify(missingCommon)} — `\n        + 'bootstrap disabled, full catalog exposed',\n      )\n      return assembled\n    }\n    const bootstrap = new Set([...selectedShells, ...commonTools])\n    return {\n      ...assembled,\n      tools: (assembled.tools ?? []).filter((tool: any) => bootstrap.has(tool.name)),\n    }\n  }\n\n  ;(ctx as any).on('system-prompt/assemble', async (_assembly: any, context: any, next: any) => {\n    // Downstream errors propagate untouched; only this filter's own logic is guarded.\n    const assembled = await next()\n    try {\n      if (isPromoted(context?.agent)) return assembled\n      return applyBootstrap(assembled)\n    } catch (error) {\n      const message = String((error as any)?.message ?? error)\n      warnOnce(`${name}: bootstrap filter failed, exposing the full catalog: ${message}`)\n      return assembled\n    }\n  })\n}\n"
-  }
+  },
+  "amendment": "2026-09-17: Mneme selected package moved to dsh-mneme/; corrected Wallpaper Engine static scene support and Prompt Optimizer model wording against pinned sources."
 }

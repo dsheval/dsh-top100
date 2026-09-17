@@ -319,7 +319,7 @@ describe("daily description cache migration and identity", () => {
     const worker = vi.fn(async () => summary);
     expect(await runDailyDescriptions([reused, fresh], plan, { limit: 10, concurrency: 2, worker, now: () => now })).toEqual({ attempted: 1, completed: 1, failed: 0 });
     updateDailyDescriptionCache([reused, fresh], cache, plan.jobs);
-    expect(cache.get(fresh.id)).toEqual({ descriptionZh: summary.descriptionZh, tagsZh: summary.tagsZh, sourceHash: descriptionSourceHash(fresh), summaryKey: fresh.readmeSummary, origin: 'model' });
+    expect(cache.get(fresh.id)).toMatchObject({ descriptionZh: summary.descriptionZh, tagsZh: summary.tagsZh, sourceHash: descriptionSourceHash(fresh), summaryKey: fresh.readmeSummary, origin: 'model' });
     const absent = source(3);
     cache.set(absent.id, { descriptionZh: older, tagsZh: [] });
     updateDailyDescriptionCache([absent], cache);

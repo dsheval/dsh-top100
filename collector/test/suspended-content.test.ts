@@ -67,7 +67,11 @@ describe('withdrawn source-bound content', () => {
     const config = JSON.parse(readFileSync(resolve('../config/ranking.json'), 'utf8'));
     writeFileSync(configPath, JSON.stringify({ ...config, excludedRepositories: {} }));
     try {
-      importMarketData(db, { schemaVersion: 2, generatedAt: '2026-09-10T00:00:00Z', plugins: [source] });
+      for (const date of ['2026-09-03', '2026-09-07', '2026-09-10']) {
+        source.starsObservedAt = `${date}T00:00:00Z`;
+        if (date.endsWith('10')) source.stars += 5;
+        importMarketData(db, { schemaVersion: 2, generatedAt: source.starsObservedAt, plugins: [source] }, { snapshotDate: date });
+      }
       const excluded = buildRankings(db, '2026-09-10', resolve('../config/ranking.json'));
       for (const list of Object.values(excluded.rankings)) expect(list).toEqual([]);
       // Withdrawal must also remain effective independently of ranking exclusion.

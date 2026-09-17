@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="https://www.dsheval.ai/top100/"><img alt="在线体验" src="https://img.shields.io/badge/在线体验-Visit-5865f2?style=flat-square"></a>
-  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.8"><img alt="正式版本 v1.3.8" src="https://img.shields.io/badge/release-v1.3.8-2f6f68?style=flat-square"></a>
+  <a href="https://github.com/dsheval/dsh-top100/releases/tag/v1.3.9"><img alt="正式版本 v1.3.9" src="https://img.shields.io/badge/release-v1.3.9-2f6f68?style=flat-square"></a>
   <a href="https://www.npmjs.com/package/@dsheval/dsh-top100-plugin"><img alt="npm latest" src="https://img.shields.io/npm/v/%40dsheval%2Fdsh-top100-plugin?style=flat-square&label=npm&color=cb3837"></a>
   <a href="https://www.dsheval.ai/top100/?page=dsh#dsh"><img alt="安装 dsh-top100" src="https://img.shields.io/badge/安装指南-接入_DSH-f2b84b?style=flat-square"></a>
   <a href="./CONTRIBUTING.md"><img alt="参与贡献" src="https://img.shields.io/badge/Contribute-参与贡献-555?style=flat-square&logo=github"></a>
@@ -72,7 +72,7 @@ Top100 是 [DSH-Eval](https://www.dsheval.ai/) 旗下的插件与 Skills 发现�
 建议使用 **Node.js 24 LTS** 和 **DSH Web 0.1.5-rc.2**。本版保留已有旧宿主兼容范围，实际验证与限制见[兼容说明](./docs/release-1.3.5.md)。普通 npm/npx 用户请在 DSH 源码目录外，依次运行：
 
 ```sh
-npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.8
+npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add @dsheval/dsh-top100-plugin@1.3.9
 npx @deepseek-ai/dsh@0.1.5-rc.2 web
 ```
 
@@ -83,7 +83,7 @@ npx @deepseek-ai/dsh@0.1.5-rc.2 web
 
 ```yaml
 minimumReleaseAgeExclude:
-  - '@dsheval/dsh-top100-plugin@1.3.8'
+  - '@dsheval/dsh-top100-plugin@1.3.9'
 ```
 
 默认文件位于用户主目录下的 `.dsh/profiles/web/pnpm-workspace.yaml`；设置了 `DSH_HOME` 时使用该目录下的 `profiles/web/pnpm-workspace.yaml`。首次安装命令会准备 Profile；尚未创建 Profile 时，可先运行 `npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web list`。若 Profile 已存在但缺少 `pnpm-workspace.yaml`，请在该 Profile 目录中创建此文件，再加入上述配置。全局或源码用户需沿用各自的命令前缀。
@@ -91,7 +91,7 @@ minimumReleaseAgeExclude:
 保存后，用同一种方式重新安装：
 
 ```sh
-npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.8
+npx @deepseek-ai/dsh@0.1.5-rc.2 plugin --profile web add -w @dsheval/dsh-top100-plugin@1.3.9
 ```
 
 该例外只放行这个版本，其他依赖仍遵守原等待期；如果报错指向其他包，应单独核对该包。后续升级须使用新版安装指引，不要沿用旧版本例外。
@@ -110,14 +110,14 @@ dsh-top100 是 DeepSeek Harness 公开插件生态的发现、验证和趋势索
 
 | 榜单 | 信号 | 用途 |
 | --- | --- | --- |
-| **Top 100** | 日增、周增、增长率、活跃度、数据质量和总 Stars 的综合评分 | 发现当前最值得关注的 100 个 Plugin 仓库 |
-| **新锐榜** | 当前 Stars 减去上一份每日快照 | 发现今日增长最快的 100 个 Plugin 仓库 |
+| **Top 100** | 60%平滑近7日增长＋40%平滑累计 Stars | 查看近期持续受关注的 Plugin 仓库，最多100项 |
+| **新锐榜** | 近3日净增长，按原有仓库规模修正 | 兼顾中小项目的近期涨势，最多100项 |
 | **Stars 总榜** | 当前 GitHub Stars 总数 | 浏览全部活跃、已验证 Plugin |
 | **Skills 技能库** | 独立目录，默认按 Stars 稳定浏览 | 发现可复用的 Agent Skills；不产生 Plugin 名次 |
 
-Agent 增强、外观、编程、知识、工具和安全是目录筛选条件，不是第四张榜。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类；分类可以叠加在综合热度、新锐或 Stars 排序之上。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
+Agent 增强、外观、编程、知识、工具和安全是目录筛选条件，不是第四张榜。DeepSeek 依据 README 为每个仓库选择 1 个主分类，并增加 1–2 个有明确依据的相关分类；分类可以叠加在综合热度、涨势或 Stars 排序之上。分类结果在后端生成并保存到 SQLite，公开 JSON 同步携带分类、置信度和简短依据。模型不可用时使用可追踪的规则回退，后续任务会继续补齐智能分类。
 
-新锐榜中的负增长按 `0` 处理。新部署在生成第二份每日快照后即可得到有效日增排名。
+两榜使用所属 GitHub 仓库 Stars，不代表具体插件的使用量或质量。增长展示保留负数，未知显示数据不足。旧历史不补造成功观测时间；过渡期可使用截止日期内的历史快照，来源与估算限制统一在排名方法说明，准确观测优先，超过固定窗口后不再回退。数据不足允许短榜或空榜。
 
 ## 02 · 如何尽可能完整地发现仓库
 
@@ -148,20 +148,12 @@ Topic 和关键词只负责召回，不直接证明兼容性。只有通过 DSH/
 
 Top 100 使用 100 分加权模型。榜单按综合热度分排序，同时保留真实 GitHub Stars 和增长数据供比较；Stars 总榜则按 GitHub Stars 总数排序。
 
-| 指标 | 权重 | 计算依据 |
-| --- | ---: | --- |
-| 当日 Stars 增长 | 35% | 当前 Stars 与上一份每日快照之差 |
-| 7 日 Stars 增长 | 25% | 当前 Stars 与七日前最近快照之差 |
-| 7 日增长率 | 15% | 7 日增长 ÷ 七日前 Stars；达到 30% 得满分 |
-| 近期活跃度 | 10% | 按最近推送时间指数衰减，半衰期 60 天 |
-| 数据质量 | 10% | 中文简介、README、许可证与来源证据完整度 |
-| Stars 总热度 | 5% | 当前 GitHub Stars 总数 |
+热度榜：`60 × √G7/(√G7+√20) + 40 × √S/(√S+√100)`，至少10星且有有效7日观测。
 
-```text
-TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5
-```
+新锐榜（近期涨势）：原始得分 `R=G3 / √(B3+50)`，新锐指数 `100×√R/(√R+√5)`（0～100分，按未换算原始值排序），至少3日净增3星且有有效3日观测。
 
-Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其他项目的分数差异。综合分相同时，依次比较今日新增 Stars、当前 Stars 和仓库全名。
+S 为当前仓库 Stars，B3 为3日前 Stars，G3/G7 为对应窗口的非负净增。资料完整度、中文简介和提交频率不加分。
+实际观测间隔与目标窗口相差不超过6小时，缺日或刷新失败不能制造日增。完整口径与过渡规则见 [排行规则](docs/ranking.md)。
 
 ## 05 · 数据、更新与可靠性
 
@@ -201,7 +193,7 @@ Stars 增长和总热度使用对数归一化，避免超大型仓库压缩其�
 - **类型**：DeepSeek Harness plugin directory and ranking index
 - **覆盖对象**：DSH plugins、DSH Skills、Cordis integrations、agent tools
 - **更新频率**：每日增量、每周完整发现
-- **主要信号**：GitHub Stars 增长、活跃度、数据质量和验证证据
+- **主要信号**：仓库累计 Stars 与有效窗口增长；来源验证独立展示
 - **数据输出**：公开 JSON
 - **许可证**：MIT
 

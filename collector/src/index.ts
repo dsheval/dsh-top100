@@ -1,3 +1,4 @@
+import { hasSkillSourceEvidence, restoreKnownSkillSource } from './skills-source-refresh.js';
 import { selectedReadmeEvidence } from "./readme-evidence.js";
 import { reviewedReadmeSource, summarizeSelectedReadme } from "./reviewed-summary.js";
 import { reviewedFunctionEvidence } from "./reviewed-evidence.js";
@@ -5,7 +6,7 @@ import { reviewFunctionChanges } from './source-change-review.js';
 import { applyFunctionEvidenceCheck } from "./reviewed-evidence-state.js";
 import { DEFAULT_MODEL, DEFAULT_MODEL_CONCURRENCY, DEFAULT_MODEL_MAX_TOKENS } from "./model-defaults.js";
 import { refreshCachedInstallEvidence } from "./install-cache.js";
-import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest, isDailyBoardRun } from "./model-requests.js";
+import { modelRequestsEnabled, dailySourceChangesOnly, withDailyModelRequest, isDailyBoardRun, isDailySkillsRun } from "./model-requests.js";
 import { bindDailySourceJob } from "./daily-model-scope.js";
 /**
  * collector 主流程（v2：并发 + 缓存）
@@ -408,6 +409,7 @@ async function main() {
         repo: repo!.name,
         fullName: repo!.full_name,
         stars: repo!.stargazers_count,
+        starsObservedAt: repo!.starsObservedAt,
         forks: repo!.forks_count,
         openIssues: repo!.open_issues_count,
         language: repo!.language,
@@ -560,6 +562,7 @@ async function main() {
           owner: owner ?? prev.owner,
           repo: repoName ?? prev.repo,
           stars: update?.stars ?? prev.stars,
+          starsObservedAt: update ? update.starsObservedAt : prev.starsObservedAt,
           forks: update?.forks ?? prev.forks,
           openIssues: update?.openIssues ?? prev.openIssues,
           pushedAt: update?.pushedAt ?? prev.pushedAt,
@@ -592,6 +595,22 @@ async function main() {
     }, (path, baseline) => fetchRawFile(item.plugin.fullName, path, baseline));
     if (check.sourceReview && refPromise) check.sourceReview.sourceRevision = await refPromise;
     item.plugin = applyFunctionEvidenceCheck(item.plugin, prevPlugins.get(item.plugin.fullName.toLowerCase()), check);
+  }
+  // Preserve selected Skill evidence across the collector's legacy mixed-summary cache.
+  // This only revisits already-proven identities, never enrolls unreviewed catalog rows.
+  for (const item of detected) {
+    const previous = prevPlugins.get(item.plugin.fullName.toLowerCase());
+    if (!previous || !hasSkillSourceEvidence(previous) || item.plugin.type !== 'skill') continue;
+    const path = previous.install.discovery!.skill!.path;
+    try {
+      const document = await loadSelectedSkill(item.plugin.fullName, path, item.repo.pushed_at, item.repo.default_branch);
+      if (document !== null) restoreKnownSkillSource(item.plugin, previous, path, document);
+      else item.plugin.install.discovery = { ...item.plugin.install.discovery!, status: 'review-required',
+        skill: { ...previous.install.discovery!.skill! } };
+    } catch {
+      item.plugin.install.discovery = { ...item.plugin.install.discovery!, status: 'review-required',
+        skill: { ...previous.install.discovery!.skill! } };
+    }
   }
   // The historical fallback path also passes the targeted stale-command guard.
   for (const { plugin, readmeContent } of detected) {
@@ -670,7 +689,7 @@ async function main() {
   if (!Number.isInteger(summaryConcurrency) || summaryConcurrency < 1 || summaryConcurrency > 10) throw new Error("DEEPSEEK_SUMMARY_CONCURRENCY must be an integer from 1 to 10");
   const knownTags = [...new Set(detected.flatMap(d => d.plugin.tags.filter(t => /[\u4e00-\u9fff]/.test(t))))].slice(0, 40);
   const summaryResult = await runDailyDescriptions(detected.map(d => d.plugin), { jobs, ready }, {
-    limit: modelsEnabled && !isDailyBoardRun() ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
+    limit: modelsEnabled && !isDailyBoardRun() && !isDailySkillsRun() ? summaryBatchSize : 0, concurrency: summaryConcurrency, onProgress: saveDescriptionJobs,
     worker: p => {
       const input = { name: p.fullName, type: p.type, packageName: p.install?.packageName, repositoryPath: p.install?.repositoryPath,
         description: p.description, readmeSummary: p.readmeSummary, topics: p.topics, knownTags };
@@ -683,7 +702,7 @@ async function main() {
   saveZhCache(zhCache);
   saveDescriptionJobs();
   console.log(`  summaries: ${summaryResult.attempted} attempted, ${ready.length - summaryResult.attempted} deferred; retry state saved`);
-  if (isDailyBoardRun()) console.log("  中文生成移至当天榜单计算之后，先处理热榜和涨榜前 100，再处理其他日常任务");
+  if (isDailyBoardRun() || isDailySkillsRun()) console.log("  中文生成移至当天榜单计算之后，先处理热榜和涨榜前 100，再处理其他日常任务");
 
   console.log("[3.6/5] 标签归一化（合并同义词 + 移除宽泛标签）...");
   if (modelsEnabled && !dailyScope) {

@@ -125,6 +125,16 @@ describe("DSH plugin recommendations", () => {
     });
   });
 
+  it('keeps the stale qualification in recommendation text and model-readable output', () => {
+    const row = entry('acme/vision-reader', { descriptionZh: '识别图片并提取 OCR 文本',
+      descriptionStatus: { state: 'stale', reviewedAt: '2026-09-16', reason: '来源核查中' } });
+    const result = recommendationResult({ ...document, rankings: { hot: [], rising: [], total: [row] } }, { query: 'ocr' });
+    expect(result.items[0].description).toContain('上次核验 2026-09-16');
+    expect(result.items[0].description).toContain('简介待更新');
+    expect(result.items[0].description).toContain(row.descriptionZh);
+    expect(formatRecommendationResult(result)).toContain('上次核验 2026-09-16');
+  });
+
   it("validates input bounds and renders a model-readable result", () => {
     expect(() => recommendationResult(document, { query: "  " })).toThrow(/non-empty/);
     expect(() => recommendationResult(document, { query: "ocr", limit: 11 })).toThrow(/between 1 and 10/);

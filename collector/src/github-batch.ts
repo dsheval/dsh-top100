@@ -6,6 +6,7 @@ export interface RepositoryRefresh {
   requestedFullName: string;
   fullName: string;
   stars: number;
+  starsObservedAt: string;
   forks: number;
   openIssues: number;
   pushedAt: string;
@@ -88,15 +89,21 @@ export async function fetchRepositoryUpdates(
       .map(({ alias, fullName }) => repositoryField(alias, fullName))
       .join("\n")}\n}`;
     const response = await request(query);
+    const observedAt = new Date().toISOString();
     for (const { alias, fullName } of aliases) {
       const repository = response.data?.[alias];
       if (!repository) continue;
+      const incomplete = !Number.isSafeInteger(repository.stargazerCount) || repository.stargazerCount < 0
+        || response.errors?.some(error => !error.path?.length || error.path[0] === alias);
+      // Definitive exclusion signals must survive a partial metrics response.
+      if (incomplete && !repository.isPrivate && !repository.isArchived && !repository.isFork) continue;
       updates.set(fullName.toLowerCase(), {
         requestedFullName: fullName,
         fullName: repository.nameWithOwner,
-        stars: repository.stargazerCount,
+        stars: Number.isSafeInteger(repository.stargazerCount) ? repository.stargazerCount : 0,
+        starsObservedAt: incomplete ? "" : observedAt,
         forks: repository.forkCount,
-        openIssues: repository.issues.totalCount,
+        openIssues: repository.issues?.totalCount ?? 0,
         pushedAt: repository.pushedAt ?? repository.updatedAt,
         updatedAt: repository.updatedAt,
         archived: repository.isArchived,

@@ -1,3 +1,4 @@
+import { descriptionDisplayFor } from '../shared/description-rules.js';
 /** Model-facing Top100 recommendation Skill and its read-only catalog search tool. */
 
 import { readFile } from "node:fs/promises";
@@ -138,7 +139,7 @@ export function recommendationResult(
       fullName: item.fullName,
       name: item.name,
       type: item.type,
-      description: item.descriptionZh,
+      description: descriptionDisplayFor(item),
       stars: item.stars,
       ...(item.dailyStars == null ? {} : { dailyStars: item.dailyStars }),
       ...(item.weeklyStars == null ? {} : { weeklyStars: item.weeklyStars }),

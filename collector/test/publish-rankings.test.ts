@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -300,5 +300,30 @@ describe("v2 ranking publication", () => {
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
+  });
+
+  it('streams exactly the same bytes as the in-memory publication across pages and categories', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'dsh-stream-publication-'));
+    try {
+      const rankings = rankingsDocument(205, true);
+      rankings.directories.skills = [{ ...rankingEntry(999), rank: 1, type: 'skill' }];
+      const expected = buildRankingPublication(rankings);
+      expect(publishRankings(rankings, directory)).toEqual(expected.manifest);
+      for (const file of expected.files) {
+        expect(readFileSync(join(directory, 'snapshots', expected.manifest.snapshotId, file.relativePath), 'utf8')).toBe(file.content);
+      }
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  it('preserves the published manifest and removes staging files when on-disk rank validation fails', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'dsh-stream-reject-'));
+    try {
+      const previous = publishRankings(rankingsDocument(2), directory);
+      const invalid = rankingsDocument(205);
+      invalid.rankings.hot[1].rank = 99;
+      expect(() => publishRankings(invalid, directory)).toThrow(/rank is not continuous/);
+      expect(JSON.parse(readFileSync(join(directory, 'manifest.json'), 'utf8'))).toEqual(previous);
+      expect(readdirSync(join(directory, 'snapshots'))).toEqual([previous.snapshotId]);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 });

@@ -614,7 +614,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
           const rankingMetric = catalogScope === "plugins" && !query && view === "hot"
             ? { label: t("hotScore"), value: scoreLabel(item.hotScore) }
             : catalogScope === "plugins" && !query && view === "rising"
-              ? { label: t("daily"), value: deltaLabel(item.dailyStars) }
+              ? { label: t(item.risingScore == null ? "daily" : "risingScore"), value: item.risingScore == null ? deltaLabel(item.dailyStars) : scoreLabel(item.risingScore) }
               : null;
           return (
             <article
@@ -647,8 +647,10 @@ export function RankingsPage({ t }: RankingsPageProps) {
               </div>
               <div className="card-footer">
                 <div className="facts">
-                  <span className="star-fact">★ {item.stars}</span>
+                  <span className="star-fact" title={`${t("repositoryStars")} · ${item.fullName}`}>★ {item.stars}</span>
+                  <span title={t("repositoryStars")}>{item.fullName}</span>
                   <span>{t("weekly")} {deltaLabel(item.weeklyStars)}</span>
+                  {item.threeDayStars != null ? <span>{t("threeDay")} {deltaLabel(item.threeDayStars)}</span> : null}
                   {rankingMetric ? (
                     <span className="ranking-metric" title={t(rankingBasisKey(view, query))}>
                       {rankingMetric.label} <strong>{rankingMetric.value}</strong>
@@ -682,7 +684,7 @@ export function RankingsPage({ t }: RankingsPageProps) {
             </article>
           );
         })}
-        {!loading && items.length === 0 ? <p className="lede">{t("empty")}</p> : null}
+        {!loading && items.length === 0 ? <p className="lede">{t(catalogScope === "plugins" && !query && view !== "total" ? "emptyRanking" : "empty")}</p> : null}
       </div>
 
       {remaining > 0 ? (

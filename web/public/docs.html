@@ -662,12 +662,12 @@
             <article class="doc-card">
               <span class="card-label" data-site-label="section" lang="en">Composite signal</span>
               <h3>Top 100</h3>
-              <p data-site-copy="body">综合日增、周增、增长率、活跃度、数据质量和总 Stars，发现当前最值得关注的项目。</p>
+              <p data-site-copy="body">综合近7日增长和累计 Stars，衡量支持 DSH 的仓库关注度。</p>
             </article>
             <article class="doc-card">
-              <span class="card-label" data-site-label="section" lang="en">Daily momentum</span>
+              <span class="card-label" data-site-label="section" lang="en">Recent momentum</span>
               <h3>新锐榜</h3>
-              <p data-site-copy="body">当前 Stars 减去上一份每日快照，按今日新增 Stars 排序，负增长按 0 处理。</p>
+              <p data-site-copy="body">按近3日仓库净增长与原有规模计算涨势，至少净增3星；不限制项目年龄。</p>
             </article>
             <article class="doc-card">
               <span class="card-label" data-site-label="section" lang="en">All verified</span>
@@ -677,7 +677,7 @@
             <article class="doc-card">
               <span class="card-label" data-site-label="section" lang="en">README semantics</span>
               <h3>分类筛选</h3>
-              <p data-site-copy="body">在综合热度、新锐或 Stars 排序下，按用途进一步筛选；同一插件可以属于多个分类。</p>
+              <p data-site-copy="body">在综合热度、涨势或 Stars 排序下，按用途进一步筛选；同一插件可以属于多个分类。</p>
             </article>
           </div>
           <h3>README 智能分类</h3>
@@ -769,33 +769,19 @@
           <p class="section-kicker" data-site-label="section" lang="en">05 · Ranking</p>
           <h2>Top 100 如何计算</h2>
           <p class="lead" data-site-copy="body">
-            Top 100 使用 100 分加权模型，按综合热度排序并显示一位小数。
-            新锐榜显示今日新增 Stars，总榜显示 GitHub Stars 总数。
+            两榜衡量所属 GitHub 仓库的关注度，不代表具体插件的使用量或质量。
+            热度榜显示热度分，新锐榜显示0～100分的新锐指数，总榜显示仓库 Stars。
           </p>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>指标</th>
-                  <th>权重</th>
-                  <th>计算依据</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td>当日 Stars 增长</td><td class="weight">35%</td><td>当前 Stars 与上一份每日快照之差</td></tr>
-                <tr><td>7 日 Stars 增长</td><td class="weight">25%</td><td>当前 Stars 与七日前最近快照之差</td></tr>
-                <tr><td>7 日增长率</td><td class="weight">15%</td><td>7 日增长 ÷ 七日前 Stars；达到 30% 得满分</td></tr>
-                <tr><td>近期活跃度</td><td class="weight">10%</td><td>按最近推送时间指数衰减，半衰期 60 天</td></tr>
-                <tr><td>数据质量</td><td class="weight">10%</td><td>中文简介、README、许可证与来源证据完整度</td></tr>
-                <tr><td>Stars 总热度</td><td class="weight">5%</td><td>当前 GitHub Stars 总数</td></tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="formula">TopScore = 日增×35 + 周增×25 + 增长率×15 + 活跃度×10 + 数据质量×10 + 总热度×5</div>
-          <p data-site-copy="body">
-            Stars 增长和总热度使用对数归一化，避免一个超大型仓库压缩其余项目的分数差异。综合分相同时，
-            依次比较今日新增 Stars、当前 Stars 和仓库全名。
-          </p>
+          <div class="formula">热度分 = 60 × √G7 / (√G7 + √20) + 40 × √S / (√S + √100)</div>
+          <div class="formula">R = G3 / √(B3 + 50)<br>新锐指数 = 100 × √R / (√R + √5)</div>
+          <p data-site-copy="body">固定换算不改变原始排序，不按每天第一名归一化。原始得分5、20、45分别对应50、66.67、75分；100为上限，不要求第一名达到100分。</p>
+          <p data-site-copy="body">S 为当前 Stars，G7、G3 为近7日、3日净增长（计分时负增长取0），B3 为3日前 Stars。
+            热度榜要求至少10星；新锐榜要求3日净增至少3星。两榜最多100项，数据不足不凑数。
+            中文简介、资料完整度和提交频率不加分。热度同分按周增、Stars、仓库名称排序；涨势同分按3日增量、Stars、仓库名称排序。</p>
+          <p data-site-copy="body">增长必须有对应日期的成功观测，实际间隔与目标窗口相差不超过6小时。
+            刷新失败保留旧观测时间，缺日不冒充零增长。增长保留负数，未知显示数据不足。</p>
+          <p data-site-copy="body">过渡期可使用2026年9月17日及以前对应日期的历史快照，日增、3日和7日增长按对应日期快照计算，过渡期结果属于估算。
+            旧快照可能包含延迟刷新，不能当作精确增长。准确观测齐备后优先替换；日增历史快照过渡最晚至9月18日，新锐榜估算窗口最晚至9月20日，热榜最晚至9月24日，后续缺数据不会延长过渡。</p>
         </section>
 
         <section class="doc-section" id="database">

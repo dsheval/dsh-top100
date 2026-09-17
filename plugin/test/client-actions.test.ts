@@ -22,6 +22,7 @@ vi.mock("react", async (original) => {
   return { ...actual, useState: host.useState, useRef: host.useRef, useMemo: host.useMemo, useCallback: (fn: unknown, deps: unknown[]) => host.useMemo(() => fn, deps), useEffect: host.useEffect };
 });
 import * as React from "react";
+import { DescriptionPreview } from "../src/client/DescriptionPreview.js";
 import { RankingsPage } from "../src/client/RankingsPage.js";
 import { ManagedPage } from "../src/client/ManagedPage.js";
 import { useTaskTracker } from "../src/client/use-task-tracker.js";
@@ -58,6 +59,16 @@ async function rankingSetup() {
 }
 
 describe("actual ranking navigation and failure actions", () => {
+  it('passes the dated stale qualification to the actual ranking description preview', async () => {
+    const staleCatalog = { ...catalog, items: [{ ...item, descriptionPolicy: 'server-v1',
+      descriptionZh: '上次已核验的具体插件能力。',
+      descriptionStatus: { state: 'stale', reviewedAt: '2026-09-16', reason: '来源核查中' } }] };
+    vi.stubGlobal('fetch', vi.fn((url: string) => Promise.resolve(json(url.includes('status') ? { activeBatches: [] } : staleCatalog))));
+    render(); await tick();
+    const preview = elements(render()).find(element => element.type === DescriptionPreview);
+    expect(preview?.props.text).toBe('上次核验 2026-09-16，来源核查中，简介待更新。上次已核验的具体插件能力。');
+  });
+
   it("switches between four top-level pages with the correct market scope", async () => {
     let { tree } = await rankingSetup();
     const nav = elements(tree).find((e) => e.type === "nav")!;

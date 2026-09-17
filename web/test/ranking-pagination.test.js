@@ -270,3 +270,48 @@ test("total and global search keep Stars ranks even when entered from a hot rank
   assert.equal(page.rankHead.textContent, "Stars 排名");
   assert.ok(renderedRanks(page).includes("#250"));
 });
+
+
+test("momentum rows show their published score and unknown growth never becomes zero", () => {
+  const { page } = createPage();
+  page.currentView = "rising";
+  const row = page.rankedEntries[0];
+  row.plugin = { ...row.plugin, dailyStars: null, weeklyStars: -2, threeDayStars: 5, risingScore: 0.625 };
+  page.risingEntries = [row];
+  page.renderRanking();
+  const rendered = page.list.children.find(child => child !== page.featuredPlugin);
+  assert.equal(rendered.querySelector(".stars").textContent, "0.63");
+  assert.deepEqual(rendered.querySelector(".meta-growth").children.map(x => x.textContent), ["日增 —", "3日 +5"]);
+  assert.equal(rendered.querySelector(".github-link").title, "example/plugin-1");
+  assert.ok(rendered.querySelector(".stars").title.includes("所属仓库 Stars 1000"));
+});
+
+test("empty boards explain observation requirements while total browsing remains available", () => {
+  const { page } = createPage();
+  for (const view of ["top100", "rising"]) {
+    page.currentView = view;
+    page.renderRanking();
+    assert.ok(page.list.children.some(row => row.textContent.includes("新观测需积累3日或7日")));
+  }
+  page.currentView = "all";
+  page.renderRanking();
+  assert.equal(renderedRanks(page).length, 100);
+});
+
+test("historical provenance does not clutter ranking numbers or growth labels", () => {
+  const {page}=createPage();page.currentView="rising";
+  const row=page.rankedEntries[0];
+  row.plugin={...row.plugin,dailyStars:null,threeDayStars:10,weeklyStars:20,risingScore:1.25,hotScore:42,
+    growthBasis:{threeDay:"historical-estimate",weekly:"observed"}};
+  page.risingEntries=[row];page.renderRanking();
+  let rendered=page.list.children.find(child=>child!==page.featuredPlugin);
+  assert.equal(rendered.querySelector(".stars").textContent,"1.25");
+  assert.deepEqual(rendered.querySelector(".meta-growth").children.map(x=>x.textContent),["日增 —","3日 +10"]);
+  row.plugin.growthBasis.threeDay="observed";page.renderRanking();
+  rendered=page.list.children.find(child=>child!==page.featuredPlugin);
+  assert.equal(rendered.querySelector(".stars").textContent,"1.25");
+  page.currentView="top100";page.hotEntries=[row];row.plugin.growthBasis.weekly="historical-estimate";page.renderRanking();
+  rendered=page.list.children.find(child=>child!==page.featuredPlugin);
+  assert.equal(rendered.querySelector(".stars").textContent,"42.0");
+  assert.deepEqual(rendered.querySelector(".meta-growth").children.map(x=>x.textContent),["日增 —","周增 +20"]);
+});

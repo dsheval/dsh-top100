@@ -4,6 +4,13 @@ import { descriptionQualityIssue } from './description-rules.js';
 
 export interface DescriptionSource extends ContentSource { id: string; description: string; readmeSummary: string | null; descriptionZh: string | null; stars: number; tags?: string[]; install?: { packageName?: string; repositoryPath?: string }; }
 export interface DescriptionJob {
+  /** Explicit source-difference review; a changed hash alone never grants regeneration. */
+  sourceChangeReview?: { sourceProofHash: string; decision: 'reuse' | 'regenerate'; reviewedAt: string; reason: string };
+  generatedAt?: string;
+  descriptionHistory?: import('@dsh-top100/schema').GeneratedDescriptionVersion[];
+  descriptionHistoryHold?: string;
+  /** Durable success receipt for a crash before older source/cache holds are replaced. */
+  descriptionHistoryResolution?: { versionId: string; replacedVersionIds: string[]; hold: string };
   dailySourceHash?: string;
   boardSourceHash?: string;
   sourceHash: string;
@@ -37,7 +44,7 @@ export function planDescriptionJobs<T extends DescriptionSource>(sources: T[], p
     const rejected = descriptionQualityIssue(source.descriptionZh) ? source.descriptionZh!
       : unchanged && descriptionQualityIssue(old.descriptionZh) ? old.descriptionZh! : undefined;
     const job: DescriptionJob = complete
-      ? { sourceHash, status: 'complete', attempts: unchanged ? old.attempts : 0, descriptionZh: source.descriptionZh!, tagsZh: source.tags ?? [] }
+      ? { ...(unchanged && old.generatedAt ? { generatedAt: old.generatedAt } : {}), ...(unchanged && old.lastAttemptAt ? { lastAttemptAt: old.lastAttemptAt } : {}), sourceHash, status: 'complete', attempts: unchanged ? old.attempts : 0, descriptionZh: source.descriptionZh!, tagsZh: source.tags ?? [] }
       : hold
         ? { ...(unchanged ? old : {}), sourceHash, status: 'review-required', attempts: unchanged ? old.attempts : 0, reviewReason: hold.reason,
           ...(rejected ? { rejectedDescriptionZh: rejected } : {}) }

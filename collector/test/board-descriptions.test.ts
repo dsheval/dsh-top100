@@ -23,6 +23,25 @@ function ranking(hot: DshPlugin[], rising: DshPlugin[] = []): RankingsDocument {
 function baseline(sources: DshPlugin[]) { return new Map(sources.map(s => [s.fullName.toLowerCase(), structuredClone(s)])); }
 
 describe('current board descriptions', () => {
+  it('reports Skills coverage without admitting unchanged Skills backlog to paid boards', async () => {
+    const skills = Array.from({ length: 105 }, (_, i) => source(`skills/${i}`, { type: 'skill' }));
+    skills[0].descriptionZh = result.descriptionZh;
+    skills[1].install.discovery!.status = 'review-required';
+    skills[2].description = ''; skills[2].readmeSummary = null;
+    const ranks = ranking([]);
+    ranks.directories!.skills = skills.map((entry, index) => ({ ...entry, rank: index + 1 })) as unknown as RankingEntry[];
+    const report = attachDescriptionCoverage(ranks, {});
+    expect(report.directories.skills).toMatchObject({ total: 105, covered: 1, missing: 104,
+      states: { pending: 102, 'review-required': 1, 'missing-source': 1 }, top100: { total: 100, covered: 1 } });
+    expect(report.directories.skills.top100.missing).toHaveLength(99);
+    expect(report.directories.skills.top100.missing.at(-1)?.fullName).toBe('skills/99');
+    expect(report.scope).toBe('hot-rising-top100'); expect(boardDescriptionScope(ranks).size).toBe(0);
+    const worker = vi.fn(async () => result);
+    await runBoardFirstDescriptions(skills, baseline(skills), new Map(), {}, () => ranks, {
+      enabled: true, limit: 200, now, persist: () => {}, worker,
+    });
+    expect(worker).not.toHaveBeenCalled();
+  });
   it('uses at most the first 100 of each current board and deduplicates overlaps', () => {
     const rows = Array.from({ length: 105 }, (_, i) => source(`a/${i}`));
     const scope = boardDescriptionScope(ranking(rows, rows.slice(5)));

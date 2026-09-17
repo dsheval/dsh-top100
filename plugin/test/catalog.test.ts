@@ -506,6 +506,15 @@ describe("catalog transport", () => {
     expect(() => parseRankingsDocument("{}")).toThrow("rankings.total");
   });
 
+  it("preserves per-window historical estimate labels in compact catalogs", () => {
+    const result = parseRankingSearchDocument(JSON.stringify({schemaVersion:2, rankings:[{
+      rank:1,fullName:"acme/estimate",threeDayStars:10,weeklyStars:20,risingScore:1.25,
+      growthBasis:{threeDay:"historical-estimate",weekly:"observed"},
+    }]}));
+    expect(result.rankings.total[0]).toMatchObject({threeDayStars:10,weeklyStars:20,
+      growthBasis:{threeDay:"historical-estimate",weekly:"observed"}});
+  });
+
   it("normalizes a small published view shard into the catalog shape", () => {
     const shard = parseRankingViewDocument(JSON.stringify({
       ...document,

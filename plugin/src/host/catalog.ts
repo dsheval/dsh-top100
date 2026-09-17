@@ -1,3 +1,4 @@
+import { descriptionStatusFor } from '../shared/description-rules.js';
 /** Fetch and filter the published rankings document. */
 
 import { execFile } from "node:child_process";
@@ -817,16 +818,19 @@ function normalizeSearchEntry(value: unknown, index: number): RankingEntry | nul
     description: typeof entry.description === "string" ? entry.description : "",
     ...(entry.descriptionPolicy === 'server-v1' ? { descriptionPolicy: entry.descriptionPolicy } : {}),
     descriptionZh: typeof entry.descriptionZh === "string" ? entry.descriptionZh : "",
-    ...(entry.descriptionStatus !== undefined ? { descriptionStatus:
-      entry.descriptionStatus && ['pending', 'review-required', 'missing-source', 'retry'].includes(entry.descriptionStatus.state)
-        && typeof entry.descriptionStatus.reason === 'string'
-        ? { state: entry.descriptionStatus.state, reason: entry.descriptionStatus.reason.slice(0, 200) }
-        : { state: 'review-required' as const, reason: '服务端简介状态无效，等待复核。' },
-    } : {}),
+    ...(entry.descriptionStatus !== undefined ? { descriptionStatus: descriptionStatusFor(entry.descriptionStatus) } : {}),
     ...(typeof entry.readmeSummary === "string" ? { readmeSummary: entry.readmeSummary } : {}),
     stars: Number(entry.stars) || 0,
     dailyStars: typeof entry.dailyStars === "number" && Number.isFinite(entry.dailyStars) ? entry.dailyStars : null,
     weeklyStars: typeof entry.weeklyStars === "number" && Number.isFinite(entry.weeklyStars) ? entry.weeklyStars : null,
+    threeDayStars: typeof entry.threeDayStars === "number" && Number.isFinite(entry.threeDayStars) ? entry.threeDayStars : null,
+    risingScore: typeof entry.risingScore === "number" && Number.isFinite(entry.risingScore) ? entry.risingScore : null,
+    ...(entry.growthBasis ? { growthBasis: {
+      daily: entry.growthBasis.daily === "observed" || entry.growthBasis.daily === "historical-estimate" ? entry.growthBasis.daily : null,
+      threeDay: entry.growthBasis.threeDay === "observed" || entry.growthBasis.threeDay === "historical-estimate" ? entry.growthBasis.threeDay : null,
+      weekly: entry.growthBasis.weekly === "observed" || entry.growthBasis.weekly === "historical-estimate" ? entry.growthBasis.weekly : null,
+    } } : {}),
+    starsObservedAt: typeof entry.starsObservedAt === "string" ? entry.starsObservedAt : null,
     hotScore: typeof entry.hotScore === "number" && Number.isFinite(entry.hotScore) ? entry.hotScore : null,
     forks: Number(entry.forks) || 0,
     openIssues: Number(entry.openIssues) || 0,

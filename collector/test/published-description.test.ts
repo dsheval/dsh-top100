@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { toSearchEntry, toSnapshotSearchEntry } from "../src/search-index.js";
 import reviews from "../config/reviewed-descriptions.json";
-import { publishedDescriptionZh } from "../src/published-description.js";
+import { publishedDescriptionZh, publishDescription } from "../src/published-description.js";
+import { hasPublishedChinese } from '../src/board-descriptions.js';
 import { descriptionFor, PENDING_DESCRIPTION_ZH } from "../src/description-rules.js";
 import type { RankingEntry } from "../src/rankings.js";
 
@@ -49,12 +50,16 @@ it.each(['readme', 'package', 'directory', 'type'] as const)('does not stamp a s
     type: review.sourceType, install: { method: 'pnpm-profile' as const,
       packageName: review.sourceInstall.packageName } } as RankingEntry;
   expect(publishedDescriptionZh(source)).toBe(review.descriptionZh);
-  if (change === 'readme') source.readmeSummary += ' Changed functionality, not reviewed.';
+  if (change === 'readme') source.readmeSummary += ' Updated documentation, awaiting review.';
   if (change === 'package') source.install.packageName = '@fixture/other';
   if (change === 'directory') source.install.repositoryPath = 'packages/other';
   if (change === 'type') source.type = 'skill';
-  expect(publishedDescriptionZh(source)).toBe(PENDING_DESCRIPTION_ZH);
+  const expected = change === 'readme' ? review.descriptionZh : PENDING_DESCRIPTION_ZH;
+  expect(publishedDescriptionZh(source)).toBe(expected);
+  expect(hasPublishedChinese(source)).toBe(false);
+  if (change === 'readme') expect(publishDescription(source).descriptionStatus).toMatchObject({ state: 'stale', reviewedAt: review.reviewedAt });
   for (const compact of [toSearchEntry(source), toSnapshotSearchEntry(source)]) {
-    expect(compact.descriptionZh).toBe(PENDING_DESCRIPTION_ZH);
+    expect(compact.descriptionZh).toBe(expected);
+    if (change === 'readme') expect(compact.descriptionStatus).toMatchObject({ state: 'stale', reviewedAt: review.reviewedAt });
   }
 });

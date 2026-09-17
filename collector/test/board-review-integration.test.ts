@@ -5,7 +5,7 @@ import { descriptionSourceHash, type DescriptionJob } from '../src/description-j
 import { checkReviewedFunctionEvidence } from '../src/reviewed-evidence.js';
 import { applyFunctionEvidenceCheck } from '../src/reviewed-evidence-state.js';
 import { reviewedDescription } from '../src/editorial.js';
-import { publishedDescriptionZh, publishDescription } from '../src/published-description.js';
+import { publishedDescriptionZh, publishDescription, verifiedDescriptionZh } from '../src/published-description.js';
 import { attachDescriptionCoverage } from '../src/board-descriptions.js';
 import type { RankingEntry, RankingsDocument } from '../src/rankings.js';
 import type { ZhEntry } from '../src/zh-util.js';
@@ -149,7 +149,7 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
     }
   });
 
-  it.each(['readme', 'package', 'directory', 'type'] as const)('does not reuse a reviewed claim after unapproved %s changes', async change => {
+  it.each(['readme', 'package', 'directory', 'type'] as const)('keeps source jobs frozen after %s changes and qualifies same-package old display', async change => {
     // helm-d uses reviewed implementation files instead of absent README evidence;
     // that separate source contract is exercised below.
     const inputs = (await verifiedSources()).filter(input => change !== 'readme' || input.id !== 'adwmc/helm-d');
@@ -174,7 +174,13 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       expect(input.descriptionZh, input.fullName).toBe(PENDING_DESCRIPTION_ZH);
       expect(result.jobs[input.id].status, input.fullName).toBe('review-required');
       expect(cache.has(input.id), input.fullName).toBe(false);
-      expect(publishedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(verifiedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      if (change === 'readme' && publishedDescriptionZh(rankingEntry(input)) !== PENDING_DESCRIPTION_ZH) {
+        const published = publishDescription(rankingEntry(input));
+        expect(published.descriptionStatus?.state, input.fullName).toBe('stale');
+        expect(descriptionDisplayFor(published), input.fullName).toContain('上次核验');
+        expect(webDescriptionDisplayFor(published), input.fullName).toContain('简介待更新');
+      } else expect(publishedDescriptionZh(rankingEntry(input))).toBe(PENDING_DESCRIPTION_ZH);
     }
   });
 
@@ -202,7 +208,7 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
     expect(result.jobs[unverified.id].status).toBe('review-required');
   });
 
-  it('withholds old canonical text and caches when the full README changes beyond the unchanged excerpt', async () => {
+  it('withholds source caches but qualifies old display when the full README changes beyond the excerpt', async () => {
     const inputs = (await verifiedSources()).filter(input => input.install.discovery?.readme);
     expect(inputs.length).toBeGreaterThan(0);
     for (const input of inputs) input.descriptionZh = reviewedDescription(input)!;
@@ -220,11 +226,17 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       expect(input.descriptionZh, input.fullName).toBe(PENDING_DESCRIPTION_ZH);
       expect(result.jobs[input.id].status, input.fullName).toBe('review-required');
       expect(cache.has(input.id), input.fullName).toBe(false);
-      expect(publishedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(verifiedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      if (input.type === 'cordis-plugin') {
+        const published = publishDescription(rankingEntry(input));
+        expect(published.descriptionStatus?.state, input.fullName).toBe('stale');
+        expect(descriptionDisplayFor(published), input.fullName).toContain('上次核验');
+        expect(webDescriptionDisplayFor(published), input.fullName).toContain('简介待更新');
+      } else expect(publishedDescriptionZh(rankingEntry(input))).toBe(PENDING_DESCRIPTION_ZH);
     }
   });
 
-  it('withholds a matching package and excerpt when current discovery is no longer verified', async () => {
+  it('keeps source jobs held and old display dated when discovery is no longer verified', async () => {
     const inputs = await verifiedSources();
     for (const input of inputs) input.descriptionZh = reviewedDescription(input)!;
     const previous = structuredClone(inputs);
@@ -240,7 +252,13 @@ describe('reviewed board corrections survive the real daily pipeline', () => {
       expect(input.descriptionZh, input.fullName).toBe(PENDING_DESCRIPTION_ZH);
       expect(result.jobs[input.id].status, input.fullName).toBe('review-required');
       expect(cache.has(input.id), input.fullName).toBe(false);
-      expect(publishedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      expect(verifiedDescriptionZh(rankingEntry(input)), input.fullName).toBe(PENDING_DESCRIPTION_ZH);
+      if (input.type === 'cordis-plugin') {
+        const published = publishDescription(rankingEntry(input));
+        expect(published.descriptionStatus?.state, input.fullName).toBe('stale');
+        expect(descriptionDisplayFor(published), input.fullName).toContain('上次核验');
+        expect(webDescriptionDisplayFor(published), input.fullName).toContain('简介待更新');
+      } else expect(publishedDescriptionZh(rankingEntry(input))).toBe(PENDING_DESCRIPTION_ZH);
     }
   });
 

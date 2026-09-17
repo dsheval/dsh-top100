@@ -6,6 +6,9 @@
 import type { PluginCategoryAssignment } from "@dsh-top100/schema";
 
 export interface ZhEntry {
+  generatedAt?: string;
+  descriptionHistory?: import('@dsh-top100/schema').GeneratedDescriptionVersion[];
+  descriptionHistoryHold?: string;
   descriptionZh: string;
   origin?: 'reviewed' | 'author' | 'model' | 'legacy';
   tagsZh: string[];
