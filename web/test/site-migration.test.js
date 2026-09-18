@@ -82,21 +82,21 @@ test("public catalog links migrate while released plugin data stays compatible",
   }
   for (const file of ["index.html", "skills.html", "docs.html", "top300.html"]) {
     const html = await read(`web/public/${file}`);
-    assert.match(html, /rel="canonical" href="https:\/\/www\.dsheval\.ai\/top100\//, file);
-    assert.doesNotMatch(html, /https?:\/\/dsheval\.ai(?:\/|["\s<])/, file);
+    assert.match(html, /rel="canonical" href="https:\/\/www\.evaldock\.ai\/top100\//, file);
+    assert.doesNotMatch(html, /https?:\/\/evaldock\.ai(?:\/|["\s<])/, file);
   }
   const home = await read("web/public/index.html");
   for (const property of ["og:url", "og:image"]) {
-    assert.match(home, new RegExp(`property="${property}" content="https://www\\.dsheval\\.ai/top100/`));
+    assert.match(home, new RegExp(`property="${property}" content="https://www\\.evaldock\\.ai/top100/`));
   }
   const structuredData = JSON.parse(home.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
-  assert.equal(structuredData.url, "https://www.dsheval.ai/top100/");
-  assert.equal(structuredData.isPartOf.url, "https://www.dsheval.ai/");
+  assert.equal(structuredData.url, "https://www.evaldock.ai/top100/");
+  assert.equal(structuredData.isPartOf.url, "https://www.evaldock.ai/");
   const robots = await read("web/public/robots.txt");
-  assert.ok(robots.includes("Sitemap: https://www.dsheval.ai/top100/sitemap.xml"));
+  assert.ok(robots.includes("Sitemap: https://www.evaldock.ai/top100/sitemap.xml"));
   const sitemap = await read("web/public/sitemap.xml");
   for (const [, location] of sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)) {
-    assert.equal(new URL(location).origin, "https://www.dsheval.ai");
+    assert.equal(new URL(location).origin, "https://www.evaldock.ai");
   }
 });
 
