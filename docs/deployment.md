@@ -1,5 +1,27 @@
 # Production Deployment
 
+## EvalDock Mac mini migration (2026-09-18)
+
+The approved new production origin is `https://www.evaldock.ai`, with this site
+mounted at `/top100/`. Website canonical URLs, Open Graph metadata, robots and
+sitemap target the new origin. This preparation does not mean DNS has switched.
+The coordinated gateway and Mac mini Compose configuration live in the
+`evaldock/evaldock` repository (`deploy/Caddyfile.mac-mini` and
+`deploy/compose.mac-mini.yml`).
+
+Migration must preserve the complete runtime, monetary ledger, jobs and daily
+stage journal. Stop the old writer before the final consistent backup and only
+activate the new managed scheduler after integrity checks. Do not run two
+schedulers, repeat completed daily stages, reset budget history or expand paid
+processing. Keep the existing budget/key settings private and provide only the
+read-only budget configuration to the watchdog. Set `DSH_PUBLIC_ORIGIN` to the
+new HTTPS origin on the new host.
+
+Existing npm packages and their `www.dsheval.ai/data` endpoints remain unchanged
+in this website migration. The old domain must keep serving compatible data and
+events directly while pages redirect to the new origin. The following sections
+retain the old Linux deployment and compatibility details.
+
 ## Server requirements
 
 - Linux server with Docker Engine 24+ and Docker Compose v2.
