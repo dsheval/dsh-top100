@@ -31,7 +31,7 @@ test("places editorial 000 inside the table using shared row styles, without a s
   assert.match(aside, /#000/);
   assert.match(aside, /本站出品 · 不参与排名/);
   assert.match(aside, /data-content-switch="dsh"/);
-  assert.match(aside, /class="github-link"[^>]*href="https:\/\/github\.com\/dsheval\/dsh-top100"/);
+  assert.match(aside, /class="github-link"[^>]*href="https:\/\/github\.com\/evaldock\/dsh-top100"/);
   assert.match(aside, /aria-label="在 GitHub 打开 dsh-top100"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
   assert.doesNotMatch(aside, /class="stars"|data-copy-command|data-rank=/);
   assert.match(aside, /class="rank"/);
@@ -94,17 +94,17 @@ test("contains the homepage conversion, privacy and SEO contracts", () => {
   assert.doesNotMatch(html, /github\.githubassets\.com\/favicons/);
 });
 
-test("uses the approved neutral sage palette", () => {
-  assert.match(html, /--paper: #f7f9f8/);
-  assert.match(html, /--hero: #d9e7e2/);
-  assert.match(html, /--hero-ink: #13201c/);
-  assert.match(html, /--hero-accent: #126657/);
-  assert.match(html, /--code-surface: #e8eeec/);
-  assert.match(html, /--line: rgba\(19, 32, 28, 0\.26\)/);
-  assert.match(html, /--line-strong: #6f837c/);
+test("uses the EvalDock violet palette", () => {
+  assert.match(html, /--paper: #f8f8ff/);
+  assert.match(html, /--hero: #f0f1fe/);
+  assert.match(html, /--hero-ink: #1c2024/);
+  assert.match(html, /--hero-accent: #5b5bd6/);
+  assert.match(html, /--code-surface: #e9e9f1/);
+  assert.match(html, /--line: rgba\(28, 32, 36, 0\.26\)/);
+  assert.match(html, /--line-strong: #92929f/);
   assert.match(html, /--signal-brass: #9b8e63/);
   assert.match(html, /--signal-sage: #7f9f95/);
-  assert.match(html, /<meta name="theme-color" content="#d9e7e2" \/>/);
+  assert.match(html, /<meta name="theme-color" content="#f0f1fe" \/>/);
   assert.match(html, /\.dsh-step-number \{[\s\S]*?border-radius: 50%/);
   assert.match(html, /\.dsh-copy-button \{[\s\S]*?color: var\(--accent\);[\s\S]*?background: var\(--card\)/);
   assert.doesNotMatch(html, /prefers-color-scheme:\s*dark/);
@@ -115,7 +115,7 @@ test("uses the approved neutral sage palette", () => {
 
 test("uses the shared footer and keeps Skills outside plugin totals", () => {
   assert.match(html, /<footer class="dsh-site-footer">/);
-  assert.match(html, /公开评测，发现值得关注的项目。/);
+  assert.match(html, /查看 Agent 能力评测/);
   assert.match(html, /href="\.\/skills\.html#ranking">Skills 榜单/);
   assert.match(html, /manifest\.datasets\.skills\?\.count/);
   assert.doesNotMatch(html, /隐藏 Skill 仓库|hideSkills|manifestSkillCount/);
@@ -128,8 +128,8 @@ test("uses the shared footer and keeps Skills outside plugin totals", () => {
 });
 
 test("shares one category interaction system across Plugin and Skills directories", () => {
-  assert.match(html, /href="\.\/category-system\.css"/);
-  assert.match(skills, /href="\.\/category-system\.css"/);
+  assert.match(html, /href="\.\/category-system\.css\?v=20260919-evaldock1"/);
+  assert.match(skills, /href="\.\/category-system\.css\?v=20260919-evaldock1"/);
   assert.match(html, /renderCategoryOptions\(document\.querySelector\("#plugin-category-options"\)/);
   assert.match(skills, /renderCategoryOptions\(document\.querySelector\("#skill-category-options"\)/);
   assert.match(categorySystem, /label: "Agent 增强"/);
@@ -211,7 +211,7 @@ test("uses a native toggle button with an accessible state and a selected checkm
 });
 
 test("keeps Skills utility text legible and aligned with Plugin typography", () => {
-  assert.match(skills, /--muted: #4f5e59/);
+  assert.match(skills, /--muted: #60646c/);
   assert.match(skills, /\.directory-head p \{[^}]*font-size: 14px;[^}]*font-weight: 400/);
   assert.match(skills, /\.status \{[^}]*font-size: 13px;[^}]*font-weight: 500/);
   assert.match(skills, /class="github-link"[^>]*target="_blank"[^>]*rel="noopener noreferrer"/);
@@ -241,19 +241,19 @@ test("serves local assets with same-origin production ranking data", () => {
 });
 
 test("keeps the install guide focused and uses the canonical brand name", () => {
-  assert.match(html, /<title>插件榜单 · Top100 · DSH-Eval<\/title>/);
+  assert.match(html, /<title>插件榜单 · Top100 · EvalDock<\/title>/);
   assert.match(html, /class="top100-section-title" href="\.\/">[\s\S]*?<span>Top100<\/span>[\s\S]*?<\/a>/);
   for (const page of [html, dsh, skills]) assert.doesNotMatch(page, /dsh-Top100|DSH-Top100/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.hero \{\s*display: none/);
   assert.match(html, /body:has\(#dsh-view:not\(\[hidden\]\)\) \.ranking \{[^}]*scroll-margin-top: var\(--site-header-height\)/);
   assert.match(html, /#dsh-view \{\s*max-width: 800px/);
   assert.match(html, /<h1 class="inline-docs-title" id="inline-dsh-title">安装指南<\/h1>/);
-  assert.match(html, /class="dsh-brand-link" href="\/" aria-label="DSH-Eval 首页"/);
+  assert.match(html, /class="dsh-brand-link" href="\/" aria-label="EvalDock 首页"/);
   assert.doesNotMatch(dsh, /dsh-brief-grid|section-kicker|dsh-data-note|3 步完成安装/);
   assert.match(dsh, /网站与插件使用同一份榜单数据/);
   assert.match(dsh, /每日更新/);
   assert.doesNotMatch(dsh, /Manifest 哈希校验/);
-  assert.match(dsh, /DSHeval 排行服务/);
+  assert.match(dsh, /EvalDock 排行服务/);
   assert.doesNotMatch(dsh, />rankings\.json</);
 });
 
@@ -327,7 +327,7 @@ test("keeps setup before the main three-step installation flow and folds recover
   assert.match(help, /发布等待期|minimumReleaseAge/);
   assert.match(help, /npx 长时间没有输出/);
   assert.match(help, /id="features"/);
-  assert.match(help, /DSHeval 排行服务/);
+  assert.match(help, /EvalDock 排行服务/);
   assert.match(dsh, /安装和启动必须使用相同的命令前缀/);
   assert.match(help, /不要单独添加 <code>--legacy-peer-deps/);
 });
@@ -398,9 +398,9 @@ test("uses a small success screenshot and keeps the installation example in opti
 test("keeps guide-only contrast readable", () => {
   const guideStyle = html.match(/#dsh-view \{([^}]+)\}/)?.[1];
   assert.ok(guideStyle);
-  assert.match(guideStyle, /--muted: #364b43/);
-  assert.match(guideStyle, /--code-surface: #203c33/);
-  assert.match(guideStyle, /--code-ink: #f7f9f8/);
+  assert.match(guideStyle, /--muted: #4b4f58/);
+  assert.match(guideStyle, /--code-surface: #272962/);
+  assert.match(guideStyle, /--code-ink: #f8f8ff/);
   assert.match(html, /#dsh-view \.doc-section > h2 \{[^}]*font-size: 20px/);
   assert.match(html, /\.dsh-detail summary \{[^}]*font: 600 16px/);
   assert.match(html, /\.dsh-detail-body \{[^}]*padding: 0;/);
@@ -416,9 +416,9 @@ test("keeps guide-only contrast readable", () => {
     .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
   const color = (name) => guideStyle.match(new RegExp(name + ": (#[a-f0-9]{6})"))?.[1];
   for (const [foreground, background] of [
-    [color("--muted"), "#f7f9f8"],
+    [color("--muted"), "#f8f8ff"],
     [color("--code-ink"), color("--code-surface")],
-    ["#ffffff", "#126657"],
+    ["#ffffff", "#5b5bd6"],
   ]) {
     const light = luminance(foreground), dark = luminance(background);
     assert.ok((Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05) >= 4.5);

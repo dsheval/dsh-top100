@@ -5,36 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="dsh-top100 是 DSH-Eval 旗下的插件与 Skills 发现栏目，通过仓库热度、近期增长和安装来源，帮助你发现支持 DSH 的插件。"
+      content="dsh-top100 是 EvalDock 旗下的插件与 Skills 发现栏目，通过仓库热度、近期增长和安装来源，帮助你发现支持 DSH 的插件。"
     />
-    <meta name="theme-color" content="#d9e7e2" />
+    <meta name="theme-color" content="#f0f1fe" />
     <link rel="canonical" href="https://www.evaldock.ai/top100/" />
-    <link rel="icon" href="./favicon.png?v=20260908-slashed-d1" type="image/png" sizes="32x32" />
-    <link rel="icon" href="./favicon.svg?v=20260908-slashed-d1" type="image/svg+xml" sizes="any" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260908-slashed-d1" sizes="180x180" />
+    <link rel="icon" href="./assets/evaldock-favicon.png?v=20260919-pony1" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="./assets/evaldock-apple-touch-icon.png?v=20260919-pony1" sizes="180x180" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:site_name" content="DSH-Eval" />
-    <meta property="og:title" content="插件榜单 · Top100 · DSH-Eval" />
-    <meta property="og:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。按仓库热度、近期增长和安装来源持续更新。" />
+    <meta property="og:site_name" content="EvalDock" />
+    <meta property="og:title" content="插件榜单 · Top100 · EvalDock" />
+    <meta property="og:description" content="EvalDock 旗下的插件与 Skills 发现栏目。按仓库热度、近期增长和安装来源持续更新。" />
     <meta property="og:url" content="https://www.evaldock.ai/top100/" />
-    <meta property="og:image" content="https://www.evaldock.ai/top100/assets/dsh-top100-og.png?v=1.3.3" />
+    <meta property="og:image" content="https://www.evaldock.ai/top100/assets/evaldock-og.png?v=20260919-pony1" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="插件榜单 · Top100 · DSH-Eval" />
-    <meta name="twitter:description" content="DSH-Eval 旗下的插件与 Skills 发现栏目。" />
-    <meta name="twitter:image" content="https://www.evaldock.ai/top100/assets/dsh-top100-og.png?v=1.3.3" />
+    <meta name="twitter:title" content="插件榜单 · Top100 · EvalDock" />
+    <meta name="twitter:description" content="EvalDock 旗下的插件与 Skills 发现栏目。" />
+    <meta name="twitter:image" content="https://www.evaldock.ai/top100/assets/evaldock-og.png?v=20260919-pony1" />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "CollectionPage",
         "name": "dsh-top100",
         "url": "https://www.evaldock.ai/top100/",
-        "description": "DSH-Eval 旗下的插件与 Skills 发现栏目",
+        "description": "EvalDock 旗下的插件与 Skills 发现栏目",
         "isPartOf": {
           "@type": "WebSite",
-          "name": "DSH-Eval",
+          "name": "EvalDock",
           "url": "https://www.evaldock.ai/"
         },
         "about": {
@@ -48,34 +47,35 @@
         }
       }
     </script>
-    <title>插件榜单 · Top100 · DSH-Eval</title>
+    <title>插件榜单 · Top100 · EvalDock</title>
     <link rel="stylesheet" href="./install-console.css" />
     <link rel="stylesheet" href="./catalog-install-command.css" />
+    <link rel="stylesheet" href="./fonts.css?v=20260919-evaldock1" />
     <style>
       :root {
         color-scheme: light;
-        --paper: #f7f9f8;
+        --paper: #f8f8ff;
         --card: #ffffff;
-        --ink: #13201c;
-        --muted: #4f5e59;
-        --accent: #126657;
+        --ink: #1c2024;
+        --muted: #60646c;
+        --accent: #5b5bd6;
         --accent-contrast: #ffffff;
-        --accent-soft: #c9ded7;
-        --section: #e5ebe8;
-        --section-strong: #d5dfdb;
-        --line: rgba(19, 32, 28, 0.26);
-        --line-strong: #6f837c;
-        --hero: #d9e7e2;
-        --hero-ink: #13201c;
-        --hero-muted: #4f5e59;
-        --hero-accent: #126657;
-        --code-surface: #e8eeec;
-        --code-ink: #13201c;
+        --accent-soft: #e1d6ff;
+        --section: #ffffff;
+        --section-strong: #eee8ff;
+        --line: rgba(28, 32, 36, 0.26);
+        --line-strong: #92929f;
+        --hero: #f0f1fe;
+        --hero-ink: #1c2024;
+        --hero-muted: #60646c;
+        --hero-accent: #5b5bd6;
+        --code-surface: #e9e9f1;
+        --code-ink: #1c2024;
         --signal-mint: #58b491;
         --signal-brass: #9b8e63;
         --signal-sage: #7f9f95;
         --signal-ink: #47645b;
-        --content: 1380px;
+        --content: 1240px;
         --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
           "PingFang SC", "Microsoft YaHei", sans-serif;
         --serif: Iowan Old Style, Baskerville, "Times New Roman", "Songti SC", serif;
@@ -135,8 +135,8 @@
         border-radius: 50%;
         background: radial-gradient(
           circle,
-          rgba(47, 111, 104, 0.16) 0,
-          rgba(47, 111, 104, 0.045) 38%,
+          rgba(91, 91, 214, 0.16) 0,
+          rgba(91, 91, 214, 0.045) 38%,
           transparent 68%
         );
         content: "";
@@ -841,7 +841,7 @@
         border: 1px solid var(--line);
         color: var(--ink);
         background: color-mix(in srgb, var(--card) 97%, var(--section));
-        box-shadow: 0 9px 22px rgba(23, 33, 31, 0.09);
+        box-shadow: 0 9px 22px rgba(28, 32, 36, 0.09);
         font-size: 12px;
         font-weight: 500;
         letter-spacing: 0.01em;
@@ -1209,7 +1209,7 @@
       }
 
       .plugin:hover .stars {
-        box-shadow: 0 6px 16px rgba(29, 81, 74, 0.2);
+        box-shadow: 0 6px 16px rgba(91, 91, 214, 0.2);
         transform: translateY(-2px);
       }
 
@@ -1677,10 +1677,10 @@
       #dsh-view {
         max-width: 800px;
         margin-inline: auto;
-        --muted: #364b43;
+        --muted: #4b4f58;
         --line: #84968e;
-        --code-surface: #203c33;
-        --code-ink: #f7f9f8;
+        --code-surface: #272962;
+        --code-ink: #f8f8ff;
       }
 
       #dsh-view .inline-docs-header {
@@ -2241,7 +2241,7 @@
           position: sticky;
           z-index: 8;
           top: var(--site-header-height);
-          box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08);
+          box-shadow: 0 8px 18px rgba(28, 32, 36, 0.08);
         }
       }
 
@@ -2629,12 +2629,12 @@
         padding: 7px 8px 7px 17px;
         border: 1px solid var(--line);
         background: color-mix(in srgb, var(--card) 92%, transparent);
-        box-shadow: 0 16px 44px rgba(23, 33, 31, 0.1);
+        box-shadow: 0 16px 44px rgba(28, 32, 36, 0.1);
       }
 
       .hero-search-control:focus-within {
         border-color: var(--hero-accent);
-        box-shadow: 0 0 0 3px rgba(47, 111, 104, 0.14), 0 16px 44px rgba(23, 33, 31, 0.1);
+        box-shadow: 0 0 0 3px rgba(91, 91, 214, 0.14), 0 16px 44px rgba(28, 32, 36, 0.1);
       }
 
       .hero-search-control svg {
@@ -3068,20 +3068,20 @@
         #top #ranking .search-input { font-size: 16px; }
       }
     </style>
-    <link rel="stylesheet" href="./category-system.css" />
-    <link rel="stylesheet" href="./ranking-method.css" />
+    <link rel="stylesheet" href="./category-system.css?v=20260919-evaldock1" />
+    <link rel="stylesheet" href="./ranking-method.css?v=20260919-evaldock1" />
     <link rel="stylesheet" href="./ranking-rows.css" />
-    <link rel="stylesheet" href="./site-controls.css?v=20260908-section-nav2" />
-    <link rel="stylesheet" href="./site-chrome.css?v=20260914-search-controls3" />
+    <link rel="stylesheet" href="./site-controls.css?v=20260919-evaldock1" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260919-evaldock5" />
   </head>
   <body>
     <header class="dsh-site-header dsh-nav-emphasis">
       <div class="dsh-site-container dsh-header-inner">
-        <a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a>
-        <nav class="dsh-desktop-nav" aria-label="DSH-Eval 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
+        <a class="dsh-brand-link" href="/" aria-label="EvalDock 首页"><span class="dsh-brand" translate="no"><span class="dsh-brand-symbol" aria-hidden="true"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="" /></span><span class="dsh-brand-wordmark"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="EvalDock" /></span></span></a>
+        <nav class="dsh-desktop-nav" aria-label="EvalDock 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
         <details class="dsh-mobile-menu">
           <summary>菜单<span class="dsh-menu-icon" aria-hidden="true"></span></summary>
-          <nav aria-label="DSH-Eval 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
+          <nav aria-label="EvalDock 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
         </details>
       </div>
     </header>
@@ -3094,18 +3094,18 @@
           <a href="./skills.html#ranking">Skills 榜单</a>
           <a href="?page=dsh#dsh" data-content-switch="dsh">安装指南</a>
           <a href="?page=docs#docs" data-content-switch="docs">排名方法</a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/evaldock/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </nav>
       <section class="hero">
         <div class="hero-inner">
           <div class="hero-copy">
-            <p class="eyebrow dsh-home-eyebrow" data-site-label="page" lang="en">DSH-Eval · <span>Plugin discovery</span> · <span>Daily snapshot</span></p>
+            <p class="eyebrow dsh-home-eyebrow" data-site-label="page" lang="en">EvalDock · <span>Plugin discovery</span> · <span>Daily snapshot</span></p>
             <h1 class="dsh-home-title"><span>发现值得安装的</span><span>DSH 插件</span></h1>
             <p class="hero-description dsh-home-description" data-site-copy="lead">
-              查看仓库关注度、近期增长和插件安装来源，
-              从具体需求出发，而不只是追逐 Stars。收录不代表已通过能力评测。
+              EvalDock 旗下的插件与 Skills 发现栏目。查看仓库关注度、近期增长和安装来源，找到适合需求的 DSH 插件。
             </p>
+            <p class="discovery-scope" data-site-copy="note">收录与热度排名不代表已通过能力评测。<a href="/results">查看 Agent 能力评测 <span aria-hidden="true">↗</span></a></p>
             <form class="hero-search" id="hero-search-form" role="search">
               <label class="sr-only" for="hero-search">搜索全部 DSH 插件</label>
               <span class="hero-search-control">
@@ -3170,7 +3170,7 @@
           <header class="section-header">
             <div>
               <p class="section-kicker" data-site-label="section" lang="en">Discover · Compare · Install</p>
-              <h2>用证据比较，<br />不只看 Stars</h2>
+              <h2>按热度发现，<br />按需求选择</h2>
               <p class="ranking-explainer" data-site-copy="body">热度榜综合近7日增长与累计 Stars；新锐榜比较按规模修正的近3日增长。Stars 属于整个 GitHub 仓库，不代表具体插件的使用量。</p>
             </div>
             <div class="ranking-meta" aria-live="polite">
@@ -3292,7 +3292,7 @@
               <div class="plugin-title">
                 <h3 class="plugin-name"><span class="plugin-name-text">dsh-top100</span></h3>
                 <span class="trust-pill">本站出品 · 不参与排名</span>
-                <a class="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
+                <a class="github-link" href="https://github.com/evaldock/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
                   <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
                 </a>
                 <a class="featured-guide" href="?page=dsh#dsh" data-content-switch="dsh">安装指南 <span aria-hidden="true">→</span></a>
@@ -3328,11 +3328,11 @@
 
           <section class="content-view inline-docs" id="dsheval-view" aria-labelledby="inline-dsheval-title" hidden>
             <header class="inline-docs-header">
-              <h1 class="inline-docs-title" id="inline-dsheval-title">关于 DSH-Eval</h1>
+              <h1 class="inline-docs-title" id="inline-dsheval-title">关于 EvalDock</h1>
               <p class="inline-docs-title-zh" data-site-copy="lead">公开评测与任务证据</p>
             </header>
             <div id="inline-dsheval-host">
-              <p class="docs-loading" data-site-copy="note">正在加载 DSHeval…</p>
+              <p class="docs-loading" data-site-copy="note">正在加载 EvalDock…</p>
             </div>
           </section>
         </div>
@@ -3341,13 +3341,12 @@
 
     <footer class="dsh-site-footer">
       <div class="dsh-site-container dsh-footer-inner">
-        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a><p>公开评测，发现值得关注的项目。</p></div>
+        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="EvalDock 首页"><span class="dsh-brand" translate="no"><span class="dsh-brand-symbol" aria-hidden="true"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="" /></span><span class="dsh-brand-wordmark"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="EvalDock" /></span></span></a></div>
         <nav class="dsh-footer-links" aria-label="页脚导航">
-          <a href="https://github.com/dsheval/dsh-eval" target="_blank" rel="noopener noreferrer">评测源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
           <a href="/about#faq">常见问题</a>
+          <a href="https://github.com/evaldock/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
         </nav>
-        <span class="dsh-copyright">© 2026 DSH-Eval</span>
+        <span class="dsh-copyright">© 2026 EvalDock</span>
       </div>
     </footer>
 
@@ -3670,8 +3669,8 @@
 
       function setContentView(view, { historyMode = "replace", scroll = false } = {}) {
         currentContentView = contentViewNames.has(view) ? view : "ranking";
-        const pageTitles = { ranking: "插件榜单", docs: "排名方法", dsh: "安装指南", dsheval: "关于 DSH-Eval" };
-        document.title = currentContentView === "dsheval" ? "关于 DSH-Eval" : `${pageTitles[currentContentView]} · Top100 · DSH-Eval`;
+        const pageTitles = { ranking: "插件榜单", docs: "排名方法", dsh: "安装指南", dsheval: "关于 EvalDock" };
+        document.title = currentContentView === "dsheval" ? "关于 EvalDock" : `${pageTitles[currentContentView]} · Top100 · EvalDock`;
         const requestedContentView = currentContentView;
         const contentViews = {
           ranking: leaderboardView,

@@ -98,7 +98,7 @@
   border: 1px solid var(--line);
   color: var(--ink);
   background: color-mix(in srgb, var(--card) 97%, var(--section));
-  box-shadow: 0 9px 22px rgba(23, 33, 31, 0.09);
+  box-shadow: 0 9px 22px rgba(28, 32, 36, 0.09);
   font-family: var(--sans);
   font-size: 12px;
   font-weight: 500;

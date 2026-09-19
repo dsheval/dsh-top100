@@ -222,10 +222,10 @@ body:has(#dsh-view:not([hidden])) .ranking-inner {
 #dsh-view {
   max-width: none;
   margin-inline: 0;
-  --muted: #4f5e59;
-  --line: rgba(19, 32, 28, 0.26);
-  --code-surface: #e5ebe8;
-  --code-ink: #13201c;
+  --muted: #60646c;
+  --line: rgba(28, 32, 36, 0.26);
+  --code-surface: #ebebf1;
+  --code-ink: #1c2024;
   font: 400 15px/1.8 var(--sans);
 }
 

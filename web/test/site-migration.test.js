@@ -44,15 +44,25 @@ test("local preview serves the Top100 mount and preserves old page queries", asy
     const response = await fetch(`${origin}/top100/${page}`);
     assert.equal(response.status, 200);
     const html = await response.text();
-    assert.ok(html.includes('aria-label="DSH-Eval 主导航"'));
+    assert.ok(html.includes('aria-label="EvalDock 主导航"'));
     for (const path of ["/", "/results", "/methodology", "/about", "/about#faq", "/top100/"]) {
       assert.ok(html.includes(`href="${path}"`));
     }
-    for (const [, path] of html.matchAll(/(?:src|href)="(\.\/[^"?#]+\.(?:css|js|svg))"/g)) {
+    for (const [, path] of html.matchAll(/(?:src|href)="(\.\/[^"?#]+\.(?:css|js|svg|png)(?:\?[^"#]+)?)"/g)) {
       const asset = await fetch(new URL(path, `${origin}/top100/${page}`));
       assert.equal(asset.status, 200, path);
       assert.doesNotMatch(asset.headers.get("content-type"), /text\/html/, path);
-      await asset.arrayBuffer();
+      if (path.includes(".css")) {
+        const css = await asset.text();
+        for (const [, font] of css.matchAll(/url\('([^']+\.woff2)'\)/g)) {
+          const fontAsset = await fetch(new URL(font, asset.url));
+          assert.equal(fontAsset.status, 200, font);
+          assert.equal(fontAsset.headers.get("content-type"), "font/woff2", font);
+          await fontAsset.arrayBuffer();
+        }
+      } else {
+        await asset.arrayBuffer();
+      }
     }
     if (page !== "docs.html") {
       assert.ok(html.includes('const MANIFEST_URL = "/data/manifest.json"'));

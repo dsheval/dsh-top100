@@ -1,5 +1,5 @@
-/* Shared verbatim with dsh-top100/web/public/site-chrome.css.
-   Both independently deployed sites use the same shell without a runtime dependency. */
+/* EvalDock shell and Top100 reading roles. Synced with the main site on 2026-09-19.
+   Assets are served locally so each website can be deployed independently. */
 :root {
   --site-header-height: 64px;
   --site-display-font: 'Iowan Old Style', Baskerville, 'Times New Roman', 'Songti SC', serif;
@@ -8,12 +8,12 @@
   --site-ui-font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 .dsh-site-header, .dsh-site-footer {
-  --dsh-paper: #f7f9f8;
-  --dsh-ink: #13201c;
-  --dsh-muted: #4f5e59;
-  --dsh-accent: #126657;
-  --dsh-deep: #174942;
-  --dsh-line: rgba(19, 32, 28, .12);
+  --dsh-paper: #f8f8ff;
+  --dsh-ink: #1c2024;
+  --dsh-muted: #4b4f58;
+  --dsh-accent: #5b5bd6;
+  --dsh-deep: #272962;
+  --dsh-line: rgba(28, 32, 36, .12);
   font-family: var(--site-ui-font);
   color: var(--dsh-ink);
   background: var(--dsh-paper);
@@ -48,9 +48,9 @@
 .dsh-menu-icon { position: relative; width: 18px; height: 10px; border-block: 1.5px solid currentColor; }
 .dsh-mobile-menu[open] .dsh-menu-icon { height: 0; border-bottom: 0; transform: rotate(45deg); }
 .dsh-mobile-menu[open] .dsh-menu-icon::after { content: ''; position: absolute; width: 18px; border-top: 1.5px solid currentColor; top: -1.5px; transform: rotate(90deg); }
-.dsh-mobile-menu nav { position: absolute; top: 63px; left: -20px; right: -20px; padding: 8px 20px 16px; border-bottom: 1px solid var(--dsh-line); background: var(--dsh-paper); box-shadow: 0 16px 24px rgba(19,32,28,.06); }
+.dsh-mobile-menu nav { position: absolute; top: 63px; left: -20px; right: -20px; padding: 8px 20px 16px; border-bottom: 1px solid var(--dsh-line); background: var(--dsh-paper); box-shadow: 0 16px 24px rgba(28,32,36,.06); }
 .dsh-mobile-menu nav a { display: flex; min-height: 48px; align-items: center; padding-inline: 12px; font-size: 15px; font-weight: 600; }
-.dsh-mobile-menu a[aria-current='page'] { color: var(--dsh-accent); background: #e5ebe8; box-shadow: inset 2px 0 var(--dsh-accent); }
+.dsh-mobile-menu a[aria-current='page'] { color: var(--dsh-accent); background: #ebebf1; box-shadow: inset 2px 0 var(--dsh-accent); }
 .dsh-site-footer { border-top: 1px solid var(--dsh-line); }
 .dsh-footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px 32px; min-height: 96px; padding-block: 20px; }
 .dsh-footer-intro { display: flex; align-items: center; gap: 24px; }
@@ -100,7 +100,7 @@
 /* Explicit English labels cover page, section and card headings on both sites.
    lang also gives assistive technology the correct pronunciation context. */
 :is(main#main-content, main#top, main) [data-site-label][lang="en"] {
-  color: #126657;
+  color: #5b5bd6;
   font-family: var(--site-label-font);
   font-size: 12px;
   font-weight: 600;
@@ -128,7 +128,7 @@
    Keep prose separate from display titles, interface labels and numeric data.
    The main scope takes precedence over legacy page-specific typography. */
 :root {
-  --site-copy-color: #4f5e59;
+  --site-copy-color: #60646c;
   --site-copy-lead-size: clamp(17px, 1.45vw, 20px);
   --site-copy-body-size: 16px;
   --site-copy-note-size: 14px;
@@ -153,17 +153,17 @@
   line-height: 1.6;
 }
 .dossier-highlight, .result-report-finding, .memory-protocol-note {
-  --site-copy-color: #126657;
+  --site-copy-color: #5b5bd6;
 }
 
 /* Shared controls: actions, inputs and badges use the interface face.
    Editorial labels and benchmark numbers retain their separate type roles. */
 :root {
   --site-control-height: 44px;
-  --site-control-accent: #126657;
-  --site-control-hover: #174942;
-  --site-control-soft: #e0ede8;
-  --site-control-line: rgba(19, 32, 28, .24);
+  --site-control-accent: #5b5bd6;
+  --site-control-hover: #272962;
+  --site-control-soft: #e0e0ed;
+  --site-control-line: rgba(28, 32, 36, .24);
 }
 :is(main#main-content, main#top, main) :is(
   button, input, select, .homepage-hero-actions a, .hero-actions a,
@@ -222,7 +222,7 @@
 }
 :is(main#main-content, main#top, main) :is(.view-tab, .category-option, .memory-metric-switch button, .search-sort button) {
   padding-inline: 12px;
-  color: #4f5e59;
+  color: #60646c;
   background: transparent;
 }
 :is(main#main-content, main#top, main) :is(.view-tab, .category-option, .memory-metric-switch button, .search-sort button):hover {
@@ -253,7 +253,7 @@
   border-radius: 0;
 }
 :is(main#main-content, main#top, main) input::placeholder {
-  color: #687772;
+  color: #686877;
   font-weight: 400;
   opacity: 1;
 }
@@ -299,7 +299,7 @@
 :is(main#main-content, main#top, main) :is(.release-badge, .result-report-status, .verification-current-marker, .trust-pill[data-level="install-source"]) {
   color: var(--site-control-accent);
   background: var(--site-control-soft);
-  border-color: rgba(18, 102, 87, .3);
+  border-color: rgba(91, 91, 214, .3);
 }
 :is(main#main-content, main#top, main) :is(a, button, input, select, summary, .dsh-copy-button, .plugin-action):focus-visible {
   outline: 2px solid var(--site-control-accent);
@@ -383,17 +383,69 @@
 /* Keep global navigation in sync with the main site. */
 .dsh-nav-emphasis .dsh-desktop-nav { align-items: center; gap: 8px; }
 .dsh-nav-emphasis .dsh-desktop-nav a { position: relative; min-height: 44px; padding: 0 16px; font-size: 15px; }
-.dsh-nav-emphasis .dsh-desktop-nav a:hover { color: #126657; text-decoration: none; }
+.dsh-nav-emphasis .dsh-desktop-nav a:hover { color: #5b5bd6; text-decoration: none; }
 .dsh-nav-emphasis .dsh-desktop-nav a[aria-current='page'] {
-  color: #126657; font-weight: 700; box-shadow: none; text-decoration: none;
+  color: #5b5bd6; font-weight: 700; box-shadow: none; text-decoration: none;
 }
 .dsh-nav-emphasis .dsh-desktop-nav a::after {
   content: ''; position: absolute; bottom: 0; left: 50%; width: 24px;
-  height: 2px; background: #126657; transform: translateX(-50%); opacity: 0;
+  height: 2px; background: #5b5bd6; transform: translateX(-50%); opacity: 0;
 }
 .dsh-nav-emphasis .dsh-desktop-nav a:hover::after { opacity: .45; }
 .dsh-nav-emphasis .dsh-desktop-nav a:is([aria-current='page'], :focus-visible)::after { opacity: 1; }
 @media (min-width: 761px) and (max-width: 900px) {
   .dsh-nav-emphasis .dsh-desktop-nav { gap: 2px; }
   .dsh-nav-emphasis .dsh-desktop-nav a { padding-inline: 10px; font-size: 14px; }
+}
+
+/* Approved EvalDock lockup; preserve the source image and its original split. */
+.dsh-site-container { width: min(1240px, calc(100% - 64px)); }
+.dsh-header-inner { gap: 28px; }
+.dsh-site-header, .dsh-site-footer { --site-ui-font: 'EvalDock Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+.dsh-brand { --brand-width: 160px; align-items: center; gap: 8px; }
+.dsh-brand-symbol, .dsh-brand-wordmark { display: block; flex: none; overflow: hidden; }
+.dsh-brand-symbol { width: calc(var(--brand-width) * .28); }
+.dsh-brand-wordmark { width: calc(var(--brand-width) * .72); }
+.dsh-brand img { display: block; width: var(--brand-width); max-width: none; height: auto; mix-blend-mode: multiply; }
+.dsh-brand-wordmark img { transform: translateX(-28%); }
+.dsh-nav-emphasis .dsh-desktop-nav { margin-left: auto; }
+.dsh-nav-emphasis .dsh-desktop-nav a { letter-spacing: .045em; }
+.dsh-site-footer { border-top-color: #d5d5dd; }
+.dsh-footer-inner { padding-block: 42px; flex-wrap: wrap; }
+:is(main#top, main) .discovery-scope { margin: 14px 0 0; max-width: 650px; }
+.discovery-scope a { color: var(--accent); text-underline-offset: 3px; }
+.install-console { background: var(--card); box-shadow: none; border-color: var(--line); }
+@media (max-width: 720px) {
+  .dsh-site-container { width: calc(100% - 40px); }
+  .dsh-brand { --brand-width: 144px; }
+  .dsh-footer-inner { padding-block: 28px; }
+}
+
+/* Keep discovery surfaces neutral; reserve brand color for actions and selection. */
+#ranking {
+  --line: rgba(28, 32, 36, .16);
+  --site-control-line: rgba(28, 32, 36, .2);
+  --site-control-soft: #f8f8fc;
+}
+#ranking.directory { background: #fff; }
+#ranking :is(.featured-plugin, .featured-skill) {
+  background: #fff;
+  box-shadow: none;
+}
+:is(main#top, main) #ranking .category-option[aria-pressed="true"] {
+  color: var(--accent);
+  background: #fff;
+  box-shadow: inset 0 -3px var(--accent);
+}
+main #ranking .trust-pill,
+main #ranking .trust-pill[data-level] {
+  color: #60646c;
+  border-color: #d8d9de;
+  background: #fff;
+}
+
+/* Plain table headings keep the brand accent on interactive controls. */
+#ranking :is(.list-head, .skill-list-head) {
+  background: #fff;
+  box-shadow: none;
 }

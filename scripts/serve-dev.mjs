@@ -24,6 +24,7 @@ const mimeTypes = new Map([
   [".txt", "text/plain; charset=utf-8"],
   [".xml", "application/xml; charset=utf-8"],
   [".jpg", "image/jpeg"],
+  [".woff2", "font/woff2"],
 ]);
 
 function proxyData(request, response) {

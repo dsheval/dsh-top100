@@ -3,33 +3,33 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#d9e7e2" />
-    <meta name="description" content="浏览 DSH-Eval 旗下 Top100 收录的 Agent Skills；收录不代表已通过能力评测，Skills 不参与插件排名。" />
+    <meta name="theme-color" content="#f0f1fe" />
+    <meta name="description" content="浏览 EvalDock 旗下 Top100 收录的 Agent Skills；收录不代表已通过能力评测，Skills 不参与插件排名。" />
     <link rel="canonical" href="https://www.evaldock.ai/top100/skills.html" />
     <meta property="og:url" content="https://www.evaldock.ai/top100/skills.html" />
-    <meta property="og:site_name" content="DSH-Eval" />
-    <title>Skills 榜单 · Top100 · DSH-Eval</title>
-    <link rel="icon" href="./favicon.png?v=20260908-slashed-d1" type="image/png" sizes="32x32" />
-    <link rel="icon" href="./favicon.svg?v=20260908-slashed-d1" type="image/svg+xml" sizes="any" />
-    <link rel="apple-touch-icon" href="./apple-touch-icon.png?v=20260908-slashed-d1" sizes="180x180" />
+    <meta property="og:site_name" content="EvalDock" />
+    <title>Skills 榜单 · Top100 · EvalDock</title>
+    <link rel="icon" href="./assets/evaldock-favicon.png?v=20260919-pony1" type="image/png" sizes="32x32" />
+    <link rel="apple-touch-icon" href="./assets/evaldock-apple-touch-icon.png?v=20260919-pony1" sizes="180x180" />
     <link rel="stylesheet" href="./install-console.css" />
+    <link rel="stylesheet" href="./fonts.css?v=20260919-evaldock1" />
     <style>
       :root {
-        --paper: #f7f9f8;
-        --hero: #d9e7e2;
-        --hero-ink: #13201c;
-        --hero-accent: #126657;
+        --paper: #f8f8ff;
+        --hero: #f0f1fe;
+        --hero-ink: #1c2024;
+        --hero-accent: #5b5bd6;
         --card: #ffffff;
-        --muted: #4f5e59;
-        --line: rgba(19, 32, 28, 0.26);
-        --soft: #e8eeec;
+        --muted: #60646c;
+        --line: rgba(28, 32, 36, 0.26);
+        --soft: #e9e9f1;
         --ink: var(--hero-ink);
         --accent: var(--hero-accent);
         --accent-contrast: #ffffff;
-        --accent-soft: #c9ded7;
-        --section: #e5ebe8;
-        --section-strong: #d5dfdb;
-        --content: 1380px;
+        --accent-soft: #e1d6ff;
+        --section: #ffffff;
+        --section-strong: #eee8ff;
+        --content: 1240px;
         --sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
         --serif: Iowan Old Style, Baskerville, "Times New Roman", "Songti SC", serif;
         --mono: "SFMono-Regular", Consolas, "Liberation Mono", "Courier New", monospace;
@@ -67,7 +67,7 @@
       .hero-inner { display: grid; min-height: 640px; grid-template-columns: minmax(0, 1.08fr) minmax(400px, 0.72fr); align-items: center; gap: clamp(50px, 7vw, 108px); padding: 82px 0 88px; }
       .hero-summary { min-width: 0; }
       .hero-side { position: relative; display: grid; min-width: 0; place-items: center; isolation: isolate; }
-      .install-console { --hero-muted: var(--muted); --code-surface: #e8eeec; --code-ink: var(--ink); --accent-contrast: #fff; }
+      .install-console { --hero-muted: var(--muted); --code-surface: #e9e9f1; --code-ink: var(--ink); --accent-contrast: #fff; }
       .hero-command-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
       .eyebrow {
         margin: 0 0 24px;
@@ -175,7 +175,7 @@
       .stars { position: relative; overflow: hidden; display: inline-flex; min-height: 34px; padding: 0 11px; align-items: center; justify-content: center; justify-self: end; border: 1px solid var(--accent); color: var(--card); background: var(--accent); font: 800 15px/1.4 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; white-space: nowrap; transition: box-shadow 180ms ease, transform 180ms ease; }
       .stars::before { margin-right: 7px; content: "★"; font-size: 12px; }
       .stars::after { position: absolute; width: 18px; height: 150%; top: -25%; left: -36px; background: rgba(255, 255, 255, 0.34); content: ""; pointer-events: none; transform: rotate(18deg); transition: translate 420ms ease; }
-      .skill-card:hover .stars { box-shadow: 0 6px 16px rgba(29, 81, 74, 0.2); transform: translateY(-2px); }
+      .skill-card:hover .stars { box-shadow: 0 6px 16px rgba(91, 91, 214, 0.2); transform: translateY(-2px); }
       .skill-card:hover .stars::after { translate: 190px 0; }
       .skill-card h3 { display: -webkit-box; min-width: 0; flex: 0 1 auto; margin: 0; padding-bottom: 0.08em; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font: 500 clamp(20px, 1.8vw, 27px)/1.14 var(--serif); letter-spacing: -0.035em; overflow-wrap: anywhere; }
       .skill-card p { display: -webkit-box; max-width: 38em; margin: 0; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--muted); font-size: 14px; font-weight: 400; line-height: 1.58; overflow-wrap: anywhere; }
@@ -214,7 +214,7 @@
         .hero-side { width: 100%; max-width: 700px; }
       }
       @media (min-width: 721px) {
-        .skill-list-head { position: sticky; z-index: 8; top: var(--site-header-height); box-shadow: 0 8px 18px rgba(23, 33, 31, 0.08); }
+        .skill-list-head { position: sticky; z-index: 8; top: var(--site-header-height); box-shadow: 0 8px 18px rgba(28, 32, 36, 0.08); }
       }
       @media (max-width: 960px) {
         .skill-list-head, .skill-card { grid-template-columns: 54px minmax(190px, 0.78fr) minmax(220px, 1fr) 118px; gap: 16px; }
@@ -263,19 +263,19 @@
         #ranking #search { font-size: 16px; }
       }
     </style>
-    <link rel="stylesheet" href="./category-system.css" />
+    <link rel="stylesheet" href="./category-system.css?v=20260919-evaldock1" />
     <link rel="stylesheet" href="./ranking-rows.css" />
-    <link rel="stylesheet" href="./site-controls.css?v=20260908-section-nav2" />
-    <link rel="stylesheet" href="./site-chrome.css?v=20260908-nav3" />
+    <link rel="stylesheet" href="./site-controls.css?v=20260919-evaldock1" />
+    <link rel="stylesheet" href="./site-chrome.css?v=20260919-evaldock5" />
   </head>
   <body>
     <header class="dsh-site-header dsh-nav-emphasis">
       <div class="dsh-site-container dsh-header-inner">
-        <a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a>
-        <nav class="dsh-desktop-nav" aria-label="DSH-Eval 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
+        <a class="dsh-brand-link" href="/" aria-label="EvalDock 首页"><span class="dsh-brand" translate="no"><span class="dsh-brand-symbol" aria-hidden="true"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="" /></span><span class="dsh-brand-wordmark"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="EvalDock" /></span></span></a>
+        <nav class="dsh-desktop-nav" aria-label="EvalDock 主导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
         <details class="dsh-mobile-menu">
           <summary>菜单<span class="dsh-menu-icon" aria-hidden="true"></span></summary>
-          <nav aria-label="DSH-Eval 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
+          <nav aria-label="EvalDock 移动端导航"><a href="/">首页</a><a href="/top100/" aria-current="page">Top100</a><a href="/results">评测结果</a><a href="/methodology">评测方法</a><a href="/about">产品介绍</a></nav>
         </details>
       </div>
     </header>
@@ -288,7 +288,7 @@
           <a href="./skills.html#ranking" aria-current="page">Skills 榜单</a>
           <a href="./index.html?page=dsh#dsh">安装指南</a>
           <a href="./index.html?page=docs#docs">排名方法</a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+          <a href="https://github.com/evaldock/dsh-top100" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
         </div>
       </nav>
       <section class="hero">
@@ -296,7 +296,8 @@
           <div class="hero-summary">
           <p class="eyebrow" data-site-label="page" lang="en">Explore · Reuse · Compose</p>
           <h1><span>发现值得复用的</span><span>Agent Skills</span></h1>
-          <p class="hero-copy" data-site-copy="lead">按用途、分类和 GitHub Stars 发现可复用的工作方法，让 Agent 更好地完成你的任务。</p>
+          <p class="hero-copy" data-site-copy="lead">按用途、分类和 GitHub Stars 发现可复用的工作方法，收录与 Stars 排序不代表已通过能力评测。</p>
+          <p class="discovery-scope" data-site-copy="note">Top100 的 Skills 独立展示；具体适用环境以项目说明为准。<a href="/results">查看 Agent 能力评测 <span aria-hidden="true">↗</span></a></p>
           <div class="hero-actions"><a class="hero-link hero-content-switch is-active" href="#ranking">浏览 Skills 榜单</a><a class="hero-placeholder" href="./index.html?page=dsh#dsh">安装 Top100 到 DSH</a></div>
           </div>
           <div class="hero-side">
@@ -350,13 +351,12 @@
     </main>
     <footer class="dsh-site-footer">
       <div class="dsh-site-container dsh-footer-inner">
-        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="DSH-Eval 首页"><span class="dsh-brand" translate="no"><strong>DSH</strong><span aria-hidden="true">/</span><b>EVAL</b></span></a><p>公开评测，发现值得关注的项目。</p></div>
+        <div class="dsh-footer-intro"><a class="dsh-brand-link" href="/" aria-label="EvalDock 首页"><span class="dsh-brand" translate="no"><span class="dsh-brand-symbol" aria-hidden="true"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="" /></span><span class="dsh-brand-wordmark"><img src="./assets/evaldock-brand-horizontal-pony.png?v=20260919-pony1" width="668" height="204" alt="EvalDock" /></span></span></a></div>
         <nav class="dsh-footer-links" aria-label="页脚导航">
-          <a href="https://github.com/dsheval/dsh-eval" target="_blank" rel="noopener noreferrer">评测源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
-          <a href="https://github.com/dsheval/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
           <a href="/about#faq">常见问题</a>
+          <a href="https://github.com/evaldock/dsh-top100" target="_blank" rel="noopener noreferrer">Top100 源码 <span aria-hidden="true">↗</span><span class="dsh-visually-hidden">（新窗口打开）</span></a>
         </nav>
-        <span class="dsh-copyright">© 2026 DSH-Eval</span>
+        <span class="dsh-copyright">© 2026 EvalDock</span>
       </div>
     </footer>
 
@@ -366,7 +366,7 @@
               <div class="skill-identity">
                 <h3 ><span class="plugin-name-text">dsh-top100</span></h3>
                 <span class="skill-kind">本站出品 · 不参与排名</span>
-                <a class="github-link" href="https://github.com/dsheval/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
+                <a class="github-link" href="https://github.com/evaldock/dsh-top100" aria-label="在 GitHub 打开 dsh-top100" title="GitHub" target="_blank" rel="noopener noreferrer">
                   <svg class="github-logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .7a11.3 11.3 0 0 0-3.6 22c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.8-1.3-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.9 1.2 1.9 1.2 1.1 1.9 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6a4.7 4.7 0 0 1 1.2-3.1c-.1-.3-.5-1.6.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0c2.2-1.5 3.2-1.2 3.2-1.2.6 1.5.2 2.8.1 3.1a4.7 4.7 0 0 1 1.2 3.1c0 4.7-2.8 5.7-5.5 6 .4.4.8 1.1.8 2.2v3.2c0 .4.2.7.8.6A11.3 11.3 0 0 0 12 .7Z"></path></svg>
                 </a>
                 <a class="featured-guide" href="./index.html?page=dsh#dsh">安装指南 <span aria-hidden="true">→</span></a>
